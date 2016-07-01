@@ -7,7 +7,7 @@ int main() {
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
     SDL_Window *window = SDL_CreateWindow(
-            "", 0, 0, 750, 750,
+            "", 0, 0, 1920, 1080,
             SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_MOUSE_CAPTURE);
     SDL_GLContext context = SDL_GL_CreateContext(window);
     atexit(IMG_Quit);
@@ -78,7 +78,7 @@ int main() {
         }
 
         // Tick/update the world
-        // world.world_tick(delta);
+        world.world_tick(delta);
 
         // Render the world
         render.render_world(&world);

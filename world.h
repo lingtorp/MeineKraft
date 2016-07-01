@@ -16,10 +16,9 @@ struct Chunk {
 class World {
 public:
     World();
-
     ~World();
 
-    static const uint8_t MAX_CHUNKS = 9; // Max # of chunks in the world
+    static const uint8_t MAX_CHUNKS = 9; // Max # of chunks in the world at the same time
     Chunk *chunks[MAX_CHUNKS];
 
     void world_tick(double delta);
