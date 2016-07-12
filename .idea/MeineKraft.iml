@@ -6,8 +6,10 @@
       <sourceFolder url="file://$MODULE_DIR$/main.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/world.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/world.cpp" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/render/primitives.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/render/camera.cpp" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/render/camera.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/render/render.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/render/primitives.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/render/render.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/CMakeLists.txt" isTestSource="false" />
     </content>
