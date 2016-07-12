@@ -3,6 +3,10 @@
 
 #include <SDL2/SDL_opengl.h>
 #include <math.h>
+#include <array>
+
+template<typename T>
+using Mat4 = std::array<std::array<T, 4>, 4>;
 
 struct Vec3 {
     GLfloat x, y, z = 0.0f;
