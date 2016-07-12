@@ -40,7 +40,7 @@ Chunk *World::new_chunk(Vec3 position) {
                 cube.position.x = i + position.x;
                 cube.position.y = j + position.y;
                 cube.position.z = k + position.z;
-                chunk->blocks[index++] = std::move(cube);
+                chunk->blocks[index++] = cube;
             }
         }
     }
