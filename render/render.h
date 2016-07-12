@@ -26,12 +26,12 @@ public:
 
     const std::string load_shader_source(std::string filename);
 
-    GLfloat *FPSViewRH(Vec3 eye, float pitch, float yaw);
-    GLfloat *transformation_matrix_x(float theta);
-    GLfloat *transformation_matrix_y(float theta);
-    GLfloat *transformation_matrix_z(float theta);
-    GLfloat *scaling_matrix(float scale);
-    GLfloat *translation_matrix(float x, float y, float z);
+    static Mat4<GLfloat> FPSViewRH(Vec3 eye, float pitch, float yaw);
+    Mat4<GLfloat> transformation_matrix_x(float theta);
+    Mat4<GLfloat> transformation_matrix_y(float theta);
+    Mat4<GLfloat> transformation_matrix_z(float theta);
+    Mat4<GLfloat> scaling_matrix(float scale);
+    Mat4<GLfloat> translation_matrix(float x, float y, float z);
 
     std::shared_ptr<Camera> camera;
 

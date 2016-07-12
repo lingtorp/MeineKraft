@@ -41,7 +41,7 @@ GLuint load_cube_map(std::vector<std::string> faces, FileFormat file_format) {
 }
 
 // Camera combined rotation matrix (y, x) & translation matrix
-GLfloat *Render::FPSViewRH(Vec3 eye, float pitch, float yaw) {
+Mat4<GLfloat> Render::FPSViewRH(Vec3 eye, float pitch, float yaw) {
     float rad = M_PI / 180;
     float cosPitch = cos(pitch * rad);
     float sinPitch = sin(pitch * rad);
@@ -50,29 +50,27 @@ GLfloat *Render::FPSViewRH(Vec3 eye, float pitch, float yaw) {
     Vec3 xaxis = {cosYaw, 0, -sinYaw};
     Vec3 yaxis = {sinYaw * sinPitch, cosPitch, cosYaw * sinPitch};
     Vec3 zaxis = {sinYaw * cosPitch, -sinPitch, cosPitch * cosYaw};
-    GLfloat tempMatrix[4][4];
-    tempMatrix[0][0] = xaxis.x;
-    tempMatrix[0][1] = yaxis.x;
-    tempMatrix[0][2] = zaxis.x;
-    tempMatrix[0][3] = 0.0f;
-    tempMatrix[1][0] = xaxis.y;
-    tempMatrix[1][1] = yaxis.y;
-    tempMatrix[1][2] = zaxis.y;
-    tempMatrix[1][3] = 0.0f;
-    tempMatrix[2][0] = xaxis.z;
-    tempMatrix[2][1] = yaxis.z;
-    tempMatrix[2][2] = zaxis.z;
-    tempMatrix[2][3] = 0.0f;
-    tempMatrix[3][0] = -dot(xaxis, eye);
-    tempMatrix[3][1] = -dot(yaxis, eye);
-    tempMatrix[3][2] = -dot(zaxis, eye); // GLM says no minus , other's say minus
-    tempMatrix[3][3] = 1.0f;
-    GLfloat *matrix = (GLfloat *) calloc(1, sizeof(tempMatrix));
-    memcpy(matrix, tempMatrix, sizeof(tempMatrix));
+    Mat4<GLfloat> matrix;
+    matrix[0][0] = xaxis.x;
+    matrix[0][1] = yaxis.x;
+    matrix[0][2] = zaxis.x;
+    matrix[0][3] = 0.0f;
+    matrix[1][0] = xaxis.y;
+    matrix[1][1] = yaxis.y;
+    matrix[1][2] = zaxis.y;
+    matrix[1][3] = 0.0f;
+    matrix[2][0] = xaxis.z;
+    matrix[2][1] = yaxis.z;
+    matrix[2][2] = zaxis.z;
+    matrix[2][3] = 0.0f;
+    matrix[3][0] = -dot(xaxis, eye);
+    matrix[3][1] = -dot(yaxis, eye);
+    matrix[3][2] = -dot(zaxis, eye); // GLM says no minus , other's say minus
+    matrix[3][3] = 1.0f;
     return matrix;
 }
 
-GLfloat *perspective_matrix(float z_near, float z_far, float fov,
+Mat4<GLfloat> perspective_matrix(float z_near, float z_far, float fov,
                             float aspect) {
     float rad = M_PI / 180;
     float tanHalf = tan(fov * rad / 2);
@@ -80,32 +78,29 @@ GLfloat *perspective_matrix(float z_near, float z_far, float fov,
     float b = 1 / tanHalf;
     float c = -(z_far + z_near) / (z_far - z_near);
     float d = -(2 * z_far * z_near) / (z_far - z_near);
-    GLfloat tempMatrix[4][4] = {{a, 0.0f, 0.0f, 0.0f},
-                                {0.0f, b, 0.0f, 0.0f},
-                                {0.0f, 0.0f, c, d},
-                                {0.0f, 0.0f, -1.0f, 0.0f}};
-    GLfloat *matrix = (GLfloat *) calloc(1, sizeof(tempMatrix));
-    memcpy(matrix, tempMatrix, sizeof(tempMatrix));
+    Mat4<GLfloat> matrix;
+    matrix[0] = {a, 0.0f, 0.0f, 0.0f};
+    matrix[1] = {0.0f, b, 0.0f, 0.0f};
+    matrix[2] = {0.0f, 0.0f, c, d};
+    matrix[3] = {0.0f, 0.0f, -1.0f, 0.0f};
     return matrix;
 }
 
-GLfloat *Render::scaling_matrix(float scale) {
-    GLfloat tempMatrix[4][4] = {{scale, 0.0f, 0.0f, 0.0f},
-                                {0.0f, scale, 0.0f, 0.0f},
-                                {0.0f, 0.0f, scale, 0.0f},
-                                {0.0f, 0.0f, 0.0f, 1.0f}};
-    GLfloat *matrix = (GLfloat *)  calloc(1, sizeof(tempMatrix));
-    memcpy(matrix, tempMatrix, sizeof(tempMatrix));
+Mat4<GLfloat> Render::scaling_matrix(float scale) {
+    Mat4<GLfloat> matrix;
+    matrix[0] = {scale, 0.0f, 0.0f, 0.0f};
+    matrix[1] = {0.0f, scale, 0.0f, 0.0f};
+    matrix[2] = {0.0f, 0.0f, scale, 0.0f};
+    matrix[3] = {0.0f, 0.0f, 0.0f, 1.0f};
     return matrix;
 }
 
-GLfloat *Render::translation_matrix(float x, float y, float z) {
-    GLfloat tempMatrix[4][4] = {{1.0f, 0.0f, 0.0f, x},
-                                {0.0f, 1.0f, 0.0f, y},
-                                {0.0f, 0.0f, 1.0f, z},
-                                {0.0f, 0.0f, 0.0f, 1.0f}};
-    GLfloat *matrix = (GLfloat *)  calloc(1, sizeof(tempMatrix));
-    memcpy(matrix, tempMatrix, sizeof(tempMatrix));
+Mat4<GLfloat> Render::translation_matrix(float x, float y, float z) {
+    Mat4<GLfloat> matrix;
+    matrix[0] = {1.0f, 0.0f, 0.0f, x};
+    matrix[1] = {0.0f, 1.0f, 0.0f, y};
+    matrix[2] = {0.0f, 0.0f, 1.0f, z};
+    matrix[3] = {0.0f, 0.0f, 0.0f, 1.0f};
     return matrix;
 }
 
@@ -117,36 +112,33 @@ const std::string Render::load_shader_source(std::string filename) {
 }
 
 // Transformation matrix for the y-plane
-GLfloat *Render::transformation_matrix_x(float theta) {
+Mat4<GLfloat> Render::transformation_matrix_x(float theta) {
     float x = M_PI / 180;
-    GLfloat *matrix = (GLfloat *) calloc(1, sizeof(GLfloat) * 4 * 4);
-    GLfloat tempMatrix[4][4] = {{1.0f, 0.0f, 0.0f, 0.0f},
-                                {0.0f, cosf(theta * x), -sinf(theta * x), 0.0f},
-                                {0.0f, sinf(theta * x), cosf(theta * x), 0.0f},
-                                {0.0f, 0.0f, 0.0f, 1.0f}};
-    memcpy(matrix, tempMatrix, sizeof(tempMatrix));
+    Mat4<GLfloat> matrix;
+    matrix[0] = {1.0f, 0.0f, 0.0f, 0.0f};
+    matrix[1] = {0.0f, cosf(theta * x), -sinf(theta * x), 0.0f};
+    matrix[2] = {0.0f, sinf(theta * x), cosf(theta * x), 0.0f};
+    matrix[3] = {0.0f, 0.0f, 0.0f, 1.0f};
     return matrix;
 }
 
-GLfloat *Render::transformation_matrix_y(float theta) {
+Mat4<GLfloat> Render::transformation_matrix_y(float theta) {
     float x = M_PI / 180;
-    GLfloat *matrix = (GLfloat *) calloc(1, sizeof(GLfloat) * 4 * 4);
-    GLfloat tempMatrix[4][4] = {{cosf(theta * x), 0.0f, sinf(theta * x), 0.0f},
-                                {0.0f, 1.0f, 0.0f, 0.0f},
-                                {-sinf(theta * x), 0.0f, cosf(theta * x), 0.0f},
-                                {0.0f, 0.0f, 0.0f, 1.0f}};
-    memcpy(matrix, tempMatrix, sizeof(tempMatrix));
+    Mat4<GLfloat> matrix;
+    matrix[0] = {cosf(theta * x), 0.0f, sinf(theta * x), 0.0f};
+    matrix[1] = {0.0f, 1.0f, 0.0f, 0.0f};
+    matrix[2] = {-sinf(theta * x), 0.0f, cosf(theta * x), 0.0f};
+    matrix[3] = {0.0f, 0.0f, 0.0f, 1.0f};
     return matrix;
 }
 
-GLfloat *Render::transformation_matrix_z(float theta) {
+Mat4<GLfloat> Render::transformation_matrix_z(float theta) {
     float x = M_PI / 180;
-    GLfloat *matrix = (GLfloat *) calloc(1, sizeof(GLfloat) * 4 * 4);
-    GLfloat tempMatrix[4][4] = {{cosf(theta * x), -sinf(theta * x), 0.0f, 0.0f},
-                                {sinf(theta * x), cosf(theta * x), 0.0f, 0.0f},
-                                {0.0f, 0.0f, 1.0f, 0.0f},
-                                {0.0f, 0.0f, 0.0f, 1.0f}};
-    memcpy(matrix, tempMatrix, sizeof(tempMatrix));
+    Mat4<GLfloat> matrix;
+    matrix[0] = {cosf(theta * x), -sinf(theta * x), 0.0f, 0.0f};
+    matrix[1] = {sinf(theta * x), cosf(theta * x), 0.0f, 0.0f};
+    matrix[2] = {0.0f, 0.0f, 1.0f, 0.0f};
+    matrix[3] = {0.0f, 0.0f, 0.0f, 1.0f};
     return matrix;
 }
 
@@ -253,8 +245,8 @@ Render::Render(SDL_Window *window): skybox(Cube()) {
     int height, width;
     SDL_GetWindowSize(this->window, &width, &height);
     float aspect = width / height;
-    GLfloat *transMat_perspective = perspective_matrix(1, -20, 60, aspect);
-    glUniformMatrix4fv(transform_perspective, 1, GL_FALSE, transMat_perspective);
+    auto transMat_perspective = perspective_matrix(1, -20, 60, aspect);
+    glUniformMatrix4fv(transform_perspective, 1, GL_FALSE, transMat_perspective.data()->data());
 
     GLuint indices[] = {
             // front
@@ -290,15 +282,14 @@ Render::Render(SDL_Window *window): skybox(Cube()) {
 
 void Render::render_world(World *world) {
     // camera view matrix
-    GLfloat *transMat_camera_view = FPSViewRH(camera->position, camera->pitch, camera->yaw);
-    printf("Camera: x(%f), y(%f), z(%f) \n", camera->position.x, camera->position.y, camera->position.z);
+    auto transMat_camera_view = FPSViewRH(camera->position, camera->pitch, camera->yaw);
 
     // Draw
     glUseProgram(shader_program);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
     glClearColor(0.4f, 0.3f, 0.7f, 1.0f);
-    glUniformMatrix4fv(camera_view, 1, GL_FALSE, transMat_camera_view);
+    glUniformMatrix4fv(camera_view, 1, GL_FALSE, transMat_camera_view.data()->data());
 
     /** Render skybox **/
     glEnable(GL_CULL_FACE); // cull face
@@ -308,18 +299,18 @@ void Render::render_world(World *world) {
 
     // Model TODO: Make the skybox follow the player
     auto transMat_scaling = scaling_matrix(skybox.scale);
-    glUniformMatrix4fv(transform_scaling, 1, GL_TRUE, transMat_scaling);
+    glUniformMatrix4fv(transform_scaling, 1, GL_TRUE, transMat_scaling.data()->data());
 
     auto transMat_translation = translation_matrix(
             skybox.position.x, skybox.position.y, skybox.position.z);
-    glUniformMatrix4fv(transform_translation, 1, GL_TRUE, transMat_translation);
+    glUniformMatrix4fv(transform_translation, 1, GL_TRUE, transMat_translation.data()->data());
 
     auto transMat_x = transformation_matrix_x(0.0f);
-    glUniformMatrix4fv(transform_x, 1, GL_TRUE, transMat_x);
+    glUniformMatrix4fv(transform_x, 1, GL_TRUE, transMat_x.data()->data());
     auto transMat_y = transformation_matrix_y(0.0f);
-    glUniformMatrix4fv(transform_y, 1, GL_TRUE, transMat_y);
+    glUniformMatrix4fv(transform_y, 1, GL_TRUE, transMat_y.data()->data());
     auto transMat_z = transformation_matrix_z(0.0f);
-    glUniformMatrix4fv(transform_z, 1, GL_TRUE, transMat_z);
+    glUniformMatrix4fv(transform_z, 1, GL_TRUE, transMat_z.data()->data());
 
     // GOTTA BIND THE VAO TO TELL OPENGL WHERE THE INDICES ARE FROM
     glBindVertexArray(VAO);
@@ -338,31 +329,25 @@ void Render::render_world(World *world) {
 
             // Model
             transMat_scaling = scaling_matrix(cube.scale);
-            glUniformMatrix4fv(transform_scaling, 1, GL_TRUE, transMat_scaling);
+            glUniformMatrix4fv(transform_scaling, 1, GL_TRUE, transMat_scaling.data()->data());
 
             transMat_translation =
                     translation_matrix(cube.position.x, cube.position.y, cube.position.z);
             glUniformMatrix4fv(transform_translation, 1, GL_TRUE,
-                               transMat_translation);
+                               transMat_translation.data()->data());
 
             transMat_x = transformation_matrix_x(cube.theta_x);
-            glUniformMatrix4fv(transform_x, 1, GL_TRUE, transMat_x);
+            glUniformMatrix4fv(transform_x, 1, GL_TRUE, transMat_x.data()->data());
             transMat_y = transformation_matrix_y(cube.theta_y);
-            glUniformMatrix4fv(transform_y, 1, GL_TRUE, transMat_y);
+            glUniformMatrix4fv(transform_y, 1, GL_TRUE, transMat_y.data()->data());
             transMat_z = transformation_matrix_z(cube.theta_z);
-            glUniformMatrix4fv(transform_z, 1, GL_TRUE, transMat_z);
+            glUniformMatrix4fv(transform_z, 1, GL_TRUE, transMat_z.data()->data());
 
             // GOTTA BIND THE VAO TO TELL OPENGL WHERE THE INDICES ARE FROM
             glBindVertexArray(VAO);
             glDrawElements(GL_TRIANGLES, 6 * 6, GL_UNSIGNED_INT, 0);
         }
     }
-    free(transMat_camera_view); // FIXME: This is wasteful
-    free(transMat_x);
-    free(transMat_y);
-    free(transMat_z);
-    free(transMat_scaling);
-    free(transMat_translation);
 }
 
 Render::~Render() {
