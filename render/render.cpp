@@ -1,3 +1,5 @@
+#include <fstream>
+#include <iostream>
 #include "render.h"
 
 typedef enum { png, jpg } FileFormat;
@@ -36,40 +38,6 @@ GLuint load_cube_map(std::vector<std::string> faces, FileFormat file_format) {
         i++;
     }
     return texture;
-}
-
-Vec3 Render::camera_move_forward(const Camera *cam) {
-    Vec3 movement =
-            vec_scalar_multiplication(cam->direction, cam->movement_speed);
-    return vec_addition(cam->position, movement);
-}
-
-Vec3 Render::camera_move_backward(const Camera *cam) {
-    Vec3 movement =
-            vec_scalar_multiplication(cam->direction, cam->movement_speed);
-    return vec_subtraction(cam->position, movement);
-}
-
-Vec3 Render::camera_move_right(const Camera *cam) {
-    Vec3 movement = normalize(cross(cam->direction, cam->up));
-    return vec_addition(cam->position,
-                        vec_scalar_multiplication(movement, cam->movement_speed));
-}
-
-Vec3 Render::camera_move_left(const Camera *cam) {
-    Vec3 movement = normalize(cross(cam->direction, cam->up));
-    return vec_subtraction(
-            cam->position, vec_scalar_multiplication(movement, cam->movement_speed));
-}
-
-Vec3 Render::camera_direction(const Camera *cam) {
-    float rad = M_PI / 180;
-    float pitch = cam->pitch;
-    Vec3 result;
-    result.x = -sin(cam->yaw * rad) * cos(pitch * rad);
-    result.y = sin(pitch * rad);
-    result.z = -cos(cam->yaw * rad) * cos(pitch * rad);
-    return normalize(result);
 }
 
 // Camera combined rotation matrix (y, x) & translation matrix
@@ -141,38 +109,11 @@ GLfloat *Render::translation_matrix(float x, float y, float z) {
     return matrix;
 }
 
-// Converts a quad to vertices
-// 1 quad = 2 triangles => 4 vertices = 4 points & 4 colors
-GLfloat *Render::quad_to_floats(Quad *quad) {
-    GLfloat *floats = (GLfloat *) calloc(1, 4 * sizeof(Vertex));
-    int j = 0;
-    for (size_t i = 0; i < 4 * 9; i += 9) {
-        Vertex vertex = quad->vertices[j];
-        floats[i] = vertex.position.x;
-        floats[i + 1] = vertex.position.y;
-        floats[i + 2] = vertex.position.z;
-        floats[i + 3] = vertex.color.r;
-        floats[i + 4] = vertex.color.g;
-        floats[i + 5] = vertex.color.b;
-        floats[i + 6] = vertex.color.a;
-        floats[i + 7] = vertex.texCoord.x;
-        floats[i + 8] = vertex.texCoord.y;
-        j++;
-    }
-    return floats;
-}
-
 // Assumes the file exists and will seg. fault otherwise.
-const GLchar *Render::load_shader_source(std::string filename) {
-    assert(filename.c_str() != NULL);
-    FILE *file = std::fopen(filename.c_str(), "r"); // open
-    fseek(file, 0L, SEEK_END);                      // find the end
-    size_t size = ftell(file);                      // get the size in bytes
-    GLchar *shaderSource = (GLchar *) calloc(1, size);  // allocate enough bytes
-    rewind(file);                                   // go back to file beginning
-    fread(shaderSource, size, sizeof(char), file);  // read each char into our block
-    fclose(file);                                   // close the stream
-    return shaderSource;
+const std::string Render::load_shader_source(std::string filename) {
+    std::ifstream ifs(filename);
+    return std::string((std::istreambuf_iterator<char>(ifs)),
+                              (std::istreambuf_iterator<char>()));
 }
 
 // Transformation matrix for the y-plane
@@ -209,7 +150,7 @@ GLfloat *Render::transformation_matrix_z(float theta) {
     return matrix;
 }
 
-Render::Render(SDL_Window *window) {
+Render::Render(SDL_Window *window): skybox(Cube()) {
     glewExperimental = (GLboolean) true;
     glewInit();
 
@@ -228,33 +169,33 @@ Render::Render(SDL_Window *window) {
                                              "res/sky/back.jpg",  "res/sky/front.jpg"};
     this->textures[SKYBOX] = load_cube_map(skybox_faces, jpg);
 
+    // Upload only one cube's quads since the model is the same for all cubes
+    Color4 colors[] = {Color4::clear(), Color4::clear(), Color4::clear(), Color4::clear()};
+    Cube cube = Cube(colors);
+
     GLuint VBO;                         // VBO - vertex buffer object
     glGenBuffers(1, &VBO);              // generate a 'name for the object'
     glBindBuffer(GL_ARRAY_BUFFER, VBO); // bind/make VBO the active object
-    glBufferData(GL_ARRAY_BUFFER, sizeof(Quad) * 2, NULL,
+    glBufferData(GL_ARRAY_BUFFER, cube.size_of_vertices(), NULL,
                  GL_STATIC_DRAW); // reserve a large buffer for cube quads
     this->VBO = VBO;
 
-    // Upload only one cube's quads since the model is the same for all cubes
-    Color4 colors[] = {new_color_clear(), new_color_clear(), new_color_clear(), new_color_clear()};
-    Cube *cube = new_cube(colors);
     for (size_t i = 0; i < 2; i++) {
-        Quad quad = cube->quads[i];
-        GLfloat *data = quad_to_floats(&quad);
-        glBufferSubData(GL_ARRAY_BUFFER, i * sizeof(Quad), sizeof(Quad), data);
+        Quad quad = cube.quads[i];
+        auto vector = quad.to_floats();
+        glBufferSubData(GL_ARRAY_BUFFER, i * quad.size_of_vertices(), quad.size_of_vertices(), vector.data());
     }
-    this->VBO = VBO;
 
-    const GLchar *vertexShaderSource =
-            load_shader_source("shaders/block/vertex-shader.glsl");
+    auto vertexShaderSource =
+            load_shader_source("shaders/block/vertex-shader.glsl").c_str();
     GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
     glCompileShader(vertexShader);
     GLint vertexShaderStatus;
     glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &vertexShaderStatus);
 
-    const GLchar *fragmentShaderSource =
-            load_shader_source("shaders/block/fragment-shader.glsl");
+    auto fragmentShaderSource =
+            load_shader_source("shaders/block/fragment-shader.glsl").c_str();
     GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
     glCompileShader(fragmentShader);
@@ -315,7 +256,8 @@ Render::Render(SDL_Window *window) {
     GLfloat *transMat_perspective = perspective_matrix(1, -20, 60, aspect);
     glUniformMatrix4fv(transform_perspective, 1, GL_FALSE, transMat_perspective);
 
-    GLuint indices[] = {// front
+    GLuint indices[] = {
+            // front
             0, 1, 2, 2, 3, 0,
             // right
             1, 5, 6, 6, 2, 1,
@@ -335,44 +277,24 @@ Render::Render(SDL_Window *window) {
                  GL_STATIC_DRAW);
 
     /****** Skybox ******/
-    Cube *skybox = new_cube(colors);
-    skybox->scale = 80.0f;
+    Cube skybox = Cube(colors);
+    skybox.scale = 80.0f;
     this->skybox = skybox;
 
     // Camera
-    Camera *camera = (Camera *) calloc(1, sizeof(Camera));
-    Vec3 eye = {0.0f, 0.0f, 1.0f};     // cam position
-    Vec3 center = {0.0f, 0.0f, -1.0f}; // position of where the cam is looking
-    Vec3 up = {0.0, 1.0f, 0.0f};       // world up
-    camera->position = eye;
-    camera->direction = center;
-    camera->up = up;
-    camera->movement_speed = 0.5f;
-    this->camera = camera;
+    Vec3 position  = {0.0f, 0.0f, 1.0f};  // cam position
+    Vec3 direction = {0.0f, 0.0f, -1.0f}; // position of where the cam is looking
+    Vec3 world_up  = {0.0, 1.0f, 0.0f};   // world up
+    this->camera = std::make_shared<Camera>(position, direction, world_up);
 }
 
 void Render::render_world(World *world) {
-    Cube *skybox = this->skybox;
-    GLuint VAO = this->VAO;
-    GLuint camera_view = this->camera_view;
-    GLuint transform_x = this->transform_x;
-    GLuint transform_y = this->transform_y;
-    GLuint transform_z = this->transform_z;
-    GLuint transform_translation = this->transform_translation;
-    GLuint transform_scaling = this->transform_scaling;
-    Camera *camera = this->camera;
-
-    GLfloat *transMat_x;
-    GLfloat *transMat_y;
-    GLfloat *transMat_z;
-    GLfloat *transMat_scaling;
-    GLfloat *transMat_translation;
-
     // camera view matrix
-    GLfloat *transMat_camera_view = this->FPSViewRH(camera->position, camera->pitch, camera->yaw);
+    GLfloat *transMat_camera_view = FPSViewRH(camera->position, camera->pitch, camera->yaw);
+    printf("Camera: x(%f), y(%f), z(%f) \n", camera->position.x, camera->position.y, camera->position.z);
 
     // Draw
-    glUseProgram(this->shader_program);
+    glUseProgram(shader_program);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
     glClearColor(0.4f, 0.3f, 0.7f, 1.0f);
@@ -382,21 +304,21 @@ void Render::render_world(World *world) {
     glEnable(GL_CULL_FACE); // cull face
     glCullFace(GL_FRONT);   // cull back face
     glFrontFace(GL_CCW);    // GL_CCW for counter clock-wise
-    glBindTexture(GL_TEXTURE_CUBE_MAP, this->textures[SKYBOX]);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, textures[SKYBOX]);
 
     // Model TODO: Make the skybox follow the player
-    transMat_scaling = scaling_matrix(skybox->scale);
+    auto transMat_scaling = scaling_matrix(skybox.scale);
     glUniformMatrix4fv(transform_scaling, 1, GL_TRUE, transMat_scaling);
 
-    transMat_translation = translation_matrix(
-            skybox->position.x, skybox->position.y, skybox->position.z);
+    auto transMat_translation = translation_matrix(
+            skybox.position.x, skybox.position.y, skybox.position.z);
     glUniformMatrix4fv(transform_translation, 1, GL_TRUE, transMat_translation);
 
-    transMat_x = transformation_matrix_x(0.0f);
+    auto transMat_x = transformation_matrix_x(0.0f);
     glUniformMatrix4fv(transform_x, 1, GL_TRUE, transMat_x);
-    transMat_y = transformation_matrix_y(0.0f);
+    auto transMat_y = transformation_matrix_y(0.0f);
     glUniformMatrix4fv(transform_y, 1, GL_TRUE, transMat_y);
-    transMat_z = transformation_matrix_z(0.0f);
+    auto transMat_z = transformation_matrix_z(0.0f);
     glUniformMatrix4fv(transform_z, 1, GL_TRUE, transMat_z);
 
     // GOTTA BIND THE VAO TO TELL OPENGL WHERE THE INDICES ARE FROM
@@ -408,13 +330,11 @@ void Render::render_world(World *world) {
     glCullFace(GL_BACK);    // cull back face
     glFrontFace(GL_CCW);    // GL_CCW for counter clock-wise
 
-    for (size_t j = 0; j < World::MAX_CHUNKS; j++) {
-        Chunk *chunk = world->chunks[j];
+    for (auto chunk : world->chunks) {
         for (size_t i = 0; i < chunk->numCubes; i++) {
             Cube cube = chunk->blocks[i];
 
-            // TODO: Blocks should be able to have different textures.
-            glBindTexture(GL_TEXTURE_CUBE_MAP, this->textures[cube.texture]);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, textures[cube.texture]);
 
             // Model
             transMat_scaling = scaling_matrix(cube.scale);
@@ -437,7 +357,6 @@ void Render::render_world(World *world) {
             glDrawElements(GL_TRIANGLES, 6 * 6, GL_UNSIGNED_INT, 0);
         }
     }
-
     free(transMat_camera_view); // FIXME: This is wasteful
     free(transMat_x);
     free(transMat_y);
