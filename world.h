@@ -2,6 +2,8 @@
 #define MEINEKRAFT_WORLD_H
 
 #include <stdint.h>
+#include <cmath>
+#include <cstdlib>
 #include "math/vector.h"
 #include "render/primitives.h"
 
@@ -18,8 +20,7 @@ public:
     World();
     ~World();
 
-    static const uint8_t MAX_CHUNKS = 9; // Max # of chunks in the world at the same time
-    Chunk *chunks[MAX_CHUNKS];
+    std::vector<Chunk *> chunks;
 
     void world_tick(double delta);
 
