@@ -3,7 +3,7 @@ project(MeineKraft)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
-set(SOURCE_FILES main.cpp render/render.cpp render/render.h math/vector.h world.cpp world.h render/primitives.h)
+set(SOURCE_FILES main.cpp render/render.cpp render/render.h math/vector.h world.cpp world.h render/primitives.h render/camera.cpp render/camera.h)
 add_executable(MeineKraft ${SOURCE_FILES})
 
 find_package(GLEW REQUIRED)
