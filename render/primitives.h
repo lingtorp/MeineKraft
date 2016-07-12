@@ -2,34 +2,85 @@
 #define MEINEKRAFT_PRIMITIVES_H
 
 #include <SDL_opengl.h>
+#include <memory>
 #include <cstdlib>
 #include "../math/vector.h"
 
 // Colors
-struct Color4 { GLfloat r, g, b, a; };
-
-static inline Color4 new_color(GLfloat r, GLfloat g, GLfloat b, GLfloat a) {
-    Color4 color;
-    color.r = r;
-    color.g = g;
-    color.b = b;
-    color.a = a;
-    return color;
-}
-
-static inline Color4 new_color_clear()  { return new_color(0.0f, 0.0f, 0.0f, 0.0f); }
-static inline Color4 new_color_red()    { return new_color(1.0f, 0.0f, 0.0f, 1.0f); }
-static inline Color4 new_color_blue()   { return new_color(0.0f, 1.0f, 0.0f, 1.0f); }
-static inline Color4 new_color_green()  { return new_color(0.0f, 0.0f, 1.0f, 1.0f); }
-static inline Color4 new_color_yellow() { return new_color(1.0f, 1.0f, 0.0f, 1.0f); }
-
-struct Vertex {
-    Point3 position;
-    Color4 color;
-    Point2 texCoord;
+struct Color4 {
+    GLfloat r, g, b, a = 0;
+    Color4(): r(0), g(0), b(0), a(0) {};
+    Color4(GLfloat r, GLfloat g, GLfloat b, GLfloat a): r(r), g(g), b(b), a(a) {};
+    inline static Color4 clear()  { return Color4(0.0f, 0.0f, 0.0f, 0.0f); }
+    inline static Color4 red()    { return Color4(1.0f, 0.0f, 0.0f, 1.0f); }
+    inline static Color4 blue()   { return Color4(0.0f, 1.0f, 0.0f, 1.0f); }
+    inline static Color4 green()  { return Color4(0.0f, 0.0f, 1.0f, 1.0f); }
+    inline static Color4 yellow() { return Color4(1.0f, 1.0f, 0.0f, 1.0f); }
 };
 
-struct Quad { Vertex vertices[4]; };
+struct Vertex {
+    Point3 position = {};
+    Color4 color = {};
+    Point2 texCoord = {};
+    Vertex(): position{}, color{}, texCoord{} {};
+    Vertex(Point3 position, Color4 color, Point2 texCoord):
+            position(position), color(color), texCoord(texCoord) {};
+};
+
+struct Mesh {
+    std::vector<Vertex> vertices;
+    std::vector<int8_t> indices;
+
+    Mesh(): vertices(std::vector<Vertex>()), indices(std::vector<int8_t>()) { };
+
+    Mesh(std::vector<Vertex> vertices, std::vector<int8_t> indices):
+            vertices(vertices), indices(indices) {};
+
+    // Converts a quad to vertices
+    // 1 quad = 2 triangles => 4 vertices = 4 points & 4 colors
+    std::vector<GLfloat> to_floats() {
+        std::vector<GLfloat> floats;
+        int j = 0;
+        for (auto vertex : vertices) {
+            floats.push_back(vertex.position.x);
+            floats.push_back(vertex.position.y);
+            floats.push_back(vertex.position.z);
+            floats.push_back(vertex.color.r);
+            floats.push_back(vertex.color.g);
+            floats.push_back(vertex.color.b);
+            floats.push_back(vertex.color.a);
+            floats.push_back(vertex.texCoord.x);
+            floats.push_back(vertex.texCoord.y);
+            j++;
+        }
+        return floats;
+    }
+
+    /// OpenGL size of vertices uploaded to OpenGL
+    size_t size_of_vertices() {
+        size_t size = 0;
+        for (auto vertex : vertices) {
+            size += sizeof(vertex);
+        }
+        return size;
+    }
+};
+
+// Input: 4 points, 4 colors
+//  d ----- c   <-- Point & color pairs
+//  |       |
+//  a ----- b   0 = a, 1 = b, 2 = c, 3 = d
+struct Quad: Mesh {
+    Quad(): Mesh() {};
+    Quad(Point3 points[4], Color4 colors[4], Point2 texCoords[4]): Mesh() {
+        vertices.push_back(Vertex(points[0], colors[0], texCoords[0]));
+        vertices.push_back(Vertex(points[1], colors[1], texCoords[1]));
+        vertices.push_back(Vertex(points[2], colors[2], texCoords[2]));
+        vertices.push_back(Vertex(points[3], colors[3], texCoords[3]));
+        indices.push_back(0); indices.push_back(1);
+        indices.push_back(2); indices.push_back(3);
+    };
+};
 
 typedef enum { SKYBOX, DIRT, GRASS, AIR } Texture;
 
@@ -39,63 +90,46 @@ struct Cube {
     GLfloat scale;
     GLfloat theta_x, theta_y, theta_z; // Rotation in object space
     Texture texture;
+
+    Cube(): quads{Quad(), Quad()} {};
+
+    Cube(Color4 *colors): quads{} {
+        scale = 1.0f;
+        texture = Texture::GRASS;
+        Point3 a = Point3(-0.5f, -0.5f, 0.5f);
+        Point3 b = Point3(0.5f, -0.5f, 0.5f);
+        Point3 c = Point3(0.5f, 0.5f, 0.5f);
+        Point3 d = Point3(-0.5f, 0.5f, 0.5f);
+        Point3 vertices1[] = {a, b, c, d};
+        Point2 tex_a = Point2(0.0f, 0.0f);
+        Point2 tex_b = Point2(1.0f, 0.0f);
+        Point2 tex_c = Point2(1.0f, 1.0f);
+        Point2 tex_d = Point2(0.0f, 1.0f);
+        Point2 texCoords1[] = {tex_a, tex_b, tex_c, tex_d};
+        quads[0] = Quad(vertices1, colors, texCoords1);
+
+        Point3 e = Point3(-0.5f, -0.5f, -0.5f);
+        Point3 f = Point3(0.5f, -0.5f, -0.5f);
+        Point3 g = Point3(0.5f, 0.5f, -0.5f);
+        Point3 h = Point3(-0.5f, 0.5f, -0.5f);
+        Point3 vertices2[] = {e, f, g, h};
+        Point2 tex_e = Point2(1.0f, 0.0f);
+        Point2 tex_f = Point2(0.0f, 0.0f);
+        Point2 tex_g = Point2(0.0f, 1.0f);
+        Point2 tex_h = Point2(1.0f, 1.0f);
+        Point2 texCoords2[] = {tex_e, tex_f, tex_g, tex_h};
+        quads[1] = Quad(vertices2, colors, texCoords2);
+        position = Point3(0.0f, 0.0f, 0.0f);
+    }
+
+    /// OpenGL size of vertices of the Quads to be uploaded to OpenGL
+    size_t size_of_vertices() {
+        size_t size = 0;
+        for (auto quad : quads) {
+            size += quad.size_of_vertices();
+        }
+        return size;
+    }
 };
-
-static Vertex new_vertex(Point3 point, Color4 color, Point2 texCoord) {
-    Vertex vertex;
-    vertex.color = color;
-    vertex.position = point;
-    vertex.texCoord = texCoord;
-    return vertex;
-}
-
-// Input: 4 points, 4 colors
-//  d ----- c   <-- Point & color pairs
-//  |       |
-//  a ----- b   0 = a, 1 = b, 2 = c, 3 = d
-static Quad new_quad(Point3 *points, Color4 *colors, Point2 *texCoords) {
-    Quad quad;
-    Point3 a = points[0];
-    Point3 b = points[1];
-    Point3 c = points[2];
-    Point3 d = points[3];
-    quad.vertices[0] = new_vertex(a, colors[0], texCoords[0]);
-    quad.vertices[1] = new_vertex(b, colors[1], texCoords[1]);
-    quad.vertices[2] = new_vertex(c, colors[2], texCoords[2]);
-    quad.vertices[3] = new_vertex(d, colors[3], texCoords[3]);
-    return quad;
-}
-
-static Cube *new_cube(Color4 *colors) {
-    Cube *cube = (Cube *) calloc(1, sizeof(Cube));
-    cube->scale = 1.0f;
-    Point3 a = new_point3(-0.5f, -0.5f, 0.5f);
-    Point3 b = new_point3(0.5f, -0.5f, 0.5f);
-    Point3 c = new_point3(0.5f, 0.5f, 0.5f);
-    Point3 d = new_point3(-0.5f, 0.5f, 0.5f);
-    Point3 vertices1[] = {a, b, c, d};
-    Point2 tex_a = new_point2(0.0f, 0.0f);
-    Point2 tex_b = new_point2(1.0f, 0.0f);
-    Point2 tex_c = new_point2(1.0f, 1.0f);
-    Point2 tex_d = new_point2(0.0f, 1.0f);
-    Point2 texCoords1[] = {tex_a, tex_b, tex_c, tex_d};
-    Quad quad1 = new_quad(vertices1, colors, texCoords1);
-    cube->quads[0] = quad1;
-
-    Point3 e = new_point3(-0.5f, -0.5f, -0.5f);
-    Point3 f = new_point3(0.5f, -0.5f, -0.5f);
-    Point3 g = new_point3(0.5f, 0.5f, -0.5f);
-    Point3 h = new_point3(-0.5f, 0.5f, -0.5f);
-    Point3 vertices2[] = {e, f, g, h};
-    Point2 tex_e = new_point2(1.0f, 0.0f);
-    Point2 tex_f = new_point2(0.0f, 0.0f);
-    Point2 tex_g = new_point2(0.0f, 1.0f);
-    Point2 tex_h = new_point2(1.0f, 1.0f);
-    Point2 texCoords2[] = {tex_e, tex_f, tex_g, tex_h};
-    Quad quad2 = new_quad(vertices2, colors, texCoords2);
-    cube->quads[1] = quad2;
-    cube->position = new_point3(0.0f, 0.0f, 0.0f);
-    return cube;
-}
 
 #endif //MEINEKRAFT_PRIMITIVES_H
