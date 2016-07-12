@@ -7,14 +7,13 @@ int main() {
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
     SDL_Window *window = SDL_CreateWindow(
-            "", 0, 0, 1920, 1080,
+            "", 0, 0, 700, 700,
             SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_MOUSE_CAPTURE);
     SDL_GLContext context = SDL_GL_CreateContext(window);
     atexit(IMG_Quit);
     IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG); // init sdl2_image
 
     Render render{window};
-    Camera *camera = render.camera;
 
     World world{};
 
@@ -32,43 +31,23 @@ int main() {
         while (SDL_PollEvent(&event)) {
             switch (event.type) {
                 case SDL_MOUSEMOTION:
-                    camera->pitch += event.motion.yrel;
-                    camera->yaw += event.motion.xrel;
-                    camera->direction = render.camera_direction(camera);
+                    render.camera->pitch += event.motion.yrel;
+                    render.camera->yaw += event.motion.xrel;
+                    render.camera->direction = render.camera->update_direction();
                     break;
                 case SDL_KEYDOWN:
                     switch (event.key.keysym.sym) {
-                        case SDLK_LEFT:
-                            camera->yaw -= camera->movement_speed * delta;
-                            camera->direction = render.camera_direction(camera);
-                            break;
-                        case SDLK_RIGHT:
-                            camera->yaw += camera->movement_speed * delta;
-                            camera->direction = render.camera_direction(camera);
-                            break;
-                        case SDLK_UP:
-                            camera->pitch += camera->movement_speed * delta;
-                            camera->direction = render.camera_direction(camera);
-                            break;
-                        case SDLK_DOWN:
-                            camera->pitch -= camera->movement_speed * delta;
-                            camera->direction = render.camera_direction(camera);
-                            break;
                         case SDLK_w:
-                            camera->position =
-                                    vec_scalar_multiplication(render.camera_move_forward(camera), delta);
+                            render.camera->position = render.camera->move_forward(delta);
                             break;
                         case SDLK_a:
-                            camera->position =
-                                    vec_scalar_multiplication(render.camera_move_left(camera), delta);
+                            render.camera->position = render.camera->move_left(delta);
                             break;
                         case SDLK_s:
-                            camera->position =
-                                    vec_scalar_multiplication(render.camera_move_backward(camera), delta);
+                            render.camera->position = render.camera->move_backward(delta);
                             break;
                         case SDLK_d:
-                            camera->position =
-                                    vec_scalar_multiplication(render.camera_move_right(camera), delta);
+                            render.camera->position = render.camera->move_right(delta);
                             break;
                     }
                     break;
