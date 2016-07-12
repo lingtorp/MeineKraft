@@ -19,11 +19,11 @@ struct Color4 {
 };
 
 struct Vertex {
-    Point3 position = {};
+    Vec3 position = {};
     Color4 color = {};
-    Point2 texCoord = {};
+    Vec2 texCoord = {};
     Vertex(): position{}, color{}, texCoord{} {};
-    Vertex(Point3 position, Color4 color, Point2 texCoord):
+    Vertex(Vec3 position, Color4 color, Vec2 texCoord):
             position(position), color(color), texCoord(texCoord) {};
 };
 
@@ -72,7 +72,7 @@ struct Mesh {
 //  a ----- b   0 = a, 1 = b, 2 = c, 3 = d
 struct Quad: Mesh {
     Quad(): Mesh() {};
-    Quad(Point3 points[4], Color4 colors[4], Point2 texCoords[4]): Mesh() {
+    Quad(Vec3 points[4], Color4 colors[4], Vec2 texCoords[4]): Mesh() {
         vertices.push_back(Vertex(points[0], colors[0], texCoords[0]));
         vertices.push_back(Vertex(points[1], colors[1], texCoords[1]));
         vertices.push_back(Vertex(points[2], colors[2], texCoords[2]));
@@ -86,7 +86,7 @@ typedef enum { SKYBOX, DIRT, GRASS, AIR } Texture;
 
 struct Cube {
     Quad quads[2];
-    Point3 position; // Center point of the cube
+    Vec3 position; // Center point of the cube
     GLfloat scale;
     GLfloat theta_x, theta_y, theta_z; // Rotation in object space
     Texture texture;
@@ -96,30 +96,30 @@ struct Cube {
     Cube(Color4 *colors): quads{} {
         scale = 1.0f;
         texture = Texture::GRASS;
-        Point3 a = Point3(-0.5f, -0.5f, 0.5f);
-        Point3 b = Point3(0.5f, -0.5f, 0.5f);
-        Point3 c = Point3(0.5f, 0.5f, 0.5f);
-        Point3 d = Point3(-0.5f, 0.5f, 0.5f);
-        Point3 vertices1[] = {a, b, c, d};
-        Point2 tex_a = Point2(0.0f, 0.0f);
-        Point2 tex_b = Point2(1.0f, 0.0f);
-        Point2 tex_c = Point2(1.0f, 1.0f);
-        Point2 tex_d = Point2(0.0f, 1.0f);
-        Point2 texCoords1[] = {tex_a, tex_b, tex_c, tex_d};
+        Vec3 a = Vec3(-0.5f, -0.5f, 0.5f);
+        Vec3 b = Vec3(0.5f, -0.5f, 0.5f);
+        Vec3 c = Vec3(0.5f, 0.5f, 0.5f);
+        Vec3 d = Vec3(-0.5f, 0.5f, 0.5f);
+        Vec3 vertices1[] = {a, b, c, d};
+        Vec2 tex_a = Vec2(0.0f, 0.0f);
+        Vec2 tex_b = Vec2(1.0f, 0.0f);
+        Vec2 tex_c = Vec2(1.0f, 1.0f);
+        Vec2 tex_d = Vec2(0.0f, 1.0f);
+        Vec2 texCoords1[] = {tex_a, tex_b, tex_c, tex_d};
         quads[0] = Quad(vertices1, colors, texCoords1);
 
-        Point3 e = Point3(-0.5f, -0.5f, -0.5f);
-        Point3 f = Point3(0.5f, -0.5f, -0.5f);
-        Point3 g = Point3(0.5f, 0.5f, -0.5f);
-        Point3 h = Point3(-0.5f, 0.5f, -0.5f);
-        Point3 vertices2[] = {e, f, g, h};
-        Point2 tex_e = Point2(1.0f, 0.0f);
-        Point2 tex_f = Point2(0.0f, 0.0f);
-        Point2 tex_g = Point2(0.0f, 1.0f);
-        Point2 tex_h = Point2(1.0f, 1.0f);
-        Point2 texCoords2[] = {tex_e, tex_f, tex_g, tex_h};
+        Vec3 e = Vec3(-0.5f, -0.5f, -0.5f);
+        Vec3 f = Vec3(0.5f, -0.5f, -0.5f);
+        Vec3 g = Vec3(0.5f, 0.5f, -0.5f);
+        Vec3 h = Vec3(-0.5f, 0.5f, -0.5f);
+        Vec3 vertices2[] = {e, f, g, h};
+        Vec2 tex_e = Vec2(1.0f, 0.0f);
+        Vec2 tex_f = Vec2(0.0f, 0.0f);
+        Vec2 tex_g = Vec2(0.0f, 1.0f);
+        Vec2 tex_h = Vec2(1.0f, 1.0f);
+        Vec2 texCoords2[] = {tex_e, tex_f, tex_g, tex_h};
         quads[1] = Quad(vertices2, colors, texCoords2);
-        position = Point3(0.0f, 0.0f, 0.0f);
+        position = Vec3(0.0f, 0.0f, 0.0f);
     }
 
     /// OpenGL size of vertices of the Quads to be uploaded to OpenGL

@@ -4,19 +4,17 @@
 #include <SDL2/SDL_opengl.h>
 #include <math.h>
 
-struct Point3 {
+struct Vec3 {
     GLfloat x, y, z = 0.0f;
-    Point3(GLfloat x, GLfloat y, GLfloat z): x(x), y(y), z(z) {};
-    Point3(): x(0), y(0), z(0) {};
+    Vec3(GLfloat x, GLfloat y, GLfloat z): x(x), y(y), z(z) {};
+    Vec3(): x(0), y(0), z(0) {};
 };
-typedef Point3 Vec3;
 
-struct Point2 {
+struct Vec2 {
     GLfloat x, y = 0.0f;
-    Point2(GLfloat x, GLfloat y): x(x), y(y) {};
-    Point2(): x(0), y(0) {};
+    Vec2(GLfloat x, GLfloat y): x(x), y(y) {};
+    Vec2(): x(0), y(0) {};
 };
-typedef Point2 Vec2;
 
 static inline GLfloat dot(Vec3 v, Vec3 u) { return v.x * u.x + v.y * u.y + v.z * u.z; }
 
@@ -59,7 +57,7 @@ static inline Vec3 vec_scalar_multiplication(Vec3 v, double s) {
 
 // result = v x u
 static inline Vec3 cross(Vec3 v, Vec3 u) {
-    Vec3 result = Point3();
+    Vec3 result = Vec3();
     result.x = v.y * u.z - v.z * u.y;
     result.y = v.z * u.x - v.x * u.z;
     result.z = v.x * u.y - v.y * u.x;
@@ -67,7 +65,7 @@ static inline Vec3 cross(Vec3 v, Vec3 u) {
 }
 
 static inline Vec3 zero_vec() {
-    Vec3 result = Point3();
+    Vec3 result = Vec3();
     result.x = 0.0f;
     result.y = 0.0f;
     result.z = 0.0f;
