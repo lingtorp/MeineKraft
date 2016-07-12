@@ -19,12 +19,13 @@ int main() {
     World world{};
 
     bool DONE = false;
-    uint32_t last_tick = 0, current_tick, delta;
+    uint32_t last_tick = SDL_GetTicks(), current_tick, delta;
 
     while (!DONE) {
         current_tick = SDL_GetTicks();
+        delta = current_tick - last_tick;
         last_tick = current_tick;
-        delta = SDL_TICKS_PASSED(last_tick, current_tick);
+        printf("Delta: %u \n", delta);
 
         // Process input
         SDL_Event event;
