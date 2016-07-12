@@ -24,8 +24,8 @@ Vec3 Camera::move_left(double delta) const {
             position, vec_scalar_multiplication(movement, movement_speed)), delta);
 }
 
-Vec3 Camera::update_direction() const {
-    double rad = M_PI / 180;
+Vec3 Camera::recalculate_direction() const {
+    float rad = M_PI / 180;
     Vec3 result;
     result.x = -sin(yaw * rad) * cos(pitch * rad);
     result.y = sin(pitch * rad);

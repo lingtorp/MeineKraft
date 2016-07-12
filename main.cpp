@@ -24,7 +24,7 @@ int main() {
         current_tick = SDL_GetTicks();
         delta = current_tick - last_tick;
         last_tick = current_tick;
-        printf("Delta: %u \n", delta);
+        printf("Delta: %u ms \n", delta);
 
         // Process input
         SDL_Event event;
@@ -33,7 +33,7 @@ int main() {
                 case SDL_MOUSEMOTION:
                     render.camera->pitch += event.motion.yrel;
                     render.camera->yaw += event.motion.xrel;
-                    render.camera->direction = render.camera->update_direction();
+                    render.camera->direction = render.camera->recalculate_direction();
                     break;
                 case SDL_KEYDOWN:
                     switch (event.key.keysym.sym) {

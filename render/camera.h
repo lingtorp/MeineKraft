@@ -7,7 +7,7 @@ class Camera {
 public:
     Vec3 direction, position, up;
     GLfloat pitch, yaw;
-    GLfloat movement_speed;
+    GLfloat movement_speed; // meters per milliseconds
 
     Camera(Vec3 position, Vec3 direction, Vec3 world_up):
             position(position), direction(direction), up(world_up),
@@ -17,7 +17,7 @@ public:
     Vec3 move_backward(double delta) const;
     Vec3 move_right(double delta) const;
     Vec3 move_left(double delta) const;
-    Vec3 update_direction() const;
+    Vec3 recalculate_direction() const;
 };
 
 #endif //MEINEKRAFT_CAMERA_H
