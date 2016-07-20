@@ -40,7 +40,6 @@ struct Mesh {
     // 1 quad = 2 triangles => 4 vertices = 4 points & 4 colors
     std::vector<GLfloat> to_floats() {
         std::vector<GLfloat> floats;
-        int j = 0;
         for (auto vertex : vertices) {
             floats.push_back(vertex.position.x);
             floats.push_back(vertex.position.y);
@@ -51,7 +50,6 @@ struct Mesh {
             floats.push_back(vertex.color.a);
             floats.push_back(vertex.texCoord.x);
             floats.push_back(vertex.texCoord.y);
-            j++;
         }
         return floats;
     }
