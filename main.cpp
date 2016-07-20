@@ -58,7 +58,7 @@ int main() {
         }
 
         // Tick/update the world
-        world.world_tick(delta);
+        world.world_tick(delta, render.camera);
 
         // Render the world
         render.render_world(&world);
