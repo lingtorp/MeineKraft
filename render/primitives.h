@@ -57,12 +57,8 @@ struct Mesh {
     }
 
     /// OpenGL size of vertices uploaded to OpenGL
-    size_t size_of_vertices() {
-        size_t size = 0;
-        for (auto vertex : vertices) {
-            size += sizeof(vertex);
-        }
-        return size;
+    size_t byte_size_of_vertices() {
+        return sizeof(Vertex) * vertices.size();
     }
 };
 

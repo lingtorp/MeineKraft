@@ -12,15 +12,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="6bc5fc86-71f7-49b9-98bc-7e35285f3f76" name="Default" comment="">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/render/chunk.cpp" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/render/chunk.h" />
-      <change type="MOVED" beforePath="$PROJECT_DIR$/world.cpp" afterPath="$PROJECT_DIR$/world/world.cpp" />
-      <change type="MOVED" beforePath="$PROJECT_DIR$/world.h" afterPath="$PROJECT_DIR$/world/world.h" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/MeineKraft.iml" afterPath="$PROJECT_DIR$/.idea/MeineKraft.iml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/CMakeLists.txt" afterPath="$PROJECT_DIR$/CMakeLists.txt" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/main.cpp" afterPath="$PROJECT_DIR$/main.cpp" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/math/vector.h" afterPath="$PROJECT_DIR$/math/vector.h" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/world.cpp" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/world.h" afterPath="" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/render/primitives.h" afterPath="$PROJECT_DIR$/render/primitives.h" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/render/render.cpp" afterPath="$PROJECT_DIR$/render/render.cpp" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/render/render.h" afterPath="$PROJECT_DIR$/render/render.h" />
@@ -48,11 +41,16 @@
         <entry file="file://$PROJECT_DIR$/math/vector.h">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="143">
-              <caret line="17" column="34" selection-start-line="17" selection-start-column="34" selection-end-line="17" selection-end-column="34" />
+              <caret line="17" column="20" selection-start-line="17" selection-start-column="20" selection-end-line="17" selection-end-column="20" />
               <folding>
                 <element signature="e#57#85#0" expanded="true" />
                 <element signature="e#113#125#0" expanded="true" />
                 <element signature="e#244#256#0" expanded="true" />
+                <marker date="1468999425000" expanded="true" signature="876:1080" ph="{...}" />
+                <marker date="1468999425000" expanded="true" signature="1133:1198" ph="{...}" />
+                <marker date="1468999425000" expanded="true" signature="1248:1313" ph="{...}" />
+                <marker date="1468999425000" expanded="true" signature="1378:1437" ph="{...}" />
+                <marker date="1468999425000" expanded="true" signature="1498:1660" ph="{...}" />
               </folding>
             </state>
           </provider>
@@ -90,7 +88,7 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="render.cpp" pinned="false" current-in-tab="true">
+      <file leaf-file-name="render.cpp" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/render/render.cpp">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="560">
@@ -134,11 +132,11 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="primitives.h" pinned="false" current-in-tab="false">
+      <file leaf-file-name="primitives.h" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/render/primitives.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="508">
-              <caret line="58" column="50" selection-start-line="58" selection-start-column="50" selection-end-line="58" selection-end-column="50" />
+            <state relative-caret-position="247">
+              <caret line="22" column="23" selection-start-line="22" selection-start-column="23" selection-end-line="22" selection-end-column="23" />
               <folding>
                 <element signature="e#65#88#0" expanded="true" />
               </folding>
@@ -177,8 +175,8 @@
         <option value="$PROJECT_DIR$/world/world.cpp" />
         <option value="$PROJECT_DIR$/world/world.h" />
         <option value="$PROJECT_DIR$/main.cpp" />
-        <option value="$PROJECT_DIR$/render/primitives.h" />
         <option value="$PROJECT_DIR$/render/render.cpp" />
+        <option value="$PROJECT_DIR$/render/primitives.h" />
       </list>
     </option>
   </component>
@@ -361,12 +359,12 @@
     <layout>
       <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.225" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
-      <window_info id="Messages" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.11581921" sideWeight="0.49583334" order="7" side_tool="false" content_ui="tabs" />
-      <window_info id="CMake" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.16897081" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
+      <window_info id="Messages" active="true" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.11581921" sideWeight="0.49583334" order="7" side_tool="false" content_ui="tabs" />
+      <window_info id="CMake" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.16854991" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32956687" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
       <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32949308" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32956687" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.20056497" sideWeight="0.50416666" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.20056497" sideWeight="0.50416666" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
       <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.3559322" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
@@ -459,6 +457,11 @@
             <element signature="e#57#85#0" expanded="true" />
             <element signature="e#113#125#0" expanded="true" />
             <element signature="e#244#256#0" expanded="true" />
+            <marker date="1468999425000" expanded="true" signature="876:1080" ph="{...}" />
+            <marker date="1468999425000" expanded="true" signature="1133:1198" ph="{...}" />
+            <marker date="1468999425000" expanded="true" signature="1248:1313" ph="{...}" />
+            <marker date="1468999425000" expanded="true" signature="1378:1437" ph="{...}" />
+            <marker date="1468999425000" expanded="true" signature="1498:1660" ph="{...}" />
           </folding>
         </state>
       </provider>
@@ -527,6 +530,11 @@
             <element signature="e#57#85#0" expanded="true" />
             <element signature="e#113#125#0" expanded="true" />
             <element signature="e#244#256#0" expanded="true" />
+            <marker date="1468999425000" expanded="true" signature="876:1080" ph="{...}" />
+            <marker date="1468999425000" expanded="true" signature="1133:1198" ph="{...}" />
+            <marker date="1468999425000" expanded="true" signature="1248:1313" ph="{...}" />
+            <marker date="1468999425000" expanded="true" signature="1378:1437" ph="{...}" />
+            <marker date="1468999425000" expanded="true" signature="1498:1660" ph="{...}" />
           </folding>
         </state>
       </provider>
@@ -595,6 +603,11 @@
             <element signature="e#57#85#0" expanded="true" />
             <element signature="e#113#125#0" expanded="true" />
             <element signature="e#244#256#0" expanded="true" />
+            <marker date="1468999425000" expanded="true" signature="876:1080" ph="{...}" />
+            <marker date="1468999425000" expanded="true" signature="1133:1198" ph="{...}" />
+            <marker date="1468999425000" expanded="true" signature="1248:1313" ph="{...}" />
+            <marker date="1468999425000" expanded="true" signature="1378:1437" ph="{...}" />
+            <marker date="1468999425000" expanded="true" signature="1498:1660" ph="{...}" />
           </folding>
         </state>
       </provider>
@@ -653,6 +666,11 @@
             <element signature="e#57#85#0" expanded="true" />
             <element signature="e#113#125#0" expanded="true" />
             <element signature="e#244#256#0" expanded="true" />
+            <marker date="1468999425000" expanded="true" signature="876:1080" ph="{...}" />
+            <marker date="1468999425000" expanded="true" signature="1133:1198" ph="{...}" />
+            <marker date="1468999425000" expanded="true" signature="1248:1313" ph="{...}" />
+            <marker date="1468999425000" expanded="true" signature="1378:1437" ph="{...}" />
+            <marker date="1468999425000" expanded="true" signature="1498:1660" ph="{...}" />
           </folding>
         </state>
       </provider>
@@ -786,11 +804,16 @@
     <entry file="file://$PROJECT_DIR$/math/vector.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="143">
-          <caret line="17" column="34" selection-start-line="17" selection-start-column="34" selection-end-line="17" selection-end-column="34" />
+          <caret line="17" column="20" selection-start-line="17" selection-start-column="20" selection-end-line="17" selection-end-column="20" />
           <folding>
             <element signature="e#57#85#0" expanded="true" />
             <element signature="e#113#125#0" expanded="true" />
             <element signature="e#244#256#0" expanded="true" />
+            <marker date="1468999425000" expanded="true" signature="876:1080" ph="{...}" />
+            <marker date="1468999425000" expanded="true" signature="1133:1198" ph="{...}" />
+            <marker date="1468999425000" expanded="true" signature="1248:1313" ph="{...}" />
+            <marker date="1468999425000" expanded="true" signature="1378:1437" ph="{...}" />
+            <marker date="1468999425000" expanded="true" signature="1498:1660" ph="{...}" />
           </folding>
         </state>
       </provider>
@@ -829,22 +852,22 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/render/primitives.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="508">
-          <caret line="58" column="50" selection-start-line="58" selection-start-column="50" selection-end-line="58" selection-end-column="50" />
-          <folding>
-            <element signature="e#65#88#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/render/render.cpp">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="560">
           <caret line="189" column="40" selection-start-line="189" selection-start-column="40" selection-end-line="189" selection-end-column="40" />
           <folding>
             <element signature="e#0#18#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/render/primitives.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="247">
+          <caret line="22" column="23" selection-start-line="22" selection-start-column="23" selection-end-line="22" selection-end-column="23" />
+          <folding>
+            <element signature="e#65#88#0" expanded="true" />
           </folding>
         </state>
       </provider>
