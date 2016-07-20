@@ -246,24 +246,11 @@ Render::Render(SDL_Window *window): skybox(Cube()) {
     auto transMat_perspective = perspective_matrix(1, -20, 60, aspect);
     glUniformMatrix4fv(transform_perspective, 1, GL_FALSE, transMat_perspective.data());
 
-    GLuint indices[] = {
-            // front
-            0, 1, 2, 2, 3, 0,
-            // right
-            1, 5, 6, 6, 2, 1,
-            // back
-            7, 6, 5, 5, 4, 7,
-            // left
-            4, 0, 3, 3, 7, 4,
-            // bot
-            4, 5, 1, 1, 0, 4,
-            // top
-            3, 2, 6, 6, 7, 3};
 
     GLuint EBO;
     glGenBuffers(1, &EBO);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, cube.byte_size_of_indices(), cube.indices.data(),
                  GL_STATIC_DRAW);
 
     /****** Skybox ******/
