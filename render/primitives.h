@@ -78,51 +78,39 @@ struct Quad: Mesh {
 
 typedef enum { SKYBOX, DIRT, GRASS, AIR } Texture;
 
-struct Cube {
-    Quad quads[2];
-    Vec3 position; // Center point of the cube
-    GLfloat scale;
+struct Cube: Mesh {
+    Vec3 position; // Lower left corner of the cube in world space
     GLfloat theta_x, theta_y, theta_z; // Rotation in object space
+    GLfloat scale;
     Texture texture;
 
-    Cube(): quads{Quad(), Quad()} {};
-
-    Cube(Color4 *colors): quads{} {
-        scale = 1.0f;
-        texture = Texture::GRASS;
+    Cube(): Mesh(), scale(1.0), texture(Texture::GRASS), position(Vec3::ZERO()),
+            theta_x(0.0), theta_y(0.0), theta_z(0.0) {
         Vec3 a = Vec3(-0.5f, -0.5f, 0.5f);
         Vec3 b = Vec3(0.5f, -0.5f, 0.5f);
         Vec3 c = Vec3(0.5f, 0.5f, 0.5f);
         Vec3 d = Vec3(-0.5f, 0.5f, 0.5f);
-        Vec3 vertices1[] = {a, b, c, d};
         Vec2 tex_a = Vec2(0.0f, 0.0f);
         Vec2 tex_b = Vec2(1.0f, 0.0f);
         Vec2 tex_c = Vec2(1.0f, 1.0f);
         Vec2 tex_d = Vec2(0.0f, 1.0f);
-        Vec2 texCoords1[] = {tex_a, tex_b, tex_c, tex_d};
-        quads[0] = Quad(vertices1, colors, texCoords1);
+        vertices.push_back(Vertex(a, tex_a));
+        vertices.push_back(Vertex(b, tex_b));
+        vertices.push_back(Vertex(c, tex_c));
+        vertices.push_back(Vertex(d, tex_d));
 
         Vec3 e = Vec3(-0.5f, -0.5f, -0.5f);
         Vec3 f = Vec3(0.5f, -0.5f, -0.5f);
         Vec3 g = Vec3(0.5f, 0.5f, -0.5f);
         Vec3 h = Vec3(-0.5f, 0.5f, -0.5f);
-        Vec3 vertices2[] = {e, f, g, h};
         Vec2 tex_e = Vec2(1.0f, 0.0f);
         Vec2 tex_f = Vec2(0.0f, 0.0f);
         Vec2 tex_g = Vec2(0.0f, 1.0f);
         Vec2 tex_h = Vec2(1.0f, 1.0f);
-        Vec2 texCoords2[] = {tex_e, tex_f, tex_g, tex_h};
-        quads[1] = Quad(vertices2, colors, texCoords2);
-        position = Vec3(0.0f, 0.0f, 0.0f);
-    }
-
-    /// OpenGL size of vertices of the Quads to be uploaded to OpenGL
-    size_t size_of_vertices() {
-        size_t size = 0;
-        for (auto quad : quads) {
-            size += quad.size_of_vertices();
-        }
-        return size;
+        vertices.push_back(Vertex(e, tex_e));
+        vertices.push_back(Vertex(f, tex_f));
+        vertices.push_back(Vertex(g, tex_g));
+        vertices.push_back(Vertex(h, tex_h));
     }
 };
 
