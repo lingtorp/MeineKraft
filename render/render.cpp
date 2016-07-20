@@ -25,6 +25,8 @@ GLuint load_cube_map(std::vector<std::string> faces, FileFormat file_format) {
         case jpg:
             internalFormat = GL_RGB;
             break;
+        default:
+            internalFormat = GL_RGBA;
     }
 
     int i = 0;
@@ -167,7 +169,7 @@ Render::Render(SDL_Window *window): skybox(Cube()) {
     GLuint VBO;                         // VBO - vertex buffer object
     glGenBuffers(1, &VBO);              // generate a 'name for the object'
     glBindBuffer(GL_ARRAY_BUFFER, VBO); // bind/make VBO the active object
-    glBufferData(GL_ARRAY_BUFFER, cube.size_of_vertices(), NULL,
+    glBufferData(GL_ARRAY_BUFFER, cube.byte_size_of_vertices(), NULL,
                  GL_STATIC_DRAW); // reserve a large buffer for cube quads
     this->VBO = VBO;
 
@@ -242,7 +244,7 @@ Render::Render(SDL_Window *window): skybox(Cube()) {
     SDL_GetWindowSize(this->window, &width, &height);
     float aspect = width / height;
     auto transMat_perspective = perspective_matrix(1, -20, 60, aspect);
-    glUniformMatrix4fv(transform_perspective, 1, GL_FALSE, transMat_perspective.data()->data());
+    glUniformMatrix4fv(transform_perspective, 1, GL_FALSE, transMat_perspective.data());
 
     GLuint indices[] = {
             // front
@@ -285,7 +287,7 @@ void Render::render_world(World *world) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
     glClearColor(0.4f, 0.3f, 0.7f, 1.0f);
-    glUniformMatrix4fv(camera_view, 1, GL_FALSE, transMat_camera_view.data()->data());
+    glUniformMatrix4fv(camera_view, 1, GL_FALSE, transMat_camera_view.data());
 
     /** Render skybox **/
     glEnable(GL_CULL_FACE); // cull face
@@ -295,18 +297,18 @@ void Render::render_world(World *world) {
 
     // Model TODO: Make the skybox follow the player
     auto transMat_scaling = scaling_matrix(skybox.scale);
-    glUniformMatrix4fv(transform_scaling, 1, GL_TRUE, transMat_scaling.data()->data());
+    glUniformMatrix4fv(transform_scaling, 1, GL_TRUE, transMat_scaling.data());
 
     auto transMat_translation = translation_matrix(
             skybox.position.x, skybox.position.y, skybox.position.z);
-    glUniformMatrix4fv(transform_translation, 1, GL_TRUE, transMat_translation.data()->data());
+    glUniformMatrix4fv(transform_translation, 1, GL_TRUE, transMat_translation.data());
 
     auto transMat_x = transformation_matrix_x(0.0f);
-    glUniformMatrix4fv(transform_x, 1, GL_TRUE, transMat_x.data()->data());
+    glUniformMatrix4fv(transform_x, 1, GL_TRUE, transMat_x.data());
     auto transMat_y = transformation_matrix_y(0.0f);
-    glUniformMatrix4fv(transform_y, 1, GL_TRUE, transMat_y.data()->data());
+    glUniformMatrix4fv(transform_y, 1, GL_TRUE, transMat_y.data());
     auto transMat_z = transformation_matrix_z(0.0f);
-    glUniformMatrix4fv(transform_z, 1, GL_TRUE, transMat_z.data()->data());
+    glUniformMatrix4fv(transform_z, 1, GL_TRUE, transMat_z.data());
 
     // GOTTA BIND THE VAO TO TELL OPENGL WHERE THE INDICES ARE FROM
     glBindVertexArray(VAO);
@@ -325,19 +327,19 @@ void Render::render_world(World *world) {
 
             // Model
             transMat_scaling = scaling_matrix(cube.scale);
-            glUniformMatrix4fv(transform_scaling, 1, GL_TRUE, transMat_scaling.data()->data());
+            glUniformMatrix4fv(transform_scaling, 1, GL_TRUE, transMat_scaling.data());
 
             transMat_translation =
                     translation_matrix(cube.position.x, cube.position.y, cube.position.z);
             glUniformMatrix4fv(transform_translation, 1, GL_TRUE,
-                               transMat_translation.data()->data());
+                               transMat_translation.data());
 
             transMat_x = transformation_matrix_x(cube.theta_x);
-            glUniformMatrix4fv(transform_x, 1, GL_TRUE, transMat_x.data()->data());
+            glUniformMatrix4fv(transform_x, 1, GL_TRUE, transMat_x.data());
             transMat_y = transformation_matrix_y(cube.theta_y);
-            glUniformMatrix4fv(transform_y, 1, GL_TRUE, transMat_y.data()->data());
+            glUniformMatrix4fv(transform_y, 1, GL_TRUE, transMat_y.data());
             transMat_z = transformation_matrix_z(cube.theta_z);
-            glUniformMatrix4fv(transform_z, 1, GL_TRUE, transMat_z.data()->data());
+            glUniformMatrix4fv(transform_z, 1, GL_TRUE, transMat_z.data());
 
             // GOTTA BIND THE VAO TO TELL OPENGL WHERE THE INDICES ARE FROM
             glBindVertexArray(VAO);
