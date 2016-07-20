@@ -4,6 +4,7 @@
 #include <SDL_opengl.h>
 #include <memory>
 #include <cstdlib>
+#include <vector>
 #include "../math/vector.h"
 
 // Colors
@@ -23,6 +24,7 @@ struct Vertex {
     Color4 color = {};
     Vec2 texCoord = {};
     Vertex(): position{}, color{}, texCoord{} {};
+    Vertex(Vec3 position, Vec2 texCoord): position(position), texCoord(texCoord), color{} {};
     Vertex(Vec3 position, Color4 color, Vec2 texCoord):
             position(position), color(color), texCoord(texCoord) {};
 };
