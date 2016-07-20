@@ -162,8 +162,7 @@ Render::Render(SDL_Window *window): skybox(Cube()) {
     this->textures[SKYBOX] = load_cube_map(skybox_faces, jpg);
 
     // Upload only one cube's quads since the model is the same for all cubes
-    Color4 colors[] = {Color4::clear(), Color4::clear(), Color4::clear(), Color4::clear()};
-    Cube cube = Cube(colors);
+    Cube cube = Cube();
 
     GLuint VBO;                         // VBO - vertex buffer object
     glGenBuffers(1, &VBO);              // generate a 'name for the object'
@@ -266,8 +265,8 @@ Render::Render(SDL_Window *window): skybox(Cube()) {
                  GL_STATIC_DRAW);
 
     /****** Skybox ******/
-    Cube skybox = Cube(colors);
-    skybox.scale = 80.0f;
+    Cube skybox = Cube();
+    skybox.scale = 20.0f;
     this->skybox = skybox;
 
     // Camera
