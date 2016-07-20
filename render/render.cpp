@@ -151,17 +151,15 @@ Render::Render(SDL_Window *window): skybox(Cube()) {
     this->window = window;
 
     // Load all block & skybox textures
-    this->textures = (GLuint *) calloc(4, sizeof(GLuint));
-
     std::vector<std::string> cube_faces = {"res/blocks/grass/bottom.jpg", "res/blocks/grass/bottom.jpg",
                                            "res/blocks/grass/bottom.jpg", "res/blocks/grass/bottom.jpg",
                                            "res/blocks/grass/bottom.jpg", "res/blocks/grass/bottom.jpg"};
-    this->textures[GRASS] = load_cube_map(cube_faces, jpg);
+    this->textures[Texture::GRASS] = load_cube_map(cube_faces, jpg);
 
     std::vector<std::string> skybox_faces = {"res/sky/right.jpg", "res/sky/left.jpg",
                                              "res/sky/top.jpg",   "res/sky/bottom.jpg",
                                              "res/sky/back.jpg",  "res/sky/front.jpg"};
-    this->textures[SKYBOX] = load_cube_map(skybox_faces, jpg);
+    this->textures[Texture::SKYBOX] = load_cube_map(skybox_faces, jpg);
 
     // Upload only one cube's quads since the model is the same for all cubes
     Cube cube = Cube();
@@ -246,7 +244,6 @@ Render::Render(SDL_Window *window): skybox(Cube()) {
     auto transMat_perspective = perspective_matrix(1, -20, 60, aspect);
     glUniformMatrix4fv(transform_perspective, 1, GL_FALSE, transMat_perspective.data());
 
-
     GLuint EBO;
     glGenBuffers(1, &EBO);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
@@ -280,7 +277,7 @@ void Render::render_world(const World *world) {
     glEnable(GL_CULL_FACE); // cull face
     glCullFace(GL_FRONT);   // cull back face
     glFrontFace(GL_CCW);    // GL_CCW for counter clock-wise
-    glBindTexture(GL_TEXTURE_CUBE_MAP, textures[SKYBOX]);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, textures[Texture::SKYBOX]);
 
     // Model TODO: Make the skybox follow the player
     auto transMat_scaling = scaling_matrix(skybox.scale);

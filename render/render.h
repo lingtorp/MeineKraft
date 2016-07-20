@@ -12,6 +12,7 @@
 #include <vector>
 #include <cstdio>
 #include <cstdlib>
+#include <unordered_map>
 
 #include "../math/vector.h"
 #include "primitives.h"
@@ -38,7 +39,7 @@ public:
 private:
     SDL_Window *window;
     Cube skybox;
-    GLuint *textures;
+    std::unordered_map<Texture, GLuint, std::hash<int>> textures;
     GLuint VBO;
     GLuint VAO;
     GLuint camera_view;
