@@ -172,11 +172,8 @@ Render::Render(SDL_Window *window): skybox(Cube()) {
                  GL_STATIC_DRAW); // reserve a large buffer for cube quads
     this->VBO = VBO;
 
-    for (size_t i = 0; i < 2; i++) {
-        Quad quad = cube.quads[i];
-        auto vector = quad.to_floats();
-        glBufferSubData(GL_ARRAY_BUFFER, i * quad.size_of_vertices(), quad.size_of_vertices(), vector.data());
-    }
+    auto vector = cube.to_floats();
+    glBufferSubData(GL_ARRAY_BUFFER, 0, cube.byte_size_of_vertices(), vector.data());
 
     auto vertexShaderSource =
             load_shader_source("shaders/block/vertex-shader.glsl").c_str();
