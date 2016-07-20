@@ -2,15 +2,17 @@
 <module type="CPP_MODULE" version="4">
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/world/world.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/world/world.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/math/vector.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/main.cpp" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/world.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/world.cpp" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/render/chunk.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/render/camera.cpp" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/render/camera.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/render/chunk.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/render/render.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/render/primitives.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/render/render.cpp" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/render/camera.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/CMakeLists.txt" isTestSource="false" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
