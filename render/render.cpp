@@ -320,9 +320,7 @@ void Render::render_world(World *world) {
     glFrontFace(GL_CCW);    // GL_CCW for counter clock-wise
 
     for (auto chunk : world->chunks) {
-        for (size_t i = 0; i < chunk->numCubes; i++) {
-            Cube cube = chunk->blocks[i];
-
+        for (auto cube : chunk.blocks) {
             glBindTexture(GL_TEXTURE_CUBE_MAP, textures[cube.texture]);
 
             // Model
