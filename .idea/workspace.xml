@@ -13,9 +13,8 @@
   <component name="ChangeListManager">
     <list default="true" id="6bc5fc86-71f7-49b9-98bc-7e35285f3f76" name="Default" comment="">
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/render/primitives.h" afterPath="$PROJECT_DIR$/render/primitives.h" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/render/render.cpp" afterPath="$PROJECT_DIR$/render/render.cpp" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/world/world.cpp" afterPath="$PROJECT_DIR$/world/world.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/render/render.h" afterPath="$PROJECT_DIR$/render/render.h" />
     </list>
     <ignored path="MeineKraft.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -36,31 +35,15 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file leaf-file-name="vector.h" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/math/vector.h">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="323">
-              <caret line="17" column="20" selection-start-line="17" selection-start-column="20" selection-end-line="17" selection-end-column="20" />
-              <folding>
-                <element signature="e#57#85#0" expanded="true" />
-                <element signature="e#113#125#0" expanded="true" />
-                <element signature="e#244#256#0" expanded="true" />
-                <marker date="1468999425000" expanded="true" signature="876:1080" ph="{...}" />
-                <marker date="1468999425000" expanded="true" signature="1133:1198" ph="{...}" />
-                <marker date="1468999425000" expanded="true" signature="1248:1313" ph="{...}" />
-                <marker date="1468999425000" expanded="true" signature="1378:1437" ph="{...}" />
-                <marker date="1468999425000" expanded="true" signature="1498:1660" ph="{...}" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
       <file leaf-file-name="world.cpp" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/world/world.cpp">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="361">
-              <caret line="19" column="72" selection-start-line="19" selection-start-column="72" selection-end-line="19" selection-end-column="72" />
-              <folding />
+              <caret line="20" column="0" selection-start-line="20" selection-start-column="0" selection-end-line="20" selection-end-column="0" />
+              <folding>
+                <marker date="1469004100000" expanded="true" signature="35:380" ph="{...}" />
+                <marker date="1469004100000" expanded="true" signature="473:478" ph="{...}" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -87,11 +70,11 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="render.cpp" pinned="false" current-in-tab="false">
+      <file leaf-file-name="render.cpp" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/render/render.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="275">
-              <caret line="252" column="56" selection-start-line="252" selection-start-column="47" selection-end-line="252" selection-end-column="67" />
+            <state relative-caret-position="702">
+              <caret line="300" column="24" selection-start-line="300" selection-start-column="24" selection-end-line="300" selection-end-column="24" />
               <folding>
                 <element signature="e#0#18#0" expanded="true" />
               </folding>
@@ -99,21 +82,31 @@
           </provider>
         </entry>
       </file>
+      <file leaf-file-name="render.h" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/render/render.h">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="171">
+              <caret line="24" column="31" selection-start-line="24" selection-start-column="31" selection-end-line="24" selection-end-column="31" />
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
       <file leaf-file-name="chunk.h" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/render/chunk.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="266">
+            <state relative-caret-position="247">
               <caret line="14" column="20" selection-start-line="14" selection-start-column="16" selection-end-line="14" selection-end-column="20" />
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="primitives.h" pinned="false" current-in-tab="true">
+      <file leaf-file-name="primitives.h" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/render/primitives.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="349">
-              <caret line="69" column="0" selection-start-line="69" selection-start-column="0" selection-end-line="69" selection-end-column="0" />
+            <state relative-caret-position="75">
+              <caret line="76" column="26" selection-start-line="76" selection-start-column="26" selection-end-line="76" selection-end-column="26" />
               <folding>
                 <element signature="e#65#88#0" expanded="true" />
               </folding>
@@ -165,15 +158,15 @@
         <option value="$PROJECT_DIR$/world/WorldCamera.h" />
         <option value="$PROJECT_DIR$/world/WorldCamera.cpp" />
         <option value="$PROJECT_DIR$/CMakeLists.txt" />
-        <option value="$PROJECT_DIR$/render/render.h" />
         <option value="$PROJECT_DIR$/render/chunk.cpp" />
         <option value="$PROJECT_DIR$/render/chunk.h" />
         <option value="$PROJECT_DIR$/math/vector.h" />
         <option value="$PROJECT_DIR$/world/world.h" />
-        <option value="$PROJECT_DIR$/render/render.cpp" />
         <option value="$PROJECT_DIR$/main.cpp" />
         <option value="$PROJECT_DIR$/world/world.cpp" />
+        <option value="$PROJECT_DIR$/render/render.cpp" />
         <option value="$PROJECT_DIR$/render/primitives.h" />
+        <option value="$PROJECT_DIR$/render/render.h" />
       </list>
     </option>
   </component>
@@ -408,7 +401,7 @@
       <breakpoints>
         <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
           <url>file://$PROJECT_DIR$/render/primitives.h</url>
-          <line>121</line>
+          <line>120</line>
           <option name="timeStamp" value="95" />
         </line-breakpoint>
       </breakpoints>
@@ -420,22 +413,6 @@
     <watches-manager />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/main.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="703">
-          <caret line="37" column="33" selection-start-line="37" selection-start-column="33" selection-end-line="37" selection-end-column="33" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/world/world.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="380">
-          <caret line="20" column="1" selection-start-line="20" selection-start-column="1" selection-end-line="20" selection-end-column="1" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/world/world.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="456">
@@ -475,7 +452,10 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="0">
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
+          <folding>
+            <marker date="1469004100000" expanded="true" signature="35:380" ph="{...}" />
+            <marker date="1469004100000" expanded="true" signature="473:478" ph="{...}" />
+          </folding>
         </state>
       </provider>
     </entry>
@@ -504,7 +484,7 @@
         <state relative-caret-position="418">
           <caret line="22" column="12" selection-start-line="22" selection-start-column="12" selection-end-line="22" selection-end-column="12" />
           <folding>
-            <element signature="e#77#97#0" expanded="true" />
+            <element signature="e#77#97#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -548,7 +528,10 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="532">
           <caret line="28" column="26" selection-start-line="28" selection-start-column="22" selection-end-line="28" selection-end-column="26" />
-          <folding />
+          <folding>
+            <marker date="1469004100000" expanded="true" signature="35:380" ph="{...}" />
+            <marker date="1469004100000" expanded="true" signature="473:478" ph="{...}" />
+          </folding>
         </state>
       </provider>
     </entry>
@@ -577,7 +560,7 @@
         <state relative-caret-position="380">
           <caret line="20" column="19" selection-start-line="20" selection-start-column="19" selection-end-line="20" selection-end-column="19" />
           <folding>
-            <element signature="e#77#97#0" expanded="true" />
+            <element signature="e#77#97#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -621,7 +604,10 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="323">
           <caret line="17" column="54" selection-start-line="17" selection-start-column="54" selection-end-line="17" selection-end-column="54" />
-          <folding />
+          <folding>
+            <marker date="1469004100000" expanded="true" signature="35:380" ph="{...}" />
+            <marker date="1469004100000" expanded="true" signature="473:478" ph="{...}" />
+          </folding>
         </state>
       </provider>
     </entry>
@@ -650,7 +636,7 @@
         <state relative-caret-position="627">
           <caret line="33" column="0" selection-start-line="33" selection-start-column="0" selection-end-line="33" selection-end-column="0" />
           <folding>
-            <element signature="e#77#97#0" expanded="true" />
+            <element signature="e#77#97#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -687,7 +673,7 @@
         <state relative-caret-position="0">
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
-            <element signature="e#77#97#0" expanded="true" />
+            <element signature="e#77#97#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -754,6 +740,7 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="456">
           <caret line="24" column="29" selection-start-line="24" selection-start-column="29" selection-end-line="24" selection-end-column="29" />
+          <folding />
         </state>
       </provider>
     </entry>
@@ -761,16 +748,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="875">
           <caret line="89" column="18" selection-start-line="89" selection-start-column="18" selection-end-line="89" selection-end-column="18" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/render/render.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="418">
-          <caret line="22" column="28" selection-start-line="22" selection-start-column="28" selection-end-line="22" selection-end-column="28" />
-          <folding>
-            <element signature="e#77#97#0" expanded="true" />
-          </folding>
         </state>
       </provider>
     </entry>
@@ -798,14 +775,6 @@
           <folding>
             <element signature="e#55#74#0" expanded="true" />
           </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/render/chunk.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="266">
-          <caret line="14" column="20" selection-start-line="14" selection-start-column="16" selection-end-line="14" selection-end-column="20" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -843,27 +812,62 @@
     <entry file="file://$PROJECT_DIR$/world/world.cpp">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="361">
-          <caret line="19" column="72" selection-start-line="19" selection-start-column="72" selection-end-line="19" selection-end-column="72" />
+          <caret line="20" column="0" selection-start-line="20" selection-start-column="0" selection-end-line="20" selection-end-column="0" />
+          <folding>
+            <marker date="1469004100000" expanded="true" signature="35:380" ph="{...}" />
+            <marker date="1469004100000" expanded="true" signature="473:478" ph="{...}" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file:///Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1/type_traits">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="303">
+          <caret line="989" column="0" selection-start-line="989" selection-start-column="0" selection-end-line="989" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file:///Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1/unordered_map">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="759">
+          <caret line="402" column="0" selection-start-line="402" selection-start-column="0" selection-end-line="402" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/render/chunk.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="247">
+          <caret line="14" column="20" selection-start-line="14" selection-start-column="16" selection-end-line="14" selection-end-column="20" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/render/primitives.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="75">
+          <caret line="76" column="26" selection-start-line="76" selection-start-column="26" selection-end-line="76" selection-end-column="26" />
+          <folding>
+            <element signature="e#65#88#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/render/render.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="171">
+          <caret line="24" column="31" selection-start-line="24" selection-start-column="31" selection-end-line="24" selection-end-column="31" />
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/render/render.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="275">
-          <caret line="252" column="56" selection-start-line="252" selection-start-column="47" selection-end-line="252" selection-end-column="67" />
+        <state relative-caret-position="702">
+          <caret line="300" column="24" selection-start-line="300" selection-start-column="24" selection-end-line="300" selection-end-column="24" />
           <folding>
             <element signature="e#0#18#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/render/primitives.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="349">
-          <caret line="69" column="0" selection-start-line="69" selection-start-column="0" selection-end-line="69" selection-end-column="0" />
-          <folding>
-            <element signature="e#65#88#0" expanded="true" />
           </folding>
         </state>
       </provider>
