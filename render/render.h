@@ -15,12 +15,12 @@
 
 #include "../math/vector.h"
 #include "primitives.h"
-#include "../world.h"
+#include "../world/world.h"
 #include "camera.h"
 
 class Render {
 public:
-    void render_world(World *world);
+    void render_world(const World *world);
     Render(SDL_Window *window);
     ~Render();
 
