@@ -31,11 +31,11 @@ struct Vertex {
 
 struct Mesh {
     std::vector<Vertex> vertices;
-    std::vector<int8_t> indices;
+    std::vector<GLuint> indices;
 
-    Mesh(): vertices(std::vector<Vertex>()), indices(std::vector<int8_t>()) { };
+    Mesh(): vertices(std::vector<Vertex>()), indices(std::vector<GLuint>()) {};
 
-    Mesh(std::vector<Vertex> vertices, std::vector<int8_t> indices):
+    Mesh(std::vector<Vertex> vertices, std::vector<GLuint> indices):
             vertices(vertices), indices(indices) {};
 
     // Converts a quad to vertices
@@ -56,9 +56,14 @@ struct Mesh {
         return floats;
     }
 
-    /// OpenGL size of vertices uploaded to OpenGL
+    /// Byte size of vertices to upload to OpenGL
     size_t byte_size_of_vertices() {
         return sizeof(Vertex) * vertices.size();
+    }
+
+    /// Byte size of indices to upload to OpenGL
+    size_t byte_size_of_indices() {
+        return sizeof(GLuint) * indices.size();
     }
 };
 
@@ -113,6 +118,19 @@ struct Cube: Mesh {
         vertices.push_back(Vertex(f, tex_f));
         vertices.push_back(Vertex(g, tex_g));
         vertices.push_back(Vertex(h, tex_h));
+
+        indices =  { // front
+                    0, 1, 2, 2, 3, 0,
+                    // right
+                    1, 5, 6, 6, 2, 1,
+                    // back
+                    7, 6, 5, 5, 4, 7,
+                    // left
+                    4, 0, 3, 3, 7, 4,
+                    // bot
+                    4, 5, 1, 1, 0, 4,
+                    // top
+                    3, 2, 6, 6, 7, 3};
     }
 };
 
