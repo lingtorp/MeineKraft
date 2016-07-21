@@ -175,17 +175,20 @@ Render::Render(SDL_Window *window): skybox(Cube()) {
     glBufferSubData(GL_ARRAY_BUFFER, 0, cube.byte_size_of_vertices(), vector.data());
 
     auto vertexShaderSource =
-            load_shader_source("shaders/block/vertex-shader.glsl").c_str();
+            load_shader_source("shaders/block/vertex-shader.glsl");
+    auto raw_str = vertexShaderSource.c_str();
+    std::cout << vertexShaderSource;
     GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+    glShaderSource(vertexShader, 1, &raw_str, NULL);
     glCompileShader(vertexShader);
     GLint vertexShaderStatus;
     glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &vertexShaderStatus);
 
     auto fragmentShaderSource =
-            load_shader_source("shaders/block/fragment-shader.glsl").c_str();
+            load_shader_source("shaders/block/fragment-shader.glsl");
+    raw_str = fragmentShaderSource.c_str();
     GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+    glShaderSource(fragmentShader, 1, &raw_str, NULL);
     glCompileShader(fragmentShader);
     GLint fragmentShaderStatus;
     glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &fragmentShaderStatus);
