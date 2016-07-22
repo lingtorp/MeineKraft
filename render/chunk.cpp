@@ -1,5 +1,6 @@
 #include "chunk.h"
 
+/// @param world_position World coordinates
 Chunk::Chunk(Vec3 world_position):
         position(world_position), numCubes(BLOCKS_PER_CHUNK), blocks(BLOCKS_PER_CHUNK) {
     GLfloat dim = cbrt(BLOCKS_PER_CHUNK);
