@@ -147,6 +147,7 @@ Mat4<GLfloat> Render::transformation_matrix_z(float theta) {
 Render::Render(SDL_Window *window): skybox(Cube()) {
     glewExperimental = (GLboolean) true;
     glewInit();
+    skybox.scale = 500.0f;
 
     this->window = window;
 
@@ -177,7 +178,6 @@ Render::Render(SDL_Window *window): skybox(Cube()) {
     auto vertexShaderSource =
             load_shader_source("shaders/block/vertex-shader.glsl");
     auto raw_str = vertexShaderSource.c_str();
-    std::cout << vertexShaderSource;
     GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertexShader, 1, &raw_str, NULL);
     glCompileShader(vertexShader);
@@ -252,11 +252,6 @@ Render::Render(SDL_Window *window): skybox(Cube()) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, cube.byte_size_of_indices(), cube.indices.data(),
                  GL_STATIC_DRAW);
-
-    /****** Skybox ******/
-    Cube skybox = Cube();
-    skybox.scale = 20.0f;
-    this->skybox = skybox;
 
     // Camera
     Vec3 position  = {0.0f, 0.0f, 1.0f};  // cam position
