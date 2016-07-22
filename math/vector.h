@@ -3,6 +3,7 @@
 
 #include <SDL2/SDL_opengl.h>
 #include <math.h>
+#include <ostream>
 
 template<typename T>
 struct Vec4 {
@@ -31,6 +32,15 @@ struct Vec3 {
     Vec3(GLfloat x, GLfloat y, GLfloat z): x(x), y(y), z(z) {};
     Vec3(): x(0), y(0), z(0) {};
     static Vec3 ZERO() { return Vec3(0.0, 0.0, 0.0); }
+
+    bool operator==(const Vec3 &rhs) {
+        return (x == rhs.x) && (y == rhs.y) && (z == rhs.z);
+    }
+
+    friend std::ostream &operator<<(std::ostream& os, const Vec3 &vec) {
+        os << "(x:" << vec.x << " y:" << vec.y << " z:" << vec.z << ")";
+        return os;
+    }
 };
 
 struct Vec2 {
