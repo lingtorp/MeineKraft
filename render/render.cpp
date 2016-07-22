@@ -278,12 +278,12 @@ void Render::render_world(const World *world) {
     glFrontFace(GL_CCW);    // GL_CCW for counter clock-wise
     glBindTexture(GL_TEXTURE_CUBE_MAP, textures[Texture::SKYBOX]);
 
-    // Model TODO: Make the skybox follow the player
+    // Model
     auto transMat_scaling = scaling_matrix(skybox.scale);
     glUniformMatrix4fv(transform_scaling, 1, GL_TRUE, transMat_scaling.data());
 
     auto transMat_translation = translation_matrix(
-            skybox.position.x, skybox.position.y, skybox.position.z);
+            camera->position.x, camera->position.y, camera->position.z);
     glUniformMatrix4fv(transform_translation, 1, GL_TRUE, transMat_translation.data());
 
     auto transMat_x = transformation_matrix_x(0.0f);
