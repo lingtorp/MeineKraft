@@ -266,7 +266,8 @@ Render::Render(SDL_Window *window): skybox(Cube()) {
 }
 
 void Render::render_world(const World *world) {
-    // camera view matrix
+    glEnable(GL_MULTISAMPLE);
+
     auto transMat_camera_view = FPSViewRH(camera->position, camera->pitch, camera->yaw);
 
     // Draw
