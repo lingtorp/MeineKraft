@@ -88,24 +88,6 @@ Mat4<GLfloat> perspective_matrix(float z_near, float z_far, float fov,
     return matrix;
 }
 
-Mat4<GLfloat> Render::scaling_matrix(float scale) {
-    Mat4<GLfloat> matrix;
-    matrix[0] = {scale, 0.0f, 0.0f, 0.0f};
-    matrix[1] = {0.0f, scale, 0.0f, 0.0f};
-    matrix[2] = {0.0f, 0.0f, scale, 0.0f};
-    matrix[3] = {0.0f, 0.0f, 0.0f, 1.0f};
-    return matrix;
-}
-
-Mat4<GLfloat> Render::translation_matrix(float x, float y, float z) {
-    Mat4<GLfloat> matrix;
-    matrix[0] = {1.0f, 0.0f, 0.0f, x};
-    matrix[1] = {0.0f, 1.0f, 0.0f, y};
-    matrix[2] = {0.0f, 0.0f, 1.0f, z};
-    matrix[3] = {0.0f, 0.0f, 0.0f, 1.0f};
-    return matrix;
-}
-
 // Assumes the file exists and will seg. fault otherwise.
 const std::string Render::load_shader_source(std::string filename) {
     std::ifstream ifs(filename);
