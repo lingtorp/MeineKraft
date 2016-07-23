@@ -31,8 +31,6 @@ public:
     Mat4<GLfloat> transformation_matrix_x(float theta);
     Mat4<GLfloat> transformation_matrix_y(float theta);
     Mat4<GLfloat> transformation_matrix_z(float theta);
-    Mat4<GLfloat> scaling_matrix(float scale);
-    Mat4<GLfloat> translation_matrix(float x, float y, float z);
 
     std::shared_ptr<Camera> camera;
 
@@ -40,15 +38,11 @@ private:
     SDL_Window *window;
     Cube skybox;
     std::unordered_map<Texture, GLuint, std::hash<int>> textures;
-    GLuint VBO;
-    GLuint VAO;
-    GLuint camera_view;
-    GLuint transform_x;
-    GLuint transform_y;
-    GLuint transform_z;
-    GLuint transform_translation;
-    GLuint transform_scaling;
-    GLuint shader_program;
+    GLuint gl_VBO;
+    GLuint gl_VAO;
+    GLuint gl_camera_view;
+    GLuint gl_model;
+    GLuint gl_shader_program;
 };
 
 #endif //MEINEKRAFT_RENDER_H

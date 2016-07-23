@@ -126,12 +126,10 @@ Mat4<GLfloat> Render::transformation_matrix_z(float theta) {
     return matrix;
 }
 
-Render::Render(SDL_Window *window): skybox(Cube()) {
+Render::Render(SDL_Window *window): skybox(Cube()), window(window) {
     glewExperimental = (GLboolean) true;
     glewInit();
     skybox.scale = 500.0f;
-
-    this->window = window;
 
     // Load all block & skybox textures
     std::vector<std::string> cube_faces = {"res/blocks/grass/bottom.jpg", "res/blocks/grass/bottom.jpg",
@@ -144,7 +142,7 @@ Render::Render(SDL_Window *window): skybox(Cube()) {
                                              "res/sky/back.jpg",  "res/sky/front.jpg"};
     this->textures[Texture::SKYBOX] = load_cube_map(skybox_faces, jpg);
 
-    // Upload only one cube's quads since the model is the same for all cubes
+    // Upload only one cube's quads since the gl_model is the same for all cubes
     Cube cube = Cube();
 
     GLuint VBO;                         // VBO - vertex buffer object
@@ -152,13 +150,13 @@ Render::Render(SDL_Window *window): skybox(Cube()) {
     glBindBuffer(GL_ARRAY_BUFFER, VBO); // bind/make VBO the active object
     glBufferData(GL_ARRAY_BUFFER, cube.byte_size_of_vertices(), NULL,
                  GL_STATIC_DRAW); // reserve a large buffer for cube quads
-    this->VBO = VBO;
+    this->gl_VBO = VBO;
 
     auto vector = cube.to_floats();
     glBufferSubData(GL_ARRAY_BUFFER, 0, cube.byte_size_of_vertices(), vector.data());
 
     auto vertexShaderSource =
-            load_shader_source("shaders/block/vertex-shader.glsl");
+            load_shader_source("/Users/AlexanderLingtorp/Google Drive/Repositories/MeineKraft/shaders/block/vertex-shader.glsl");
     auto raw_str = vertexShaderSource.c_str();
     GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertexShader, 1, &raw_str, NULL);
@@ -167,7 +165,7 @@ Render::Render(SDL_Window *window): skybox(Cube()) {
     glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &vertexShaderStatus);
 
     auto fragmentShaderSource =
-            load_shader_source("shaders/block/fragment-shader.glsl");
+            load_shader_source("/Users/AlexanderLingtorp/Google Drive/Repositories/MeineKraft/shaders/block/fragment-shader.glsl");
     raw_str = fragmentShaderSource.c_str();
     GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(fragmentShader, 1, &raw_str, NULL);
@@ -186,7 +184,7 @@ Render::Render(SDL_Window *window): skybox(Cube()) {
     glAttachShader(shaderProgram, fragmentShader);
     glLinkProgram(shaderProgram);
     glUseProgram(shaderProgram);
-    this->shader_program = shaderProgram;
+    this->gl_shader_program = shaderProgram;
 
     // Bind Vertex Array Object - OpenGL core REQUIRES a VERTEX ARRAY OBJECT in
     // order to render ANYTHING.
@@ -194,7 +192,7 @@ Render::Render(SDL_Window *window): skybox(Cube()) {
     GLuint VAO;
     glGenVertexArrays(1, &VAO);
     glBindVertexArray(VAO); // make the VAO the active one ..
-    this->VAO = VAO;
+    this->gl_VAO = VAO;
 
     // Then set our vertex attributes pointers, only doable AFTER linking
     GLuint positionAttrib = glGetAttribLocation(shaderProgram, "position");
@@ -235,16 +233,15 @@ Render::Render(SDL_Window *window): skybox(Cube()) {
 }
 
 void Render::render_world(const World *world) {
-    glEnable(GL_MULTISAMPLE);
-
-    auto transMat_camera_view = FPSViewRH(camera->position, camera->pitch, camera->yaw);
+    auto camera_view = FPSViewRH(camera->position, camera->pitch, camera->yaw);
 
     // Draw
-    glUseProgram(shader_program);
+    glUseProgram(gl_shader_program);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_MULTISAMPLE);
     glClearColor(0.4f, 0.3f, 0.7f, 1.0f);
-    glUniformMatrix4fv(camera_view, 1, GL_FALSE, transMat_camera_view.data());
+    glUniformMatrix4fv(gl_camera_view, 1, GL_FALSE, camera_view.data());
 
     /** Render skybox **/
     glEnable(GL_CULL_FACE); // cull face
@@ -259,8 +256,8 @@ void Render::render_world(const World *world) {
     glUniformMatrix4fv(gl_model, 1, GL_TRUE, model.data());
 
     // GOTTA BIND THE VAO TO TELL OPENGL WHERE THE INDICES ARE FROM
-    glBindVertexArray(VAO);
-    glDrawElements(GL_TRIANGLES, 6 * 6, GL_UNSIGNED_INT, 0);
+    glBindVertexArray(gl_VAO);
+    glDrawElements(GL_TRIANGLES, skybox.indices.size(), GL_UNSIGNED_INT, 0);
 
     /** Render cubes **/
     glEnable(GL_CULL_FACE); // cull face
@@ -281,13 +278,13 @@ void Render::render_world(const World *world) {
             glUniformMatrix4fv(gl_model, 1, GL_TRUE, model.data());
 
             // GOTTA BIND THE VAO TO TELL OPENGL WHERE THE INDICES ARE FROM
-            glBindVertexArray(VAO);
-            glDrawElements(GL_TRIANGLES, 6 * 6, GL_UNSIGNED_INT, 0);
+            glBindVertexArray(gl_VAO);
+            glDrawElements(GL_TRIANGLES, cube.indices.size(), GL_UNSIGNED_INT, 0);
         }
     }
 }
 
 Render::~Render() {
-    glDeleteVertexArrays(1, (const GLuint *) this->VAO);
-    glDeleteBuffers(1, (const GLuint *) this->VBO);
+    glDeleteVertexArrays(1, (const GLuint *) this->gl_VAO);
+    glDeleteBuffers(1, (const GLuint *) this->gl_VBO);
 }
