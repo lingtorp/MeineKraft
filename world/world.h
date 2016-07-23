@@ -12,7 +12,6 @@
 class World {
 public:
     World();
-    ~World();
 
     std::vector<Chunk> chunks;
 
