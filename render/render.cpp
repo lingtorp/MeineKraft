@@ -225,27 +225,19 @@ Render::Render(SDL_Window *window): skybox(Cube()) {
                           (const void *)offsetof(Vertex, color));
     glEnableVertexAttribArray(colorAttrib);
 
-    this->transform_x = glGetUniformLocation(shaderProgram, "transform_x");
-    this->transform_y = glGetUniformLocation(shaderProgram, "transform_y");
-    this->transform_z = glGetUniformLocation(shaderProgram, "transform_z");
-
     // Model
-    this->transform_translation =
-            glGetUniformLocation(shaderProgram, "transform_translation");
-    this->transform_scaling =
-            glGetUniformLocation(shaderProgram, "transform_scaling");
+    this->gl_model = glGetUniformLocation(shaderProgram, "model");
 
     // View / camera space
-    this->camera_view = glGetUniformLocation(shaderProgram, "camera_view");
+    this->gl_camera_view = glGetUniformLocation(shaderProgram, "camera_view");
 
     // Projection
-    GLuint transform_perspective =
-            glGetUniformLocation(shaderProgram, "transform_perspective");
+    GLuint projection = glGetUniformLocation(shaderProgram, "projection");
     int height, width;
     SDL_GetWindowSize(this->window, &width, &height);
     float aspect = width / height;
-    auto transMat_perspective = perspective_matrix(1, -20, 60, aspect);
-    glUniformMatrix4fv(transform_perspective, 1, GL_FALSE, transMat_perspective.data());
+    auto perspective_mat = perspective_matrix(1, -20, 60, aspect);
+    glUniformMatrix4fv(projection, 1, GL_FALSE, perspective_mat.data());
 
     GLuint EBO;
     glGenBuffers(1, &EBO);
@@ -279,19 +271,10 @@ void Render::render_world(const World *world) {
     glBindTexture(GL_TEXTURE_CUBE_MAP, textures[Texture::SKYBOX]);
 
     // Model
-    auto transMat_scaling = scaling_matrix(skybox.scale);
-    glUniformMatrix4fv(transform_scaling, 1, GL_TRUE, transMat_scaling.data());
-
-    auto transMat_translation = translation_matrix(
-            camera->position.x, camera->position.y, camera->position.z);
-    glUniformMatrix4fv(transform_translation, 1, GL_TRUE, transMat_translation.data());
-
-    auto transMat_x = transformation_matrix_x(0.0f);
-    glUniformMatrix4fv(transform_x, 1, GL_TRUE, transMat_x.data());
-    auto transMat_y = transformation_matrix_y(0.0f);
-    glUniformMatrix4fv(transform_y, 1, GL_TRUE, transMat_y.data());
-    auto transMat_z = transformation_matrix_z(0.0f);
-    glUniformMatrix4fv(transform_z, 1, GL_TRUE, transMat_z.data());
+    auto model = Mat4<GLfloat>();
+    model = model.translate(skybox.position);
+    model = model.scale(skybox.scale);
+    glUniformMatrix4fv(gl_model, 1, GL_TRUE, model.data());
 
     // GOTTA BIND THE VAO TO TELL OPENGL WHERE THE INDICES ARE FROM
     glBindVertexArray(VAO);
@@ -306,21 +289,14 @@ void Render::render_world(const World *world) {
         for (auto cube : chunk.blocks) {
             glBindTexture(GL_TEXTURE_CUBE_MAP, textures[cube.texture]);
 
-            // Model
-            transMat_scaling = scaling_matrix(cube.scale);
-            glUniformMatrix4fv(transform_scaling, 1, GL_TRUE, transMat_scaling.data());
-
-            transMat_translation =
-                    translation_matrix(cube.position.x, cube.position.y, cube.position.z);
-            glUniformMatrix4fv(transform_translation, 1, GL_TRUE,
-                               transMat_translation.data());
-
-            transMat_x = transformation_matrix_x(cube.theta_x);
-            glUniformMatrix4fv(transform_x, 1, GL_TRUE, transMat_x.data());
-            transMat_y = transformation_matrix_y(cube.theta_y);
-            glUniformMatrix4fv(transform_y, 1, GL_TRUE, transMat_y.data());
-            transMat_z = transformation_matrix_z(cube.theta_z);
-            glUniformMatrix4fv(transform_z, 1, GL_TRUE, transMat_z.data());
+            // Model - transform_z * transform_y * transform_x * transform_translation * transform_scaling
+            model = Mat4<GLfloat>();
+            model = model.translate(cube.position);
+            model = model.scale(cube.scale);
+            model = model * transformation_matrix_x(cube.theta_x);
+            model = model * transformation_matrix_y(cube.theta_y);
+            model = model * transformation_matrix_z(cube.theta_z);
+            glUniformMatrix4fv(gl_model, 1, GL_TRUE, model.data());
 
             // GOTTA BIND THE VAO TO TELL OPENGL WHERE THE INDICES ARE FROM
             glBindVertexArray(VAO);

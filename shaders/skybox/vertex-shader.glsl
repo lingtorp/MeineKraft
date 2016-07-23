@@ -3,18 +3,17 @@
 in vec3 position;
 
 // Model
-uniform mat4 transform_scaling;
-uniform mat4 transform_translation;
+uniform mat4 model;
 
 // View
 uniform mat4 camera_view;
 
 // Projection
-uniform mat4 transform_perspective;
+uniform mat4 projection;
 
 out vec3 fTexcoord;
 
 void main() {
-  gl_Position = transform_perspective * camera_view * transform_scaling * vec4(position, 1.0f);
+  gl_Position = projection * camera_view * model * vec4(position, 1.0f);
   fTexcoord = normalize(position);
 }
