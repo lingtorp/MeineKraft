@@ -72,16 +72,6 @@ struct Mat4 {
         return *this * matrix;
     }
 
-    /// Scales the x, y, z of the Mat4 except w
-    Mat4<T> scale(Vec3 vec) const {
-        Mat4<T> matrix;
-        matrix[0] = {vec.x, 0.0f, 0.0f, 0.0f};
-        matrix[1] = {0.0f, vec.y, 0.0f, 0.0f};
-        matrix[2] = {0.0f, 0.0f, vec.z, 0.0f};
-        matrix[3] = {0.0f, 0.0f, 0.0f, 1.0f};
-        return *this * matrix;
-    }
-
     /// Scales the matrix the same over all axis except w
     Mat4<T> scale(T scale) const {
         Mat4<T> matrix;
@@ -92,8 +82,33 @@ struct Mat4 {
         return *this * matrix;
     }
 
+    /// Transposes the current matrix and returns that matrix
+    Mat4<T> transpose() {
+        Mat4<T> mat;
+        mat[0][0] = rows[0][0];
+        mat[1][1] = rows[1][1];
+        mat[2][2] = rows[2][2];
+        mat[3][3] = rows[3][3];
+
+        mat[1][0] = rows[0][1];
+        mat[2][0] = rows[0][2];
+        mat[3][0] = rows[0][3];
+        mat[0][1] = rows[1][0];
+        mat[0][2] = rows[2][0];
+        mat[0][3] = rows[3][0];
+
+        mat[2][1] = rows[1][2];
+        mat[3][1] = rows[1][3];
+        mat[1][2] = rows[2][1];
+        mat[1][3] = rows[3][1];
+
+        mat[2][3] = rows[3][2];
+        mat[3][2] = rows[2][3];
+        return mat;
+    }
+
     // Operators
-    /// Standard matrix multiplication row-column wise
+    /// Standard matrix multiplication row-column wise; *this * mat
     Mat4<T> operator*(Mat4<T> mat) const {
         Mat4<T> matrix;
         for (int i = 0; i < 4; ++i) {

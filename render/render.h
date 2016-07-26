@@ -40,8 +40,8 @@ private:
     std::unordered_map<Texture, GLuint, std::hash<int>> textures;
     GLuint gl_VBO;
     GLuint gl_VAO;
+    GLuint gl_modelsBO;
     GLuint gl_camera_view;
-    GLuint gl_model;
     GLuint gl_shader_program;
 };
 
