@@ -280,13 +280,13 @@ void Render::render_world(const World *world) {
         auto chunk = world->chunks[j];
         for (int i = 0; i < Chunk::BLOCKS_PER_CHUNK; i++) {
             // Model - transform_z * transform_y * transform_x * transform_translation * transform_scaling
-            auto cube = chunk.blocks[i];
+            auto cube = &chunk.blocks[i];
             auto model = Mat4<GLfloat>();
-            model = model.scale(cube.scale);
-            model = model.translate(cube.position);
-            model = model * transformation_matrix_x(cube.theta_x);
-            model = model * transformation_matrix_y(cube.theta_y);
-            model = model * transformation_matrix_z(cube.theta_z);
+            model = model.scale(cube->scale);
+            model = model.translate(cube->position);
+            model = model * transformation_matrix_x(cube->theta_x);
+            model = model * transformation_matrix_y(cube->theta_y);
+            model = model * transformation_matrix_z(cube->theta_z);
             model = model.transpose();
             buffer.push_back(model);
         }
