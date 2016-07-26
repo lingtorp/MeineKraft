@@ -11,7 +11,7 @@ public:
 
     Camera(Vec3 position, Vec3 direction, Vec3 world_up):
             position(position), direction(direction), up(world_up),
-            pitch(0), yaw(0), movement_speed(0.01) {};
+            pitch(0), yaw(0), movement_speed(0.05) {};
 
     Vec3 move_forward(double delta) const;
     Vec3 move_backward(double delta) const;
