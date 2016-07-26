@@ -29,7 +29,7 @@ void World::world_tick(uint32_t delta, const std::shared_ptr<Camera> camera) {
         for (auto y : y) {
             for (auto z : z) {
                 Vec3 position = {x, y, z};
-                bool chunk_exists_at_pos = std::any_of(chunks.begin(), chunks.end(), [position](Chunk c1){ return c1.position == position; });
+                bool chunk_exists_at_pos = std::any_of(chunks.begin(), chunks.end(), [position](Chunk &c1){ return c1.position == position; });
                 if (chunk_exists_at_pos) { continue; }
                 chunks.push_back(Chunk::Chunk(position));
             }
