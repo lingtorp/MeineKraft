@@ -43,6 +43,7 @@ private:
     GLuint gl_modelsBO;
     GLuint gl_camera_view;
     GLuint gl_shader_program;
+    GLuint gl_skybox_shader;
 };
 
 #endif //MEINEKRAFT_RENDER_H

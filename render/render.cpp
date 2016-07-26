@@ -130,7 +130,7 @@ Mat4<GLfloat> Render::transformation_matrix_z(float theta) {
 Render::Render(SDL_Window *window): skybox(Cube()), window(window) {
     glewExperimental = (GLboolean) true;
     glewInit();
-    skybox.scale = 500.0f;
+    char buffer[512];
 
     // Load all block & skybox textures
     std::vector<std::string> cube_faces = {"res/blocks/grass/bottom.jpg", "res/blocks/grass/bottom.jpg",
@@ -143,9 +143,39 @@ Render::Render(SDL_Window *window): skybox(Cube()), window(window) {
                                              "res/sky/back.jpg",  "res/sky/front.jpg"};
     this->textures[Texture::SKYBOX] = load_cube_map(skybox_faces, jpg);
 
+    /** Skybox **/
+    skybox.scale = 500.0f;
+    auto skyboxVertSrc = load_shader_source("/Users/AlexanderLingtorp/Google Drive/Repositories/MeineKraft/shaders/skybox/vertex-shader.glsl");
+    auto raw_str = skyboxVertSrc.c_str();
+    GLuint skyboxVertShader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(skyboxVertShader, 1, &raw_str, NULL);
+    glCompileShader(skyboxVertShader);
+    GLint skyboxVertStatus;
+    glGetShaderiv(skyboxVertShader, GL_COMPILE_STATUS, &skyboxVertStatus);
+
+    auto skyboxFragSrc = load_shader_source("/Users/AlexanderLingtorp/Google Drive/Repositories/MeineKraft/shaders/skybox/fragment-shader.glsl");
+    raw_str = skyboxFragSrc.c_str();
+    GLuint skyboxFragShader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(skyboxFragShader, 1, &raw_str, NULL);
+    glCompileShader(skyboxFragShader);
+    GLint skyboxFragStatus;
+    glGetShaderiv(skyboxFragShader, GL_COMPILE_STATUS, &skyboxFragStatus);
+
+    printf("Cube Fragment: %i, Vertex: %i\n", skyboxFragStatus,
+           skyboxVertStatus);
+    glGetShaderInfoLog(skyboxVertShader, 512, NULL, buffer);
+    printf("%s\n", buffer);
+
+    this->gl_skybox_shader = glCreateProgram();
+    glAttachShader(gl_skybox_shader, skyboxVertShader);
+    glAttachShader(gl_skybox_shader, skyboxFragShader);
+    glLinkProgram(gl_skybox_shader);
+    glUseProgram(gl_skybox_shader);
+
+    /** Cube **/
     auto vertexShaderSource =
             load_shader_source("/Users/AlexanderLingtorp/Google Drive/Repositories/MeineKraft/shaders/block/vertex-shader.glsl");
-    auto raw_str = vertexShaderSource.c_str();
+    raw_str = vertexShaderSource.c_str();
     GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertexShader, 1, &raw_str, NULL);
     glCompileShader(vertexShader);
@@ -161,9 +191,8 @@ Render::Render(SDL_Window *window): skybox(Cube()), window(window) {
     GLint fragmentShaderStatus;
     glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &fragmentShaderStatus);
 
-    printf("Fragment: %i, Vertex: %i\n", fragmentShaderStatus,
+    printf("Cube Fragment: %i, Vertex: %i\n", fragmentShaderStatus,
            vertexShaderStatus);
-    char buffer[512];
     glGetShaderInfoLog(vertexShader, 512, NULL, buffer);
     printf("%s\n", buffer);
 
@@ -239,48 +268,45 @@ Render::Render(SDL_Window *window): skybox(Cube()), window(window) {
 void Render::render_world(const World *world) {
     auto camera_view = FPSViewRH(camera->position, camera->pitch, camera->yaw);
 
-    // Draw
-    glUseProgram(gl_shader_program);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_MULTISAMPLE);
     glClearColor(0.4f, 0.3f, 0.7f, 1.0f);
-    glUniformMatrix4fv(gl_camera_view, 1, GL_FALSE, camera_view.data());
 
-    /*
-    // Render skybox
-    glEnable(GL_CULL_FACE); // cull face
-    glCullFace(GL_FRONT);   // cull back face
-    glFrontFace(GL_CCW);    // GL_CCW for counter clock-wise
-    glBindTexture(GL_TEXTURE_CUBE_MAP, textures[Texture::SKYBOX]);
-
-    // Model
-    auto model = Mat4<GLfloat>();
-    model = model.translate(skybox.position);
-    model = model.scale(skybox.scale);
-    glUniformMatrix4fv(gl_model, 1, GL_TRUE, model.data());
-
-    // GOTTA BIND THE VAO TO TELL OPENGL WHERE THE INDICES ARE FROM
-    glBindVertexArray(gl_VAO);
-    glDrawElements(GL_TRIANGLES, skybox.indices.size(), GL_UNSIGNED_INT, 0);
-    */
-
-    glBindVertexArray(gl_VAO);
+    /** Render skybox **/
+//    glUseProgram(gl_skybox_shader);
+//    glEnable(GL_CULL_FACE); // cull face
+//    glCullFace(GL_FRONT);   // cull back face
+//    glFrontFace(GL_CCW);    // GL_CCW for counter clock-wise
+//    glBindTexture(GL_TEXTURE_CUBE_MAP, textures[Texture::SKYBOX]);
+//
+//    // Model
+//    auto model = Mat4<GLfloat>();
+//    model = model.translate(skybox.position);
+//    model = model.scale(skybox.scale);
+//    glUniformMatrix4fv(gl_skybox_model, 1, GL_TRUE, model.data());
+//    glUniformMatrix4fv(gl_skybox_camera, 1, GL_TRUE, camera);
+//
+//    glBindVertexArray(gl_skybox_VAO);
+//    glDrawElements(GL_TRIANGLES, skybox.indices.size(), GL_UNSIGNED_INT, 0);
 
     /** Render cubes **/
+    glUseProgram(gl_shader_program);
     glEnable(GL_CULL_FACE); // cull face
     glCullFace(GL_BACK);    // cull back face
     glFrontFace(GL_CCW);    // GL_CCW for counter clock-wise
+    glUniformMatrix4fv(gl_camera_view, 1, GL_FALSE, camera_view.data());
+    glBindVertexArray(gl_VAO);
 
-    glBindTexture(GL_TEXTURE_CUBE_MAP, textures[GRASS]);
     glBindBuffer(GL_ARRAY_BUFFER, gl_modelsBO);
     std::vector<Mat4<GLfloat>> buffer{};
     buffer.reserve(world->chunks.size() * Chunk::BLOCKS_PER_CHUNK);
     for (int j = 0; j < world->chunks.size(); j++) {
         auto chunk = &world->chunks[j];
         for (int i = 0; i < Chunk::BLOCKS_PER_CHUNK; i++) {
-            // Model - transform_z * transform_y * transform_x * transform_translation * transform_scaling
             auto cube = &chunk->blocks[i];
+            glBindTexture(GL_TEXTURE_CUBE_MAP, textures[cube->texture]);
+            // Model - transform_z * transform_y * transform_x * transform_translation * transform_scaling
             auto model = Mat4<GLfloat>();
             model = model.scale(cube->scale);
             model = model.translate(cube->position);
