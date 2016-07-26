@@ -278,7 +278,7 @@ void Render::render_world(const World *world) {
     buffer.reserve(world->chunks.size() * Chunk::BLOCKS_PER_CHUNK);
     for (int j = 0; j < world->chunks.size(); j++) {
         auto chunk = world->chunks[j];
-        for (int i = 0; i < chunk.BLOCKS_PER_CHUNK; i++) {
+        for (int i = 0; i < Chunk::BLOCKS_PER_CHUNK; i++) {
             // Model - transform_z * transform_y * transform_x * transform_translation * transform_scaling
             auto cube = chunk.blocks[i];
             auto model = Mat4<GLfloat>();
