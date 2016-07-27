@@ -300,10 +300,9 @@ void Render::render_world(const World *world) {
 
     glBindBuffer(GL_ARRAY_BUFFER, gl_modelsBO);
     std::vector<Mat4<GLfloat>> buffer{};
-    buffer.reserve(world->chunks.size() * Chunk::BLOCKS_PER_CHUNK);
     for (int j = 0; j < world->chunks.size(); j++) {
         auto chunk = &world->chunks[j];
-        for (int i = 0; i < Chunk::BLOCKS_PER_CHUNK; i++) {
+        for (int i = 0; i < chunk->numCubes; i++) {
             auto cube = &chunk->blocks[i];
             glBindTexture(GL_TEXTURE_CUBE_MAP, textures[cube->texture]);
             // Model - transform_z * transform_y * transform_x * transform_translation * transform_scaling
@@ -317,9 +316,9 @@ void Render::render_world(const World *world) {
             buffer.push_back(model);
         }
     }
-    std::cout << world->chunks.size() + Chunk::BLOCKS_PER_CHUNK << " ";
-    glBufferData(GL_ARRAY_BUFFER, world->chunks.size() * Chunk::BLOCKS_PER_CHUNK * sizeof(Mat4<GLfloat>), buffer.data(), GL_DYNAMIC_DRAW);
-    glDrawElementsInstanced(GL_TRIANGLES, skybox.indices.size(), GL_UNSIGNED_INT, 0, Chunk::BLOCKS_PER_CHUNK * world->chunks.size());
+    // std::cout << "#" << world->chunks.size() + Chunk::BLOCKS_PER_CHUNK << " ";
+    glBufferData(GL_ARRAY_BUFFER, buffer.size() * sizeof(Mat4<GLfloat>), buffer.data(), GL_DYNAMIC_DRAW);
+    glDrawElementsInstanced(GL_TRIANGLES, skybox.indices.size(), GL_UNSIGNED_INT, 0, buffer.size());
 }
 
 Render::~Render() {
