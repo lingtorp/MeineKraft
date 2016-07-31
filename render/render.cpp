@@ -133,14 +133,21 @@ Render::Render(SDL_Window *window): skybox(Cube()), window(window) {
     char buffer[512];
 
     // Load all block & skybox textures
-    std::vector<std::string> cube_faces = {"res/blocks/grass/bottom.jpg", "res/blocks/grass/bottom.jpg",
-                                           "res/blocks/grass/bottom.jpg", "res/blocks/grass/bottom.jpg",
-                                           "res/blocks/grass/bottom.jpg", "res/blocks/grass/bottom.jpg"};
+    auto base = "/Users/AlexanderLingtorp/Google Drive/Repositories/MeineKraft/";
+    std::vector<std::string> cube_faces = {base + std::string("res/blocks/grass/side.jpg"),
+                                           base + std::string("res/blocks/grass/side.jpg"),
+                                           base + std::string("res/blocks/grass/top.jpg"),
+                                           base + std::string("res/blocks/grass/bottom.jpg"),
+                                           base + std::string("res/blocks/grass/side.jpg"),
+                                           base + std::string("res/blocks/grass/side.jpg")};
     this->textures[Texture::GRASS] = load_cube_map(cube_faces, jpg);
 
-    std::vector<std::string> skybox_faces = {"res/sky/right.jpg", "res/sky/left.jpg",
-                                             "res/sky/top.jpg",   "res/sky/bottom.jpg",
-                                             "res/sky/back.jpg",  "res/sky/front.jpg"};
+    std::vector<std::string> skybox_faces = {base + std::string("res/sky/right.jpg"),
+                                             base + std::string("res/sky/left.jpg"),
+                                             base + std::string("res/sky/top.jpg"),
+                                             base + std::string("res/sky/bottom.jpg"),
+                                             base + std::string("res/sky/back.jpg"),
+                                              base + std::string("res/sky/front.jpg")};
     this->textures[Texture::SKYBOX] = load_cube_map(skybox_faces, jpg);
 
     /** Skybox **/
