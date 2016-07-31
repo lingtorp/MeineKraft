@@ -323,7 +323,7 @@ void Render::render_world(const World *world) {
             buffer.push_back(model);
         }
     }
-    // std::cout << "#" << world->chunks.size() + Chunk::BLOCKS_PER_CHUNK << " ";
+    // std::cout << "#" << buffer.size() << " blocks";
     glBufferData(GL_ARRAY_BUFFER, buffer.size() * sizeof(Mat4<GLfloat>), buffer.data(), GL_DYNAMIC_DRAW);
     glDrawElementsInstanced(GL_TRIANGLES, skybox.indices.size(), GL_UNSIGNED_INT, 0, buffer.size());
 }
