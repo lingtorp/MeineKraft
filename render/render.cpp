@@ -4,7 +4,7 @@
 
 typedef enum { png, jpg } FileFormat;
 
-// Texture loading order; right, left, top, bottom, back, front
+/// Texture loading order; right, left, top, bottom, back, front
 GLuint load_cube_map(std::vector<std::string> faces, FileFormat file_format) {
     GLuint texture;
     glGenTextures(1, &texture);
@@ -88,7 +88,7 @@ Mat4<GLfloat> perspective_matrix(float z_near, float z_far, float fov,
     return matrix;
 }
 
-// Assumes the file exists and will seg. fault otherwise.
+/// Assumes the file exists and will seg. fault otherwise.
 const std::string Render::load_shader_source(std::string filename) {
     std::ifstream ifs(filename);
     return std::string((std::istreambuf_iterator<char>(ifs)),
@@ -96,7 +96,7 @@ const std::string Render::load_shader_source(std::string filename) {
 }
 
 // TODO: transformation_vec
-// Transformation matrix for the y-plane
+/// Transformation matrix for the y-plane
 Mat4<GLfloat> Render::transformation_matrix_x(float theta) {
     float x = M_PI / 180;
     Mat4<GLfloat> matrix;
