@@ -39,18 +39,21 @@ struct Vec3 {
     }
 };
 
-// TODO: Make templated?
+template<typename T>
 struct Vec2 {
-    GLfloat x, y = 0.0f;
-    Vec2(GLfloat x, GLfloat y): x(x), y(y) {};
+    T x, y = 0.0f;
+    Vec2(T x, T y): x(x), y(y) {};
     Vec2(): x(0), y(0) {};
+
+    static Vec2<T> normalize(Vec2<T> vec) {
+        float length = sqrt(pow(vec.x, 2) + pow(vec.y, 2));
+        Vec3 result;
+        result.x = vec.x / length;
+        result.y = vec.y / length;
+        return result;
+    }
 };
 
-struct Vec22 {
-    double x, y = 0.0f;
-    Vec22(double x, double y): x(x), y(y) {};
-    Vec22(): x(0), y(0) {};
-};
 
 template<typename T>
 struct Mat4 {
@@ -137,17 +140,7 @@ struct Mat4 {
 };
 
 static inline GLfloat dot(Vec3 v, Vec3 u) { return v.x * u.x + v.y * u.y + v.z * u.z; }
-static inline GLfloat dot(Vec2 v, Vec2 u) { return v.x * u.x + v.y * u.y; }
-
-static inline double dot(Vec22 v, Vec22 u) { return v.x * u.x + v.y * u.y; }
-
-static inline Vec22 normalize(Vec22 vec) {
-    double length = sqrt(pow(vec.x, 2) + pow(vec.y, 2));
-    Vec22 result;
-    result.x = vec.x / length;
-    result.y = vec.y / length;
-    return result;
-}
+static inline GLfloat dot(Vec2<double> v, Vec2<double> u) { return v.x * u.x + v.y * u.y; }
 
 static inline Vec3 normalize(Vec3 vec) {
     float length = sqrt(pow(vec.x, 2) + pow(vec.y, 2) + pow(vec.z, 2));

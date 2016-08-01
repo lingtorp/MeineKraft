@@ -22,10 +22,10 @@ struct Color4 {
 struct Vertex {
     Vec3 position = {};
     Color4 color = {};
-    Vec2 texCoord = {};
+    Vec2<GLfloat> texCoord = {};
     Vertex(): position{}, color{}, texCoord{} {};
-    Vertex(Vec3 position, Vec2 texCoord): position(position), texCoord(texCoord), color{} {};
-    Vertex(Vec3 position, Color4 color, Vec2 texCoord):
+    Vertex(Vec3 position, Vec2<GLfloat> texCoord): position(position), texCoord(texCoord), color{} {};
+    Vertex(Vec3 position, Color4 color, Vec2<GLfloat> texCoord):
             position(position), color(color), texCoord(texCoord) {};
 };
 
@@ -73,7 +73,7 @@ struct Mesh {
 //  a ----- b   0 = a, 1 = b, 2 = c, 3 = d
 struct Quad: Mesh {
     Quad(): Mesh() {};
-    Quad(Vec3 points[4], Color4 colors[4], Vec2 texCoords[4]): Mesh() {
+    Quad(Vec3 points[4], Color4 colors[4], Vec2<GLfloat> texCoords[4]): Mesh() {
         vertices.push_back(Vertex(points[0], colors[0], texCoords[0]));
         vertices.push_back(Vertex(points[1], colors[1], texCoords[1]));
         vertices.push_back(Vertex(points[2], colors[2], texCoords[2]));
@@ -97,10 +97,10 @@ struct Cube: Mesh {
         Vec3 b = Vec3(0.5f, -0.5f, 0.5f);
         Vec3 c = Vec3(0.5f, 0.5f, 0.5f);
         Vec3 d = Vec3(-0.5f, 0.5f, 0.5f);
-        Vec2 tex_a = Vec2(0.0f, 0.0f);
-        Vec2 tex_b = Vec2(1.0f, 0.0f);
-        Vec2 tex_c = Vec2(1.0f, 1.0f);
-        Vec2 tex_d = Vec2(0.0f, 1.0f);
+        auto tex_a = Vec2<GLfloat>(0.0f, 0.0f);
+        auto tex_b = Vec2<GLfloat>(1.0f, 0.0f);
+        auto tex_c = Vec2<GLfloat>(1.0f, 1.0f);
+        auto tex_d = Vec2<GLfloat>(0.0f, 1.0f);
         vertices.push_back(Vertex(a, tex_a));
         vertices.push_back(Vertex(b, tex_b));
         vertices.push_back(Vertex(c, tex_c));
@@ -110,10 +110,10 @@ struct Cube: Mesh {
         Vec3 f = Vec3(0.5f, -0.5f, -0.5f);
         Vec3 g = Vec3(0.5f, 0.5f, -0.5f);
         Vec3 h = Vec3(-0.5f, 0.5f, -0.5f);
-        Vec2 tex_e = Vec2(1.0f, 0.0f);
-        Vec2 tex_f = Vec2(0.0f, 0.0f);
-        Vec2 tex_g = Vec2(0.0f, 1.0f);
-        Vec2 tex_h = Vec2(1.0f, 1.0f);
+        auto tex_e = Vec2<GLfloat>(1.0f, 0.0f);
+        auto tex_f = Vec2<GLfloat>(0.0f, 0.0f);
+        auto tex_g = Vec2<GLfloat>(0.0f, 1.0f);
+        auto tex_h = Vec2<GLfloat>(1.0f, 1.0f);
         vertices.push_back(Vertex(e, tex_e));
         vertices.push_back(Vertex(f, tex_f));
         vertices.push_back(Vertex(g, tex_g));
