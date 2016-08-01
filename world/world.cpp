@@ -2,22 +2,7 @@
 #include <numeric>
 #include "world.h"
 
-World::World() {
-    std::vector<GLfloat> x(2);
-    std::vector<GLfloat> y{-Chunk::dimension, -Chunk::dimension};
-    std::vector<GLfloat> z(2);
-    std::iota(x.begin(), x.end(), -1);
-    std::iota(z.begin(), z.end(), -1);
-    for (auto x : x) {
-        for (auto y : y) {
-            for (auto z : z) {
-                Vec3 chunk_pos = {x, y, z};
-                auto chunk = Chunk::Chunk(chunk_pos);
-                chunks.push_back(chunk);
-           }
-        }
-    }
-}
+World::World() {}
 
 void World::world_tick(uint32_t delta, const std::shared_ptr<Camera> camera) {
     static auto once = false;
