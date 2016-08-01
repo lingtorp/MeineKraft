@@ -12,14 +12,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="6bc5fc86-71f7-49b9-98bc-7e35285f3f76" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/main.cpp" afterPath="$PROJECT_DIR$/main.cpp" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/math/noise.h" afterPath="$PROJECT_DIR$/math/noise.h" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/render/camera.h" afterPath="$PROJECT_DIR$/render/camera.h" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/render/chunk.cpp" afterPath="$PROJECT_DIR$/render/chunk.cpp" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/render/chunk.h" afterPath="$PROJECT_DIR$/render/chunk.h" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/render/render.cpp" afterPath="$PROJECT_DIR$/render/render.cpp" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/world/world.cpp" afterPath="$PROJECT_DIR$/world/world.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/math/vector.h" afterPath="$PROJECT_DIR$/math/vector.h" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/render/primitives.h" afterPath="$PROJECT_DIR$/render/primitives.h" />
     </list>
     <ignored path="MeineKraft.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -87,8 +82,8 @@
       <file leaf-file-name="primitives.h" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/render/primitives.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="277">
-              <caret line="93" column="4" selection-start-line="93" selection-start-column="4" selection-end-line="93" selection-end-column="4" />
+            <state relative-caret-position="270">
+              <caret line="99" column="12" selection-start-line="99" selection-start-column="12" selection-end-line="99" selection-end-column="12" />
               <folding>
                 <element signature="e#65#88#0" expanded="true" />
               </folding>
@@ -121,8 +116,8 @@
       <file leaf-file-name="main.cpp" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/main.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="266">
-              <caret line="14" column="21" selection-start-line="14" selection-start-column="21" selection-end-line="14" selection-end-column="21" />
+            <state relative-caret-position="247">
+              <caret line="13" column="21" selection-start-line="13" selection-start-column="21" selection-end-line="13" selection-end-column="21" />
               <folding />
             </state>
           </provider>
@@ -131,8 +126,8 @@
       <file leaf-file-name="noise.h" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/math/noise.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="437">
-              <caret line="39" column="46" selection-start-line="39" selection-start-column="46" selection-end-line="39" selection-end-column="46" />
+            <state relative-caret-position="418">
+              <caret line="40" column="76" selection-start-line="40" selection-start-column="76" selection-end-line="40" selection-end-column="76" />
               <folding>
                 <element signature="e#55#72#0" expanded="true" />
               </folding>
@@ -143,11 +138,12 @@
       <file leaf-file-name="vector.h" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/math/vector.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="515">
-              <caret line="120" column="31" selection-start-line="120" selection-start-column="31" selection-end-line="120" selection-end-column="31" />
+            <state relative-caret-position="379">
+              <caret line="148" column="47" selection-start-line="148" selection-start-column="47" selection-end-line="148" selection-end-column="47" />
               <folding>
                 <element signature="e#132#144#0" expanded="true" />
-                <element signature="e#1419#1431#0" expanded="true" />
+                <element signature="e#1160#1172#0" expanded="true" />
+                <element signature="e#1506#1518#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -175,20 +171,20 @@
         <option value="$PROJECT_DIR$/world/chunk.cpp" />
         <option value="$PROJECT_DIR$/world/WorldCamera.h" />
         <option value="$PROJECT_DIR$/world/WorldCamera.cpp" />
-        <option value="$PROJECT_DIR$/render/primitives.h" />
         <option value="$PROJECT_DIR$/../MinecraftC/shaders/block/vertex-shader.glsl" />
         <option value="$PROJECT_DIR$/shaders/skybox/vertex-shader.glsl" />
         <option value="$PROJECT_DIR$/shaders/block/vertex-shader.glsl" />
         <option value="$PROJECT_DIR$/render/render.h" />
         <option value="$PROJECT_DIR$/world/world.h" />
         <option value="$PROJECT_DIR$/render/camera.h" />
-        <option value="$PROJECT_DIR$/math/vector.h" />
         <option value="$PROJECT_DIR$/CMakeLists.txt" />
         <option value="$PROJECT_DIR$/main.cpp" />
         <option value="$PROJECT_DIR$/render/render.cpp" />
         <option value="$PROJECT_DIR$/world/world.cpp" />
         <option value="$PROJECT_DIR$/render/chunk.cpp" />
         <option value="$PROJECT_DIR$/render/chunk.h" />
+        <option value="$PROJECT_DIR$/math/vector.h" />
+        <option value="$PROJECT_DIR$/render/primitives.h" />
         <option value="$PROJECT_DIR$/math/noise.h" />
       </list>
     </option>
@@ -475,12 +471,12 @@
       <updated>1469699076154</updated>
       <workItem from="1469699079353" duration="2068000" />
       <workItem from="1469730265093" duration="381000" />
-      <workItem from="1469821846747" duration="27178000" />
+      <workItem from="1469821846747" duration="29035000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="29627000" />
+    <option name="totallyTimeSpent" value="31484000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="23" width="1280" height="1370" extended-state="0" />
@@ -784,17 +780,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/math/vector.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="515">
-          <caret line="120" column="31" selection-start-line="120" selection-start-column="31" selection-end-line="120" selection-end-column="31" />
-          <folding>
-            <element signature="e#132#144#0" expanded="true" />
-            <element signature="e#1419#1431#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/res/blocks/grass/top.jpg">
       <provider selected="true" editor-type-id="images">
         <state />
@@ -852,16 +837,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/render/primitives.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="277">
-          <caret line="93" column="4" selection-start-line="93" selection-start-column="4" selection-end-line="93" selection-end-column="4" />
-          <folding>
-            <element signature="e#65#88#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/world/world.cpp">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="152">
@@ -882,8 +857,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/main.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="266">
-          <caret line="14" column="21" selection-start-line="14" selection-start-column="21" selection-end-line="14" selection-end-column="21" />
+        <state relative-caret-position="247">
+          <caret line="13" column="21" selection-start-line="13" selection-start-column="21" selection-end-line="13" selection-end-column="21" />
           <folding />
         </state>
       </provider>
@@ -906,10 +881,32 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/math/vector.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="379">
+          <caret line="148" column="47" selection-start-line="148" selection-start-column="47" selection-end-line="148" selection-end-column="47" />
+          <folding>
+            <element signature="e#132#144#0" expanded="true" />
+            <element signature="e#1160#1172#0" expanded="true" />
+            <element signature="e#1506#1518#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/render/primitives.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="270">
+          <caret line="99" column="12" selection-start-line="99" selection-start-column="12" selection-end-line="99" selection-end-column="12" />
+          <folding>
+            <element signature="e#65#88#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/math/noise.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="437">
-          <caret line="39" column="46" selection-start-line="39" selection-start-column="46" selection-end-line="39" selection-end-column="46" />
+        <state relative-caret-position="418">
+          <caret line="40" column="76" selection-start-line="40" selection-start-column="76" selection-end-line="40" selection-end-column="76" />
           <folding>
             <element signature="e#55#72#0" expanded="true" />
           </folding>
