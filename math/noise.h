@@ -34,16 +34,23 @@ public:
         }
     }
 
-    double perlin(int x, int y, Vec3 chunk_pos, int dimension) {
+    double perlin(int x, int z, Vec3 chunk_pos, int dimension) {
         /// Skew coordinate inside the chunk; double part + int part + skew part = point coordinate
-        double X = ((x % dimension) / dimension) + chunk_pos.x / dimension + 0.5;
-        double Y = ((y % dimension) / dimension) + chunk_pos.y / dimension + 0.5;
+        double a = z % dimension; // Integer offset inside the chunk
+        double b = 1 - std::abs(a / dimension); // Float offset inside the chunk (0, 1)
+        double c = chunk_pos.z / dimension; // Integer bounds from the world
+        double Y = b + c; // Relative position inside the chunk and the chunk from the world coords perspective
+
+        double f = x % dimension;
+        double g = 1 - std::abs(f / dimension);
+        double h = chunk_pos.x / dimension;
+        double X = g + h;
 
         /// Grid points from the chunk in the world
-        int X0 = chunk_pos.x / dimension;
-        int X1 = (chunk_pos.x + dimension) / dimension;
-        int Y0 = chunk_pos.y / dimension;
-        int Y1 = (chunk_pos.y + dimension) / dimension;
+        int X0 = (int) (chunk_pos.x / dimension);
+        int X1 = (int) (chunk_pos.x + dimension) / dimension;
+        int Y0 = (int) chunk_pos.z / dimension;
+        int Y1 = (int) (chunk_pos.z + dimension) / dimension;
 
         /// Gradients using hashed indices from lookup list
         Vec22 x0y0 = grads[perms[(Y0 + perms[X0 % perms.size()]) % perms.size()]];
