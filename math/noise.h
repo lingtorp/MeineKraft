@@ -34,8 +34,8 @@ public:
         }
     }
 
-    double perlin(int x, int y, Vec3 chunk_pos, int dimension) {
-        /// Skew coordinate inside the chunk; double part + int part + skew part = point coordinate
+    double perlin(int x, int y, Vec3<> chunk_pos, int dimension) {
+        /// Compress the coordinates inside the chunk; double part + int part = point coordinate
         double a = y % dimension; // Integer offset inside the chunk
         double b = 1 - std::abs(a / dimension); // Float offset inside the chunk (0, 1)
         double c = chunk_pos.z / dimension; // Integer bounds from the world
@@ -59,10 +59,10 @@ public:
         Vec2<double> x1y1 = grads[perms[(X1 + perms[Y1 % perms.size()]) % perms.size()]];
 
         /// Contribution of gradient vectors by dot product between relative vectors and gradients
-        double v00 = dot(x0y0, Vec2<double>{X0 - X, Y0 - Y});
-        double v10 = dot(x1y0, Vec2<double>{X1 - X, Y0 - Y});
-        double v01 = dot(x0y1, Vec2<double>{X0 - X, Y1 - Y});
-        double v11 = dot(x1y1, Vec2<double>{X1 - X, Y1 - Y});
+        double v00 = x0y0.dot(Vec2<double>{X0 - X, Y0 - Y});
+        double v10 = x1y0.dot(Vec2<double>{X1 - X, Y0 - Y});
+        double v01 = x0y1.dot(Vec2<double>{X0 - X, Y1 - Y});
+        double v11 = x1y1.dot(Vec2<double>{X1 - X, Y1 - Y});
 
         /// Bi-cubic interpolation to get the final value
         double Wx = 3*pow(X0 - X, 2) - 2*pow(X0 - X, 3);

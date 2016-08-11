@@ -4,10 +4,14 @@
 #include <SDL2/SDL_opengl.h>
 #include <math.h>
 #include <ostream>
+#include <cmath>
 
 template<typename T>
 struct Vec4 {
     T values[4];
+
+    Vec4(T x, T y, T z, T w) { values[0] = x; values[1] = y; values[2] = z; values[3] = w; };
+    Vec4() { values[0] = 0.0; values[1] = 0.0; values[2] = 0.0; values[3] = 0.0; };
 
     // Operators
     T& operator[] (const int index) {
@@ -23,19 +27,59 @@ struct Vec4 {
     }
 };
 
-// TODO: Make templated?
+/// Defaults to Vec3<GLfloat>
+template<typename T = GLfloat>
 struct Vec3 {
-    GLfloat x, y, z = 0.0f;
-    Vec3(GLfloat x, GLfloat y, GLfloat z): x(x), y(y), z(z) {};
+    T x, y, z;
+    Vec3(T x, T y, T z): x(x), y(y), z(z) {};
     Vec3(): x(0), y(0), z(0) {};
-    static Vec3 ZERO() { return Vec3(0.0, 0.0, 0.0); }
+    inline static Vec3 ZERO() { return Vec3(0.0, 0.0, 0.0); }
+    inline double length() const { return std::sqrt(std::pow(x, 2) + std::pow(y, 2) + std::pow(z, 2)); }
 
-    bool operator==(const Vec3 &rhs) {
+    inline Vec3<T> rotate_y(float theta) const {
+        // TODO: Implement
+        return *this;
+    }
+
+    inline Vec3<T> normalize() const {
+        double length = this->length();
+        Vec3 result;
+        result.x = x / length;
+        result.y = y / length;
+        result.z = z / length;
+        return result;
+    }
+
+    /// Result = v x u
+    inline Vec3<T> cross(Vec3<T> u) const {
+        Vec3<T> result;
+        result.x = y * u.z - z * u.y;
+        result.y = z * u.x - x * u.z;
+        result.z = x * u.y - y * u.x;
+        return result;
+    }
+
+    inline T dot(Vec3<T> u) const { return x * u.x + y * u.y + z * u.z; }
+
+    /// Operators
+    inline Vec3<T> operator+(const Vec3 &rhs) const {
+        return Vec3<T>{x + rhs.x, y + rhs.y, z + rhs.z};
+    }
+
+    inline Vec3<T> operator*(const T s) const {
+        return Vec3<T>{x * s, y * s, z * s};
+    }
+
+    inline bool operator==(const Vec3 &rhs) const {
         return (x == rhs.x) && (y == rhs.y) && (z == rhs.z);
     }
 
     friend std::ostream &operator<<(std::ostream& os, const Vec3 &vec) {
         return os << "(x:" << vec.x << " y:" << vec.y << " z:" << vec.z << ")";
+    }
+
+    inline Vec3 operator-(const Vec3 &rhs) const {
+        return Vec3{x - rhs.x, y - rhs.y, z - rhs.z};
     }
 };
 
@@ -45,20 +89,25 @@ struct Vec2 {
     Vec2(T x, T y): x(x), y(y) {};
     Vec2(): x(0), y(0) {};
 
-    static Vec2<T> normalize(Vec2<T> vec) {
-        float length = sqrt(pow(vec.x, 2) + pow(vec.y, 2));
-        Vec3 result;
-        result.x = vec.x / length;
-        result.y = vec.y / length;
+    inline Vec2<T> normalize() {
+        T length = sqrt(pow(x, 2) + pow(y, 2));
+        Vec2 result;
+        result.x = x / length;
+        result.y = y / length;
         return result;
     }
-};
 
+    /// Dot product
+    inline T dot(Vec2<T> u) { return x * u.x + y * u.y; }
+};
 
 template<typename T>
 struct Mat4 {
+private:
     Vec4<T> rows[4];
+    static constexpr float RADIAN = M_PI / 180;
 
+public:
     inline T *data() {
         return &rows[0][0];
     }
@@ -72,7 +121,7 @@ struct Mat4 {
     }
 
     /// Translation - moves the matrix projection in space ...
-    Mat4<T> translate(Vec3 vec) const {
+    inline Mat4<T> translate(Vec3<T> vec) const {
         Mat4<T> matrix;
         matrix[0] = {1.0f, 0.0f, 0.0f, vec.x};
         matrix[1] = {0.0f, 1.0f, 0.0f, vec.y};
@@ -82,7 +131,7 @@ struct Mat4 {
     }
 
     /// Scales the matrix the same over all axis except w
-    Mat4<T> scale(T scale) const {
+    inline Mat4<T> scale(T scale) const {
         Mat4<T> matrix;
         matrix[0] = {scale, 0.0f, 0.0f, 0.0f};
         matrix[1] = {0.0f, scale, 0.0f, 0.0f};
@@ -92,7 +141,7 @@ struct Mat4 {
     }
 
     /// Transposes the current matrix and returns that matrix
-    Mat4<T> transpose() {
+    inline Mat4<T> transpose() {
         Mat4<T> mat;
         mat[0][0] = rows[0][0];
         mat[1][1] = rows[1][1];
@@ -116,9 +165,39 @@ struct Mat4 {
         return mat;
     }
 
+    /// Rotation matrix around x-axis (counterclockwise)
+    inline Mat4<T> rotate_x(float theta) const {
+        Mat4<T> matrix;
+        matrix[0] = {1.0f, 0.0f, 0.0f, 0.0f};
+        matrix[1] = {0.0f, cosf(theta * RADIAN), -sinf(theta * RADIAN), 0.0f};
+        matrix[2] = {0.0f, sinf(theta * RADIAN), cosf(theta * RADIAN), 0.0f};
+        matrix[3] = {0.0f, 0.0f, 0.0f, 1.0f};
+        return *this * matrix;
+    }
+
+    /// Rotation matrix around y-axis (counterclockwise)
+    inline Mat4<T> rotate_y(float theta) const {
+        Mat4<T> matrix;
+        matrix[0] = {cosf(theta * RADIAN), 0.0f, sinf(theta * RADIAN), 0.0f};
+        matrix[1] = {0.0f, 1.0f, 0.0f, 0.0f};
+        matrix[2] = {-sinf(theta * RADIAN), 0.0f, cosf(theta * RADIAN), 0.0f};
+        matrix[3] = {0.0f, 0.0f, 0.0f, 1.0f};
+        return *this * matrix;
+    }
+
+    /// Rotation matrix around z-axis (counterclockwise)
+    inline Mat4<T> rotate_z(float theta) const {
+        Mat4<T> matrix;
+        matrix[0] = {cosf(theta * RADIAN), -sinf(theta * RADIAN), 0.0f, 0.0f};
+        matrix[1] = {sinf(theta * RADIAN), cosf(theta * RADIAN), 0.0f, 0.0f};
+        matrix[2] = {0.0f, 0.0f, 1.0f, 0.0f};
+        matrix[3] = {0.0f, 0.0f, 0.0f, 1.0f};
+        return *this * matrix;
+    }
+
     // Operators
     /// Standard matrix multiplication row-column wise; *this * mat
-    Mat4<T> operator*(Mat4<T> mat) const {
+    inline Mat4<T> operator*(Mat4<T> mat) const {
         Mat4<T> matrix;
         for (int i = 0; i < 4; ++i) {
             auto row = rows[i];
@@ -130,6 +209,24 @@ struct Mat4 {
         return matrix;
     }
 
+    /// TODO: Refactor into Mat3<> ...
+    /// A * v, where v = (rhs, 1.0), v is a Vec4 with w set to 1.0
+    inline Vec3<T> operator*(Vec3<T> rhs) const {
+        auto vec = Vec4<T>{rhs.x, rhs.y, rhs.z, 1.0};
+        auto result = *this * vec;
+        return Vec3<>{result.values[0], result.values[1], result.values[2]};
+    }
+
+    /// A * v = b
+    inline Vec4<T> operator*(Vec4<T> rhs) const {
+        Vec4<T> result;
+        for (int i = 0; i < 4; i++) {
+            result.values[i] = rows[i].values[0] * rhs.values[0] + rows[i].values[1] * rhs.values[1] + rows[i].values[2] * rhs.values[2] + rows[i].values[3] * rhs.values[3];
+        }
+        return result;
+    }
+
+    /// matrix[row_i][colum_j]
     Vec4<T> &operator[](const int index) {
         return rows[index];
     }
@@ -138,48 +235,5 @@ struct Mat4 {
         return os << "\n { \n" << mat.rows[0] << "), \n" << mat.rows[1] << "), \n" << mat.rows[2] << "), \n" << mat.rows[3] << ")\n }";
     }
 };
-
-static inline GLfloat dot(Vec3 v, Vec3 u) { return v.x * u.x + v.y * u.y + v.z * u.z; }
-static inline GLfloat dot(Vec2<double> v, Vec2<double> u) { return v.x * u.x + v.y * u.y; }
-
-static inline Vec3 normalize(Vec3 vec) {
-    float length = sqrt(pow(vec.x, 2) + pow(vec.y, 2) + pow(vec.z, 2));
-    Vec3 result;
-    result.x = vec.x / length;
-    result.y = vec.y / length;
-    result.z = vec.z / length;
-    return result;
-}
-
-// result = v x u
-static inline Vec3 cross(Vec3 v, Vec3 u) {
-    Vec3 result = Vec3();
-    result.x = v.y * u.z - v.z * u.y;
-    result.y = v.z * u.x - v.x * u.z;
-    result.z = v.x * u.y - v.y * u.x;
-    return result;
-}
-
-// TODO: Move these into operators on their structs
-static inline Vec3 vec_subtraction(Vec3 v, Vec3 u) {
-    v.x -= u.x;
-    v.y -= u.y;
-    v.z -= u.z;
-    return v;
-}
-
-static inline Vec3 vec_addition(Vec3 v, Vec3 u) {
-    v.x += u.x;
-    v.y += u.y;
-    v.z += u.z;
-    return v;
-}
-
-static inline Vec3 vec_scalar_multiplication(Vec3 v, double s) {
-    v.x *= s;
-    v.y *= s;
-    v.z *= s;
-    return v;
-}
 
 #endif //MEINEKRAFT_VECTOR_H
