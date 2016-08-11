@@ -1,6 +1,8 @@
 #include <fstream>
 #include <iostream>
+#include <SDL2/SDL_video.h>
 #include "render.h"
+#include "../ray.h"
 
 typedef enum { png, jpg } FileFormat;
 
@@ -43,15 +45,15 @@ GLuint load_cube_map(std::vector<std::string> faces, FileFormat file_format) {
 }
 
 /// Column major - Camera combined rotation matrix (y, x) & translation matrix
-Mat4<GLfloat> Render::FPSViewRH(Vec3 eye, float pitch, float yaw) {
-    float rad = M_PI / 180;
+Mat4<GLfloat> Render::FPSViewRH(Vec3<> eye, float pitch, float yaw) {
+    static constexpr float rad = M_PI / 180;
     float cosPitch = cos(pitch * rad);
     float sinPitch = sin(pitch * rad);
     float cosYaw = cos(yaw * rad);
     float sinYaw = sin(yaw * rad);
-    Vec3 xaxis = {cosYaw, 0, -sinYaw};
-    Vec3 yaxis = {sinYaw * sinPitch, cosPitch, cosYaw * sinPitch};
-    Vec3 zaxis = {sinYaw * cosPitch, -sinPitch, cosPitch * cosYaw};
+    auto xaxis = Vec3<>{cosYaw, 0, -sinYaw};
+    auto yaxis = Vec3<>{sinYaw * sinPitch, cosPitch, cosYaw * sinPitch};
+    auto zaxis = Vec3<>{sinYaw * cosPitch, -sinPitch, cosPitch * cosYaw};
     Mat4<GLfloat> matrix;
     matrix[0][0] = xaxis.x;
     matrix[0][1] = yaxis.x;
@@ -65,9 +67,9 @@ Mat4<GLfloat> Render::FPSViewRH(Vec3 eye, float pitch, float yaw) {
     matrix[2][1] = yaxis.z;
     matrix[2][2] = zaxis.z;
     matrix[2][3] = 0.0f;
-    matrix[3][0] = -dot(xaxis, eye);
-    matrix[3][1] = -dot(yaxis, eye);
-    matrix[3][2] = -dot(zaxis, eye); // GLM says no minus , other's say minus
+    matrix[3][0] = -xaxis.dot(eye);
+    matrix[3][1] = -yaxis.dot(eye);
+    matrix[3][2] = -zaxis.dot(eye); // GLM says no minus , other's say minus
     matrix[3][3] = 1.0f;
     return matrix;
 }
@@ -95,39 +97,7 @@ const std::string Render::load_shader_source(std::string filename) {
                               (std::istreambuf_iterator<char>()));
 }
 
-// TODO: transformation_vec
-/// Transformation matrix for the y-plane
-Mat4<GLfloat> Render::transformation_matrix_x(float theta) {
-    float x = M_PI / 180;
-    Mat4<GLfloat> matrix;
-    matrix[0] = {1.0f, 0.0f, 0.0f, 0.0f};
-    matrix[1] = {0.0f, cosf(theta * x), -sinf(theta * x), 0.0f};
-    matrix[2] = {0.0f, sinf(theta * x), cosf(theta * x), 0.0f};
-    matrix[3] = {0.0f, 0.0f, 0.0f, 1.0f};
-    return matrix;
-}
-
-Mat4<GLfloat> Render::transformation_matrix_y(float theta) {
-    float x = M_PI / 180;
-    Mat4<GLfloat> matrix;
-    matrix[0] = {cosf(theta * x), 0.0f, sinf(theta * x), 0.0f};
-    matrix[1] = {0.0f, 1.0f, 0.0f, 0.0f};
-    matrix[2] = {-sinf(theta * x), 0.0f, cosf(theta * x), 0.0f};
-    matrix[3] = {0.0f, 0.0f, 0.0f, 1.0f};
-    return matrix;
-}
-
-Mat4<GLfloat> Render::transformation_matrix_z(float theta) {
-    float x = M_PI / 180;
-    Mat4<GLfloat> matrix;
-    matrix[0] = {cosf(theta * x), -sinf(theta * x), 0.0f, 0.0f};
-    matrix[1] = {sinf(theta * x), cosf(theta * x), 0.0f, 0.0f};
-    matrix[2] = {0.0f, 0.0f, 1.0f, 0.0f};
-    matrix[3] = {0.0f, 0.0f, 0.0f, 1.0f};
-    return matrix;
-}
-
-Render::Render(SDL_Window *window): skybox(Cube()), window(window) {
+Render::Render(SDL_Window *window): skybox(Cube()), window(window), DRAW_DISTANCE(50) {
     glewExperimental = (GLboolean) true;
     glewInit();
     char buffer[512];
@@ -147,7 +117,7 @@ Render::Render(SDL_Window *window): skybox(Cube()), window(window) {
                                              base + std::string("res/sky/top.jpg"),
                                              base + std::string("res/sky/bottom.jpg"),
                                              base + std::string("res/sky/back.jpg"),
-                                              base + std::string("res/sky/front.jpg")};
+                                             base + std::string("res/sky/front.jpg")};
     this->textures[Texture::SKYBOX] = load_cube_map(skybox_faces, jpg);
 
     /** Skybox **/
@@ -256,7 +226,7 @@ Render::Render(SDL_Window *window): skybox(Cube()), window(window) {
     int height, width;
     SDL_GetWindowSize(this->window, &width, &height);
     float aspect = width / height;
-    auto perspective_mat = perspective_matrix(1, -20, 60, aspect);
+    auto perspective_mat = perspective_matrix(1, -15, 90, aspect);
     glUniformMatrix4fv(projection, 1, GL_FALSE, perspective_mat.data());
 
     GLuint EBO;
@@ -266,9 +236,9 @@ Render::Render(SDL_Window *window): skybox(Cube()), window(window) {
                  GL_STATIC_DRAW);
 
     // Camera
-    Vec3 position  = {0.0f, 0.0f, 1.0f};  // cam position
-    Vec3 direction = {0.0f, 0.0f, -1.0f}; // position of where the cam is looking
-    Vec3 world_up  = {0.0, 1.0f, 0.0f};   // world up
+    auto position  = Vec3<>{0.0f, 0.0f, 1.0f};  // cam position
+    auto direction = Vec3<>{0.0f, 0.0f, -1.0f}; // position of where the cam is looking
+    auto world_up  = Vec3<>{0.0, 1.0f, 0.0f};   // world up
     this->camera = std::make_shared<Camera>(position, direction, world_up);
 }
 
@@ -315,15 +285,15 @@ void Render::render_world(const World *world) {
             // Model - transform_z * transform_y * transform_x * transform_translation * transform_scaling
             auto model = Mat4<GLfloat>();
             model = model.scale(cube->scale);
+            model = model.rotate_x(cube->theta_x);
+            model = model.rotate_y(cube->theta_y);
+            model = model.rotate_z(cube->theta_z);
             model = model.translate(cube->position);
-            model = model * transformation_matrix_x(cube->theta_x);
-            model = model * transformation_matrix_y(cube->theta_y);
-            model = model * transformation_matrix_z(cube->theta_z);
             model = model.transpose();
             buffer.push_back(model);
         }
     }
-    // std::cout << "#" << buffer.size() << " blocks";
+    std::cout << "#" << buffer.size() << " blocks ";
     glBufferData(GL_ARRAY_BUFFER, buffer.size() * sizeof(Mat4<GLfloat>), buffer.data(), GL_DYNAMIC_DRAW);
     glDrawElementsInstanced(GL_TRIANGLES, skybox.indices.size(), GL_UNSIGNED_INT, 0, buffer.size());
 }
