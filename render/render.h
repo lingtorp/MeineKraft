@@ -26,14 +26,9 @@ public:
     ~Render();
 
     const std::string load_shader_source(std::string filename);
-
-    static Mat4<GLfloat> FPSViewRH(Vec3 eye, float pitch, float yaw);
-    Mat4<GLfloat> transformation_matrix_x(float theta);
-    Mat4<GLfloat> transformation_matrix_y(float theta);
-    Mat4<GLfloat> transformation_matrix_z(float theta);
+    static Mat4<GLfloat> FPSViewRH(Vec3<> eye, float pitch, float yaw);
 
     std::shared_ptr<Camera> camera;
-
 private:
     SDL_Window *window;
     Cube skybox;
@@ -44,6 +39,8 @@ private:
     GLuint gl_camera_view;
     GLuint gl_shader_program;
     GLuint gl_skybox_shader;
+
+    double DRAW_DISTANCE;
 };
 
 #endif //MEINEKRAFT_RENDER_H
