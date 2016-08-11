@@ -6,7 +6,7 @@
 Chunk::Chunk(Vec3<> world_position):
         position(world_position), blocks{}, numCubes(0) {
     static auto noise = Noise();
-    static auto bottom = -3;
+    static auto bottom = -10;
     for (size_t x = 0; x < dimension; x++) {
         for (size_t z = 0; z < dimension; z++) {
             auto X = x + position.x;
