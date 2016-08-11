@@ -281,6 +281,10 @@ void Render::render_world(const World *world) {
         auto chunk = &world->chunks[j];
         for (int i = 0; i < chunk->numCubes; i++) {
             auto cube = &chunk->blocks[i];
+
+            // Draw distance
+            auto camera_to_cube = camera->position - cube->position;
+            if (camera_to_cube.length() >= DRAW_DISTANCE) { continue; }
             glBindTexture(GL_TEXTURE_CUBE_MAP, textures[cube->texture]);
             // Model - transform_z * transform_y * transform_x * transform_translation * transform_scaling
             auto model = Mat4<GLfloat>();
