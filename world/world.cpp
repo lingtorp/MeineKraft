@@ -18,14 +18,14 @@ void World::world_tick(uint32_t delta, const std::shared_ptr<Camera> camera) {
     for (auto x : x) {
         for (auto y : y) {
             for (auto z : z) {
-                Vec3 position = {x, y, z};
+                auto position = Vec3<>{x, y, z};
                 chunks.push_back(Chunk::Chunk(position));
             }
         }
     }
 
 //    // 1. Snap Camera/Player to the world coordinate grid using it's direction vector.
-//    auto camera_world_pos = Vec3{std::round(camera->position.x + camera->direction.x), std::round(camera->position.y + camera->direction.y), std::round(camera->position.z + camera->direction.z)};
+//    auto camera_world_pos = Vec3<GLfloat>{std::round(camera->position.x + camera->direction.x), std::round(camera->position.y + camera->direction.y), std::round(camera->position.z + camera->direction.z)};
 //    std::vector<GLfloat> x{camera_world_pos.x - Chunk::dimension, camera_world_pos.x, camera_world_pos.x + Chunk::dimension};
 //    std::vector<GLfloat> y{-Chunk::dimension};
 //    std::vector<GLfloat> z{camera_world_pos.z - Chunk::dimension, camera_world_pos.z, camera_world_pos.z + Chunk::dimension};
@@ -35,7 +35,7 @@ void World::world_tick(uint32_t delta, const std::shared_ptr<Camera> camera) {
 //        for (auto y : y) {
 //            for (auto z : z) {
 //                if ((int) y % Chunk::dimension != 0) { continue; }
-//                Vec3 position = {x, y, z};
+//                auto position = Vec3<GLfloat>{x, y, z};
 //                bool chunk_exists_at_pos = std::any_of(chunks.begin(), chunks.end(), [position](Chunk &c1){ return c1.position == position; });
 //                if (chunk_exists_at_pos) { continue; }
 //                chunks.push_back(Chunk::Chunk(position));
