@@ -11,11 +11,11 @@ Chunk::Chunk(Vec3<> world_position):
         for (size_t z = 0; z < dimension; z++) {
             auto X = x + position.x;
             auto Z = z + position.z;
-            auto height = std::round(std::sqrt(noise.perlin(X, Z, world_position, dimension)));
-//            auto height = noise.generate(X, Z);
-            std::cout << "Height: " << height;
-            std::cout << " / Noise: " << noise.perlin(X, Z, world_position, dimension);
-            std::cout << " for (x, z) = (" << X << ", " << Z << ")" << std::endl;
+ //           auto height = std::round(std::sqrt(noise.perlin(X, Z, world_position, dimension)));
+            auto height = noise.generate(X, Z);
+            // std::cout << "Height: " << height;
+            // std::cout << " / Noise: " << noise.perlin(X, Z, world_position, dimension);
+            // std::cout << " for (x, z) = (" << X << ", " << Z << ")" << std::endl;
             for (auto y = bottom; y < height; y++) {
                 Cube cube = Cube();
                 cube.position.x = x + position.x;
