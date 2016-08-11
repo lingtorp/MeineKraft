@@ -12,11 +12,21 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="6bc5fc86-71f7-49b9-98bc-7e35285f3f76" name="Default" comment="">
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/ray.h" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/MeineKraft.iml" afterPath="$PROJECT_DIR$/.idea/MeineKraft.iml" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/CMakeLists.txt" afterPath="$PROJECT_DIR$/CMakeLists.txt" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/main.cpp" afterPath="$PROJECT_DIR$/main.cpp" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/math/noise.h" afterPath="$PROJECT_DIR$/math/noise.h" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/math/vector.h" afterPath="$PROJECT_DIR$/math/vector.h" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/render/camera.cpp" afterPath="$PROJECT_DIR$/render/camera.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/render/camera.h" afterPath="$PROJECT_DIR$/render/camera.h" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/render/chunk.cpp" afterPath="$PROJECT_DIR$/render/chunk.cpp" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/render/chunk.h" afterPath="$PROJECT_DIR$/render/chunk.h" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/render/primitives.h" afterPath="$PROJECT_DIR$/render/primitives.h" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/render/render.cpp" afterPath="$PROJECT_DIR$/render/render.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/render/render.h" afterPath="$PROJECT_DIR$/render/render.h" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/world/world.cpp" afterPath="$PROJECT_DIR$/world/world.cpp" />
     </list>
     <ignored path="MeineKraft.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -36,36 +46,55 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file leaf-file-name="world.cpp" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/world/world.cpp">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="152">
-              <caret line="8" column="0" selection-start-line="8" selection-start-column="0" selection-end-line="8" selection-end-column="0" />
-              <folding>
-                <element signature="e#0#19#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="world.h" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/world/world.h">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="209">
-              <caret line="11" column="4" selection-start-line="11" selection-start-column="4" selection-end-line="11" selection-end-column="4" />
-              <folding>
-                <marker date="1469915524000" expanded="false" signature="64:215" ph="..." />
-                <marker date="1469915524000" expanded="true" signature="229:355" ph="{...}" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
       <file leaf-file-name="render.cpp" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/render/render.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="6175">
-              <caret line="325" column="0" selection-start-line="325" selection-start-column="0" selection-end-line="325" selection-end-column="0" />
+            <state relative-caret-position="5700">
+              <caret line="300" column="23" selection-start-line="300" selection-start-column="23" selection-end-line="300" selection-end-column="23" />
+              <folding>
+                <element signature="e#0#18#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="primitives.h" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/render/primitives.h">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="1862">
+              <caret line="98" column="67" selection-start-line="98" selection-start-column="67" selection-end-line="98" selection-end-column="67" />
+              <folding>
+                <element signature="e#65#88#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="ray.h" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/ray.h">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="190">
+              <caret line="10" column="52" selection-start-line="10" selection-start-column="52" selection-end-line="10" selection-end-column="52" />
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="world.cpp" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/world/world.cpp">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="418">
+              <caret line="24" column="5" selection-start-line="24" selection-start-column="5" selection-end-line="24" selection-end-column="5" />
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="CMakeLists.txt" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/CMakeLists.txt">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="323">
+              <caret line="17" column="41" selection-start-line="17" selection-start-column="41" selection-end-line="17" selection-end-column="41" />
               <folding />
             </state>
           </provider>
@@ -75,29 +104,17 @@
         <entry file="file://$PROJECT_DIR$/render/chunk.h">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="190">
-              <caret line="10" column="39" selection-start-line="10" selection-start-column="39" selection-end-line="10" selection-end-column="39" />
+              <caret line="10" column="38" selection-start-line="10" selection-start-column="38" selection-end-line="10" selection-end-column="38" />
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="primitives.h" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/render/primitives.h">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1881">
-              <caret line="99" column="12" selection-start-line="99" selection-start-column="12" selection-end-line="99" selection-end-column="12" />
-              <folding>
-                <element signature="e#65#88#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="chunk.cpp" pinned="false" current-in-tab="true">
+      <file leaf-file-name="chunk.cpp" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/render/chunk.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="228">
-              <caret line="12" column="36" selection-start-line="12" selection-start-column="36" selection-end-line="12" selection-end-column="36" />
+            <state relative-caret-position="266">
+              <caret line="14" column="36" selection-start-line="14" selection-start-column="36" selection-end-line="14" selection-end-column="36" />
               <folding>
                 <element signature="e#0#16#0" expanded="true" />
               </folding>
@@ -105,21 +122,11 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="main.cpp" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/main.cpp">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="209">
-              <caret line="11" column="32" selection-start-line="11" selection-start-column="32" selection-end-line="11" selection-end-column="32" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
       <file leaf-file-name="noise.h" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/math/noise.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1292">
-              <caret line="68" column="33" selection-start-line="68" selection-start-column="30" selection-end-line="68" selection-end-column="33" />
+            <state relative-caret-position="1235">
+              <caret line="65" column="0" selection-start-line="65" selection-start-column="0" selection-end-line="65" selection-end-column="0" />
               <folding>
                 <element signature="e#55#72#0" expanded="true" />
               </folding>
@@ -130,13 +137,25 @@
       <file leaf-file-name="vector.h" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/math/vector.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="2812">
-              <caret line="148" column="30" selection-start-line="148" selection-start-column="30" selection-end-line="148" selection-end-column="30" />
+            <state relative-caret-position="3591">
+              <caret line="189" column="19" selection-start-line="189" selection-start-column="19" selection-end-line="189" selection-end-column="19" />
               <folding>
-                <element signature="e#132#144#0" expanded="true" />
-                <element signature="e#1160#1172#0" expanded="true" />
-                <element signature="e#1506#1518#0" expanded="true" />
+                <element signature="e#57#85#0" expanded="true" />
+                <element signature="e#172#184#0" expanded="true" />
+                <element signature="e#919#941#0" expanded="true" />
+                <element signature="e#2495#2507#0" expanded="true" />
+                <element signature="e#2888#2900#0" expanded="true" />
               </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="camera.cpp" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/render/camera.cpp">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="57">
+              <caret line="3" column="0" selection-start-line="3" selection-start-column="0" selection-end-line="3" selection-end-column="0" />
+              <folding />
             </state>
           </provider>
         </entry>
@@ -155,7 +174,6 @@
         <option value="$PROJECT_DIR$/render/Primitives.h" />
         <option value="$PROJECT_DIR$/shaders/block/fragment-shader.glsl" />
         <option value="$PROJECT_DIR$/c14.h" />
-        <option value="$PROJECT_DIR$/render/camera.cpp" />
         <option value="$PROJECT_DIR$/world.h" />
         <option value="$PROJECT_DIR$/world.cpp" />
         <option value="$PROJECT_DIR$/chunk.cpp" />
@@ -166,21 +184,24 @@
         <option value="$PROJECT_DIR$/../MinecraftC/shaders/block/vertex-shader.glsl" />
         <option value="$PROJECT_DIR$/shaders/skybox/vertex-shader.glsl" />
         <option value="$PROJECT_DIR$/shaders/block/vertex-shader.glsl" />
-        <option value="$PROJECT_DIR$/render/render.h" />
         <option value="$PROJECT_DIR$/world/world.h" />
-        <option value="$PROJECT_DIR$/render/camera.h" />
+        <option value="$PROJECT_DIR$/main.cpp" />
         <option value="$PROJECT_DIR$/CMakeLists.txt" />
+        <option value="$PROJECT_DIR$/render/camera.h" />
+        <option value="$PROJECT_DIR$/render/camera.cpp" />
+        <option value="$PROJECT_DIR$/math/noise.h" />
+        <option value="$PROJECT_DIR$/render/primitives.h" />
+        <option value="$PROJECT_DIR$/render/render.h" />
+        <option value="$PROJECT_DIR$/ray.h" />
+        <option value="$PROJECT_DIR$/math/vector.h" />
+        <option value="$PROJECT_DIR$/render/chunk.h" />
+        <option value="$PROJECT_DIR$/render/chunk.cpp" />
         <option value="$PROJECT_DIR$/render/render.cpp" />
         <option value="$PROJECT_DIR$/world/world.cpp" />
-        <option value="$PROJECT_DIR$/math/vector.h" />
-        <option value="$PROJECT_DIR$/render/primitives.h" />
-        <option value="$PROJECT_DIR$/render/chunk.h" />
-        <option value="$PROJECT_DIR$/main.cpp" />
-        <option value="$PROJECT_DIR$/math/noise.h" />
-        <option value="$PROJECT_DIR$/render/chunk.cpp" />
       </list>
     </option>
   </component>
+  <component name="OCFindUsagesOptions" text="true" ivars="false" properties="true" derivedClasses="false" />
   <component name="ProjectFrameBounds">
     <option name="y" value="23" />
     <option name="width" value="960" />
@@ -399,7 +420,7 @@
       <recent name="$PROJECT_DIR$" />
     </key>
   </component>
-  <component name="RunManager" selected="Application.MeineKraft Debug">
+  <component name="RunManager" selected="Application.MeineKraft">
     <configuration default="true" type="CMakeGoogleTestRunConfigurationType" factoryName="Google Test" WORKING_DIR="" PASS_PARENT_ENVS_2="true" PROJECT_NAME="MeineKraft" TARGET_NAME="MeineKraft" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="MeineKraft" RUN_TARGET_NAME="MeineKraft" TEST_MODE="SUITE_TEST">
       <envs />
       <method />
@@ -411,11 +432,11 @@
     <configuration default="true" type="CompoundRunConfigurationType" factoryName="Compound Run Configuration">
       <method />
     </configuration>
-    <configuration default="false" name="MeineKraft Debug" type="CMakeRunConfiguration" factoryName="Application" singleton="true" WORKING_DIR="file://$PROJECT_DIR$/../MinecraftC" PASS_PARENT_ENVS_2="true" PROJECT_NAME="MeineKraft" TARGET_NAME="MeineKraft" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="MeineKraft" RUN_TARGET_NAME="MeineKraft">
+    <configuration default="false" name="MeineKraft" type="CMakeRunConfiguration" factoryName="Application" singleton="true" WORKING_DIR="file://$PROJECT_DIR$/../MinecraftC" PASS_PARENT_ENVS_2="true" PROJECT_NAME="MeineKraft" TARGET_NAME="MeineKraft" CONFIG_NAME="Release" RUN_TARGET_PROJECT_NAME="MeineKraft" RUN_TARGET_NAME="MeineKraft">
       <envs />
       <method />
     </configuration>
-    <configuration default="false" name="MeineKraft" type="CMakeRunConfiguration" factoryName="Application" singleton="true" WORKING_DIR="file://$PROJECT_DIR$/../MinecraftC" PASS_PARENT_ENVS_2="true" PROJECT_NAME="MeineKraft" TARGET_NAME="MeineKraft" CONFIG_NAME="Release" RUN_TARGET_PROJECT_NAME="MeineKraft" RUN_TARGET_NAME="MeineKraft">
+    <configuration default="false" name="MeineKraft Debug" type="CMakeRunConfiguration" factoryName="Application" singleton="true" WORKING_DIR="file://$PROJECT_DIR$/../MinecraftC" PASS_PARENT_ENVS_2="true" PROJECT_NAME="MeineKraft" TARGET_NAME="MeineKraft" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="MeineKraft" RUN_TARGET_NAME="MeineKraft">
       <envs />
       <method />
     </configuration>
@@ -424,8 +445,8 @@
       <method />
     </configuration>
     <list size="3">
-      <item index="0" class="java.lang.String" itemvalue="Application.MeineKraft Debug" />
-      <item index="1" class="java.lang.String" itemvalue="Application.MeineKraft" />
+      <item index="0" class="java.lang.String" itemvalue="Application.MeineKraft" />
+      <item index="1" class="java.lang.String" itemvalue="Application.MeineKraft Debug" />
       <item index="2" class="java.lang.String" itemvalue="Application.Build All" />
     </list>
   </component>
@@ -444,35 +465,43 @@
       <workItem from="1469821846747" duration="29103000" />
       <workItem from="1470063643290" duration="1388000" />
       <workItem from="1470065100687" duration="3109000" />
-      <workItem from="1470137109560" duration="1872000" />
+      <workItem from="1470137109560" duration="10231000" />
+      <workItem from="1470415284064" duration="3251000" />
+      <workItem from="1470468049219" duration="1618000" />
+      <workItem from="1470553044371" duration="2684000" />
+      <workItem from="1470664855389" duration="36000" />
+      <workItem from="1470680276562" duration="6757000" />
+      <workItem from="1470908866931" duration="37000" />
+      <workItem from="1470908923863" duration="582000" />
+      <workItem from="1470909520164" duration="126000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="37921000" />
+    <option name="totallyTimeSpent" value="61371000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="23" width="960" height="1130" extended-state="0" />
     <editor active="true" />
     <layout>
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.225" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.240625" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
-      <window_info id="Messages" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.35532516" sideWeight="0.49583334" order="7" side_tool="false" content_ui="tabs" />
-      <window_info id="CMake" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.13477851" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
+      <window_info id="CMake" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.13477851" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32956687" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.3289777" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.16211122" sideWeight="0.50416666" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
-      <window_info id="Time Tracking" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32916668" sideWeight="0.5" order="-1" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
-      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.19600308" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
+      <window_info id="Messages" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.35532516" sideWeight="0.49583334" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Commander" active="false" anchor="right" auto_hide="false" internal_type="SLIDING" type="SLIDING" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Inspection" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.3992467" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.16211122" sideWeight="0.50416666" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Hierarchy" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="2" side_tool="false" content_ui="combo" />
       <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32862523" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Time Tracking" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32916668" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
+      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.19509897" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
     </layout>
     <layout-to-restore>
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
@@ -507,38 +536,14 @@
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
-          <url>file://$PROJECT_DIR$/math/noise.h</url>
-          <line>73</line>
-          <option name="timeStamp" value="148" />
-        </line-breakpoint>
-      </breakpoints>
       <breakpoints-dialog>
         <breakpoints-dialog />
       </breakpoints-dialog>
-      <option name="time" value="149" />
+      <option name="time" value="150" />
     </breakpoint-manager>
     <watches-manager />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/render/render.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="380">
-          <caret line="20" column="19" selection-start-line="20" selection-start-column="19" selection-end-line="20" selection-end-column="19" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/render/primitives.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="532">
-          <caret line="28" column="20" selection-start-line="28" selection-start-column="20" selection-end-line="28" selection-end-column="20" />
-          <folding>
-            <element signature="e#65#88#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/math/vector.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="304">
@@ -557,9 +562,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="323">
           <caret line="17" column="54" selection-start-line="17" selection-start-column="54" selection-end-line="17" selection-end-column="54" />
-          <folding>
-            <element signature="e#0#19#0" expanded="true" />
-          </folding>
         </state>
       </provider>
     </entry>
@@ -567,10 +569,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="133">
           <caret line="7" column="25" selection-start-line="7" selection-start-column="25" selection-end-line="7" selection-end-column="25" />
-          <folding>
-            <marker date="1469915524000" expanded="false" signature="64:215" ph="..." />
-            <marker date="1469915524000" expanded="true" signature="229:355" ph="{...}" />
-          </folding>
         </state>
       </provider>
     </entry>
@@ -578,7 +576,9 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="646">
           <caret line="34" column="10" selection-start-line="34" selection-start-column="10" selection-end-line="34" selection-end-column="10" />
-          <folding />
+          <folding>
+            <element signature="e#0#18#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
@@ -600,7 +600,9 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="0">
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
+          <folding>
+            <element signature="e#0#18#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
@@ -711,13 +713,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/render/camera.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="76">
-          <caret line="4" column="55" selection-start-line="4" selection-start-column="55" selection-end-line="4" selection-end-column="55" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file:///Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1/random">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="347">
@@ -729,20 +724,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="218">
           <caret line="1730" column="0" selection-start-line="1730" selection-start-column="0" selection-end-line="1730" selection-end-column="0" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/render/camera.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="323">
-          <caret line="17" column="40" selection-start-line="17" selection-start-column="40" selection-end-line="17" selection-end-column="40" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/render/render.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="152">
-          <caret line="23" column="9" selection-start-line="23" selection-start-column="9" selection-end-line="23" selection-end-column="9" />
         </state>
       </provider>
     </entry>
@@ -776,52 +757,6 @@
         <state />
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/CMakeLists.txt">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="57">
-          <caret line="3" column="51" selection-start-line="3" selection-start-column="51" selection-end-line="3" selection-end-column="51" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/world/world.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="209">
-          <caret line="11" column="4" selection-start-line="11" selection-start-column="4" selection-end-line="11" selection-end-column="4" />
-          <folding>
-            <marker date="1469915524000" expanded="false" signature="64:215" ph="..." />
-            <marker date="1469915524000" expanded="true" signature="229:355" ph="{...}" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/world/world.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="152">
-          <caret line="8" column="0" selection-start-line="8" selection-start-column="0" selection-end-line="8" selection-end-column="0" />
-          <folding>
-            <element signature="e#0#19#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/render/primitives.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1881">
-          <caret line="99" column="12" selection-start-line="99" selection-start-column="12" selection-end-line="99" selection-end-column="12" />
-          <folding>
-            <element signature="e#65#88#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/render/render.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="6175">
-          <caret line="325" column="0" selection-start-line="325" selection-start-column="0" selection-end-line="325" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file:///Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1/vector">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="1009">
@@ -829,36 +764,64 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/render/chunk.h">
+    <entry file="file://$PROJECT_DIR$/main.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="190">
-          <caret line="10" column="39" selection-start-line="10" selection-start-column="39" selection-end-line="10" selection-end-column="39" />
+        <state relative-caret-position="608">
+          <caret line="56" column="49" selection-start-line="56" selection-start-column="49" selection-end-line="56" selection-end-column="49" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/world/world.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="323">
+          <caret line="17" column="9" selection-start-line="17" selection-start-column="9" selection-end-line="17" selection-end-column="9" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file:///usr/local/include/SDL2/SDL_video.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="297">
+          <caret line="574" column="45" selection-start-line="574" selection-start-column="45" selection-end-line="574" selection-end-column="45" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/render/camera.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="285">
+          <caret line="15" column="16" selection-start-line="15" selection-start-column="16" selection-end-line="15" selection-end-column="16" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/render/render.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="437">
+          <caret line="23" column="9" selection-start-line="23" selection-start-column="9" selection-end-line="23" selection-end-column="9" />
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/render/chunk.cpp">
+    <entry file="file://$PROJECT_DIR$/render/primitives.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="228">
-          <caret line="12" column="36" selection-start-line="12" selection-start-column="36" selection-end-line="12" selection-end-column="36" />
+        <state relative-caret-position="1862">
+          <caret line="98" column="67" selection-start-line="98" selection-start-column="67" selection-end-line="98" selection-end-column="67" />
           <folding>
-            <element signature="e#0#16#0" expanded="true" />
+            <element signature="e#65#88#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/main.cpp">
+    <entry file="file://$PROJECT_DIR$/ray.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="209">
-          <caret line="11" column="32" selection-start-line="11" selection-start-column="32" selection-end-line="11" selection-end-column="32" />
+        <state relative-caret-position="190">
+          <caret line="10" column="52" selection-start-line="10" selection-start-column="52" selection-end-line="10" selection-end-column="52" />
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/math/noise.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1292">
-          <caret line="68" column="33" selection-start-line="68" selection-start-column="30" selection-end-line="68" selection-end-column="33" />
+        <state relative-caret-position="1235">
+          <caret line="65" column="0" selection-start-line="65" selection-start-column="0" selection-end-line="65" selection-end-column="0" />
           <folding>
             <element signature="e#55#72#0" expanded="true" />
           </folding>
@@ -867,13 +830,67 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/math/vector.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="2812">
-          <caret line="148" column="30" selection-start-line="148" selection-start-column="30" selection-end-line="148" selection-end-column="30" />
+        <state relative-caret-position="3591">
+          <caret line="189" column="19" selection-start-line="189" selection-start-column="19" selection-end-line="189" selection-end-column="19" />
           <folding>
-            <element signature="e#132#144#0" expanded="true" />
-            <element signature="e#1160#1172#0" expanded="true" />
-            <element signature="e#1506#1518#0" expanded="true" />
+            <element signature="e#57#85#0" expanded="true" />
+            <element signature="e#172#184#0" expanded="true" />
+            <element signature="e#919#941#0" expanded="true" />
+            <element signature="e#2495#2507#0" expanded="true" />
+            <element signature="e#2888#2900#0" expanded="true" />
           </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/render/camera.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="57">
+          <caret line="3" column="0" selection-start-line="3" selection-start-column="0" selection-end-line="3" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/render/chunk.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="190">
+          <caret line="10" column="38" selection-start-line="10" selection-start-column="38" selection-end-line="10" selection-end-column="38" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/render/chunk.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="266">
+          <caret line="14" column="36" selection-start-line="14" selection-start-column="36" selection-end-line="14" selection-end-column="36" />
+          <folding>
+            <element signature="e#0#16#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/render/render.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="5700">
+          <caret line="300" column="23" selection-start-line="300" selection-start-column="23" selection-end-line="300" selection-end-column="23" />
+          <folding>
+            <element signature="e#0#18#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/world/world.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="418">
+          <caret line="24" column="5" selection-start-line="24" selection-start-column="5" selection-end-line="24" selection-end-column="5" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/CMakeLists.txt">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="323">
+          <caret line="17" column="41" selection-start-line="17" selection-start-column="41" selection-end-line="17" selection-end-column="41" />
+          <folding />
         </state>
       </provider>
     </entry>
