@@ -3,7 +3,7 @@
 #include "chunk.h"
 
 /// @param world_position World coordinates
-Chunk::Chunk(Vec3 world_position):
+Chunk::Chunk(Vec3<> world_position):
         position(world_position), blocks{}, numCubes(0) {
     static auto noise = Noise();
     static auto bottom = -3;
