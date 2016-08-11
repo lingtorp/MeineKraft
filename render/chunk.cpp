@@ -21,6 +21,10 @@ Chunk::Chunk(Vec3 world_position):
                 cube.position.x = x + position.x;
                 cube.position.y = y + position.y;
                 cube.position.z = z + position.z;
+                cube.center = Vec3<>{(GLfloat) (cube.position.x + 0.5),
+                                     (GLfloat) (cube.position.y + 0.5),
+                                     (GLfloat) (cube.position.z + 0.5)};
+                cube.radius = 1.0;
                 blocks.push_back(cube);
                 numCubes++;
             }
