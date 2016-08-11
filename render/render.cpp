@@ -285,6 +285,17 @@ void Render::render_world(const World *world) {
             // Draw distance
             auto camera_to_cube = camera->position - cube->position;
             if (camera_to_cube.length() >= DRAW_DISTANCE) { continue; }
+
+            // Ray tracing
+            auto angles = {-45, -30, -15, 0, 15, 30, 45};
+            auto hit = false;
+            for (auto angle : angles) {
+                auto ray = Ray(camera->position, Mat4<GLfloat>().rotate_z(angle) * camera->direction);
+                if (ray.hits_sphere(cube->center, cube->radius)) { hit = true; };
+                if (hit) { break; }
+            }
+            if (hit) { continue; }
+
             glBindTexture(GL_TEXTURE_CUBE_MAP, textures[cube->texture]);
             // Model - transform_z * transform_y * transform_x * transform_translation * transform_scaling
             auto model = Mat4<GLfloat>();
