@@ -74,6 +74,10 @@ public:
 
         return v;
     }
+
+    double generate(int x, int y) {
+        return 4 * std::cos(x/4) + std::sin(y/2);
+    }
 };
 
 #endif //MEINEKRAFT_NOISE_H
