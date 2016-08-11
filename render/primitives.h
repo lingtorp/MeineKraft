@@ -20,12 +20,12 @@ struct Color4 {
 };
 
 struct Vertex {
-    Vec3 position = {};
+    Vec3<GLfloat> position = {};
     Color4 color = {};
     Vec2<GLfloat> texCoord = {};
     Vertex(): position{}, color{}, texCoord{} {};
-    Vertex(Vec3 position, Vec2<GLfloat> texCoord): position(position), texCoord(texCoord), color{} {};
-    Vertex(Vec3 position, Color4 color, Vec2<GLfloat> texCoord):
+    Vertex(Vec3<> position, Vec2<GLfloat> texCoord): position(position), texCoord(texCoord), color{} {};
+    Vertex(Vec3<> position, Color4 color, Vec2<GLfloat> texCoord):
             position(position), color(color), texCoord(texCoord) {};
 };
 
@@ -73,7 +73,7 @@ struct Mesh {
 //  a ----- b   0 = a, 1 = b, 2 = c, 3 = d
 struct Quad: Mesh {
     Quad(): Mesh() {};
-    Quad(Vec3 points[4], Color4 colors[4], Vec2<GLfloat> texCoords[4]): Mesh() {
+    Quad(Vec3<> points[4], Color4 colors[4], Vec2<GLfloat> texCoords[4]): Mesh() {
         vertices.push_back(Vertex(points[0], colors[0], texCoords[0]));
         vertices.push_back(Vertex(points[1], colors[1], texCoords[1]));
         vertices.push_back(Vertex(points[2], colors[2], texCoords[2]));
@@ -86,17 +86,21 @@ struct Quad: Mesh {
 typedef enum { SKYBOX, DIRT, GRASS, AIR } Texture;
 
 struct Cube: Mesh {
-    Vec3 position; // Lower left corner of the cube in world space
+    Vec3<GLfloat> position; // Lower left corner of the cube in world space
     GLfloat theta_x, theta_y, theta_z; // Rotation in object space
     GLfloat scale;
     Texture texture;
 
-    Cube(): Mesh(), scale(1.0), texture(Texture::GRASS), position(Vec3::ZERO()),
-            theta_x(0.0), theta_y(0.0), theta_z(0.0) {
-        Vec3 a = Vec3(-0.5f, -0.5f, 0.5f);
-        Vec3 b = Vec3(0.5f, -0.5f, 0.5f);
-        Vec3 c = Vec3(0.5f, 0.5f, 0.5f);
-        Vec3 d = Vec3(-0.5f, 0.5f, 0.5f);
+    // TODO: Refactor later
+    Vec3<GLfloat> center;
+    double radius;
+
+    Cube(): Mesh(), scale(1.0), texture(Texture::GRASS), position(Vec3<>::ZERO()),
+            theta_x(0.0), theta_y(0.0), theta_z(0.0), center(Vec3<>::ZERO()), radius(0) {
+        auto a = Vec3<GLfloat>(-0.5f, -0.5f, 0.5f);
+        auto b = Vec3<GLfloat>(0.5f, -0.5f, 0.5f);
+        auto c = Vec3<GLfloat>(0.5f, 0.5f, 0.5f);
+        auto d = Vec3<GLfloat>(-0.5f, 0.5f, 0.5f);
         auto tex_a = Vec2<GLfloat>(0.0f, 0.0f);
         auto tex_b = Vec2<GLfloat>(1.0f, 0.0f);
         auto tex_c = Vec2<GLfloat>(1.0f, 1.0f);
@@ -106,10 +110,10 @@ struct Cube: Mesh {
         vertices.push_back(Vertex(c, tex_c));
         vertices.push_back(Vertex(d, tex_d));
 
-        Vec3 e = Vec3(-0.5f, -0.5f, -0.5f);
-        Vec3 f = Vec3(0.5f, -0.5f, -0.5f);
-        Vec3 g = Vec3(0.5f, 0.5f, -0.5f);
-        Vec3 h = Vec3(-0.5f, 0.5f, -0.5f);
+        auto e = Vec3<GLfloat>(-0.5f, -0.5f, -0.5f);
+        auto f = Vec3<GLfloat>(0.5f, -0.5f, -0.5f);
+        auto g = Vec3<GLfloat>(0.5f, 0.5f, -0.5f);
+        auto h = Vec3<GLfloat>(-0.5f, 0.5f, -0.5f);
         auto tex_e = Vec2<GLfloat>(1.0f, 0.0f);
         auto tex_f = Vec2<GLfloat>(0.0f, 0.0f);
         auto tex_g = Vec2<GLfloat>(0.0f, 1.0f);
