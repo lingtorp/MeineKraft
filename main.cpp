@@ -9,7 +9,7 @@ int main() {
     SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
     SDL_Window *window = SDL_CreateWindow(
-            "", 0, 0, 700, 700,
+            "", 0, 0, 1000, 1000,
             SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_MOUSE_CAPTURE);
     SDL_GLContext context = SDL_GL_CreateContext(window);
     atexit(IMG_Quit);
