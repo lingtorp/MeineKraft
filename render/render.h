@@ -41,6 +41,9 @@ private:
     GLuint gl_skybox_shader;
 
     double DRAW_DISTANCE;
+    GLint gl_skybox_camera;
+    GLint gl_skybox_model;
+    GLuint gl_skybox_VAO;
 };
 
 #endif //MEINEKRAFT_RENDER_H
