@@ -97,10 +97,15 @@ const std::string Render::load_shader_source(std::string filename) {
                               (std::istreambuf_iterator<char>()));
 }
 
-Render::Render(SDL_Window *window): skybox(Cube()), window(window), DRAW_DISTANCE(50) {
+Render::Render(SDL_Window *window): skybox(Cube()), window(window), DRAW_DISTANCE(150) {
     glewExperimental = (GLboolean) true;
     glewInit();
     char buffer[512];
+
+    int height, width;
+    SDL_GetWindowSize(this->window, &width, &height);
+    float aspect = width / height;
+    auto perspective_mat = perspective_matrix(1, -15, 90, aspect);
 
     // Load all block & skybox textures
     auto base = "/Users/AlexanderLingtorp/Google Drive/Repositories/MeineKraft/";
@@ -138,7 +143,7 @@ Render::Render(SDL_Window *window): skybox(Cube()), window(window), DRAW_DISTANC
     GLint skyboxFragStatus;
     glGetShaderiv(skyboxFragShader, GL_COMPILE_STATUS, &skyboxFragStatus);
 
-    printf("Cube Fragment: %i, Vertex: %i\n", skyboxFragStatus,
+    printf("Skybox Fragment: %i, Vertex: %i\n", skyboxFragStatus,
            skyboxVertStatus);
     glGetShaderInfoLog(skyboxVertShader, 512, NULL, buffer);
     printf("%s\n", buffer);
@@ -148,6 +153,33 @@ Render::Render(SDL_Window *window): skybox(Cube()), window(window), DRAW_DISTANC
     glAttachShader(gl_skybox_shader, skyboxFragShader);
     glLinkProgram(gl_skybox_shader);
     glUseProgram(gl_skybox_shader);
+
+    /// Skybox vertex bindings
+    glGenVertexArrays(1, &gl_skybox_VAO);
+    glBindVertexArray(gl_skybox_VAO);
+
+    this->gl_skybox_model = glGetUniformLocation(gl_skybox_shader, "model");
+    this->gl_skybox_camera = glGetUniformLocation(gl_skybox_shader, "camera");
+    auto sky_projection = glGetUniformLocation(gl_skybox_shader, "projection");
+    glUniformMatrix4fv(sky_projection, 1, GL_FALSE, perspective_mat.data());
+
+    GLuint skybox_VBO;
+    glGenBuffers(1, &skybox_VBO);
+    glBindBuffer(GL_ARRAY_BUFFER, skybox_VBO);
+    auto sky_vector = skybox.to_floats();
+    glBufferData(GL_ARRAY_BUFFER, skybox.byte_size_of_vertices(), sky_vector.data(), GL_STATIC_DRAW);
+
+    // Then set our vertex attributes pointers, only doable AFTER linking
+    auto sky_positionAttrib = glGetAttribLocation(gl_skybox_shader, "position");
+    glVertexAttribPointer(sky_positionAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                          (const void *)offsetof(Vertex, position));
+    glEnableVertexAttribArray(sky_positionAttrib);
+
+    GLuint sky_EBO;
+    glGenBuffers(1, &sky_EBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, sky_EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, skybox.byte_size_of_indices(), skybox.indices.data(),
+                 GL_STATIC_DRAW);
 
     /** Cube **/
     auto vertexShaderSource =
@@ -207,6 +239,7 @@ Render::Render(SDL_Window *window): skybox(Cube()), window(window), DRAW_DISTANC
                           (const void *)offsetof(Vertex, color));
     glEnableVertexAttribArray(colorAttrib);
 
+    // Buffer for all the model matrices
     glGenBuffers(1, &gl_modelsBO);
     glBindBuffer(GL_ARRAY_BUFFER, gl_modelsBO);
 
@@ -223,10 +256,6 @@ Render::Render(SDL_Window *window): skybox(Cube()), window(window), DRAW_DISTANC
 
     // Projection
     GLuint projection = glGetUniformLocation(gl_shader_program, "projection");
-    int height, width;
-    SDL_GetWindowSize(this->window, &width, &height);
-    float aspect = width / height;
-    auto perspective_mat = perspective_matrix(1, -15, 90, aspect);
     glUniformMatrix4fv(projection, 1, GL_FALSE, perspective_mat.data());
 
     GLuint EBO;
@@ -251,31 +280,29 @@ void Render::render_world(const World *world) {
     glClearColor(0.4f, 0.3f, 0.7f, 1.0f);
 
     /** Render skybox **/
-//    glUseProgram(gl_skybox_shader);
-//    glEnable(GL_CULL_FACE); // cull face
-//    glCullFace(GL_FRONT);   // cull back face
-//    glFrontFace(GL_CCW);    // GL_CCW for counter clock-wise
-//    glBindTexture(GL_TEXTURE_CUBE_MAP, textures[Texture::SKYBOX]);
-//
-//    // Model
-//    auto model = Mat4<GLfloat>();
-//    model = model.translate(skybox.position);
-//    model = model.scale(skybox.scale);
-//    glUniformMatrix4fv(gl_skybox_model, 1, GL_TRUE, model.data());
-//    glUniformMatrix4fv(gl_skybox_camera, 1, GL_TRUE, camera);
-//
-//    glBindVertexArray(gl_skybox_VAO);
-//    glDrawElements(GL_TRIANGLES, skybox.indices.size(), GL_UNSIGNED_INT, 0);
+    glBindVertexArray(gl_skybox_VAO);
+    glUseProgram(gl_skybox_shader);
+    glEnable(GL_CULL_FACE); // cull face
+    glCullFace(GL_FRONT);   // cull back face
+    glFrontFace(GL_CCW);    // GL_CCW for counter clock-wise
+    glBindTexture(GL_TEXTURE_CUBE_MAP, textures[Texture::SKYBOX]);
+
+    // Model
+    glUniformMatrix4fv(gl_skybox_camera, 1, GL_FALSE, camera_view.data());
+    auto model = Mat4<GLfloat>();
+    model = model.translate(skybox.position);
+    model = model.scale(skybox.scale);
+    glUniformMatrix4fv(gl_skybox_model, 1, GL_TRUE, model.data());
+    glDrawElements(GL_TRIANGLES, skybox.indices.size(), GL_UNSIGNED_INT, 0);
 
     /** Render cubes **/
+    glBindVertexArray(gl_VAO);
     glUseProgram(gl_shader_program);
     glEnable(GL_CULL_FACE); // cull face
     glCullFace(GL_BACK);    // cull back face
     glFrontFace(GL_CCW);    // GL_CCW for counter clock-wise
     glUniformMatrix4fv(gl_camera_view, 1, GL_FALSE, camera_view.data());
-    glBindVertexArray(gl_VAO);
 
-    glBindBuffer(GL_ARRAY_BUFFER, gl_modelsBO);
     std::vector<Mat4<GLfloat>> buffer{};
     for (int j = 0; j < world->chunks.size(); j++) {
         auto chunk = &world->chunks[j];
