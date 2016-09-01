@@ -22,16 +22,10 @@ public:
 
         /// Fill gradient lookup array with random indices to the gradients list
         /// Fill with indices from 0 to perms.size()
-        for (int i = 0; i < perms.size(); i++) {
-            perms[i] = i;
-        }
+        std::iota(perms.begin(), perms.end(), 0);
+
         /// Randomize the order of the indices
-        for (int i = 0; i < perms.size(); i++) {
-            int j = (int) distr(engine) & perms.size();
-            auto swap = perms[i];
-            perms[i] = perms[j];
-            perms[j] = swap;
-        }
+        std::shuffle(perms.begin(), perms.end(), engine);
     }
 
     double perlin(int x, int y, Vec3<> chunk_pos, int dimension) {
