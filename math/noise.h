@@ -52,11 +52,17 @@ public:
         Vec2<double> x0y1 = grads[perms[(X0 + perms[Y1 % perms.size()]) % perms.size()]];
         Vec2<double> x1y1 = grads[perms[(X1 + perms[Y1 % perms.size()]) % perms.size()]];
 
+        /// Vectors from gradients to point in unit squere
+        auto v00 = Vec2<double>{X0 - X, Y0 - Y};
+        auto v10 = Vec2<double>{X1 - X, Y0 - Y};
+        auto v01 = Vec2<double>{X0 - X, Y1 - Y};
+        auto v11 = Vec2<double>{X1 - X, Y1 - Y};
+
         /// Contribution of gradient vectors by dot product between relative vectors and gradients
-        double v00 = x0y0.dot(Vec2<double>{X0 - X, Y0 - Y});
-        double v10 = x1y0.dot(Vec2<double>{X1 - X, Y0 - Y});
-        double v01 = x0y1.dot(Vec2<double>{X0 - X, Y1 - Y});
-        double v11 = x1y1.dot(Vec2<double>{X1 - X, Y1 - Y});
+        double d00 = x0y0.dot(v00);
+        double d10 = x1y0.dot(v10);
+        double d01 = x0y1.dot(v01);
+        double d11 = x1y1.dot(v11);
 
         /// Interpolate dot product values at sample point using polynomial interpolation 6x^5 - 15x^4 + 10x^3
         auto wx = fade(xf);
