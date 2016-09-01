@@ -31,14 +31,14 @@ public:
     double perlin(int x, int y, Vec3<> chunk_pos, int dimension) {
         /// Compress the coordinates inside the chunk; double part + int part = point coordinate
         double a = y % dimension; // Integer offset inside the chunk
-        double b = 1 - std::abs(a / dimension); // Float offset inside the chunk (0, 1)
-        double c = chunk_pos.z / dimension; // Integer bounds from the world
-        double Y = b + c; // Relative position inside the chunk and the chunk from the world coords perspective
+        double yf = 1 - std::abs(a / dimension); // Float offset inside the chunk (0, 1)
+        double yi = chunk_pos.z / dimension; // Integer bounds from the world
+        double Y = yf + yi; // Relative position inside the chunk and the chunk from the world coords perspective
 
-        double f = x % dimension;
-        double g = 1 - std::abs(f / dimension);
-        double h = chunk_pos.x / dimension;
-        double X = g + h;
+        double b = x % dimension;
+        double xf = 1 - std::abs(b / dimension);
+        double xi = chunk_pos.x / dimension;
+        double X = xf + xi;
 
         /// Grid points from the chunk in the world
         int X0 = (int) (chunk_pos.x / dimension);
