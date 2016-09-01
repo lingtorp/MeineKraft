@@ -64,20 +64,23 @@ public:
         double v01 = x0y1.dot(Vec2<double>{X0 - X, Y1 - Y});
         double v11 = x1y1.dot(Vec2<double>{X1 - X, Y1 - Y});
 
-        /// Bi-cubic interpolation to get the final value
-        double Wx = 3*pow(X0 - X, 2) - 2*pow(X0 - X, 3);
-        double v0 = v00 - Wx*(v00 - v01);
-        double v1 = v10 - Wx*(v10 - v11);
+        /// Interpolate dot product values at sample point using polynomial interpolation 6x^5 - 15x^4 + 10x^3
+        auto wx = fade(xf);
+        auto wy = fade(yf);
 
-        double Wy = 3*pow(Y0 - Y, 2) - 2*pow(Y0 - Y, 3);
-        double v = v0 - Wy*(v0 - v1);
+        auto xa = lerp(wx, d00, d10);
+        auto xb = lerp(wx, d01, d11);
+        auto ya = lerp(wy, xa, xb);
 
-        return v;
+        return ya * 10;
     }
 
     double generate(int x, int y) {
         return 4 * std::cos(x/4) + std::sin(y/2);
     }
+
+    double fade(double t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+    double lerp(double t, double a, double b) { return a + t * (b - a); }
 };
 
 #endif //MEINEKRAFT_NOISE_H
