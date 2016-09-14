@@ -14,3 +14,9 @@
 .idea/uiDesigner.xml
 
 .DS_Store
+
+.idea
+
+*.xml
+
+.idea/workspace.xml
