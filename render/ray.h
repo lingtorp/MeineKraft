@@ -1,7 +1,7 @@
 #ifndef MEINEKRAFT_RAY_H
 #define MEINEKRAFT_RAY_H
 
-#include "math/vector.h"
+#include "../math/vector.h"
 
 class Ray {
 public:
