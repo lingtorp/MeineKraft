@@ -1,23 +1,23 @@
 #include "camera.h"
 
-Vec3<> Camera::move_forward(double delta) const {
-    Vec3<> movement = direction * (movement_speed * delta);
-    return position + movement;
+Vec3<> Camera::move_forward(double delta) {
+    velocity = std::min(velocity + acceleration * delta, max_acceleration);
+    return position + direction * velocity;
 }
 
-Vec3<> Camera::move_backward(double delta) const {
-    Vec3<> movement = direction * (movement_speed * delta);
-    return position - movement;
+Vec3<> Camera::move_backward(double delta) {
+    velocity = std::min(velocity + acceleration * delta, -max_acceleration);
+    return position + direction * velocity;
 }
 
 Vec3<> Camera::move_right(double delta) const {
     Vec3<> movement = direction.cross(up).normalize();
-    return position + (movement * (movement_speed * delta));
+    return position + (movement * (acceleration * delta));
 }
 
 Vec3<> Camera::move_left(double delta) const {
     Vec3<> movement = direction.cross(up).normalize();
-    return position - (movement * (movement_speed * delta));
+    return position - (movement * (acceleration * delta));
 }
 
 Vec3<> Camera::recalculate_direction() const {
