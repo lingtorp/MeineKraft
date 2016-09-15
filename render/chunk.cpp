@@ -6,13 +6,12 @@
 Chunk::Chunk(Vec3<> world_position):
         position(world_position), blocks{}, numCubes(0) {
     static auto noise = Noise();
-    static auto bottom = -10;
+    static auto bottom = -32;
     for (size_t x = 0; x < dimension; x++) {
         for (size_t z = 0; z < dimension; z++) {
             auto X = x + position.x;
             auto Z = z + position.z;
- //           auto height = std::round(std::sqrt(noise.perlin(X, Z, world_position, dimension)));
-            auto height = noise.generate(X, Z);
+            auto height = std::round(noise.perlin(X, Z, world_position, dimension));
             // std::cout << "Height: " << height;
             // std::cout << " / Noise: " << noise.perlin(X, Z, world_position, dimension);
             // std::cout << " for (x, z) = (" << X << ", " << Z << ")" << std::endl;
