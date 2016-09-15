@@ -12,7 +12,7 @@ out vec3 fTexcoord;
 // View or a.k.a camera matrix
 uniform mat4 camera_view;
 
-// Projection or a.k.a perspecitve matrix
+// Projection or a.k.a perspective matrix
 uniform mat4 projection;
 
 void main() {
