@@ -38,8 +38,8 @@ struct Mesh {
     Mesh(std::vector<Vertex> vertices, std::vector<GLuint> indices):
             vertices(vertices), indices(indices) {};
 
-    // Converts a quad to vertices
     // 1 quad = 2 triangles => 4 vertices = 4 points & 4 colors
+    /// Converts a quad to vertices
     std::vector<GLfloat> to_floats() {
         std::vector<GLfloat> floats;
         for (auto vertex : vertices) {
@@ -135,6 +135,40 @@ struct Cube: Mesh {
                     4, 5, 1, 1, 0, 4,
                     // top
                     3, 2, 6, 6, 7, 3};
+    }
+};
+
+/// Mathematical plane: a*x + b*y + c*z = d
+template<typename T>
+struct Plane {
+    T a, b, c, d;
+
+    Plane(): a(0), b(0), c(0), d(0) {};
+    Plane(T a, T b, T c, T d): a(a), b(b), c(c), d(d) {};
+
+    /// Normal of the plane
+    /// @return Normal vector of the plane
+    Vec3<T> normal(bool normalized) {
+        return Vec3<T>(a, b, c);
+    }
+
+    /// Normalizes the plane
+    /// @return Normalized plane (self)
+    Plane<T> normalize() {
+        double mag = sqrt(a * a + b * b + c * c);
+        a = a / mag;
+        b = b / mag;
+        c = c / mag;
+        d = d / mag;
+        return *this;
+    }
+
+    /// Distance to point from the plane
+    /// distance < 0, then point lies in the negative halfspace
+    /// distance = 0, then point lies in the plane
+    /// distance > 0, then point lies in the positive halfspace
+    double distance_to_point(const Vec3<T> point) {
+        return a*point.x + b*point.y + c*point.z + d;
     }
 };
 
