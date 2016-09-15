@@ -1,5 +1,7 @@
-# MeineKraft - Study of 3D game engines with a Minecraft clone
- Written in C++11 & OpenGL, also an adventure in C++ and OpenGL.
+# MeineKraft
+## - Study of 3D game engine with a Minecraft clone
+ Written in C++11 & OpenGL, also an adventure into C++ and OpenGL.
+ ![](/screenshots/perlin-hills.gif)
 
 # Notebook
 * Procedural generation
@@ -12,13 +14,13 @@ Content streaming
 - [ ] Multithreaded?
 
 Lightning
-- [ ]
+- [ ] Implement Phong lightning to begin with
 
 Rendering
 - [x] Merge all model matrices into a single matrix
 - [x] Use instanced rendering
 - [ ] Line of sight distance
-- [x] View frustrum culling (geometric approach)
-- [x] Ray tracing
-- [ ] Use the ray tracing for entity selection
+- [ ] View frustrum culling (geometric approach)
+- [ ] Ray tracing for entity selection
 - [ ] Merge all 3 transformation matrices into one
+- [ ] Frustrum cull checks against chunks
