@@ -16,6 +16,10 @@ public:
     std::vector<Chunk> chunks;
 
     void world_tick(uint32_t delta, std::shared_ptr<Camera> camera);
+    Vec3<> world_position(Vec3<> position) const;
+
+private:
+    void spawn_flat_world();
 };
 
 #endif //MEINEKRAFT_WORLD_H
