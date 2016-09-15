@@ -314,6 +314,9 @@ void Render::render_world(const World *world) {
     std::vector<Mat4<GLfloat>> buffer{};
     for (int j = 0; j < world->chunks.size(); j++) {
         auto chunk = &world->chunks[j];
+
+        // TODO: Frustrum culling on chunks in order to improve perf.
+
         for (int i = 0; i < chunk->numCubes; i++) {
             auto cube = &chunk->blocks[i];
 
