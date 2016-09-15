@@ -32,18 +32,21 @@ public:
 private:
     SDL_Window *window;
     Cube skybox;
+    double DRAW_DISTANCE;
     std::unordered_map<Texture, GLuint, std::hash<int>> textures;
-    GLuint gl_VBO;
+    Mat4<GLfloat> projection_matrix;
+
     GLuint gl_VAO;
     GLuint gl_modelsBO;
     GLuint gl_camera_view;
     GLuint gl_shader_program;
-    GLuint gl_skybox_shader;
 
-    double DRAW_DISTANCE;
+    GLuint gl_skybox_shader;
     GLint gl_skybox_camera;
     GLint gl_skybox_model;
     GLuint gl_skybox_VAO;
+
+    std::array<Plane<GLfloat>, 6> extract_planes(Mat4<GLfloat> matrix);
 };
 
 #endif //MEINEKRAFT_RENDER_H
