@@ -3,9 +3,10 @@
 
 #include <random>
 #include "vector.h"
+#include <iostream>
 
 class Noise {
-    int seed = 1;
+    unsigned int seed = 1;
     std::mt19937 engine;
     std::uniform_real_distribution<> distr;
     std::vector<Vec2<double>> grads; /// Normalized gradients
@@ -28,23 +29,39 @@ public:
         std::shuffle(perms.begin(), perms.end(), engine);
     }
 
-    double perlin(int x, int y, Vec3<> chunk_pos, int dimension) {
+    /// Octabes of 2D Perlin noise
+    double octaves_of_perlin2d(int x, int y, int intensity, int amplitude, Vec3<> chunk_pos, int chunk_size) {
+        float total = 0.0;
+        int n = intensity; // noise intensity
+        int p = amplitude; // noise amplitude (0) - plains, (1) - rugged, (2) - hills, (3) - mountains
+
+        for (unsigned int i = 0; i < n; ++i )  {
+            int freq = 1 << i; // 2^i
+            double amp = pow(p, i);
+            // tot += noise( x * freq ) * amp;
+            total += perlin2d(x * freq, y * freq, chunk_pos, chunk_size) * amp;
+        }
+        return total;
+    }
+
+    /// 2D Perlin noise (x, y), chunk_pos gives the frame for the coord (x, y) and dimension is the chunks size
+    double perlin2d(int x, int y, Vec3<> chunk_pos, int chunk_size) {
         /// Compress the coordinates inside the chunk; double part + int part = point coordinate
-        double a = y % dimension; // Integer offset inside the chunk
-        double yf = 1 - std::abs(a / dimension); // Float offset inside the chunk (0, 1)
-        double yi = chunk_pos.z / dimension; // Integer bounds from the world
+        double a = y % chunk_size; // Integer offset inside the chunk
+        double yf = 1 - std::abs(a / chunk_size); // Float offset inside the chunk (0, 1)
+        double yi = chunk_pos.z / chunk_size; // Integer bounds from the world
         double Y = yf + yi; // Relative position inside the chunk and the chunk from the world coords perspective
 
-        double b = x % dimension;
-        double xf = 1 - std::abs(b / dimension);
-        double xi = chunk_pos.x / dimension;
+        double b = x % chunk_size;
+        double xf = 1 - std::abs(b / chunk_size);
+        double xi = chunk_pos.x / chunk_size;
         double X = xf + xi;
 
         /// Grid points from the chunk in the world
-        int X0 = (int) (chunk_pos.x / dimension);
-        int X1 = (int) (chunk_pos.x + dimension) / dimension;
-        int Y0 = (int) chunk_pos.z / dimension;
-        int Y1 = (int) (chunk_pos.z + dimension) / dimension;
+        int X0 = (int) (chunk_pos.x / chunk_size);
+        int X1 = (int) (chunk_pos.x + chunk_size) / chunk_size;
+        int Y0 = (int) chunk_pos.z / chunk_size;
+        int Y1 = (int) (chunk_pos.z + chunk_size) / chunk_size;
 
         /// Gradients using hashed indices from lookup list
         Vec2<double> x0y0 = grads[perms[(X0 + perms[Y0 % perms.size()]) % perms.size()]];
@@ -75,12 +92,9 @@ public:
         return ya * 10;
     }
 
-    double generate(int x, int y) {
-        return 4 * std::cos(x/4) + std::sin(y/2);
-    }
-
-    double fade(double t) { return t * t * t * (t * (t * 6 - 15) + 10); }
-    double lerp(double t, double a, double b) { return a + t * (b - a); }
+private:
+    static inline double fade(double t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+    static inline double lerp(double t, double a, double b) { return a + t * (b - a); }
 };
 
 #endif //MEINEKRAFT_NOISE_H

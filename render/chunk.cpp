@@ -11,7 +11,7 @@ Chunk::Chunk(Vec3<> world_position):
         for (size_t z = 0; z < dimension; z++) {
             auto X = x + position.x;
             auto Z = z + position.z;
-            auto height = std::round(noise.perlin(X, Z, world_position, dimension));
+            auto height = std::round(noise.octaves_of_perlin2d(X, Z, 2, 0,world_position, dimension));
             // std::cout << "Height: " << height;
             // std::cout << " / Noise: " << noise.perlin(X, Z, world_position, dimension);
             // std::cout << " for (x, z) = (" << X << ", " << Z << ")" << std::endl;
