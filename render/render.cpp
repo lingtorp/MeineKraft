@@ -274,6 +274,20 @@ Render::Render(SDL_Window *window): skybox(Cube()), window(window), DRAW_DISTANC
     this->camera = std::make_shared<Camera>(position, direction, world_up);
 }
 
+bool Render::point_inside_frustrum(Vec3<GLfloat> point, std::array<Plane<GLfloat>, 6> planes) {
+    auto left_plane = planes[0]; auto right_plane = planes[1];
+    auto top_plane  = planes[2]; auto bot_plane   = planes[3];
+    auto near_plane = planes[4]; auto far_plane   = planes[5];
+    auto dist_l = left_plane.distance_to_point(point);
+    auto dist_r = right_plane.distance_to_point(point);
+    auto dist_t = top_plane.distance_to_point(point);
+    auto dist_b = bot_plane.distance_to_point(point);
+    auto dist_n = near_plane.distance_to_point(point);
+    auto dist_f = far_plane.distance_to_point(point);
+    if (dist_l < 0 && dist_r < 0 && dist_t < 0 && dist_b < 0 && dist_n < 0 && dist_f < 0) { return true; }
+    return false;
+}
+
 void Render::render_world(const World *world) {
     /// Frustrum planes
     auto camera_view = FPSViewRH(camera->position, camera->pitch, camera->yaw);
