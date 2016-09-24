@@ -46,6 +46,7 @@ private:
     GLint gl_skybox_model;
     GLuint gl_skybox_VAO;
 
+    bool point_inside_frustrum(Vec3<GLfloat> point, std::array<Plane<GLfloat>, 6> planes);
     std::array<Plane<GLfloat>, 6> extract_planes(Mat4<GLfloat> matrix);
 };
 
