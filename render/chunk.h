@@ -10,6 +10,7 @@ public:
     Chunk(Vec3<> world_position);
     static const uint16_t dimension = 32; // The 'width' of the chunk in number of cubes
     Vec3<> position;
+    Vec3<> center_position;
     uint16_t numCubes;
     std::vector<Cube> blocks;
 };
