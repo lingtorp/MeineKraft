@@ -19,7 +19,40 @@ include_directories(${SDL2_INCLUDE_DIRS})
 target_link_libraries(MeineKraft ${SDL2_LIBRARIES})
 
 cmake_policy(SET CMP0004 OLD)
-include(FindPkgConfig)
-pkg_search_module(SDL2IMAGE REQUIRED SDL2_image>=2.0.0)
-include_directories({SDL2IMAGE_INCLUDE_DIRS})
-target_link_libraries(MeineKraft ${SDL2IMAGE_LIBRARIES})
+
+FIND_PATH(SDL2IMAGE_INCLUDE_DIR SDL_image.h
+        HINTS
+        $ENV{SDL2IMAGEDIR}
+        $ENV{SDL2DIR}
+        PATH_SUFFIXES include
+        PATHS
+        ~/Library/Frameworks
+        /Library/Frameworks
+        /usr/local/include/SDL2
+        /usr/include/SDL2
+        /sw/include/SDL2 # Fink
+        /opt/local/include/SDL2 # DarwinPorts
+        /opt/csw/include/SDL2 # Blastwave
+        /opt/include/SDL2
+        )
+
+FIND_LIBRARY(SDL2IMAGE_LIBRARY
+        NAMES SDL2_image
+        HINTS
+        $ENV{SDL2IMAGEDIR}
+        $ENV{SDL2DIR}
+        PATH_SUFFIXES lib64 lib
+        PATHS
+        ~/Library/Frameworks
+        /Library/Frameworks
+        /usr/local
+        /usr
+        /sw
+        /opt/local
+        /opt/csw
+        /opt
+        )
+
+include_directories({SDL2IMAGE_INCLUDE_DIR})
+target_link_libraries(MeineKraft ${SDL2IMAGE_LIBRARY})
+
