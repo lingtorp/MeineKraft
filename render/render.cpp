@@ -336,13 +336,7 @@ void Render::render_world(const World *world) {
             auto cube = &chunk->blocks[i];
 
             // Frustrum cullling
-            auto dist_l = left_plane.distance_to_point(cube->position);
-            auto dist_r = right_plane.distance_to_point(cube->position);
-            auto dist_t = top_plane.distance_to_point(cube->position);
-            auto dist_b = bot_plane.distance_to_point(cube->position);
-            auto dist_n = near_plane.distance_to_point(cube->position);
-            auto dist_f = far_plane.distance_to_point(cube->position);
-            if (dist_l < 0 && dist_r < 0 && dist_t < 0 && dist_b < 0 && dist_n < 0 && dist_f < 0) { continue; }
+            if (point_inside_frustrum(cube->position, planes)) { continue; }
 
             // Draw distance
             auto camera_to_cube = camera->position - cube->position;
