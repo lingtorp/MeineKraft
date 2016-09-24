@@ -329,7 +329,8 @@ void Render::render_world(const World *world) {
     for (int j = 0; j < world->chunks.size(); j++) {
         auto chunk = &world->chunks[j];
 
-        // TODO: Frustrum culling on chunks in order to improve perf.
+        auto chunk_mid = chunk->center_position;
+        if (point_inside_frustrum(chunk_mid, planes)) { continue; }
 
         for (int i = 0; i < chunk->numCubes; i++) {
             auto cube = &chunk->blocks[i];
