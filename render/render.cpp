@@ -286,7 +286,7 @@ void Render::render_world(const World *world) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_MULTISAMPLE);
-    glClearColor(0.4f, 0.3f, 0.7f, 1.0f);
+    glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
 
     /** Render skybox **/
     glBindVertexArray(gl_skybox_VAO);
