@@ -13,6 +13,7 @@ public:
     Vec3<> center_position;
     uint16_t numCubes;
     std::vector<Cube> blocks;
+    bool will_be_removed;
 };
 
 #endif //MEINEKRAFT_CHUNK_H
