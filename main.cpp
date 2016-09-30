@@ -28,7 +28,7 @@ int main() {
         last_tick = current_tick;
         printf("Delta: %u ms \n", delta);
 
-        // Process input
+        /// Process input
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             switch (event.type) {
@@ -53,16 +53,23 @@ int main() {
                             break;
                     }
                     break;
+                case SDL_WINDOWEVENT:
+                    switch (event.window.event) {
+                        case SDL_WINDOWEVENT_RESIZED:
+                            render.update_projection_matrix();
+                            break;
+                    }
+                    break;
                 case SDL_QUIT:
                     DONE = true;
                     break;
             }
         }
 
-        // Tick/update the world
+        /// Tick/update the world
         world.world_tick(delta, render.camera);
 
-        // Render the world
+        /// Render the world
         render.render_world(&world);
 
         SDL_GL_SwapWindow(window);

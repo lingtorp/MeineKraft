@@ -400,3 +400,19 @@ std::array<Plane<GLfloat>, 6> Render::extract_planes(Mat4<GLfloat> mat) {
     planes[3] = top_plane;  planes[4] = near_plane;   planes[5] = far_plane;
     return planes;
 }
+
+void Render::update_projection_matrix() {
+    int height, width;
+    SDL_GetWindowSize(this->window, &width, &height);
+    float aspect = width / height;
+    this->projection_matrix = gen_projection_matrix(1, -10, 70, aspect);
+
+    /// Update all shader programs projection matrix to the new one
+    GLuint projection = glGetUniformLocation(gl_shader_program, "projection");
+    glUniformMatrix4fv(projection, 1, GL_FALSE, projection_matrix.data());
+
+    GLuint projection0 = glGetUniformLocation(gl_skybox_shader, "projection");
+    glUniformMatrix4fv(projection0, 1, GL_FALSE, projection_matrix.data());
+}
+
+
