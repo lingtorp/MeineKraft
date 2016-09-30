@@ -104,11 +104,6 @@ Render::Render(SDL_Window *window): skybox(Cube()), window(window), DRAW_DISTANC
     glewInit();
     char buffer[512];
 
-    int height, width;
-    SDL_GetWindowSize(this->window, &width, &height);
-    float aspect = width / height;
-    this->projection_matrix = gen_projection_matrix(1, -10, 70, aspect);
-
     // Load all block & skybox textures
     auto base = "/Users/AlexanderLingtorp/Google Drive/Repositories/MeineKraft/";
     std::vector<std::string> cube_faces = {base + std::string("res/blocks/grass/side.jpg"),
@@ -162,8 +157,6 @@ Render::Render(SDL_Window *window): skybox(Cube()), window(window), DRAW_DISTANC
 
     this->gl_skybox_model = glGetUniformLocation(gl_skybox_shader, "model");
     this->gl_skybox_camera = glGetUniformLocation(gl_skybox_shader, "camera");
-    auto sky_projection = glGetUniformLocation(gl_skybox_shader, "projection");
-    glUniformMatrix4fv(sky_projection, 1, GL_FALSE, projection_matrix.data());
 
     GLuint skybox_VBO;
     glGenBuffers(1, &skybox_VBO);
@@ -257,15 +250,14 @@ Render::Render(SDL_Window *window): skybox(Cube()), window(window), DRAW_DISTANC
     // View / camera space
     this->gl_camera_view = glGetUniformLocation(gl_shader_program, "camera_view");
 
-    // Projection
-    GLuint projection = glGetUniformLocation(gl_shader_program, "projection");
-    glUniformMatrix4fv(projection, 1, GL_FALSE, projection_matrix.data());
-
     GLuint EBO;
     glGenBuffers(1, &EBO);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, cube.byte_size_of_indices(), cube.indices.data(),
                  GL_STATIC_DRAW);
+
+    // Create and update all shader programs projection matrix
+    update_projection_matrix();
 
     // Camera
     auto position  = Vec3<>{0.0f, 0.0f, 0.0f};  // cam position
