@@ -93,7 +93,7 @@ struct Vec2 {
     }
 
     /// Dot product
-    inline T dot(Vec2<T> u) { return x * u.x + y * u.y; }
+    inline T dot(Vec2<T> u) const { return x * u.x + y * u.y; }
 };
 
 template<typename T>
