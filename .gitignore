@@ -20,3 +20,5 @@
 *.xml
 
 .idea/workspace.xml
+
+imgui.ini

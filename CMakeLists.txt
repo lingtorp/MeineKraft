@@ -3,7 +3,9 @@ project(MeineKraft)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
-set(SOURCE_FILES main.cpp render/render.cpp render/render.h math/vector.h world/world.cpp world/world.h render/primitives.h render/camera.cpp render/camera.h render/chunk.cpp render/chunk.h math/noise.h render/ray.h render/GraphicsEntity.h)
+file(GLOB IMGUI_SRC "include/imgui/*.cpp" "include/imgui/*.h") # Adds all imgui related files into the application
+
+set(SOURCE_FILES main.cpp render/render.cpp render/render.h math/vector.h world/world.cpp world/world.h render/primitives.h render/camera.cpp render/camera.h nodes/chunk.cpp nodes/chunk.h math/noise.h render/ray.h ${IMGUI_SRC})
 add_executable(MeineKraft ${SOURCE_FILES})
 
 find_package(GLEW REQUIRED)

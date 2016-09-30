@@ -2,9 +2,12 @@
 <project version="4">
   <component name="CMakeWorkspace" PROJECT_DIR="$PROJECT_DIR$" />
   <component name="CidrRootsConfiguration">
-    <sourceRoots />
-    <libraryRoots />
-    <excludeRoots />
+    <libraryRoots>
+      <file path="$PROJECT_DIR$/include" />
+    </libraryRoots>
+    <excludeRoots>
+      <file path="$PROJECT_DIR$/screenshots" />
+    </excludeRoots>
   </component>
   <component name="ProjectLevelVcsManager" settingsEditedManually="false">
     <OptionsSetting value="true" id="Add" />
