@@ -15,8 +15,16 @@ uniform mat4 camera_view;
 // Projection or a.k.a perspective matrix
 uniform mat4 projection;
 
+const vec3 fog_color = vec3(0.5, 0.5, 0.5);
+const float fog_max_distance = 200;
+
 void main() {
   gl_Position = projection * camera_view * model * vec4(position, 1.0f);
-  fColor = vColor;
   fTexcoord = normalize(position);
+
+  // Linear fog
+  float distance = length(gl_Position);
+  float fog_factor = (fog_max_distance - distance)/(fog_max_distance - 100);
+  fog_factor = clamp(fog_factor, 0.0, 1.0);
+  fColor = vec4(fog_color * fog_factor, 1.0);
 }
