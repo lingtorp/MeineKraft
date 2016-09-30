@@ -27,6 +27,7 @@ public:
 
     const std::string load_shader_source(std::string filename);
     static Mat4<GLfloat> FPSViewRH(Vec3<> eye, float pitch, float yaw);
+    void update_projection_matrix();
 
     std::shared_ptr<Camera> camera;
 private:
