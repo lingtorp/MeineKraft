@@ -36,11 +36,6 @@ struct Vec3 {
     inline static Vec3 ZERO() { return Vec3(0.0, 0.0, 0.0); }
     inline double length() const { return std::sqrt(std::pow(x, 2) + std::pow(y, 2) + std::pow(z, 2)); }
 
-    inline Vec3<T> rotate_y(float theta) const {
-        // TODO: Implement
-        return *this;
-    }
-
     inline Vec3<T> normalize() const {
         double length = this->length();
         Vec3 result;
