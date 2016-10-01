@@ -1,7 +1,6 @@
 #ifndef MEINEKRAFT_RENDER_H
 #define MEINEKRAFT_RENDER_H
 
-#define GLEW_STATIC
 #include <GL/glew.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
@@ -19,6 +18,10 @@
 #include "../world/world.h"
 #include "camera.h"
 
+struct RenderState {
+    uint64_t entities;
+};
+
 class Render {
 public:
     void render_world(const World *world);
@@ -30,6 +33,7 @@ public:
     void update_projection_matrix();
 
     std::shared_ptr<Camera> camera;
+    RenderState state;
 private:
     SDL_Window *window;
     Cube skybox;
@@ -42,10 +46,10 @@ private:
     GLuint gl_camera_view;
     GLuint gl_shader_program;
 
-    GLuint gl_skybox_shader;
-    GLint gl_skybox_camera;
-    GLint gl_skybox_model;
     GLuint gl_skybox_VAO;
+    GLuint gl_skybox_model;
+    GLuint gl_skybox_camera;
+    GLuint gl_skybox_shader;
 
     bool point_inside_frustrum(Vec3<GLfloat> point, std::array<Plane<GLfloat>, 6> planes);
     std::array<Plane<GLfloat>, 6> extract_planes(Mat4<GLfloat> matrix);

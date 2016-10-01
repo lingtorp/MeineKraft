@@ -99,7 +99,7 @@ const std::string Render::load_shader_source(std::string filename) {
 }
 
 Render::Render(SDL_Window *window): skybox(Cube()), window(window), DRAW_DISTANCE(200),
-           projection_matrix(Mat4<GLfloat>()) {
+           projection_matrix(Mat4<GLfloat>()), state{} {
     glewExperimental = (GLboolean) true;
     glewInit();
     char buffer[512];
@@ -140,10 +140,10 @@ Render::Render(SDL_Window *window): skybox(Cube()), window(window), DRAW_DISTANC
     GLint skyboxFragStatus;
     glGetShaderiv(skyboxFragShader, GL_COMPILE_STATUS, &skyboxFragStatus);
 
-    printf("Skybox Fragment: %i, Vertex: %i\n", skyboxFragStatus,
+    SDL_Log("Skybox Fragment: %i, Vertex: %i\n", skyboxFragStatus,
            skyboxVertStatus);
     glGetShaderInfoLog(skyboxVertShader, 512, NULL, buffer);
-    printf("%s\n", buffer);
+    SDL_Log("%s\n", buffer);
 
     this->gl_skybox_shader = glCreateProgram();
     glAttachShader(gl_skybox_shader, skyboxVertShader);
@@ -155,7 +155,7 @@ Render::Render(SDL_Window *window): skybox(Cube()), window(window), DRAW_DISTANC
     glGenVertexArrays(1, &gl_skybox_VAO);
     glBindVertexArray(gl_skybox_VAO);
 
-    this->gl_skybox_model = glGetUniformLocation(gl_skybox_shader, "model");
+    this->gl_skybox_model  = glGetUniformLocation(gl_skybox_shader, "model");
     this->gl_skybox_camera = glGetUniformLocation(gl_skybox_shader, "camera");
 
     GLuint skybox_VBO;
@@ -195,10 +195,10 @@ Render::Render(SDL_Window *window): skybox(Cube()), window(window), DRAW_DISTANC
     GLint fragmentShaderStatus;
     glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &fragmentShaderStatus);
 
-    printf("Cube Fragment: %i, Vertex: %i\n", fragmentShaderStatus,
+    SDL_Log("Cube Fragment: %i, Vertex: %i\n", fragmentShaderStatus,
            vertexShaderStatus);
     glGetShaderInfoLog(vertexShader, 512, NULL, buffer);
-    printf("%s\n", buffer);
+    SDL_Log("%s\n", buffer);
 
     this->gl_shader_program = glCreateProgram();
     glAttachShader(gl_shader_program, vertexShader);
@@ -319,13 +319,13 @@ void Render::render_world(const World *world) {
 
     std::vector<Mat4<GLfloat>> buffer{};
     for (int j = 0; j < world->chunks.size(); j++) {
-        auto chunk = &world->chunks[j];
+        auto chunk = &world->chunks[j]; // TODO: Remove pointer chasing
 
         auto chunk_mid = chunk->center_position;
         if (point_inside_frustrum(chunk_mid, planes)) { continue; }
 
         for (int i = 0; i < chunk->numCubes; i++) {
-            auto cube = &chunk->blocks[i];
+            auto cube = &chunk->blocks[i]; // TODO: Remove pointer chasing
 
             // Frustrum cullling
             if (point_inside_frustrum(cube->position, planes)) { continue; }
@@ -348,7 +348,9 @@ void Render::render_world(const World *world) {
     }
     glBufferData(GL_ARRAY_BUFFER, buffer.size() * sizeof(Mat4<GLfloat>), buffer.data(), GL_DYNAMIC_DRAW);
     glDrawElementsInstanced(GL_TRIANGLES, skybox.indices.size(), GL_UNSIGNED_INT, 0, buffer.size());
-    std::cout << "#" << buffer.size() << " blocks " << std::endl;
+
+    // Update render state
+    state.entities = buffer.size();
 }
 
 Render::~Render() {
