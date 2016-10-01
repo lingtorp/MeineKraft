@@ -6,14 +6,14 @@
 #include <iostream>
 
 class Noise {
-    unsigned int seed = 1;
+    uint64_t seed;
     std::mt19937 engine;
     std::uniform_real_distribution<> distr;
     std::vector<Vec2<double>> grads; /// Normalized gradients
     std::vector<int> perms;
 
 public:
-    Noise(): engine(seed), grads(256), distr(0, 1), perms(256) {
+    Noise(uint64_t seed): engine(seed), grads(256), distr(0, 1), perms(256) {
         /// Fill the gradients list with random normalized vectors
         for (int i = 0; i < grads.size(); i++) {
             double x = distr(engine);
@@ -30,7 +30,7 @@ public:
     }
 
     /// Octabes of 2D Perlin noise
-    double octaves_of_perlin2d(int x, int y, int intensity, int amplitude, Vec3<> chunk_pos, int chunk_size) {
+    double octaves_of_perlin2d(int x, int y, int intensity, int amplitude, Vec3<> chunk_pos, int chunk_size) const {
         float total = 0.0;
         int n = intensity; // noise intensity
         int p = amplitude; // noise amplitude (0) - plains, (1) - rugged, (2) - hills, (3) - mountains
@@ -45,7 +45,7 @@ public:
     }
 
     /// 2D Perlin noise (x, y), chunk_pos gives the frame for the coord (x, y) and dimension is the chunks size
-    double perlin2d(int x, int y, Vec3<> chunk_pos, int chunk_size) {
+    double perlin2d(int x, int y, Vec3<> chunk_pos, int chunk_size) const {
         /// Compress the coordinates inside the chunk; double part + int part = point coordinate
         double a = y % chunk_size; // Integer offset inside the chunk
         double yf = 1 - std::abs(a / chunk_size); // Float offset inside the chunk (0, 1)

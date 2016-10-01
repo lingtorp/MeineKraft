@@ -2,7 +2,7 @@
 #include <numeric>
 #include "world.h"
 
-World::World() {}
+World::World(uint64_t seed): noise(Noise(seed)) {}
 
 void World::world_tick(uint32_t delta, const std::shared_ptr<Camera> camera) {
     // Snap Camera/Player to the world coordinate grid
@@ -18,7 +18,7 @@ void World::world_tick(uint32_t delta, const std::shared_ptr<Camera> camera) {
                 positions.push_back(position);
                 bool chunk_exists_at_pos = std::any_of(chunks.begin(), chunks.end(), [position](Chunk &c1){ return c1.position == position; });
                 if (chunk_exists_at_pos) { continue; }
-                chunks.push_back(Chunk::Chunk(position));
+                chunks.push_back(Chunk::Chunk(position, &noise));
             }
         }
     }
@@ -49,11 +49,12 @@ void World::spawn_flat_world() {
         x.push_back(i * Chunk::dimension);
         z.push_back(i * Chunk::dimension);
     }
+    auto noise = Noise(1);
     for (auto x : x) {
         for (auto y : y) {
             for (auto z : z) {
                 auto position = Vec3<>{x, y, z};
-                chunks.push_back(Chunk::Chunk(position));
+                chunks.push_back(Chunk::Chunk(position, &noise));
             }
         }
     }

@@ -11,7 +11,7 @@
 
 class World {
 public:
-    World();
+    World(uint64_t seed);
 
     std::vector<Chunk> chunks;
 
@@ -19,6 +19,7 @@ public:
     Vec3<> world_position(Vec3<> position) const;
 
 private:
+    Noise noise;
     void spawn_flat_world();
 };
 

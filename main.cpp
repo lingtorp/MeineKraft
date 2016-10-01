@@ -22,7 +22,8 @@ int main() {
     // Inits glew
     Render render{window};
 
-    World world{};
+    // Init the world with seed
+    World world{1};
 
     bool DONE = false;
     uint32_t last_tick = SDL_GetTicks(), current_tick, delta;
