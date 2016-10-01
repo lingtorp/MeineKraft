@@ -1,5 +1,4 @@
 #include "render/render.h"
-#include "include/imgui/imgui.h"
 #include "include/imgui/imgui_impl_sdl.h"
 
 int main() {
@@ -32,7 +31,7 @@ int main() {
         current_tick = SDL_GetTicks();
         delta = current_tick - last_tick;
         last_tick = current_tick;
-        SDL_Log("Delta: %u ms \n", delta);
+        // SDL_Log("Delta: %u ms \n", delta);
 
         /// Process input
         SDL_Event event;
@@ -83,31 +82,17 @@ int main() {
 
         /// ImGui - Debug instruments
         {
-            auto clear_color = ImColor(114, 144, 154);
-            auto show_test_window = true;
-            auto show_another_window = true;
-            // 1. Show a simple window
-            // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug"
-            {
-                static float f = 0.0f;
-                ImGui::Text("Hello, world!");
-                ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
-                ImGui::ColorEdit3("clear color", (float *) &clear_color);
-                if (ImGui::Button("Test Window")) show_test_window ^= 1;
-                if (ImGui::Button("Another Window")) show_another_window ^= 1;
-                ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate,
-                            ImGui::GetIO().Framerate);
-            }
+            auto io = ImGui::GetIO();
 
-            // 2. Show another simple window, this time using an explicit Begin/End pair
-            if (show_another_window) {
-                ImGui::SetNextWindowSize(ImVec2(200, 100), ImGuiSetCond_FirstUseEver);
-                ImGui::Begin("Another Window", &show_another_window);
-                ImGui::Text("Hello");
-                ImGui::End();
-            }
+            static bool show_test_window;
 
-            // 3. Show the ImGui test window. Most of the sample code is in ImGui::ShowTestWindow()
+            ImGui::Begin("Render state");
+            ImGui::Text("Chunks: %i", world.chunks.size());
+            ImGui::Text("Entities: %i", render.state.entities);
+            ImGui::Text("Application average %u ms/frame (%.1f FPS)", delta, io.Framerate);
+            if (ImGui::Button("ImGui Palette")) show_test_window ^= 1;
+            ImGui::End();
+
             if (show_test_window) {
                 ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiSetCond_FirstUseEver);
                 ImGui::ShowTestWindow(&show_test_window);
