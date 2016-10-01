@@ -7,7 +7,7 @@ in vec3 fTexcoord;   // passthrough shading for interpolated textures
 uniform samplerCube tex;
 
 void main() {
-  outColor = texture(tex, fTexcoord); // * fColor;
+  outColor = texture(tex, fTexcoord) * fColor;
   // outColor = vec4(1.0f, 1.0f, 1.0f, 1.0f);
   // outColor = fColor;
 }
