@@ -4,6 +4,7 @@
 
 World::World(uint64_t seed): noise(Noise(seed)) {}
 
+/// Ticks the world
 void World::world_tick(uint32_t delta, const std::shared_ptr<Camera> camera) {
     // Snap Camera/Player to the world coordinate grid
     auto camera_world_pos = world_position(camera->position);
@@ -24,8 +25,12 @@ void World::world_tick(uint32_t delta, const std::shared_ptr<Camera> camera) {
     }
 
     // TODO: Cull out chunks that are far away from the Player
-    std::cout << "# of Chunk: " << chunks.size() << std::endl;
-    if (chunks.size() > 12) {}
+
+    for (auto i = 0; i < chunks.size(); i++) {
+        auto chunk = chunks[i];
+        auto vec_to_chunk = chunk.center_position - Vec3<GLfloat>{camera->position.x, camera->position.y, 0};
+        if (vec_to_chunk.length() > 100) { chunks.erase(chunks.begin() + i); }
+    }
 }
 
 /// World position is measured in Chunk lengths
