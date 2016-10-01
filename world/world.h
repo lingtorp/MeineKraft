@@ -6,7 +6,7 @@
 #include <cstdlib>
 #include <vector>
 #include "../math/vector.h"
-#include "../render/chunk.h"
+#include "../nodes/chunk.h"
 #include "../render/camera.h"
 
 class World {
