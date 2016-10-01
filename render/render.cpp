@@ -319,13 +319,13 @@ void Render::render_world(const World *world) {
 
     std::vector<Mat4<GLfloat>> buffer{};
     for (int j = 0; j < world->chunks.size(); j++) {
-        auto chunk = &world->chunks[j]; // TODO: Remove pointer chasing
+        auto chunk = &world->chunks[j]; 
 
         auto chunk_mid = chunk->center_position;
         if (point_inside_frustrum(chunk_mid, planes)) { continue; }
 
         for (int i = 0; i < chunk->numCubes; i++) {
-            auto cube = &chunk->blocks[i]; // TODO: Remove pointer chasing
+            auto cube = &chunk->blocks[i];
 
             // Frustrum cullling
             if (point_inside_frustrum(cube->position, planes)) { continue; }
