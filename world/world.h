@@ -16,7 +16,7 @@ public:
     std::vector<Chunk> chunks;
 
     void world_tick(uint32_t delta, std::shared_ptr<Camera> camera);
-    Vec3<> world_position(Vec3<> position) const;
+    Vec3<float> world_position(Vec3<float> position) const;
 
 private:
     Noise noise;
