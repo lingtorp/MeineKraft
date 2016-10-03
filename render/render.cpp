@@ -1,9 +1,27 @@
-#include <fstream>
-#include <iostream>
-#include <SDL2/SDL_video.h>
-#include <array>
 #include "render.h"
-#include "ray.h"
+
+#include <GL/glew.h>
+#include <SDL2/SDL.h>
+#include <cmath>
+#include <SDL2/SDL_image.h>
+#include <string>
+#include <vector>
+#include <cstdio>
+#include <cstdlib>
+#include <unordered_map>
+#include <map>
+#include <fstream>
+#include <array>
+
+#include "../math/vector.h"
+#include "primitives.h"
+#include "../world/world.h"
+#include "camera.h"
+
+#include "graphicsbatch.h"
+#include "rendercomponent.h"
+#include "../nodes/entity.h"
+#include "shader.h"
 
 typedef enum { png, jpg } FileFormat;
 
