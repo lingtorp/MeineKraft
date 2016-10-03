@@ -109,19 +109,11 @@ Mat4<float> gen_projection_matrix(float z_near, float z_far, float fov, float as
     return matrix;
 }
 
-/// Assumes the file exists and will seg. fault otherwise.
-const std::string Render::load_shader_source(std::string filename) {
-    std::ifstream ifs(filename);
-    return std::string((std::istreambuf_iterator<char>(ifs)), (std::istreambuf_iterator<char>()));
-}
-
-Render::Render(SDL_Window *window): skybox(Cube()), window(window), DRAW_DISTANCE(200),
-           projection_matrix(Mat4<GLfloat>()), state{} {
+Render::Render(): skybox(Cube()), DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), state{}, graphics_batches{}, shaders{} {
     glewExperimental = (GLboolean) true;
     glewInit();
-    char buffer[512];
 
-    // Load all block & skybox textures
+    /// Load all block & skybox textures
     auto base = "/Users/AlexanderLingtorp/Google Drive/Repositories/MeineKraft/";
     std::vector<std::string> cube_faces = {base + std::string("res/blocks/grass/side.jpg"),
                                            base + std::string("res/blocks/grass/side.jpg"),
@@ -141,39 +133,33 @@ Render::Render(SDL_Window *window): skybox(Cube()), window(window), DRAW_DISTANC
 
     /** Skybox **/
     skybox.scale = 500.0f;
-    auto skyboxVertSrc = load_shader_source("/Users/AlexanderLingtorp/Google Drive/Repositories/MeineKraft/shaders/skybox/vertex-shader.glsl");
-    auto raw_str = skyboxVertSrc.c_str();
-    GLuint skyboxVertShader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(skyboxVertShader, 1, &raw_str, NULL);
-    glCompileShader(skyboxVertShader);
-    GLint skyboxVertStatus;
-    glGetShaderiv(skyboxVertShader, GL_COMPILE_STATUS, &skyboxVertStatus);
 
-    auto skyboxFragSrc = load_shader_source("/Users/AlexanderLingtorp/Google Drive/Repositories/MeineKraft/shaders/skybox/fragment-shader.glsl");
-    raw_str = skyboxFragSrc.c_str();
-    GLuint skyboxFragShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(skyboxFragShader, 1, &raw_str, NULL);
-    glCompileShader(skyboxFragShader);
-    GLint skyboxFragStatus;
-    glGetShaderiv(skyboxFragShader, GL_COMPILE_STATUS, &skyboxFragStatus);
+    /// Compile shaders
+    // Files are truly horrible and filepaths are even worse, therefore this is not scalable
+    std::string shader_base_filepath = "/Users/AlexanderLingtorp/Google Drive/Repositories/MeineKraft/shaders/";
+    std::string err_msg;
+    bool success;
 
-    SDL_Log("Skybox Fragment: %i, Vertex: %i\n", skyboxFragStatus,
-           skyboxVertStatus);
-    glGetShaderInfoLog(skyboxVertShader, 512, NULL, buffer);
-    SDL_Log("%s\n", buffer);
+    auto skybox_vert = shader_base_filepath + "skybox/vertex-shader.glsl";
+    auto skybox_frag = shader_base_filepath + "skybox/fragment-shader.glsl";
+    Shader skybox_shader(skybox_vert, skybox_frag);
+    std::tie(success, err_msg) = skybox_shader.compile();
+    shaders.insert({ShaderType::SKYBOX_SHADER, skybox_shader});
+    if (!success) { SDL_Log("%s", err_msg.c_str()); }
 
-    this->gl_skybox_shader = glCreateProgram();
-    glAttachShader(gl_skybox_shader, skyboxVertShader);
-    glAttachShader(gl_skybox_shader, skyboxFragShader);
-    glLinkProgram(gl_skybox_shader);
-    glUseProgram(gl_skybox_shader);
+    auto std_vert = shader_base_filepath + "block/vertex-shader.glsl";
+    auto std_frag = shader_base_filepath + "block/fragment-shader.glsl";
+    Shader std_shader(std_vert, std_frag);
+    std::tie(success, err_msg) = std_shader.compile();
+    shaders.insert({ShaderType::STANDARD_SHADER, std_shader});
+    if (!success) { SDL_Log("%s", err_msg.c_str()); }
 
     /// Skybox vertex bindings
-    glGenVertexArrays(1, &gl_skybox_VAO);
+    glGenVertexArrays(1, (GLuint *) &gl_skybox_VAO);
     glBindVertexArray(gl_skybox_VAO);
 
-    this->gl_skybox_model  = glGetUniformLocation(gl_skybox_shader, "model");
-    this->gl_skybox_camera = glGetUniformLocation(gl_skybox_shader, "camera");
+    this->gl_skybox_model  = glGetUniformLocation(shaders.at(ShaderType::SKYBOX_SHADER).gl_program, "model");
+    this->gl_skybox_camera = glGetUniformLocation(shaders.at(ShaderType::SKYBOX_SHADER).gl_program, "camera");
 
     GLuint skybox_VBO;
     glGenBuffers(1, &skybox_VBO);
@@ -190,43 +176,13 @@ Render::Render(SDL_Window *window): skybox(Cube()), window(window), DRAW_DISTANC
     GLuint sky_EBO;
     glGenBuffers(1, &sky_EBO);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, sky_EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, skybox.byte_size_of_indices(), skybox.indices.data(),
-                 GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, skybox.byte_size_of_indices(), skybox.indices.data(), GL_STATIC_DRAW);
 
     /** Cube **/
-    auto vertexShaderSource =
-            load_shader_source("/Users/AlexanderLingtorp/Google Drive/Repositories/MeineKraft/shaders/block/vertex-shader.glsl");
-    raw_str = vertexShaderSource.c_str();
-    GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertexShader, 1, &raw_str, NULL);
-    glCompileShader(vertexShader);
-    GLint vertexShaderStatus;
-    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &vertexShaderStatus);
-
-    auto fragmentShaderSource =
-            load_shader_source("/Users/AlexanderLingtorp/Google Drive/Repositories/MeineKraft/shaders/block/fragment-shader.glsl");
-    raw_str = fragmentShaderSource.c_str();
-    GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShader, 1, &raw_str, NULL);
-    glCompileShader(fragmentShader);
-    GLint fragmentShaderStatus;
-    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &fragmentShaderStatus);
-
-    SDL_Log("Cube Fragment: %i, Vertex: %i\n", fragmentShaderStatus,
-           vertexShaderStatus);
-    glGetShaderInfoLog(vertexShader, 512, NULL, buffer);
-    SDL_Log("%s\n", buffer);
-
-    this->gl_shader_program = glCreateProgram();
-    glAttachShader(gl_shader_program, vertexShader);
-    glAttachShader(gl_shader_program, fragmentShader);
-    glLinkProgram(gl_shader_program);
-    glUseProgram(gl_shader_program);
-
     // Bind Vertex Array Object - OpenGL core REQUIRES a VERTEX ARRAY OBJECT in
     // order to render ANYTHING.
     // An object that stores vertex array bindings
-    glGenVertexArrays(1, &gl_VAO);
+    glGenVertexArrays(1, (GLuint *) &gl_VAO);
     glBindVertexArray(gl_VAO); // make the VAO the active one ..
 
     // Upload only one cube's quads since the gl_model is the same for all cubes
@@ -242,39 +198,35 @@ Render::Render(SDL_Window *window): skybox(Cube()), window(window), DRAW_DISTANC
     glBufferSubData(GL_ARRAY_BUFFER, 0, cube.byte_size_of_vertices(), vector.data());
 
     // Then set our vertex attributes pointers, only doable AFTER linking
-    GLuint positionAttrib = glGetAttribLocation(gl_shader_program, "position");
-    glVertexAttribPointer(positionAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-                          (const void *)offsetof(Vertex, position));
+    GLuint positionAttrib = glGetAttribLocation(shaders.at(ShaderType::STANDARD_SHADER).gl_program, "position");
+    glVertexAttribPointer(positionAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>),
+                          (const void *)offsetof(Vertex<float>, position));
     glEnableVertexAttribArray(positionAttrib);
 
-    GLuint colorAttrib = glGetAttribLocation(gl_shader_program, "vColor");
-    glVertexAttribPointer(colorAttrib, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-                          (const void *)offsetof(Vertex, color));
+    GLuint colorAttrib = glGetAttribLocation(shaders.at(ShaderType::STANDARD_SHADER).gl_program, "vColor");
+    glVertexAttribPointer(colorAttrib, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>),
+                          (const void *)offsetof(Vertex<float>, color));
     glEnableVertexAttribArray(colorAttrib);
 
     // Buffer for all the model matrices
-    glGenBuffers(1, &gl_modelsBO);
+    glGenBuffers(1, (GLuint *) &gl_modelsBO);
     glBindBuffer(GL_ARRAY_BUFFER, gl_modelsBO);
 
-    GLuint modelAttrib = glGetAttribLocation(gl_shader_program, "model");
+    GLuint modelAttrib = glGetAttribLocation(shaders.at(ShaderType::STANDARD_SHADER).gl_program, "model");
     for (int i = 0; i < 4; i++) {
-        glVertexAttribPointer(modelAttrib + i, 4, GL_FLOAT, GL_FALSE, sizeof(Mat4<GLfloat>),
-                              (const void *) (sizeof(GLfloat) * i * 4));
+        glVertexAttribPointer(modelAttrib + i, 4, GL_FLOAT, GL_FALSE, sizeof(Mat4<float>),
+                              (const void *) (sizeof(float) * i * 4));
         glEnableVertexAttribArray(modelAttrib + i);
         glVertexAttribDivisor(modelAttrib + i, 1);
     }
 
     // View / camera space
-    this->gl_camera_view = glGetUniformLocation(gl_shader_program, "camera_view");
+    this->gl_camera_view = glGetUniformLocation(shaders.at(ShaderType::STANDARD_SHADER).gl_program, "camera_view");
 
     GLuint EBO;
     glGenBuffers(1, &EBO);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, cube.byte_size_of_indices(), cube.indices.data(),
-                 GL_STATIC_DRAW);
-
-    // Create and update all shader programs projection matrix
-    update_projection_matrix();
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, cube.byte_size_of_indices(), cube.indices.data(), GL_STATIC_DRAW);
 
     // Camera
     auto position  = Vec3<float>{0.0f, 0.0f, 0.0f};  // cam position
@@ -311,9 +263,28 @@ void Render::render_world(const World *world) {
     glEnable(GL_MULTISAMPLE);
     glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
 
+    for (auto batch : graphics_batches) {
+        glBindVertexArray(batch.gl_VAO);
+        glUseProgram(batch.gl_shader_program);
+
+        std::vector<Mat4<float>> buffer{};
+        for (auto component : batch.components) {
+            // glBindTexture(GL_TEXTURE_CUBE_MAP, textures[component.graphics_state.texture]);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, textures[Texture::SKYBOX]);
+
+            Mat4<float> model{};
+            model = model.translate(camera->position + camera->direction * 2);
+            model = model.transpose();
+            buffer.push_back(model);
+        }
+        glBindBuffer(GL_ARRAY_BUFFER, batch.gl_models_buffer_object);
+        glBufferData(GL_ARRAY_BUFFER, buffer.size() * sizeof(Mat4<float>), buffer.data(), GL_DYNAMIC_DRAW);
+        glDrawElementsInstanced(GL_TRIANGLES, batch.mesh.indices.size(), GL_UNSIGNED_INT, 0, buffer.size());
+    }
+
     /** Render skybox **/
+    glUseProgram((GLuint) shaders.at(ShaderType::SKYBOX_SHADER).gl_program);
     glBindVertexArray(gl_skybox_VAO);
-    glUseProgram(gl_skybox_shader);
     glEnable(GL_CULL_FACE); // cull face
     glCullFace(GL_FRONT);   // cull back face
     glFrontFace(GL_CCW);    // GL_CCW for counter clock-wise
@@ -327,8 +298,8 @@ void Render::render_world(const World *world) {
     glDrawElements(GL_TRIANGLES, skybox.indices.size(), GL_UNSIGNED_INT, 0);
 
     /** Render cubes **/
+    glUseProgram((GLuint) shaders.at(ShaderType::STANDARD_SHADER).gl_program);
     glBindVertexArray(gl_VAO);
-    glUseProgram(gl_shader_program);
     glEnable(GL_CULL_FACE); // cull face
     glCullFace(GL_BACK);    // cull back face
     glFrontFace(GL_CCW);    // GL_CCW for counter clock-wise
@@ -336,10 +307,7 @@ void Render::render_world(const World *world) {
 
     std::vector<Mat4<float>> buffer{};
     for (int j = 0; j < world->chunks.size(); j++) {
-        auto chunk = &world->chunks[j]; 
-
-        auto chunk_mid = chunk->center_position;
-        if (point_inside_frustrum(chunk_mid, planes)) { continue; }
+        auto chunk = &world->chunks[j];
 
         for (int i = 0; i < chunk->numCubes; i++) {
             auto cube = &chunk->blocks[i];
@@ -363,10 +331,11 @@ void Render::render_world(const World *world) {
             buffer.push_back(model);
         }
     }
-    glBufferData(GL_ARRAY_BUFFER, buffer.size() * sizeof(Mat4<GLfloat>), buffer.data(), GL_DYNAMIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, gl_modelsBO);
+    glBufferData(GL_ARRAY_BUFFER, buffer.size() * sizeof(Mat4<float>), buffer.data(), GL_DYNAMIC_DRAW);
     glDrawElementsInstanced(GL_TRIANGLES, skybox.indices.size(), GL_UNSIGNED_INT, 0, buffer.size());
 
-    // Update render state
+    /// Update render state
     state.entities = buffer.size();
 }
 
@@ -412,18 +381,83 @@ std::array<Plane<float>, 6> Render::extract_planes(Mat4<float> mat) {
     return planes;
 }
 
-void Render::update_projection_matrix() {
+void Render::update_projection_matrix(float fov) {
     int height, width;
-    SDL_GetWindowSize(this->window, &width, &height);
-    float aspect = width / height;
-    this->projection_matrix = gen_projection_matrix(1, -10, 70, aspect);
+    SDL_GL_GetDrawableSize(this->window, &width, &height);
+    float aspect = (float) width / (float) height;
+    this->projection_matrix = gen_projection_matrix(1, -10, fov, aspect);
+    glViewport(0, 0, width, height);
+    /// Update all shader programs projection matrices to the new one
+    for (auto shader_program : shaders) {
+        glUseProgram(shader_program.second.gl_program);
+        GLuint projection = glGetUniformLocation(shader_program.second.gl_program, "projection");
+        glUniformMatrix4fv(projection, 1, GL_FALSE, projection_matrix.data());
+    }
+}
 
-    /// Update all shader programs projection matrix to the new one
-    GLuint projection = glGetUniformLocation(gl_shader_program, "projection");
+void Render::add_to_batch(RenderComponent component) {
+    for (auto batch : graphics_batches) {
+        if (batch.hash_id == component.entity->hash_id) {
+            batch.components.push_back(component);
+            return;
+        }
+    }
+
+    GraphicsBatch batch{component.entity->hash_id};
+    batch.mesh = Cube(); /// Default to mesh of a cube ...
+    batch.gl_shader_program = shaders.at(ShaderType::STANDARD_SHADER).gl_program;
+    glUseProgram(batch.gl_shader_program);
+    // glEnable(GL_CULL_FACE); // cull face
+    // glCullFace(GL_BACK);    // cull back face
+    // glFrontFace(GL_CCW);    // GL_CCW for counter clock-wise
+
+    glGenVertexArrays(1, (GLuint *) &batch.gl_VAO);
+    glBindVertexArray(batch.gl_VAO);
+    batch.gl_camera_view = glGetUniformLocation(batch.gl_shader_program, "camera_view");
+
+    GLuint gl_VBO;
+    glGenBuffers(1, &gl_VBO);
+    glBindBuffer(GL_ARRAY_BUFFER, gl_VBO);
+    auto vertices = batch.mesh.to_floats();
+    glBufferData(GL_ARRAY_BUFFER, batch.mesh.byte_size_of_vertices(), vertices.data(), GL_STATIC_DRAW);
+
+    // Then set our vertex attributes pointers, only doable AFTER linking
+    GLuint positionAttrib = glGetAttribLocation(batch.gl_shader_program, "position");
+    glVertexAttribPointer(positionAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>),
+                          (const void *)offsetof(Vertex<float>, position));
+    glEnableVertexAttribArray(positionAttrib);
+
+    GLuint colorAttrib = glGetAttribLocation(batch.gl_shader_program, "vColor");
+    glVertexAttribPointer(colorAttrib, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>),
+                          (const void *)offsetof(Vertex<float>, color));
+    glEnableVertexAttribArray(colorAttrib);
+
+    // Buffer for all the model matrices
+    glGenBuffers(1, (GLuint *) &batch.gl_models_buffer_object);
+    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_models_buffer_object);
+
+    GLuint modelAttrib = glGetAttribLocation(batch.gl_shader_program, "model");
+    for (int i = 0; i < 4; i++) {
+        glVertexAttribPointer(modelAttrib + i, 4, GL_FLOAT, GL_FALSE, sizeof(Mat4<float>),
+                              (const void *) (sizeof(float) * i * 4));
+        glEnableVertexAttribArray(modelAttrib + i);
+        glVertexAttribDivisor(modelAttrib + i, 1);
+    }
+
+    GLuint EBO;
+    glGenBuffers(1, &EBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, batch.mesh.byte_size_of_indices(), batch.mesh.indices.data(), GL_STATIC_DRAW);
+
+    GLuint projection = glGetUniformLocation(batch.gl_shader_program, "projection");
     glUniformMatrix4fv(projection, 1, GL_FALSE, projection_matrix.data());
 
-    GLuint projection0 = glGetUniformLocation(gl_skybox_shader, "projection");
-    glUniformMatrix4fv(projection0, 1, GL_FALSE, projection_matrix.data());
+    batch.components.push_back(component);
+    graphics_batches.push_back(batch);
+}
+
+void Render::remove_from_batch(RenderComponent component) {
+    // TODO: Implement
 }
 
 
