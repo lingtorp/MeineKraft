@@ -1,7 +1,6 @@
 #ifndef MEINEKRAFT_VECTOR_H
 #define MEINEKRAFT_VECTOR_H
 
-#include <SDL2/SDL_opengl.h>
 #include <math.h>
 #include <ostream>
 #include <cmath>
@@ -27,8 +26,7 @@ struct Vec4 {
     }
 };
 
-/// Defaults to Vec3<GLfloat>
-template<typename T = GLfloat>
+template<typename T>
 struct Vec3 {
     T x, y, z;
     Vec3(T x, T y, T z): x(x), y(y), z(z) {};
@@ -209,7 +207,7 @@ public:
     inline Vec3<T> operator*(Vec3<T> rhs) const {
         auto vec = Vec4<T>{rhs.x, rhs.y, rhs.z, 1.0};
         auto result = *this * vec;
-        return Vec3<>{result.values[0], result.values[1], result.values[2]};
+        return Vec3<T>{result.values[0], result.values[1], result.values[2]};
     }
 
     /// A * v = b

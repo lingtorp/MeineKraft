@@ -8,14 +8,14 @@ World::World(uint64_t seed): noise(Noise(seed)) {}
 void World::world_tick(uint32_t delta, const std::shared_ptr<Camera> camera) {
     // Snap Camera/Player to the world coordinate grid
     auto camera_world_pos = world_position(camera->position);
-    std::vector<GLfloat> x{camera_world_pos.x - Chunk::dimension, camera_world_pos.x, camera_world_pos.x + Chunk::dimension};
-    std::vector<GLfloat> y{-Chunk::dimension};
-    std::vector<GLfloat> z{camera_world_pos.z - Chunk::dimension, camera_world_pos.z, camera_world_pos.z + Chunk::dimension};
-    std::vector<Vec3<>> positions = {};
+    std::vector<float> x{camera_world_pos.x - Chunk::dimension, camera_world_pos.x, camera_world_pos.x + Chunk::dimension};
+    std::vector<float> y{-Chunk::dimension};
+    std::vector<float> z{camera_world_pos.z - Chunk::dimension, camera_world_pos.z, camera_world_pos.z + Chunk::dimension};
+    std::vector<Vec3<float>> positions = {};
     for (auto x : x) {
         for (auto y : y) {
             for (auto z : z) {
-                auto position = Vec3<GLfloat>{x, y, z};
+                auto position = Vec3<float>{x, y, z};
                 positions.push_back(position);
                 bool chunk_exists_at_pos = std::any_of(chunks.begin(), chunks.end(), [position](Chunk &c1){ return c1.position == position; });
                 if (chunk_exists_at_pos) { continue; }
@@ -34,8 +34,8 @@ void World::world_tick(uint32_t delta, const std::shared_ptr<Camera> camera) {
 }
 
 /// World position is measured in Chunk lengths
-Vec3<> World::world_position(Vec3<> position) const {
-    auto result = Vec3<>{};
+Vec3<float> World::world_position(Vec3<float> position) const {
+    Vec3<float> result{};
     result.x = std::round(position.x / Chunk::dimension) * Chunk::dimension;
     result.y = std::round(position.y / Chunk::dimension) * Chunk::dimension;
     result.z = std::round(position.z / Chunk::dimension) * Chunk::dimension;
@@ -47,9 +47,9 @@ void World::spawn_flat_world() {
     static auto once = false;
     if (once) { return; } else { once = true; }
     /// Spawn a flat world once
-    std::vector<GLfloat> x = {};
-    std::vector<GLfloat> y = {-Chunk::dimension};
-    std::vector<GLfloat> z = {};
+    std::vector<float> x = {};
+    std::vector<float> y = {-Chunk::dimension};
+    std::vector<float> z = {};
     for (int i = -5; i < 5; i++) {
         x.push_back(i * Chunk::dimension);
         z.push_back(i * Chunk::dimension);
@@ -58,7 +58,7 @@ void World::spawn_flat_world() {
     for (auto x : x) {
         for (auto y : y) {
             for (auto z : z) {
-                auto position = Vec3<>{x, y, z};
+                auto position = Vec3<float>{x, y, z};
                 chunks.push_back(Chunk::Chunk(position, &noise));
             }
         }

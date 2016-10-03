@@ -30,7 +30,7 @@ public:
     }
 
     /// Octabes of 2D Perlin noise
-    double octaves_of_perlin2d(int x, int y, int intensity, int amplitude, Vec3<> chunk_pos, int chunk_size) const {
+    double octaves_of_perlin2d(int x, int y, int intensity, int amplitude, Vec3<float> chunk_pos, int chunk_size) const {
         float total = 0.0;
         int n = intensity; // noise intensity
         int p = amplitude; // noise amplitude (0) - plains, (1) - rugged, (2) - hills, (3) - mountains
@@ -45,7 +45,7 @@ public:
     }
 
     /// 2D Perlin noise (x, y), chunk_pos gives the frame for the coord (x, y) and dimension is the chunks size
-    double perlin2d(int x, int y, Vec3<> chunk_pos, int chunk_size) const {
+    double perlin2d(int x, int y, Vec3<float> chunk_pos, int chunk_size) const {
         /// Compress the coordinates inside the chunk; double part + int part = point coordinate
         double a = y % chunk_size; // Integer offset inside the chunk
         double yf = 1 - std::abs(a / chunk_size); // Float offset inside the chunk (0, 1)

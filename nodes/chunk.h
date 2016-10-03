@@ -9,10 +9,10 @@
 
 class Chunk {
 public:
-    Chunk(Vec3<> world_position, const Noise *noise);
+    Chunk(Vec3<float> world_position, const Noise *noise);
     static const uint16_t dimension = 32; // The 'width' of the chunk in number of cubes
-    Vec3<> position;
-    Vec3<> center_position;
+    Vec3<float> position;
+    Vec3<float> center_position;
     uint16_t numCubes;
     std::vector<Cube> blocks;
     bool will_be_removed;

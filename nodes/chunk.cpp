@@ -1,7 +1,7 @@
 #include "chunk.h"
 
 /// @param world_position World coordinates
-Chunk::Chunk(Vec3<> world_position, const Noise *noise):
+Chunk::Chunk(Vec3<float> world_position, const Noise *noise):
         position(world_position), center_position{world_position.x + dimension/2,
                                                   world_position.y + dimension/2,
                                                   world_position.z + dimension/2},
@@ -20,8 +20,6 @@ Chunk::Chunk(Vec3<> world_position, const Noise *noise):
                 cube.position.x = x + position.x;
                 cube.position.y = y + position.y;
                 cube.position.z = z + position.z;
-                cube.center = Vec3<>{(GLfloat) (cube.position.x + 0.5),
-                                     (GLfloat) (cube.position.y + 0.5),
                                      (GLfloat) (cube.position.z + 0.5)};
                 cube.radius = 1.0;
                 blocks.push_back(cube);
