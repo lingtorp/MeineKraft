@@ -20,7 +20,9 @@ Chunk::Chunk(Vec3<float> world_position, const Noise *noise):
                 cube.position.x = x + position.x;
                 cube.position.y = y + position.y;
                 cube.position.z = z + position.z;
-                                     (GLfloat) (cube.position.z + 0.5)};
+                cube.center = Vec3<float>{cube.position.x + 0.5f,
+                                          cube.position.y + 0.5f,
+                                          cube.position.z + 0.5f};
                 cube.radius = 1.0;
                 blocks.push_back(cube);
                 numCubes++;
