@@ -64,16 +64,16 @@ GLuint load_cube_map(std::vector<std::string> faces, FileFormat file_format) {
 }
 
 /// Column major - Camera combined rotation matrix (y, x) & translation matrix
-Mat4<GLfloat> Render::FPSViewRH(Vec3<> eye, float pitch, float yaw) {
+Mat4<float> Render::FPSViewRH(Vec3<float> eye, float pitch, float yaw) {
     static constexpr float rad = M_PI / 180;
-    float cosPitch = cos(pitch * rad);
-    float sinPitch = sin(pitch * rad);
-    float cosYaw = cos(yaw * rad);
-    float sinYaw = sin(yaw * rad);
-    auto xaxis = Vec3<>{cosYaw, 0, -sinYaw};
-    auto yaxis = Vec3<>{sinYaw * sinPitch, cosPitch, cosYaw * sinPitch};
-    auto zaxis = Vec3<>{sinYaw * cosPitch, -sinPitch, cosPitch * cosYaw};
-    Mat4<GLfloat> matrix;
+    float cosPitch = cosf(pitch * rad);
+    float sinPitch = sinf(pitch * rad);
+    float cosYaw = cosf(yaw * rad);
+    float sinYaw = sinf(yaw * rad);
+    auto xaxis = Vec3<float>{cosYaw, 0, -sinYaw};
+    auto yaxis = Vec3<float>{sinYaw * sinPitch, cosPitch, cosYaw * sinPitch};
+    auto zaxis = Vec3<float>{sinYaw * cosPitch, -sinPitch, cosPitch * cosYaw};
+    Mat4<float> matrix;
     matrix[0][0] = xaxis.x;
     matrix[0][1] = yaxis.x;
     matrix[0][2] = zaxis.x;
@@ -94,15 +94,14 @@ Mat4<GLfloat> Render::FPSViewRH(Vec3<> eye, float pitch, float yaw) {
 }
 
 /// A.k.a perspective matrix
-Mat4<GLfloat> gen_projection_matrix(float z_near, float z_far, float fov,
-                                float aspect) {
+Mat4<float> gen_projection_matrix(float z_near, float z_far, float fov, float aspect) {
     float rad = M_PI / 180;
-    float tanHalf = tan(fov * rad / 2);
+    float tanHalf = tanf(fov * rad / 2);
     float a = 1 / (tanHalf * aspect);
     float b = 1 / tanHalf;
     float c = -(z_far + z_near) / (z_far - z_near);
     float d = -(2 * z_far * z_near) / (z_far - z_near);
-    Mat4<GLfloat> matrix;
+    Mat4<float> matrix;
     matrix[0] = {a, 0.0f, 0.0f, 0.0f};
     matrix[1] = {0.0f, b, 0.0f, 0.0f};
     matrix[2] = {0.0f, 0.0f, c, d};
@@ -183,9 +182,9 @@ Render::Render(SDL_Window *window): skybox(Cube()), window(window), DRAW_DISTANC
     glBufferData(GL_ARRAY_BUFFER, skybox.byte_size_of_vertices(), sky_vector.data(), GL_STATIC_DRAW);
 
     // Then set our vertex attributes pointers, only doable AFTER linking
-    auto sky_positionAttrib = glGetAttribLocation(gl_skybox_shader, "position");
-    glVertexAttribPointer(sky_positionAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-                          (const void *)offsetof(Vertex, position));
+    auto sky_positionAttrib = glGetAttribLocation(shaders.at(ShaderType::SKYBOX_SHADER).gl_program, "position");
+    glVertexAttribPointer(sky_positionAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>),
+                          (const void *)offsetof(Vertex<float>, position));
     glEnableVertexAttribArray(sky_positionAttrib);
 
     GLuint sky_EBO;
@@ -278,13 +277,13 @@ Render::Render(SDL_Window *window): skybox(Cube()), window(window), DRAW_DISTANC
     update_projection_matrix();
 
     // Camera
-    auto position  = Vec3<>{0.0f, 0.0f, 0.0f};  // cam position
-    auto direction = Vec3<>{0.0f, 0.0f, -1.0f}; // position of where the cam is looking
-    auto world_up  = Vec3<>{0.0, 1.0f, 0.0f};   // world up
+    auto position  = Vec3<float>{0.0f, 0.0f, 0.0f};  // cam position
+    auto direction = Vec3<float>{0.0f, 0.0f, -1.0f}; // position of where the cam is looking
+    auto world_up  = Vec3<float>{0.0, 1.0f, 0.0f};   // world up
     this->camera = std::make_shared<Camera>(position, direction, world_up);
 }
 
-bool Render::point_inside_frustrum(Vec3<GLfloat> point, std::array<Plane<GLfloat>, 6> planes) {
+bool Render::point_inside_frustrum(Vec3<float> point, std::array<Plane<float>, 6> planes) {
     auto left_plane = planes[0]; auto right_plane = planes[1];
     auto top_plane  = planes[2]; auto bot_plane   = planes[3];
     auto near_plane = planes[4]; auto far_plane   = planes[5];
@@ -302,7 +301,7 @@ void Render::render_world(const World *world) {
     /// Frustrum planes
     auto camera_view = FPSViewRH(camera->position, camera->pitch, camera->yaw);
     auto frustrum_view = camera_view * projection_matrix;
-    std::array<Plane<GLfloat>, 6> planes = extract_planes(frustrum_view.transpose());
+    std::array<Plane<float>, 6> planes = extract_planes(frustrum_view.transpose());
     auto left_plane = planes[0]; auto right_plane = planes[1];
     auto top_plane  = planes[2]; auto bot_plane   = planes[3];
     auto near_plane = planes[4]; auto far_plane   = planes[5];
@@ -321,7 +320,7 @@ void Render::render_world(const World *world) {
     glBindTexture(GL_TEXTURE_CUBE_MAP, textures[Texture::SKYBOX]);
 
     glUniformMatrix4fv(gl_skybox_camera, 1, GL_FALSE, camera_view.data());
-    auto model = Mat4<GLfloat>();
+    Mat4<float> model{};
     model = model.translate(camera->position);
     model = model.scale(skybox.scale);
     glUniformMatrix4fv(gl_skybox_model, 1, GL_TRUE, model.data());
@@ -335,7 +334,7 @@ void Render::render_world(const World *world) {
     glFrontFace(GL_CCW);    // GL_CCW for counter clock-wise
     glUniformMatrix4fv(gl_camera_view, 1, GL_FALSE, camera_view.data());
 
-    std::vector<Mat4<GLfloat>> buffer{};
+    std::vector<Mat4<float>> buffer{};
     for (int j = 0; j < world->chunks.size(); j++) {
         auto chunk = &world->chunks[j]; 
 
@@ -354,7 +353,7 @@ void Render::render_world(const World *world) {
 
             glBindTexture(GL_TEXTURE_CUBE_MAP, textures[cube->texture]);
             // Model - transform_z * transform_y * transform_x * transform_translation * transform_scaling
-            auto model = Mat4<GLfloat>();
+            Mat4<float> model{};
             model = model.scale(cube->scale);
             model = model.rotate_x(cube->theta_x);
             model = model.rotate_y(cube->theta_y);
@@ -377,39 +376,39 @@ Render::~Render() {
 
 /// Returns the planes from the frustrum matrix in order; {left, right, bottom, top, near, far}
 /// See: http://gamedevs.org/uploads/fast-extraction-viewing-frustum-planes-from-world-view-projection-matrix.pdf
-std::array<Plane<GLfloat>, 6> Render::extract_planes(Mat4<GLfloat> mat) {
-    auto planes = std::array<Plane<GLfloat>, 6>();
-    auto left_plane  = Plane<GLfloat>(mat[3][0] + mat[0][0],
-                                      mat[3][1] + mat[0][1],
-                                      mat[3][2] + mat[0][2],
-                                      mat[3][3] + mat[0][3]);
+std::array<Plane<float>, 6> Render::extract_planes(Mat4<float> mat) {
+    auto planes = std::array<Plane<float>, 6>();
+    auto left_plane  = Plane<float>(mat[3][0] + mat[0][0],
+                                    mat[3][1] + mat[0][1],
+                                    mat[3][2] + mat[0][2],
+                                    mat[3][3] + mat[0][3]);
 
-    auto right_plane = Plane<GLfloat>(mat[3][0] - mat[0][0],
-                                      mat[3][1] - mat[0][1],
-                                      mat[3][2] - mat[0][2],
-                                      mat[3][3] - mat[0][3]);
+    auto right_plane = Plane<float>(mat[3][0] - mat[0][0],
+                                    mat[3][1] - mat[0][1],
+                                    mat[3][2] - mat[0][2],
+                                    mat[3][3] - mat[0][3]);
 
-    auto bot_plane   = Plane<GLfloat>(mat[3][0] + mat[1][0],
-                                      mat[3][1] + mat[1][1],
-                                      mat[3][2] + mat[1][2],
-                                      mat[3][3] + mat[1][3]);
+    auto bot_plane   = Plane<float>(mat[3][0] + mat[1][0],
+                                    mat[3][1] + mat[1][1],
+                                    mat[3][2] + mat[1][2],
+                                    mat[3][3] + mat[1][3]);
 
-    auto top_plane   = Plane<GLfloat>(mat[3][0] - mat[1][0],
-                                      mat[3][1] - mat[1][1],
-                                      mat[3][2] - mat[1][2],
-                                      mat[3][3] - mat[1][3]);
+    auto top_plane   = Plane<float>(mat[3][0] - mat[1][0],
+                                    mat[3][1] - mat[1][1],
+                                    mat[3][2] - mat[1][2],
+                                    mat[3][3] - mat[1][3]);
 
-    auto near_plane  = Plane<GLfloat>(mat[3][0] + mat[2][0],
-                                      mat[3][1] + mat[2][1],
-                                      mat[3][2] + mat[2][2],
-                                      mat[3][3] + mat[2][3]);
+    auto near_plane  = Plane<float>(mat[3][0] + mat[2][0],
+                                    mat[3][1] + mat[2][1],
+                                    mat[3][2] + mat[2][2],
+                                    mat[3][3] + mat[2][3]);
 
-    auto far_plane   = Plane<GLfloat>(mat[3][0] - mat[2][0],
-                                      mat[3][1] - mat[2][1],
-                                      mat[3][2] - mat[2][2],
-                                      mat[3][3] - mat[2][3]);
+    auto far_plane   = Plane<float>(mat[3][0] - mat[2][0],
+                                    mat[3][1] - mat[2][1],
+                                    mat[3][2] - mat[2][2],
+                                    mat[3][3] - mat[2][3]);
     planes[0] = left_plane; planes[1] = right_plane; planes[2] = bot_plane;
-    planes[3] = top_plane;  planes[4] = near_plane;   planes[5] = far_plane;
+    planes[3] = top_plane;  planes[4] = near_plane;  planes[5] = far_plane;
     return planes;
 }
 

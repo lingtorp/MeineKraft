@@ -1,58 +1,75 @@
 #ifndef MEINEKRAFT_RENDER_H
 #define MEINEKRAFT_RENDER_H
 
-#include <GL/glew.h>
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_opengl.h>
-#include <cmath>
-#include <SDL2/SDL_image.h>
-#include <cassert>
+#include <cstdint>
+#include <SDL2/SDL_video.h>
 #include <string>
 #include <vector>
-#include <cstdio>
-#include <cstdlib>
 #include <unordered_map>
-
-#include "../math/vector.h"
 #include "primitives.h"
-#include "../world/world.h"
-#include "camera.h"
+
+class World;
+class Camera;
+class RenderComponent;
+class GraphicsBatch;
+class Shader;
+struct Cube;
+
+enum Texture: uint64_t;
 
 struct RenderState {
     uint64_t entities;
 };
 
+enum ShaderType {
+    STANDARD_SHADER, SKYBOX_SHADER
+};
+
 class Render {
 public:
-    void render_world(const World *world);
-    Render(SDL_Window *window);
-    ~Render();
+    Render(Render &render) = delete;
+    ~Render(); // Render does not dealloc properly atm
 
-    const std::string load_shader_source(std::string filename);
-    static Mat4<GLfloat> FPSViewRH(Vec3<> eye, float pitch, float yaw);
-    void update_projection_matrix();
+    /// Singleton instance of core Render, use with caution.
+    static Render &instance() {
+        static Render instance;
+        return instance;
+    }
+
+    void render_world(const World *world);
+
+    void add_to_batch(RenderComponent component);
+    void remove_from_batch(RenderComponent component);
+    std::vector<GraphicsBatch> graphics_batches;
+    std::unordered_map<ShaderType, Shader, std::hash<int>> shaders;
+
+    // std::shared_ptr<GraphicsState> graphics_state(uint64_t hash_id, std::string obj_file);
+
+    Mat4<float> FPSViewRH(Vec3<float> eye, float pitch, float yaw);
+    void update_projection_matrix(float fov);
 
     std::shared_ptr<Camera> camera;
     RenderState state;
-private:
+
     SDL_Window *window;
+private:
+    Render();
+
     Cube skybox;
     double DRAW_DISTANCE;
-    std::unordered_map<Texture, GLuint, std::hash<int>> textures;
-    Mat4<GLfloat> projection_matrix;
+    std::unordered_map<Texture, uint64_t, std::hash<int>> textures;
+    Mat4<float> projection_matrix;
 
-    GLuint gl_VAO;
-    GLuint gl_modelsBO;
-    GLuint gl_camera_view;
-    GLuint gl_shader_program;
+    uint64_t gl_VAO;
+    uint64_t gl_modelsBO;
+    uint64_t gl_camera_view;
 
-    GLuint gl_skybox_VAO;
-    GLuint gl_skybox_model;
-    GLuint gl_skybox_camera;
-    GLuint gl_skybox_shader;
+    uint64_t gl_skybox_VAO;
+    uint64_t gl_skybox_model;
+    uint64_t gl_skybox_camera;
 
-    bool point_inside_frustrum(Vec3<GLfloat> point, std::array<Plane<GLfloat>, 6> planes);
-    std::array<Plane<GLfloat>, 6> extract_planes(Mat4<GLfloat> matrix);
+    bool point_inside_frustrum(Vec3<float> point, std::array<Plane<float>, 6> planes);
+    std::array<Plane<float>, 6> extract_planes(Mat4<float> matrix);
 };
 
 #endif //MEINEKRAFT_RENDER_H
