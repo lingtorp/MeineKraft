@@ -3,7 +3,7 @@
 
 #include "primitives.h"
 
-class Render;
+class Renderer;
 class Entity;
 
 class RenderComponent {

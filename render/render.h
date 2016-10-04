@@ -19,54 +19,54 @@ enum Texture: uint64_t;
 
 struct RenderState {
     uint64_t entities;
+    uint64_t graphic_batches;
 };
 
 enum ShaderType {
     STANDARD_SHADER, SKYBOX_SHADER
 };
 
-class Render {
+class Renderer {
 public:
-    Render(Render &render) = delete;
-    ~Render(); // Render does not dealloc properly atm
+    Renderer(Renderer &render) = delete;
+    ~Renderer(); // Render does not dealloc properly atm
 
     /// Singleton instance of core Render, use with caution.
-    static Render &instance() {
-        static Render instance;
+    static Renderer &instance() {
+        static Renderer instance;
         return instance;
     }
 
-    void render_world(const World *world);
+    /// Main render function, renders all the graphics batches and so on
+    void render();
 
-    void add_to_batch(RenderComponent component);
+    /// Adds the RenderComponent to a internal batch with the same Entity.hash_id
+    uint64_t add_to_batch(RenderComponent component);
+
+    /// Removes the RenderComponent from a internal batch with the same Entity.hash_id
     void remove_from_batch(RenderComponent component);
-    std::vector<GraphicsBatch> graphics_batches;
-    std::unordered_map<ShaderType, Shader, std::hash<int>> shaders;
 
-    // std::shared_ptr<GraphicsState> graphics_state(uint64_t hash_id, std::string obj_file);
+    /// Updates the RenderComponent to a internal batch with the same Entity.hash_id and RenderComponent.id
+    void update_render_component(RenderComponent component);
 
     Mat4<float> FPSViewRH(Vec3<float> eye, float pitch, float yaw);
+
+    /// Updates all the shaders projection matrices in order to support resizing of the window
     void update_projection_matrix(float fov);
 
     std::shared_ptr<Camera> camera;
     RenderState state;
-
     SDL_Window *window;
 private:
-    Render();
-
-    Cube skybox;
+    Renderer();
+    uint64_t render_components_id;
     double DRAW_DISTANCE;
-    std::unordered_map<Texture, uint64_t, std::hash<int>> textures;
+
     Mat4<float> projection_matrix;
 
-    uint64_t gl_VAO;
-    uint64_t gl_modelsBO;
-    uint64_t gl_camera_view;
-
-    uint64_t gl_skybox_VAO;
-    uint64_t gl_skybox_model;
-    uint64_t gl_skybox_camera;
+    std::unordered_map<Texture, uint64_t, std::hash<int>> textures;
+    std::vector<GraphicsBatch> graphics_batches;
+    std::unordered_map<ShaderType, Shader, std::hash<int>> shaders;
 
     bool point_inside_frustrum(Vec3<float> point, std::array<Plane<float>, 6> planes);
     std::array<Plane<float>, 6> extract_planes(Mat4<float> matrix);

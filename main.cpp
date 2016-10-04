@@ -1,3 +1,4 @@
+#include <memory>
 #include "render/render.h"
 #include "include/imgui/imgui_impl_sdl.h"
 #include <SDL2/SDL_image.h>
@@ -32,14 +33,15 @@ int main() {
     ImGui_ImplSdlGL3_Init(window);
 
     // Inits glew
-    Render &render = Render::instance();
-    render.window = window;
-    render.update_projection_matrix(70);
-
-    Skybox skybox{};
+    Renderer &renderer = Renderer::instance();
+    renderer.window = window;
+    renderer.update_projection_matrix(70);
 
     // Init the world with seed
     World world{1};
+
+    Skybox skybox{};
+    world.add_entity(&skybox);
 
     bool DONE = false;
     uint32_t last_tick = SDL_GetTicks(), current_tick, delta;
@@ -56,30 +58,30 @@ int main() {
             ImGui_ImplSdlGL3_ProcessEvent(&event);
             switch (event.type) {
                 case SDL_MOUSEMOTION:
-                    render.camera->pitch += event.motion.yrel;
-                    render.camera->yaw += event.motion.xrel;
-                    render.camera->direction = render.camera->recalculate_direction();
+                    renderer.camera->pitch += event.motion.yrel;
+                    renderer.camera->yaw += event.motion.xrel;
+                    renderer.camera->direction = renderer.camera->recalculate_direction();
                     break;
                 case SDL_KEYDOWN:
                     switch (event.key.keysym.sym) {
                         case SDLK_w:
-                            render.camera->position = render.camera->move_forward(delta);
+                            renderer.camera->position = renderer.camera->move_forward(delta);
                             break;
                         case SDLK_a:
-                            render.camera->position = render.camera->move_left(delta);
+                            renderer.camera->position = renderer.camera->move_left(delta);
                             break;
                         case SDLK_s:
-                            render.camera->position = render.camera->move_backward(delta);
+                            renderer.camera->position = renderer.camera->move_backward(delta);
                             break;
                         case SDLK_d:
-                            render.camera->position = render.camera->move_right(delta);
+                            renderer.camera->position = renderer.camera->move_right(delta);
                             break;
                     }
                     break;
                 case SDL_WINDOWEVENT:
                     switch (event.window.event) {
                         case SDL_WINDOWEVENT_RESIZED:
-                            render.update_projection_matrix(70);
+                            renderer.update_projection_matrix(70);
                             break;
                     }
                     break;
@@ -92,10 +94,10 @@ int main() {
         ImGui_ImplSdlGL3_NewFrame(window);
 
         /// Tick/update the world
-        world.world_tick(delta, render.camera);
+        world.world_tick(delta, renderer.camera);
 
         /// Render the world
-        render.render_world(&world);
+        renderer.render();
 
         /// ImGui - Debug instruments
         {
@@ -105,8 +107,9 @@ int main() {
 
             ImGui::Begin("Render state");
             ImGui::Text("Chunks: %li", world.chunks.size());
-            ImGui::Text("Entities: %lli", render.state.entities);
-            ImGui::Text("Application average %u ms/frame (%.1f FPS)", delta, io.Framerate);
+            ImGui::Text("Graphics batches: %li", renderer.state.graphic_batches);
+            ImGui::Text("Entities: %lli", renderer.state.entities);
+            ImGui::Text("Application average %u ms / frame (%.1f FPS)", delta, io.Framerate);
             if (ImGui::Button("ImGui Palette")) show_test_window ^= 1;
             ImGui::End();
 

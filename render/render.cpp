@@ -64,7 +64,7 @@ GLuint load_cube_map(std::vector<std::string> faces, FileFormat file_format) {
 }
 
 /// Column major - Camera combined rotation matrix (y, x) & translation matrix
-Mat4<float> Render::FPSViewRH(Vec3<float> eye, float pitch, float yaw) {
+Mat4<float> Renderer::FPSViewRH(Vec3<float> eye, float pitch, float yaw) {
     static constexpr float rad = M_PI / 180;
     float cosPitch = cosf(pitch * rad);
     float sinPitch = sinf(pitch * rad);
@@ -109,7 +109,7 @@ Mat4<float> gen_projection_matrix(float z_near, float z_far, float fov, float as
     return matrix;
 }
 
-Render::Render(): skybox(Cube()), DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), state{}, graphics_batches{}, shaders{} {
+Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), state{}, graphics_batches{}, shaders{}, render_components_id(0) {
     glewExperimental = (GLboolean) true;
     glewInit();
 
@@ -339,7 +339,7 @@ void Render::render_world(const World *world) {
     state.entities = buffer.size();
 }
 
-Render::~Render() {
+Renderer::~Renderer() {
     // TODO: Clear up all the GraphicsObjects
 }
 
@@ -381,7 +381,7 @@ std::array<Plane<float>, 6> Render::extract_planes(Mat4<float> mat) {
     return planes;
 }
 
-void Render::update_projection_matrix(float fov) {
+void Renderer::update_projection_matrix(float fov) {
     int height, width;
     SDL_GL_GetDrawableSize(this->window, &width, &height);
     float aspect = (float) width / (float) height;
@@ -395,8 +395,8 @@ void Render::update_projection_matrix(float fov) {
     }
 }
 
-void Render::add_to_batch(RenderComponent component) {
-    for (auto batch : graphics_batches) {
+uint64_t Renderer::add_to_batch(RenderComponent component) {
+    for (auto &batch : graphics_batches) {
         if (batch.hash_id == component.entity->hash_id) {
             batch.components.push_back(component);
             return;
@@ -456,7 +456,7 @@ void Render::add_to_batch(RenderComponent component) {
     graphics_batches.push_back(batch);
 }
 
-void Render::remove_from_batch(RenderComponent component) {
+void Renderer::remove_from_batch(RenderComponent component) {
     // TODO: Implement
 }
 
