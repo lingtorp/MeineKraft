@@ -1,16 +1,7 @@
 #include "render.h"
 
 #include <GL/glew.h>
-#include <SDL2/SDL.h>
-#include <cmath>
 #include <SDL2/SDL_image.h>
-#include <string>
-#include <vector>
-#include <cstdio>
-#include <cstdlib>
-#include <unordered_map>
-#include <map>
-#include <fstream>
 #include <array>
 
 #include "../math/vector.h"
