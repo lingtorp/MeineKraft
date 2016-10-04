@@ -8,8 +8,9 @@ file(GLOB IMGUI_SRC "include/imgui/*.cpp" "include/imgui/*.h") # Adds all imgui 
 set(SOURCE_FILES main.cpp render/render.cpp render/render.h math/vector.h world/world.cpp world/world.h render/primitives.h
         render/camera.cpp render/camera.h nodes/chunk.cpp nodes/chunk.h math/noise.h render/ray.h render/graphicsbatch.h
         render/graphicsbatch.cpp render/rendercomponent.cpp render/rendercomponent.h nodes/entity.cpp nodes/entity.h
-        render/shader.cpp render/shader.h ${IMGUI_SRC} nodes/Skybox.cpp nodes/Skybox.h)
-add_executable(MeineKraft ${SOURCE_FILES} nodes/Skybox.cpp nodes/Skybox.h)
+        render/shader.cpp render/shader.h ${IMGUI_SRC} nodes/Skybox.cpp nodes/Skybox.h nodes/block.cpp nodes/block.h
+        nodes/Skybox.cpp nodes/Skybox.h)
+add_executable(MeineKraft ${SOURCE_FILES})
 
 find_package(GLEW REQUIRED)
 include_directories(${GLEW_INCLUDE_DIRS})
