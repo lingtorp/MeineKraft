@@ -172,4 +172,8 @@ struct Plane {
     }
 };
 
+struct GraphicsState {
+    Texture gl_texture;
+};
+
 #endif //MEINEKRAFT_PRIMITIVES_H

@@ -3,18 +3,21 @@
 
 #include "../render/primitives.h"
 
+class Camera;
+
 class Entity {
 public:
     uint64_t hash_id;
     Vec3<float> position;
     float theta_x, theta_y, theta_z; // Rotation
+    float scale;
 
-    Entity(): hash_id(get_next_hash_id(0)), position{}, theta_x(0), theta_y(0), theta_z(0) {}
+    Entity(uint64_t hash_id): hash_id(hash_id), position{}, theta_x(0), theta_y(0), theta_z(0), scale(1) {}
 
-private: // Every Entity gets a new hash_id, should be every new type of subclass instead
-    constexpr uint64_t get_next_hash_id(uint64_t old_hash_id) {
-        return old_hash_id + 1;
-    }
+    virtual void update(uint64_t delta, const std::shared_ptr<Camera> camera) {};
+
+    /// To be overridden by subclasses that will provided a unique ID for each sub-class
+    constexpr uint64_t generate_entity_id();
 };
 
 #endif //MEINEKRAFT_ENTITY_H
