@@ -1,31 +1,36 @@
-#include <iostream>
-#include <numeric>
 #include "world.h"
+#include "../render/camera.h"
+#include "../nodes/entity.h"
+#include "../nodes/chunk.h"
 
 World::World(uint64_t seed): noise(Noise(seed)) {}
 
 /// Ticks the world
 void World::world_tick(uint32_t delta, const std::shared_ptr<Camera> camera) {
+    for (auto entity : entities) {
+        entity->update(delta, camera);
+    }
+
     // TODO: Improve or replace the solution below ...
     // Snap Camera/Player to the world coordinate grid
     auto camera_world_pos = world_position(camera->position);
     std::vector<float> x{camera_world_pos.x - Chunk::dimension, camera_world_pos.x, camera_world_pos.x + Chunk::dimension};
     std::vector<float> y{-Chunk::dimension};
     std::vector<float> z{camera_world_pos.z - Chunk::dimension, camera_world_pos.z, camera_world_pos.z + Chunk::dimension};
-    std::vector<Vec3<float>> positions = {};
     for (auto x : x) {
         for (auto y : y) {
             for (auto z : z) {
                 auto position = Vec3<float>{x, y, z};
-                positions.push_back(position);
-                bool chunk_exists_at_pos = std::any_of(chunks.begin(), chunks.end(), [position](Chunk &c1){ return c1.position == position; });
+                bool chunk_exists_at_pos = std::any_of(chunks.begin(), chunks.end(), [position](std::shared_ptr<Chunk> c1){ return c1->position == position; });
                 if (chunk_exists_at_pos) { continue; }
-                chunks.push_back(Chunk::Chunk(position, &noise));
+                auto chunk = std::make_shared<Chunk>(position, noise);
+                chunks.push_back(chunk);
             }
         }
     }
 
-    // TODO: Cull out chunks that are far away from the Player
+    // TODO: Cull out entities by inactivating those that are far away from the Player
+    // TODO: Also the inverse of above
 }
 
 /// World position is measured in Chunk lengths
@@ -37,25 +42,6 @@ Vec3<float> World::world_position(Vec3<float> position) const {
     return result;
 }
 
-/// Mainly used for testing noise functions
-void World::spawn_flat_world() {
-    static auto once = false;
-    if (once) { return; } else { once = true; }
-    /// Spawn a flat world once
-    std::vector<float> x = {};
-    std::vector<float> y = {-Chunk::dimension};
-    std::vector<float> z = {};
-    for (int i = -5; i < 5; i++) {
-        x.push_back(i * Chunk::dimension);
-        z.push_back(i * Chunk::dimension);
-    }
-    auto noise = Noise(1);
-    for (auto x : x) {
-        for (auto y : y) {
-            for (auto z : z) {
-                auto position = Vec3<float>{x, y, z};
-                chunks.push_back(Chunk::Chunk(position, &noise));
-            }
-        }
-    }
+void World::add_entity(Entity *entity) {
+    entities.push_back(entity);
 }
