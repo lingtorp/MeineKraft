@@ -8,6 +8,7 @@ class Entity;
 
 class RenderComponent {
 public:
+    uint64_t id;
     GraphicsState graphics_state;
     Entity *entity;
 
@@ -16,6 +17,8 @@ public:
     // RenderComponent - with obj file
     // RenderComponent - with sprite file
     void remove_component();
+
+    void set_cube_map_texture(Texture texture);
 };
 
 #endif //MEINEKRAFT_RENDERCOMPONENT_H
