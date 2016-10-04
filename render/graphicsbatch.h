@@ -13,7 +13,7 @@ public:
     Mesh mesh;
     std::vector<RenderComponent> components;
 
-    // GLenum gl_cull_mode  = GL_FRONT;
+    uint64_t gl_cull_mode; //
 
     uint64_t gl_VAO;
     uint64_t gl_models_buffer_object;
