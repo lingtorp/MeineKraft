@@ -109,9 +109,9 @@ int main() {
             static bool show_test_window;
 
             ImGui::Begin("Render state");
-            ImGui::Text("Chunks: %li", world.chunks.size());
-            ImGui::Text("Graphics batches: %li", renderer.state.graphic_batches);
-            ImGui::Text("Entities: %lli", renderer.state.entities);
+            ImGui::Text("Chunks: %lu", world.chunks.size());
+            ImGui::Text("Graphics batches: %llu", renderer.state.graphic_batches);
+            ImGui::Text("Entities: %llu", renderer.state.entities);
             ImGui::Text("Application average %u ms / frame (%.1f FPS)", delta, io.Framerate);
             if (ImGui::Button("ImGui Palette")) show_test_window ^= 1;
             ImGui::End();
