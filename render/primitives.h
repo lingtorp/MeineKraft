@@ -24,22 +24,20 @@ struct Vertex {
     Color4<T> color = {};
     Vec2<T> texCoord = {};
     Vertex(): position{}, color{}, texCoord{} {};
+    Vertex(Vec3<T> position): position(position), texCoord{}, color{} {};
     Vertex(Vec3<T> position, Vec2<T> texCoord): position(position), texCoord(texCoord), color{} {};
-    Vertex(Vec3<T> position, Color4<T> color, Vec2<T> texCoord):
-            position(position), color(color), texCoord(texCoord) {};
+    Vertex(Vec3<T> position, Color4<T> color, Vec2<T> texCoord): position(position), color(color), texCoord(texCoord) {};
 };
 
 struct Mesh {
     std::vector<Vertex<float>> vertices;
     std::vector<int> indices;
 
-    Mesh(): vertices(std::vector<Vertex<float>>()), indices(std::vector<int>()) {};
+    Mesh(): vertices{}, indices{} {};
 
-    Mesh(std::vector<Vertex<float>> vertices, std::vector<int> indices):
-            vertices(vertices), indices(indices) {};
+    Mesh(std::vector<Vertex<float>> vertices, std::vector<int> indices): vertices(vertices), indices(indices) {};
 
-    // 1 quad = 2 triangles => 4 vertices = 4 points & 4 colors
-    /// Converts a quad to vertices
+    /// Return a vector of all the vertices data laid out as the Vertex struct
     std::vector<float> to_floats() {
         std::vector<float> floats;
         for (auto vertex : vertices) {
@@ -67,23 +65,7 @@ struct Mesh {
     }
 };
 
-// Input: 4 points, 4 colors
-//  d ----- c   <-- Point & color pairs
-//  |       |
-//  a ----- b   0 = a, 1 = b, 2 = c, 3 = d
-struct Quad: Mesh {
-    Quad(): Mesh() {};
-    Quad(Vec3<float> points[4], Color4<float> colors[4], Vec2<float> texCoords[4]): Mesh() {
-        vertices.push_back(Vertex<float>(points[0], colors[0], texCoords[0]));
-        vertices.push_back(Vertex<float>(points[1], colors[1], texCoords[1]));
-        vertices.push_back(Vertex<float>(points[2], colors[2], texCoords[2]));
-        vertices.push_back(Vertex<float>(points[3], colors[3], texCoords[3]));
-        indices.push_back(0); indices.push_back(1);
-        indices.push_back(2); indices.push_back(3);
-    };
-};
-
-enum Texture: uint64_t { SKYBOX, DIRT, GRASS, AIR };
+enum Texture: uint64_t { SKYBOX, GRASS };
 
 struct Cube: Mesh {
     Vec3<float> position; // Lower left corner of the cube in world space

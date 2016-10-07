@@ -14,6 +14,9 @@
 #include "../nodes/entity.h"
 #include "shader.h"
 
+#define TINYOBJLOADER_IMPLEMENTATION
+#include "../include/tinyobjloader/tiny_obj_loader.h"
+
 typedef enum { png, jpg } FileFormat;
 
 /// Texture loading order; right, left, top, bottom, back, front
@@ -273,7 +276,7 @@ void Renderer::update_projection_matrix(float fov) {
     }
 }
 
-uint64_t Renderer::add_to_batch(RenderComponent component) {
+uint64_t Renderer::add_to_batch(RenderComponent component, Mesh mesh) {
     for (auto &batch : graphics_batches) {
         if (batch.hash_id == component.entity->hash_id) {
             batch.components.push_back(component);
@@ -282,7 +285,7 @@ uint64_t Renderer::add_to_batch(RenderComponent component) {
     }
 
     GraphicsBatch batch{component.entity->hash_id};
-    batch.mesh = Cube(); /// Default to mesh of a cube ...
+    batch.mesh = mesh;
     batch.gl_shader_program = shaders.at(ShaderType::STANDARD_SHADER).gl_program;
     glUseProgram(batch.gl_shader_program);
 
@@ -328,6 +331,34 @@ uint64_t Renderer::add_to_batch(RenderComponent component) {
     graphics_batches.push_back(batch);
 
     return render_components_id++;
+}
+
+Mesh Renderer::load_mesh_from_file(std::string filepath) {
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+    std::string err;
+    auto success = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, filepath.c_str());
+    if (!success) { SDL_Log("Failed loading mesh %s: %s", filepath.c_str(), err.c_str()); return Mesh(); }
+
+    Mesh mesh{};
+    for (auto shape : shapes) { // Shapes
+        size_t index_offset = 0;
+        for (auto face : shape.mesh.num_face_vertices) { // Faces (polygon)
+            for (auto v = 0; v < face; v++) {
+                tinyobj::index_t idx = shape.mesh.indices[index_offset + v];
+                float vx = attrib.vertices[3 * idx.vertex_index + 0];
+                float vy = attrib.vertices[3 * idx.vertex_index + 1];
+                float vz = attrib.vertices[3 * idx.vertex_index + 2];
+                // TODO: Take out normals and texcoords
+                mesh.vertices.push_back(Vertex<float>{Vec3<float>{vx, vy, vz}});
+                mesh.indices.push_back(3 * idx.vertex_index);
+            }
+            index_offset += face;
+        }
+    }
+
+    return mesh;
 }
 
 void Renderer::remove_from_batch(RenderComponent component) {

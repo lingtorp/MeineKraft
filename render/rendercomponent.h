@@ -12,10 +12,13 @@ public:
     GraphicsState graphics_state;
     Entity *entity;
 
-    // Defaults to the mesh of a cube
+    /// Creates a RenderComponent with the mesh of a obj file
+    RenderComponent(Entity *entity, std::string mesh_file);
+
+    /// Creates a RenderComponent with the mesh of a Cube
     RenderComponent(Entity *entity);
-    // RenderComponent - with obj file
-    // RenderComponent - with sprite file
+
+    // RenderComponent - with sprite file/images/
     void remove_component();
 
     void set_cube_map_texture(Texture texture);
