@@ -16,6 +16,8 @@ public:
 
     virtual void update(uint64_t delta, const std::shared_ptr<Camera> camera) {};
 
+    // TODO: The index system is fundamentally coupled with the Rendering which is not really great.
+    // TODO: Might make more sense to bound it into the World or something ...
     /// To be overridden by subclasses that will provided a unique ID for each sub-class
     constexpr uint64_t generate_entity_id();
 };
