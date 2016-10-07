@@ -5,6 +5,7 @@
 #include "render/camera.h"
 #include "world/world.h"
 #include "nodes/Skybox.h"
+#include "nodes/teapot.h"
 
 struct Resolution {
     int width, height;
@@ -42,6 +43,8 @@ int main() {
 
     Skybox skybox{};
     world.add_entity(&skybox);
+
+    Teapot teapot{};
 
     bool DONE = false;
     uint32_t last_tick = SDL_GetTicks(), current_tick, delta;
