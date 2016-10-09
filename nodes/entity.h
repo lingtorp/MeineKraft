@@ -9,10 +9,10 @@ class Entity {
 public:
     uint64_t hash_id;
     Vec3<float> position;
-    float theta_x, theta_y, theta_z; // Rotation
+    Vec3<float> rotation; // Rotation
     float scale;
 
-    Entity(uint64_t hash_id): hash_id(hash_id), position{}, theta_x(0), theta_y(0), theta_z(0), scale(1) {}
+    Entity(uint64_t hash_id): hash_id(hash_id), position{}, rotation{}, scale(1) {}
 
     virtual void update(uint64_t delta, const std::shared_ptr<Camera> camera) {};
 
