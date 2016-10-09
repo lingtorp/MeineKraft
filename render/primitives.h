@@ -16,6 +16,10 @@ struct Color4 {
     inline static Color4 blue()   { return Color4(0.0f, 1.0f, 0.0f, 1.0f); }
     inline static Color4 green()  { return Color4(0.0f, 0.0f, 1.0f, 1.0f); }
     inline static Color4 yellow() { return Color4(1.0f, 1.0f, 0.0f, 1.0f); }
+
+    bool operator==(const Color4<T> &rhs) const {
+        return r == rhs.r && g == rhs.g && b == rhs.b && a == rhs.a;
+    }
 };
 
 template<typename T>
@@ -27,6 +31,10 @@ struct Vertex {
     Vertex(Vec3<T> position): position(position), texCoord{}, color{} {};
     Vertex(Vec3<T> position, Vec2<T> texCoord): position(position), texCoord(texCoord), color{} {};
     Vertex(Vec3<T> position, Color4<T> color, Vec2<T> texCoord): position(position), color(color), texCoord(texCoord) {};
+
+    bool operator==(const Vertex<T> &rhs) const {
+        return position == rhs.position && color == rhs.color && texCoord == rhs.texCoord;
+    }
 };
 
 /// Template specialization for hashing of a Vertex
