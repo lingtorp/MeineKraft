@@ -92,6 +92,11 @@ struct Vec2 {
 
     /// Dot product
     inline T dot(Vec2<T> u) const { return x * u.x + y * u.y; }
+
+    /// Operators
+    bool operator==(const Vec2 &rhs) const {
+        return x == rhs.x && y == rhs.y;
+    }
 };
 
 template<typename T>
