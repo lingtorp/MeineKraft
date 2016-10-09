@@ -59,14 +59,14 @@ namespace std {
 
 struct Mesh {
     std::vector<Vertex<float>> vertices;
-    std::vector<int> indices;
+    std::vector<uint32_t> indices;
 
     Mesh(): vertices{}, indices{} {};
 
-    Mesh(std::vector<Vertex<float>> vertices, std::vector<int> indices): vertices(vertices), indices(indices) {};
+    Mesh(std::vector<Vertex<float>> vertices, std::vector<uint32_t> indices): vertices(vertices), indices(indices) {};
 
     /// Return a vector of all the vertices data laid out as the Vertex struct
-    std::vector<float> to_floats() {
+    std::vector<float> to_floats() const {
         std::vector<float> floats;
         for (auto vertex : vertices) {
             floats.push_back(vertex.position.x);
@@ -83,13 +83,13 @@ struct Mesh {
     }
 
     /// Byte size of vertices to upload to OpenGL
-    size_t byte_size_of_vertices() {
+    size_t byte_size_of_vertices() const {
         return sizeof(Vertex<float>) * vertices.size();
     }
 
     /// Byte size of indices to upload to OpenGL
-    size_t byte_size_of_indices() {
-        return sizeof(int) * indices.size();
+    size_t byte_size_of_indices() const {
+        return sizeof(uint32_t) * indices.size();
     }
 };
 
