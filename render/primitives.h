@@ -29,6 +29,26 @@ struct Vertex {
     Vertex(Vec3<T> position, Color4<T> color, Vec2<T> texCoord): position(position), color(color), texCoord(texCoord) {};
 };
 
+/// Template specialization for hashing of a Vertex
+namespace std {
+    template<>
+    struct hash<Vertex<float>> {
+        size_t operator() (Vertex<float> const &vertex) const {
+            auto hashed_x = hash<float>{}(vertex.position.x);
+            auto hashed_y = hash<float>{}(vertex.position.y);
+            auto hashed_z = hash<float>{}(vertex.position.z);
+            auto hashed_color_r = hash<float>{}(vertex.position.x);
+            auto hashed_color_g = hash<float>{}(vertex.position.x);
+            auto hashed_color_b = hash<float>{}(vertex.position.x);
+            auto hashed_color_a = hash<float>{}(vertex.position.x);
+            auto hashed_texcoord_x = hash<float>{}(vertex.position.x);
+            auto hashed_texcoord_y = hash<float>{}(vertex.position.x);
+            // TODO: Need a proper hash function
+            return (hashed_x * 83492791) ^ (hashed_y * 19349663) ^ (hashed_z * 73856093);
+        }
+    };
+}
+
 struct Mesh {
     std::vector<Vertex<float>> vertices;
     std::vector<int> indices;
