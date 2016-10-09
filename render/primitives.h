@@ -93,7 +93,7 @@ struct Mesh {
     }
 };
 
-enum Texture: uint64_t { SKYBOX, GRASS };
+enum Texture: uint64_t { SKYBOX, GRASS, NONE };
 
 struct Cube: Mesh {
     Vec3<float> position; // Lower left corner of the cube in world space
