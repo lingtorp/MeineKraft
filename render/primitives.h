@@ -155,7 +155,10 @@ struct Plane {
 };
 
 struct GraphicsState {
-    Texture gl_texture;
+    Vec3<float> position;
+    Vec3<float> rotation; // Rotation
+    float scale;
+    Texture gl_texture = Texture::SKYBOX;
 };
 
 #endif //MEINEKRAFT_PRIMITIVES_H
