@@ -188,7 +188,7 @@ void Renderer::render() {
         glUseProgram(batch.gl_shader_program);
         glUniformMatrix4fv(batch.gl_camera_view, 1, GL_FALSE, camera_view.data());
 
-        // TODO: Setup glEnables and stuff, gotta set the defaults in GraphicsState too
+//        // TODO: Setup glEnables and stuff, gotta set the defaults in GraphicsState too
 //        glEnable(GL_CULL_FACE);
 //        glCullFace(GL_FRONT);
 //        glFrontFace(GL_CCW);
@@ -199,8 +199,8 @@ void Renderer::render() {
             if (point_inside_frustrum(component.entity->position, planes)) { continue; }
 
             // Draw distance
-            auto camera_to_cube = camera->position - component.entity->position;
-            if (camera_to_cube.length() >= DRAW_DISTANCE) { continue; }
+            auto camera_to_entity = camera->position - component.entity->position;
+            if (camera_to_entity.length() >= DRAW_DISTANCE) { continue; }
 
             glBindTexture(GL_TEXTURE_CUBE_MAP, textures[component.graphics_state.gl_texture]);
 
@@ -339,25 +339,39 @@ Mesh Renderer::load_mesh_from_file(std::string filepath) {
     std::vector<tinyobj::material_t> materials;
     std::string err;
     auto success = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, filepath.c_str());
-    if (!success) { SDL_Log("Failed loading mesh %s: %s", filepath.c_str(), err.c_str()); return Mesh(); }
+    if (!success) { SDL_Log("Failed loading mesh %s: %s", filepath.c_str(), err.c_str()); return Mesh(); } // TODO: May want to throw a RT-exception here
 
+    std::unordered_map<Vertex<float>, uint32_t> unique_vertices{};
     Mesh mesh{};
     for (auto shape : shapes) { // Shapes
         size_t index_offset = 0;
         for (auto face : shape.mesh.num_face_vertices) { // Faces (polygon)
             for (auto v = 0; v < face; v++) {
                 tinyobj::index_t idx = shape.mesh.indices[index_offset + v];
+                Vertex<float> vertex{};
                 float vx = attrib.vertices[3 * idx.vertex_index + 0];
                 float vy = attrib.vertices[3 * idx.vertex_index + 1];
                 float vz = attrib.vertices[3 * idx.vertex_index + 2];
+                vertex.position = {vx, vy, vz};
+
+                mesh.vertices.push_back(vertex);
+                mesh.indices.push_back(mesh.indices.size());
+
                 // TODO: Take out normals and texcoords
-                mesh.vertices.push_back(Vertex<float>{Vec3<float>{vx, vy, vz}});
-                mesh.indices.push_back(3 * idx.vertex_index);
+                // TODO: Check for unique vertices, models will contain duplicates
+//                if (unique_vertices.count(vertex) == 0) {
+//                    unique_vertices[vertex] = mesh.vertices.size();
+//                    mesh.vertices.push_back(vertex);
+//                    // mesh.indices.push_back(mesh.indices.size());
+//                } else {
+//                    mesh.indices.push_back(unique_vertices.at(vertex));
+//                }
             }
             index_offset += face;
         }
     }
 
+    SDL_Log("Number of vetices: %lu for model %s", mesh.vertices.size(), filepath.c_str());
     return mesh;
 }
 
