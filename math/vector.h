@@ -195,7 +195,7 @@ public:
 
     // Operators
     /// Standard matrix multiplication row-column wise; *this * mat
-    inline Mat4<T> operator*(Mat4<T> mat) const {
+    inline Mat4<T> operator*(Mat4<T> &mat) const {
         Mat4<T> matrix;
         for (int i = 0; i < 4; ++i) {
             auto row = rows[i];
@@ -225,7 +225,7 @@ public:
     }
 
     /// matrix[row_i][colum_j]
-    Vec4<T> &operator[](const int index) {
+    inline Vec4<T> &operator[](const int index) {
         return rows[index];
     }
 
