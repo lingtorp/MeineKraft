@@ -10,7 +10,6 @@ void World::world_tick(uint32_t delta, const std::shared_ptr<Camera> camera) {
     for (auto entity : entities) {
         entity->update(delta, camera);
     }
-    return;
 
     // TODO: Improve or replace the solution below ...
     // Snap Camera/Player to the world coordinate grid
