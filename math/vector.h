@@ -134,7 +134,7 @@ public:
         matrix[0] = {scale, 0.0f, 0.0f, 0.0f};
         matrix[1] = {0.0f, scale, 0.0f, 0.0f};
         matrix[2] = {0.0f, 0.0f, scale, 0.0f};
-        matrix[3] = {0.0f, 0.0f, 0.0f, 1.0f};
+        matrix[3] = {0.0f, 0.0f,  0.0f, 1.0f};
         return *this * matrix;
     }
 
@@ -207,7 +207,7 @@ public:
         return matrix;
     }
 
-    /// TODO: Refactor into Mat3<> ...
+    // TODO: Refactor into Mat3<> ...
     /// A * v, where v = (rhs, 1.0), v is a Vec4 with w set to 1.0
     inline Vec3<T> operator*(Vec3<T> rhs) const {
         auto vec = Vec4<T>{rhs.x, rhs.y, rhs.z, 1.0};
