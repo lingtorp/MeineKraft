@@ -13,18 +13,13 @@ class Camera;
 class RenderComponent;
 class GraphicsBatch;
 class Shader;
+class FileMonitor;
+
 struct Cube;
+struct RenderState;
 
 enum Texture: uint64_t;
-
-struct RenderState {
-    uint64_t entities;
-    uint64_t graphic_batches;
-};
-
-enum ShaderType {
-    STANDARD_SHADER, SKYBOX_SHADER
-};
+enum ShaderType: uint64_t;
 
 class Renderer {
 public:
@@ -44,10 +39,10 @@ public:
     Mesh load_mesh_from_file(std::string filepath);
 
     /// Adds the RenderComponent to a internal batch with the same Entity.hash_id
-    uint64_t add_to_batch(RenderComponent component, Mesh mesh);
+    uint64_t add_to_batch(RenderComponent *component, Mesh mesh);
 
     /// Removes the RenderComponent from a internal batch with the same Entity.hash_id
-    void remove_from_batch(RenderComponent component);
+    void remove_from_batch(RenderComponent *component);
 
     /// Updates the RenderComponent to a internal batch with the same Entity.hash_id and RenderComponent.id
     void update_render_component(RenderComponent component);
@@ -75,6 +70,8 @@ private:
 
     bool point_inside_frustrum(Vec3<float> point, std::array<Plane<float>, 6> planes);
     std::array<Plane<float>, 6> extract_planes(Mat4<float> matrix);
+
+    std::unique_ptr<FileMonitor> shader_file_monitor;
 };
 
 #endif //MEINEKRAFT_RENDER_H

@@ -23,11 +23,12 @@ void main() {
   fTexcoord = normalize(position);
 
   // Linear fog
-  if (false) {
+  if (true) {
     float distance = length(gl_Position);
     float fog_factor = (fog_max_distance - distance)/(fog_max_distance - 100);
     fog_factor = clamp(fog_factor, 0.0, 1.0);
     fColor = vec4(fog_color * fog_factor, 1.0);
-  }
-  fColor = vec4(1, 1, 1, 0);
+  } else {
+    fColor = vec4(1, 1, 1, 0);
+   }
 }

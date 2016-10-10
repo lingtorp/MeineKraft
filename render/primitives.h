@@ -42,6 +42,7 @@ namespace std {
     template<>
     struct hash<Vertex<float>> {
         size_t operator() (Vertex<float> const &vertex) const {
+            // TODO: Need a proper hash function
             auto hashed_x = hash<float>{}(vertex.position.x);
             auto hashed_y = hash<float>{}(vertex.position.y);
             auto hashed_z = hash<float>{}(vertex.position.z);
@@ -51,7 +52,6 @@ namespace std {
             auto hashed_color_a = hash<float>{}(vertex.position.x);
             auto hashed_texcoord_x = hash<float>{}(vertex.position.x);
             auto hashed_texcoord_y = hash<float>{}(vertex.position.x);
-            // TODO: Need a proper hash function
             return (hashed_x * 83492791) ^ (hashed_y * 19349663) ^ (hashed_z * 73856093);
         }
     };
@@ -101,12 +101,8 @@ struct Cube: Mesh {
     float scale;
     Texture texture;
 
-    // TODO: Refactor later - used for Path tracing
-    Vec3<float> center;
-    double radius;
-
     Cube(): Mesh(), scale(1.0), texture(Texture::GRASS), position(Vec3<float>::ZERO()),
-            theta_x(0.0), theta_y(0.0), theta_z(0.0), center(Vec3<float>::ZERO()), radius(0) {
+            theta_x(0.0), theta_y(0.0), theta_z(0.0) {
         auto a = Vec3<float>(-0.5f, -0.5f, 0.5f);
         auto b = Vec3<float>(0.5f, -0.5f, 0.5f);
         auto c = Vec3<float>(0.5f, 0.5f, 0.5f);
@@ -187,6 +183,15 @@ struct GraphicsState {
     Vec3<float> rotation; // Rotation
     float scale;
     Texture gl_texture = Texture::SKYBOX;
+};
+
+struct RenderState {
+    uint64_t entities;
+    uint64_t graphic_batches;
+};
+
+enum ShaderType: uint64_t {
+    STANDARD_SHADER, SKYBOX_SHADER
 };
 
 #endif //MEINEKRAFT_PRIMITIVES_H

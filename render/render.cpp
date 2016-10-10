@@ -4,8 +4,6 @@
 #include <SDL2/SDL_image.h>
 #include <array>
 
-#include "../math/vector.h"
-#include "primitives.h"
 #include "../world/world.h"
 #include "camera.h"
 
@@ -13,6 +11,7 @@
 #include "rendercomponent.h"
 #include "../nodes/entity.h"
 #include "shader.h"
+#include "filemonitor.h"
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "../include/tinyobjloader/tiny_obj_loader.h"
@@ -103,7 +102,8 @@ Mat4<float> gen_projection_matrix(float z_near, float z_far, float fov, float as
     return matrix;
 }
 
-Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), state{}, graphics_batches{}, shaders{}, render_components_id(0) {
+Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), state{}, graphics_batches{}, shaders{},
+                      render_components_id(0), shader_file_monitor(std::make_unique<FileMonitor>()) {
     glewExperimental = (GLboolean) true;
     glewInit();
 
@@ -145,6 +145,12 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
     shaders.insert({ShaderType::STANDARD_SHADER, std_shader});
     if (!success) { SDL_Log("%s", err_msg.c_str()); }
 
+    shader_file_monitor->add_file(shader_base_filepath + "skybox/vertex-shader.glsl");
+    shader_file_monitor->add_file(shader_base_filepath + "skybox/fragment-shader.glsl");
+    shader_file_monitor->add_file(shader_base_filepath + "block/vertex-shader.glsl");
+    shader_file_monitor->add_file(shader_base_filepath + "block/fragment-shader.glsl");
+    shader_file_monitor->start_monitor();
+
     // Camera
     auto position  = Vec3<float>{0.0f, 0.0f, 0.0f};  // cam position
     auto direction = Vec3<float>{0.0f, 0.0f, -1.0f}; // position of where the cam is looking
@@ -170,6 +176,20 @@ void Renderer::render() {
     /// Reset render stats
     state = RenderState();
 
+    auto modified_files = shader_file_monitor->get_modified_files();
+    if (modified_files.size() > 0) {
+        for (auto &kv : shaders) {
+            auto shader_key = kv.first;
+            auto shader     = kv.second;
+            std::string err_msg;
+            bool success;
+            std::tie(success, err_msg) = shader.compile();
+            if (!success) { SDL_Log("%s", err_msg.c_str()); continue; }
+            shaders.insert({shader_key, shader});
+        }
+        shader_file_monitor->clear_all_modification_flags();
+    }
+
     /// Frustrum planes
     auto camera_view = FPSViewRH(camera->position, camera->pitch, camera->yaw);
     auto frustrum_view = camera_view * projection_matrix;
@@ -185,7 +205,7 @@ void Renderer::render() {
 
     for (auto &batch : graphics_batches) {
         glBindVertexArray(batch.gl_VAO);
-        glUseProgram(batch.gl_shader_program);
+        glUseProgram(shaders.at(batch.gl_shader_program).gl_program);
         glUniformMatrix4fv(batch.gl_camera_view, 1, GL_FALSE, camera_view.data());
 
 //        // TODO: Setup glEnables and stuff, gotta set the defaults in GraphicsState too
@@ -196,17 +216,17 @@ void Renderer::render() {
         std::vector<Mat4<float>> buffer{};
         for (auto &component : batch.components) {
             // Frustrum cullling
-            if (point_inside_frustrum(component.entity->position, planes)) { continue; }
+            if (point_inside_frustrum(component->entity->position, planes)) { continue; }
 
             // Draw distance
-            auto camera_to_entity = camera->position - component.entity->position;
+            auto camera_to_entity = camera->position - component->entity->position;
             if (camera_to_entity.length() >= DRAW_DISTANCE) { continue; }
 
-            glBindTexture(GL_TEXTURE_CUBE_MAP, textures[component.graphics_state.gl_texture]);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, textures[component->graphics_state.gl_texture]);
 
             Mat4<float> model{};
-            model = model.translate(component.entity->position);
-            model = model.scale(component.entity->scale);
+            model = model.translate(component->entity->position);
+            model = model.scale(component->entity->scale);
             model = model.transpose();
             buffer.push_back(model);
         }
@@ -276,22 +296,24 @@ void Renderer::update_projection_matrix(float fov) {
     }
 }
 
-uint64_t Renderer::add_to_batch(RenderComponent component, Mesh mesh) {
+uint64_t Renderer::add_to_batch(RenderComponent *component, Mesh mesh) {
     for (auto &batch : graphics_batches) {
-        if (batch.hash_id == component.entity->hash_id) {
+        if (batch.hash_id == component->entity->hash_id) {
             batch.components.push_back(component);
             return render_components_id++;
         }
     }
 
-    GraphicsBatch batch{component.entity->hash_id};
+    GraphicsBatch batch{component->entity->hash_id};
+    // TODO: Reserve gl_* for OpenGL enums and what not.
+    auto batch_shader_program = shaders.at(batch.gl_shader_program).gl_program;
     batch.mesh = mesh;
-    batch.gl_shader_program = shaders.at(ShaderType::STANDARD_SHADER).gl_program;
+    batch.gl_shader_program = ShaderType::STANDARD_SHADER;
     glUseProgram(batch.gl_shader_program);
 
     glGenVertexArrays(1, (GLuint *) &batch.gl_VAO);
     glBindVertexArray(batch.gl_VAO);
-    batch.gl_camera_view = glGetUniformLocation(batch.gl_shader_program, "camera_view");
+    batch.gl_camera_view = glGetUniformLocation(batch_shader_program, "camera_view");
 
     GLuint gl_VBO;
     glGenBuffers(1, &gl_VBO);
@@ -300,11 +322,11 @@ uint64_t Renderer::add_to_batch(RenderComponent component, Mesh mesh) {
     glBufferData(GL_ARRAY_BUFFER, batch.mesh.byte_size_of_vertices(), vertices.data(), GL_STATIC_DRAW);
 
     // Then set our vertex attributes pointers, only doable AFTER linking
-    GLuint positionAttrib = glGetAttribLocation(batch.gl_shader_program, "position");
+    GLuint positionAttrib = glGetAttribLocation(batch_shader_program, "position");
     glVertexAttribPointer(positionAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *)offsetof(Vertex<float>, position));
     glEnableVertexAttribArray(positionAttrib);
 
-    GLuint colorAttrib = glGetAttribLocation(batch.gl_shader_program, "vColor");
+    GLuint colorAttrib = glGetAttribLocation(batch_shader_program, "vColor");
     glVertexAttribPointer(colorAttrib, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *)offsetof(Vertex<float>, color));
     glEnableVertexAttribArray(colorAttrib);
 
@@ -312,7 +334,7 @@ uint64_t Renderer::add_to_batch(RenderComponent component, Mesh mesh) {
     glGenBuffers(1, (GLuint *) &batch.gl_models_buffer_object);
     glBindBuffer(GL_ARRAY_BUFFER, batch.gl_models_buffer_object);
 
-    GLuint modelAttrib = glGetAttribLocation(batch.gl_shader_program, "model");
+    GLuint modelAttrib = glGetAttribLocation(batch_shader_program, "model");
     for (int i = 0; i < 4; i++) {
         glVertexAttribPointer(modelAttrib + i, 4, GL_FLOAT, GL_FALSE, sizeof(Mat4<float>), (const void *) (sizeof(float) * i * 4));
         glEnableVertexAttribArray(modelAttrib + i);
@@ -324,7 +346,7 @@ uint64_t Renderer::add_to_batch(RenderComponent component, Mesh mesh) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, batch.mesh.byte_size_of_indices(), batch.mesh.indices.data(), GL_STATIC_DRAW);
 
-    GLuint projection = glGetUniformLocation(batch.gl_shader_program, "projection");
+    GLuint projection = glGetUniformLocation(batch_shader_program, "projection");
     glUniformMatrix4fv(projection, 1, GL_FALSE, projection_matrix.data());
 
     batch.components.push_back(component);
@@ -339,7 +361,7 @@ Mesh Renderer::load_mesh_from_file(std::string filepath) {
     std::vector<tinyobj::material_t> materials;
     std::string err;
     auto success = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, filepath.c_str());
-    if (!success) { SDL_Log("Failed loading mesh %s: %s", filepath.c_str(), err.c_str()); return Mesh(); } // TODO: May want to throw a RT-exception here
+    if (!success) { SDL_Log("Failed loading mesh %s: %s", filepath.c_str(), err.c_str()); return Mesh(); }
 
     std::unordered_map<Vertex<float>, uint32_t> unique_vertices{};
     Mesh mesh{};
@@ -354,10 +376,14 @@ Mesh Renderer::load_mesh_from_file(std::string filepath) {
                 float vz = attrib.vertices[3 * idx.vertex_index + 2];
                 vertex.position = {vx, vy, vz};
 
+                float tx = attrib.vertices[3 * idx.texcoord_index + 0];
+                float ty = attrib.vertices[3 * idx.texcoord_index + 0];
+                vertex.texCoord = {tx, ty};
+
                 mesh.vertices.push_back(vertex);
                 mesh.indices.push_back(mesh.indices.size());
 
-                // TODO: Take out normals and texcoords
+                // TODO: Take out normals
                 // TODO: Check for unique vertices, models will contain duplicates
 //                if (unique_vertices.count(vertex) == 0) {
 //                    unique_vertices[vertex] = mesh.vertices.size();
@@ -375,21 +401,8 @@ Mesh Renderer::load_mesh_from_file(std::string filepath) {
     return mesh;
 }
 
-void Renderer::remove_from_batch(RenderComponent component) {
+void Renderer::remove_from_batch(RenderComponent *component) {
     // TODO: Implement
-}
-
-void Renderer::update_render_component(RenderComponent component) {
-    // TODO: This feels like a bad design, gotta rework it.
-    for (auto &batch : graphics_batches) {
-        if (batch.hash_id == component.entity->hash_id) {
-            for (auto &old_component : batch.components) {
-                if (component.id == old_component.id) {
-                    old_component = component;
-                }
-            }
-        }
-    }
 }
 
 

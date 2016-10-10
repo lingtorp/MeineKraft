@@ -11,12 +11,12 @@ public:
 
     uint64_t hash_id;
     Mesh mesh;
-    std::vector<RenderComponent> components;
+    std::vector<RenderComponent *> components;
 
     uint64_t gl_VAO;
     uint64_t gl_models_buffer_object;
     uint64_t gl_camera_view;
-    uint64_t gl_shader_program;
+    ShaderType gl_shader_program;
 };
 
 #endif //MEINEKRAFT_GRAPHICSBATCH_H

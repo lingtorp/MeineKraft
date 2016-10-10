@@ -11,8 +11,10 @@ public:
     Vec3<float> position;
     Vec3<float> rotation; // Rotation
     float scale;
+    Vec3<float> center;
+    double radius;
 
-    Entity(uint64_t hash_id): hash_id(hash_id), position{}, rotation{}, scale(1) {}
+    Entity(uint64_t hash_id): hash_id(hash_id), position{}, rotation{}, scale(1), center{}, radius(0) {}
 
     virtual void update(uint64_t delta, const std::shared_ptr<Camera> camera) {};
 
