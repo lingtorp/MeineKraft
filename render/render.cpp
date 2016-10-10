@@ -183,7 +183,7 @@ void Renderer::render() {
     glEnable(GL_MULTISAMPLE);
     glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
 
-    for (auto batch : graphics_batches) {
+    for (auto &batch : graphics_batches) {
         glBindVertexArray(batch.gl_VAO);
         glUseProgram(batch.gl_shader_program);
         glUniformMatrix4fv(batch.gl_camera_view, 1, GL_FALSE, camera_view.data());
@@ -194,7 +194,7 @@ void Renderer::render() {
 //        glFrontFace(GL_CCW);
 
         std::vector<Mat4<float>> buffer{};
-        for (auto component : batch.components) {
+        for (auto &component : batch.components) {
             // Frustrum cullling
             if (point_inside_frustrum(component.entity->position, planes)) { continue; }
 
