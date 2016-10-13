@@ -1,8 +1,9 @@
 # MeineKraft
 ## - Study of 3D game engine with a Minecraft clone
- Written in C++11 & OpenGL, also an adventure into C++ and OpenGL.
+ Written in C++14 & OpenGL.
  ![](/screenshots/perlin-hills.gif)
  ![](/screenshots/linear-fog.gif)
+ ![](/screenshots/dynamic-shader-editing.gif)
 
 # Notebook
 * Procedural generation
