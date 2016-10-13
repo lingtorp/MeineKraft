@@ -10,7 +10,7 @@ set(SOURCE_FILES main.cpp render/render.cpp render/render.h math/vector.h world/
         render/camera.cpp render/camera.h nodes/chunk.cpp nodes/chunk.h math/noise.h render/ray.h render/graphicsbatch.h
         render/graphicsbatch.cpp render/rendercomponent.cpp render/rendercomponent.h nodes/entity.cpp nodes/entity.h
         render/shader.cpp render/shader.h ${IMGUI_SRC} nodes/Skybox.cpp nodes/Skybox.h nodes/block.cpp nodes/block.h
-        nodes/Skybox.cpp nodes/Skybox.h ${TINYOBJLOADER_SRC} nodes/teapot.cpp nodes/teapot.h render/filemonitor.cpp render/filemonitor.h)
+        nodes/Skybox.cpp nodes/Skybox.h ${TINYOBJLOADER_SRC} nodes/teapot.cpp nodes/teapot.h util/filemonitor.cpp util/filemonitor.h)
 add_executable(MeineKraft ${SOURCE_FILES})
 
 find_package(GLEW REQUIRED)

@@ -21,6 +21,7 @@ void FileMonitor::poll_files() {
             auto old_timestamp = files_modification_time[filepath];
             auto new_timestamp = stats.st_mtimespec.tv_sec;
             if (old_timestamp == new_timestamp) { continue; }
+            files_modfied = true;
             modified_files[filepath] = true;
             files_modification_time[filepath] = (uint64_t) stats.st_mtimespec.tv_sec;
             std::cout << stats.st_mtimespec.tv_sec << std::endl;
@@ -30,7 +31,7 @@ void FileMonitor::poll_files() {
     }
 }
 
-bool FileMonitor::add_file(std::string filepath) {
+void FileMonitor::add_file(std::string filepath) {
     internal_lock.lock();
     watched_files.push_back(filepath);
     internal_lock.unlock();
@@ -47,6 +48,7 @@ void FileMonitor::clear_all_modification_flags() {
     for (auto filepath : modified_files) {
         modified_files[filepath.first] = false;
     }
+    files_modfied = false;
     internal_lock.unlock();
 }
 
