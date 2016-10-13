@@ -11,7 +11,7 @@
 #include "rendercomponent.h"
 #include "../nodes/entity.h"
 #include "shader.h"
-#include "filemonitor.h"
+#include "../util/filemonitor.h"
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "../include/tinyobjloader/tiny_obj_loader.h"
@@ -176,16 +176,20 @@ void Renderer::render() {
     /// Reset render stats
     state = RenderState();
 
-    auto modified_files = shader_file_monitor->get_modified_files();
-    if (modified_files.size() > 0) {
+    /// Check shader files for modifications
+    if (shader_file_monitor->files_modfied) {
         for (auto &kv : shaders) {
             auto shader_key = kv.first;
             auto shader     = kv.second;
             std::string err_msg;
             bool success;
-            std::tie(success, err_msg) = shader.compile();
+            std::tie(success, err_msg) = shader.recompile();
             if (!success) { SDL_Log("%s", err_msg.c_str()); continue; }
-            shaders.insert({shader_key, shader});
+            for (auto &batch : graphics_batches) {
+                if (batch.gl_shader_program == shader_key) {
+                    link_batch(batch); // relink the batch
+                }
+            }
         }
         shader_file_monitor->clear_all_modification_flags();
     }
@@ -242,6 +246,7 @@ void Renderer::render() {
 
 Renderer::~Renderer() {
     // TODO: Clear up all the GraphicsObjects
+    shader_file_monitor->end_monitor();
 }
 
 /// Returns the planes from the frustrum matrix in order; {left, right, bottom, top, near, far}
@@ -305,49 +310,9 @@ uint64_t Renderer::add_to_batch(RenderComponent *component, Mesh mesh) {
     }
 
     GraphicsBatch batch{component->entity->hash_id};
-    // TODO: Reserve gl_* for OpenGL enums and what not.
-    auto batch_shader_program = shaders.at(batch.gl_shader_program).gl_program;
     batch.mesh = mesh;
     batch.gl_shader_program = ShaderType::STANDARD_SHADER;
-    glUseProgram(batch.gl_shader_program);
-
-    glGenVertexArrays(1, (GLuint *) &batch.gl_VAO);
-    glBindVertexArray(batch.gl_VAO);
-    batch.gl_camera_view = glGetUniformLocation(batch_shader_program, "camera_view");
-
-    GLuint gl_VBO;
-    glGenBuffers(1, &gl_VBO);
-    glBindBuffer(GL_ARRAY_BUFFER, gl_VBO);
-    auto vertices = batch.mesh.to_floats();
-    glBufferData(GL_ARRAY_BUFFER, batch.mesh.byte_size_of_vertices(), vertices.data(), GL_STATIC_DRAW);
-
-    // Then set our vertex attributes pointers, only doable AFTER linking
-    GLuint positionAttrib = glGetAttribLocation(batch_shader_program, "position");
-    glVertexAttribPointer(positionAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *)offsetof(Vertex<float>, position));
-    glEnableVertexAttribArray(positionAttrib);
-
-    GLuint colorAttrib = glGetAttribLocation(batch_shader_program, "vColor");
-    glVertexAttribPointer(colorAttrib, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *)offsetof(Vertex<float>, color));
-    glEnableVertexAttribArray(colorAttrib);
-
-    // Buffer for all the model matrices
-    glGenBuffers(1, (GLuint *) &batch.gl_models_buffer_object);
-    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_models_buffer_object);
-
-    GLuint modelAttrib = glGetAttribLocation(batch_shader_program, "model");
-    for (int i = 0; i < 4; i++) {
-        glVertexAttribPointer(modelAttrib + i, 4, GL_FLOAT, GL_FALSE, sizeof(Mat4<float>), (const void *) (sizeof(float) * i * 4));
-        glEnableVertexAttribArray(modelAttrib + i);
-        glVertexAttribDivisor(modelAttrib + i, 1);
-    }
-
-    GLuint EBO;
-    glGenBuffers(1, &EBO);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, batch.mesh.byte_size_of_indices(), batch.mesh.indices.data(), GL_STATIC_DRAW);
-
-    GLuint projection = glGetUniformLocation(batch_shader_program, "projection");
-    glUniformMatrix4fv(projection, 1, GL_FALSE, projection_matrix.data());
+    link_batch(batch);
 
     batch.components.push_back(component);
     graphics_batches.push_back(batch);
@@ -397,8 +362,50 @@ Mesh Renderer::load_mesh_from_file(std::string filepath) {
         }
     }
 
-    SDL_Log("Number of vetices: %lu for model %s", mesh.vertices.size(), filepath.c_str());
+    SDL_Log("Number of vertices: %lu for model %s", mesh.vertices.size(), filepath.c_str());
     return mesh;
+}
+
+void Renderer::link_batch(GraphicsBatch &batch) {
+    auto batch_shader_program = shaders.at(batch.gl_shader_program).gl_program;
+
+    glGenVertexArrays(1, (GLuint *) &batch.gl_VAO);
+    glBindVertexArray(batch.gl_VAO);
+    batch.gl_camera_view = glGetUniformLocation(batch_shader_program, "camera_view");
+
+    GLuint gl_VBO;
+    glGenBuffers(1, &gl_VBO);
+    glBindBuffer(GL_ARRAY_BUFFER, gl_VBO);
+    auto vertices = batch.mesh.to_floats();
+    glBufferData(GL_ARRAY_BUFFER, batch.mesh.byte_size_of_vertices(), vertices.data(), GL_STATIC_DRAW);
+
+    // Then set our vertex attributes pointers, only doable AFTER linking
+    GLuint positionAttrib = glGetAttribLocation(batch_shader_program, "position");
+    glVertexAttribPointer(positionAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *)offsetof(Vertex<float>, position));
+    glEnableVertexAttribArray(positionAttrib);
+
+    GLuint colorAttrib = glGetAttribLocation(batch_shader_program, "vColor");
+    glVertexAttribPointer(colorAttrib, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *)offsetof(Vertex<float>, color));
+    glEnableVertexAttribArray(colorAttrib);
+
+    // Buffer for all the model matrices
+    glGenBuffers(1, (GLuint *) &batch.gl_models_buffer_object);
+    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_models_buffer_object);
+
+    GLuint modelAttrib = glGetAttribLocation(batch_shader_program, "model");
+    for (int i = 0; i < 4; i++) {
+        glVertexAttribPointer(modelAttrib + i, 4, GL_FLOAT, GL_FALSE, sizeof(Mat4<float>), (const void *) (sizeof(float) * i * 4));
+        glEnableVertexAttribArray(modelAttrib + i);
+        glVertexAttribDivisor(modelAttrib + i, 1);
+    }
+
+    GLuint EBO;
+    glGenBuffers(1, &EBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, batch.mesh.byte_size_of_indices(), batch.mesh.indices.data(), GL_STATIC_DRAW);
+
+    GLuint projection = glGetUniformLocation(batch_shader_program, "projection");
+    glUniformMatrix4fv(projection, 1, GL_FALSE, projection_matrix.data());
 }
 
 void Renderer::remove_from_batch(RenderComponent *component) {

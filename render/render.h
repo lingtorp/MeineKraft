@@ -72,6 +72,9 @@ private:
     std::array<Plane<float>, 6> extract_planes(Mat4<float> matrix);
 
     std::unique_ptr<FileMonitor> shader_file_monitor;
+
+    /// Setups the VAO and uniforms up between the batch and OpenGL
+    void link_batch(GraphicsBatch &batch);
 };
 
 #endif //MEINEKRAFT_RENDER_H
