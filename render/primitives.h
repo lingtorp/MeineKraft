@@ -24,13 +24,14 @@ struct Color4 {
 
 template<typename T>
 struct Vertex {
-    Vec3<T> position = {};
-    Color4<T> color = {};
-    Vec2<T> texCoord = {};
-    Vertex(): position{}, color{}, texCoord{} {};
-    Vertex(Vec3<T> position): position(position), texCoord{}, color{} {};
-    Vertex(Vec3<T> position, Vec2<T> texCoord): position(position), texCoord(texCoord), color{} {};
-    Vertex(Vec3<T> position, Color4<T> color, Vec2<T> texCoord): position(position), color(color), texCoord(texCoord) {};
+    Vec3<T>   position = {};
+    Color4<T> color    = {};
+    Vec2<T>   texCoord = {};
+    Vec3<T>   normal   = {};
+    Vertex(): position{}, color{}, texCoord{}, normal{} {};
+    Vertex(Vec3<T> position): position(position), texCoord{}, color{}, normal{} {};
+    Vertex(Vec3<T> position, Vec2<T> texCoord): position(position), texCoord(texCoord), color{}, normal{} {};
+    Vertex(Vec3<T> position, Color4<T> color, Vec2<T> texCoord): position(position), color(color), texCoord(texCoord), normal{} {};
 
     bool operator==(const Vertex<T> &rhs) const {
         return position == rhs.position && color == rhs.color && texCoord == rhs.texCoord;
@@ -41,18 +42,57 @@ struct Vertex {
 namespace std {
     template<>
     struct hash<Vertex<float>> {
-        size_t operator() (Vertex<float> const &vertex) const {
-            // TODO: Need a proper hash function
-            auto hashed_x = hash<float>{}(vertex.position.x);
-            auto hashed_y = hash<float>{}(vertex.position.y);
-            auto hashed_z = hash<float>{}(vertex.position.z);
-            auto hashed_color_r = hash<float>{}(vertex.position.x);
-            auto hashed_color_g = hash<float>{}(vertex.position.x);
-            auto hashed_color_b = hash<float>{}(vertex.position.x);
-            auto hashed_color_a = hash<float>{}(vertex.position.x);
-            auto hashed_texcoord_x = hash<float>{}(vertex.position.x);
-            auto hashed_texcoord_y = hash<float>{}(vertex.position.x);
-            return (hashed_x * 83492791) ^ (hashed_y * 19349663) ^ (hashed_z * 73856093);
+        void hash_combine(size_t &seed, const size_t hash) const {
+            seed ^= hash + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+        }
+
+        size_t operator() (const Vertex<float> &vertex) const {
+            auto hasher = hash<float>{};
+            auto hashed_x = hasher(vertex.position.x);
+            auto hashed_y = hasher(vertex.position.y);
+            auto hashed_z = hasher(vertex.position.z);
+            auto hashed_color_r = hasher(vertex.color.r);
+            auto hashed_color_g = hasher(vertex.color.g);
+            auto hashed_color_b = hasher(vertex.color.b);
+            auto hashed_color_a = hasher(vertex.color.a);
+            auto hashed_texcoord_x = hasher(vertex.texCoord.x);
+            auto hashed_texcoord_y = hasher(vertex.texCoord.y);
+            auto hashed_normal_x = hasher(vertex.normal.x);
+            auto hashed_normal_y = hasher(vertex.normal.y);
+            auto hashed_normal_z = hasher(vertex.normal.z);
+
+            size_t seed = 0;
+            hash_combine(seed, hashed_x);
+            hash_combine(seed, hashed_y);
+            hash_combine(seed, hashed_z);
+            hash_combine(seed, hashed_texcoord_x);
+            hash_combine(seed, hashed_texcoord_y);
+            hash_combine(seed, hashed_normal_x);
+            hash_combine(seed, hashed_normal_y);
+            hash_combine(seed, hashed_normal_z);
+            return seed;
+        }
+    };
+}
+
+/// Template specialization for hashing of a Vec3
+namespace std {
+    template<typename T>
+    struct hash<Vec3<T>> {
+        void hash_combine(size_t &seed, const size_t &hash) const {
+            seed ^= hash + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+        }
+
+        size_t operator() (const Vec3<T> &vec) const {
+            auto hashed_x = hash<T>{}(vec.x);
+            auto hashed_y = hash<T>{}(vec.y);
+            auto hashed_z = hash<T>{}(vec.z);
+
+            size_t seed = 0;
+            hash_combine(seed, hashed_x);
+            hash_combine(seed, hashed_y);
+            hash_combine(seed, hashed_z);
+            return seed;
         }
     };
 }
@@ -78,6 +118,9 @@ struct Mesh {
             floats.push_back(vertex.color.a);
             floats.push_back(vertex.texCoord.x);
             floats.push_back(vertex.texCoord.y);
+            floats.push_back(vertex.normal.x);
+            floats.push_back(vertex.normal.y);
+            floats.push_back(vertex.normal.z);
         }
         return floats;
     }
@@ -161,7 +204,7 @@ struct Plane {
     /// Normalizes the plane
     /// @return Normalized plane (self)
     Plane<T> normalize() {
-        double mag = sqrt(a * a + b * b + c * c);
+        const double mag = sqrt(a * a + b * b + c * c);
         a = a / mag;
         b = b / mag;
         c = c / mag;
@@ -173,7 +216,7 @@ struct Plane {
     /// distance < 0, then point lies in the negative halfspace
     /// distance = 0, then point lies in the plane
     /// distance > 0, then point lies in the positive halfspace
-    double distance_to_point(const Vec3<T> point) {
+    inline double distance_to_point(const Vec3<T> &point) const {
         return a*point.x + b*point.y + c*point.z + d;
     }
 };
