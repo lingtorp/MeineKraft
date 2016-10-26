@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <vector>
+#include <unordered_map>
 #include "../math/vector.h"
 #include "../math/noise.h"
 #include "../nodes/chunk.h"
@@ -17,7 +18,7 @@ public:
     World(uint64_t seed);
 
     std::vector<Entity *> entities;
-    std::vector<std::shared_ptr<Chunk>> chunks;
+    std::unordered_map<Vec3<float>, std::shared_ptr<Chunk>> chunks;
 
     void world_tick(uint32_t delta, std::shared_ptr<Camera> camera);
     void add_entity(Entity *entity);

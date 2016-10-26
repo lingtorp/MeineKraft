@@ -11,8 +11,7 @@ void World::world_tick(uint32_t delta, const std::shared_ptr<Camera> camera) {
         entity->update(delta, camera);
     }
 
-    // TODO: Improve or replace the solution below ...
-    // Snap Camera/Player to the world coordinate grid
+    /// Snap Camera/Player to the world coordinate grid
     auto camera_world_pos = world_position(camera->position);
     std::vector<float> x{camera_world_pos.x - Chunk::dimension, camera_world_pos.x, camera_world_pos.x + Chunk::dimension};
     std::vector<float> y{-Chunk::dimension};
@@ -21,16 +20,20 @@ void World::world_tick(uint32_t delta, const std::shared_ptr<Camera> camera) {
         for (auto y : y) {
             for (auto z : z) {
                 auto position = Vec3<float>{x, y, z};
-                bool chunk_exists_at_pos = std::any_of(chunks.begin(), chunks.end(), [position](std::shared_ptr<Chunk> c1){ return c1->position == position; });
-                if (chunk_exists_at_pos) { continue; }
-                auto chunk = std::make_shared<Chunk>(position, noise);
-                chunks.push_back(chunk);
+                if (chunks.count(position) == 0) {
+                    chunks[position] = std::make_shared<Chunk>(position, noise);
+                }
             }
         }
     }
 
-    // TODO: Cull out entities by inactivating those that are far away from the Player
-    // TODO: Also the inverse of above
+    for (auto &key_value : chunks) {
+        auto &chunk = key_value.second;
+        auto direction = camera->position - chunk->position;
+        if (direction.length() >= 100) {
+            // chunks.erase(chunk->position); // Superslow
+        }
+    }
 }
 
 /// World position is measured in Chunk lengths
