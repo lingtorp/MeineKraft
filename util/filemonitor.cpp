@@ -4,22 +4,22 @@
 #include <thread>
 
 FileMonitor::FileMonitor(): modified_files{}, monitoring(false), watched_files{}, internal_lock{},
-                            files_modification_time{} {}
+                            files_modification_time{}, files_modfied(false) {}
 
 void FileMonitor::poll_files() {
     using namespace std::chrono;
     while (true) {
         internal_lock.lock();
         if (!monitoring) { internal_lock.unlock(); break; }
-        for (auto filepath : watched_files) {
+        for (auto &filepath : watched_files) {
             struct stat stats;
             stat(filepath.c_str(), &stats);
-            if (files_modification_time.count(filepath) == 0 ) { // First time checked
+            if (files_modification_time.count(filepath) == 0) { // First time checked
                 files_modification_time[filepath] = (uint64_t) stats.st_mtimespec.tv_sec;
                 continue;
             }
             auto old_timestamp = files_modification_time[filepath];
-            auto new_timestamp = stats.st_mtimespec.tv_sec;
+            auto new_timestamp = (uint64_t) stats.st_mtimespec.tv_sec;
             if (old_timestamp == new_timestamp) { continue; }
             files_modfied = true;
             modified_files[filepath] = true;
@@ -34,12 +34,6 @@ void FileMonitor::poll_files() {
 void FileMonitor::add_file(std::string filepath) {
     internal_lock.lock();
     watched_files.push_back(filepath);
-    internal_lock.unlock();
-}
-
-void FileMonitor::clear_modification_flag(std::string filepath) {
-    internal_lock.lock();
-    modified_files[filepath] = false;
     internal_lock.unlock();
 }
 
@@ -66,16 +60,4 @@ void FileMonitor::start_monitor() {
         std::thread t1{[=]{ poll_files(); }};
         t1.detach();
     }
-}
-
-std::vector<std::string> FileMonitor::get_modified_files() {
-    internal_lock.lock();
-    std::vector<std::string> modified_files_to_return{};
-    for (auto file : modified_files) {
-        if (file.second) {
-            modified_files_to_return.push_back(file.first);
-        }
-    }
-    internal_lock.unlock();
-    return modified_files_to_return;
 }

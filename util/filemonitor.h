@@ -20,14 +20,8 @@ public:
     /// Adds a file to the FileMonitor if there exists such a file
     void add_file(std::string filepath);
 
-    /// Clears the modification flag for one file
-    void clear_modification_flag(std::string filepath);
-
     /// Clears all the modification flags for all the files
     void clear_all_modification_flags();
-
-    /// Returns a vector of all the filepaths that was modified recently
-    std::vector<std::string> get_modified_files();
 
     /// Is set to true whenever a file in the watch list is modified
     bool files_modfied;
