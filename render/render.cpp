@@ -108,7 +108,7 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
     glewInit();
 
     /// Load all block & skybox textures
-    auto base = "/Users/AlexanderLingtorp/Google Drive/Repositories/MeineKraft/";
+    const auto base = "/Users/AlexanderLingtorp/Google Drive/Repositories/MeineKraft/";
     std::vector<std::string> cube_faces = {base + std::string("res/blocks/grass/side.jpg"),
                                            base + std::string("res/blocks/grass/side.jpg"),
                                            base + std::string("res/blocks/grass/top.jpg"),
@@ -127,19 +127,19 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
 
     /// Compile shaders
     // Files are truly horrible and filepaths are even worse, therefore this is not scalable
-    std::string shader_base_filepath = "/Users/AlexanderLingtorp/Google Drive/Repositories/MeineKraft/shaders/";
+    const std::string shader_base_filepath = "/Users/AlexanderLingtorp/Google Drive/Repositories/MeineKraft/shaders/";
     std::string err_msg;
     bool success;
 
-    auto skybox_vert = shader_base_filepath + "skybox/vertex-shader.glsl";
-    auto skybox_frag = shader_base_filepath + "skybox/fragment-shader.glsl";
+    const auto skybox_vert = shader_base_filepath + "skybox/vertex-shader.glsl";
+    const auto skybox_frag = shader_base_filepath + "skybox/fragment-shader.glsl";
     Shader skybox_shader(skybox_vert, skybox_frag);
     std::tie(success, err_msg) = skybox_shader.compile();
     shaders.insert({ShaderType::SKYBOX_SHADER, skybox_shader});
     if (!success) { SDL_Log("%s", err_msg.c_str()); }
 
-    auto std_vert = shader_base_filepath + "block/vertex-shader.glsl";
-    auto std_frag = shader_base_filepath + "block/fragment-shader.glsl";
+    const auto std_vert = shader_base_filepath + "block/vertex-shader.glsl";
+    const auto std_frag = shader_base_filepath + "block/fragment-shader.glsl";
     Shader std_shader(std_vert, std_frag);
     std::tie(success, err_msg) = std_shader.compile();
     shaders.insert({ShaderType::STANDARD_SHADER, std_shader});
@@ -152,22 +152,22 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
     shader_file_monitor->start_monitor();
 
     // Camera
-    auto position  = Vec3<float>{0.0f, 0.0f, 0.0f};  // cam position
-    auto direction = Vec3<float>{0.0f, 0.0f, -1.0f}; // position of where the cam is looking
-    auto world_up  = Vec3<float>{0.0, 1.0f, 0.0f};   // world up
+    const auto position  = Vec3<float>{0.0f, 0.0f, 0.0f};  // cam position
+    const auto direction = Vec3<float>{0.0f, 0.0f, -1.0f}; // position of where the cam is looking
+    const auto world_up  = Vec3<float>{0.0, 1.0f, 0.0f};   // world up
     this->camera = std::make_shared<Camera>(position, direction, world_up);
 }
 
 bool Renderer::point_inside_frustrum(Vec3<float> point, std::array<Plane<float>, 6> planes) {
-    auto left_plane = planes[0]; auto right_plane = planes[1];
-    auto top_plane  = planes[2]; auto bot_plane   = planes[3];
-    auto near_plane = planes[4]; auto far_plane   = planes[5];
-    auto dist_l = left_plane.distance_to_point(point);
-    auto dist_r = right_plane.distance_to_point(point);
-    auto dist_t = top_plane.distance_to_point(point);
-    auto dist_b = bot_plane.distance_to_point(point);
-    auto dist_n = near_plane.distance_to_point(point);
-    auto dist_f = far_plane.distance_to_point(point);
+    const auto left_plane = planes[0]; const auto right_plane = planes[1];
+    const auto top_plane  = planes[2]; const auto bot_plane   = planes[3];
+    const auto near_plane = planes[4]; const auto far_plane   = planes[5];
+    const auto dist_l = left_plane.distance_to_point(point);
+    const auto dist_r = right_plane.distance_to_point(point);
+    const auto dist_t = top_plane.distance_to_point(point);
+    const auto dist_b = bot_plane.distance_to_point(point);
+    const auto dist_n = near_plane.distance_to_point(point);
+    const auto dist_f = far_plane.distance_to_point(point);
     if (dist_l < 0 && dist_r < 0 && dist_t < 0 && dist_b < 0 && dist_n < 0 && dist_f < 0) { return true; }
     return false;
 }
@@ -325,10 +325,10 @@ Mesh Renderer::load_mesh_from_file(std::string filepath) {
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
     std::string err;
-    auto success = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, filepath.c_str());
+    auto success = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, filepath.c_str(), filepath.c_str(), true);
     if (!success) { SDL_Log("Failed loading mesh %s: %s", filepath.c_str(), err.c_str()); return Mesh(); }
 
-    std::unordered_map<Vertex<float>, uint32_t> unique_vertices{};
+    std::unordered_map<Vertex<float>, size_t> unique_vertices{};
     Mesh mesh{};
     for (auto shape : shapes) { // Shapes
         size_t index_offset = 0;
@@ -341,22 +341,22 @@ Mesh Renderer::load_mesh_from_file(std::string filepath) {
                 float vz = attrib.vertices[3 * idx.vertex_index + 2];
                 vertex.position = {vx, vy, vz};
 
-                float tx = attrib.vertices[3 * idx.texcoord_index + 0];
-                float ty = attrib.vertices[3 * idx.texcoord_index + 0];
+                float tx = attrib.vertices[2 * idx.texcoord_index + 0];
+                float ty = attrib.vertices[2 * idx.texcoord_index + 1];
                 vertex.texCoord = {tx, ty};
 
-                mesh.vertices.push_back(vertex);
-                mesh.indices.push_back(mesh.indices.size());
+                float nx = attrib.normals[3 * idx.normal_index + 0];
+                float ny = attrib.normals[3 * idx.normal_index + 1];
+                float nz = attrib.normals[3 * idx.normal_index + 2];
+                vertex.normal = {nx, ny, nz};
 
-                // TODO: Take out normals
-                // TODO: Check for unique vertices, models will contain duplicates
-//                if (unique_vertices.count(vertex) == 0) {
-//                    unique_vertices[vertex] = mesh.vertices.size();
-//                    mesh.vertices.push_back(vertex);
-//                    // mesh.indices.push_back(mesh.indices.size());
-//                } else {
-//                    mesh.indices.push_back(unique_vertices.at(vertex));
-//                }
+                if (unique_vertices.count(vertex) == 0) {
+                    unique_vertices[vertex] = mesh.vertices.size();
+                    mesh.indices.push_back(mesh.vertices.size());
+                    mesh.vertices.push_back(vertex);
+                } else {
+                    mesh.indices.push_back(unique_vertices.at(vertex));
+                }
             }
             index_offset += face;
         }
@@ -388,6 +388,10 @@ void Renderer::link_batch(GraphicsBatch &batch) {
     glVertexAttribPointer(colorAttrib, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *)offsetof(Vertex<float>, color));
     glEnableVertexAttribArray(colorAttrib);
 
+    GLuint normalAttrib = glGetAttribLocation(batch_shader_program, "normal");
+    glVertexAttribPointer(normalAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *)offsetof(Vertex<float>, normal));
+    glVertexAttribDivisor(normalAttrib, 3);
+
     // Buffer for all the model matrices
     glGenBuffers(1, (GLuint *) &batch.gl_models_buffer_object);
     glBindBuffer(GL_ARRAY_BUFFER, batch.gl_models_buffer_object);
@@ -409,7 +413,14 @@ void Renderer::link_batch(GraphicsBatch &batch) {
 }
 
 void Renderer::remove_from_batch(RenderComponent *component) {
-    // TODO: Implement
+    for (auto &batch : graphics_batches) {
+        for (auto &comp : batch.components) {
+            if (comp == component) {
+                auto &vec = batch.components;
+                vec.erase(std::remove(vec.begin(), vec.end(), component), vec.end());
+            }
+        }
+    }
 }
 
 

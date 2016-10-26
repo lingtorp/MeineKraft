@@ -44,9 +44,6 @@ public:
     /// Removes the RenderComponent from a internal batch with the same Entity.hash_id
     void remove_from_batch(RenderComponent *component);
 
-    /// Updates the RenderComponent to a internal batch with the same Entity.hash_id and RenderComponent.id
-    void update_render_component(RenderComponent component);
-
     /// Creates a camera view matrix based on the euler angles (x, y) and position of the eye
     Mat4<float> FPSViewRH(Vec3<float> eye, float pitch, float yaw);
 
