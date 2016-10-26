@@ -4,25 +4,39 @@
 #include <math.h>
 #include <ostream>
 #include <cmath>
+#include <list>
+#include <vector>
 
 template<typename T>
 struct Vec4 {
-    T values[4];
+    T x, y, z, w;
 
-    Vec4(T x, T y, T z, T w) { values[0] = x; values[1] = y; values[2] = z; values[3] = w; };
-    Vec4() { values[0] = 0.0; values[1] = 0.0; values[2] = 0.0; values[3] = 0.0; };
+    Vec4(T x, T y, T z, T w): x(x), y(y), z(z), w(w) { };
+    Vec4(): x(0), y(0), z(0), w(0) { };
 
-    // Operators
+    /// Operators
+    /// Returns the members x, y, z, w in index order (invalid indexes returns w)
     T& operator[] (const int index) {
-        return values[index];
+        switch (index) { // Should be a jump table when optimised
+            case 0:
+                return x;
+            case 1:
+                return y;
+            case 2:
+                return z;
+            case 3:
+                return w;
+            default:
+                return x;
+        }
     }
 
     bool operator==(const Vec4 &rhs) {
-        return (values[0] == rhs.values[0]) && (values[1] == rhs.values[1]) && (values[2] == rhs.values[2]) && (values[3] == rhs.values[3]);
+        return x == rhs.x && y == rhs.y && z == rhs.z && w == rhs.w;
     }
 
     friend std::ostream &operator<<(std::ostream &os, const Vec4 &vec) {
-        return os << "(x:" << vec.values[0] << " y:" << vec.values[1] << " z:" << vec.values[2] << " w:" << vec.values[3];
+        return os << "(x:" << vec.x << " y:" << vec.y << " z:" << vec.z << " w:" << vec.w << ")";
     }
 };
 
@@ -193,7 +207,7 @@ public:
         return *this * matrix;
     }
 
-    // Operators
+    /// Operators
     /// Standard matrix multiplication row-column wise; *this * mat
     inline Mat4<T> operator*(Mat4<T> &mat) const {
         Mat4<T> matrix;
@@ -212,7 +226,7 @@ public:
     inline Vec3<T> operator*(Vec3<T> rhs) const {
         auto vec = Vec4<T>{rhs.x, rhs.y, rhs.z, 1.0};
         auto result = *this * vec;
-        return Vec3<T>{result.values[0], result.values[1], result.values[2]};
+        return Vec3<T>{result.x, result.y, result.z};
     }
 
     /// A * v = b
