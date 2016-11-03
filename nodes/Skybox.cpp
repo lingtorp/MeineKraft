@@ -3,7 +3,7 @@
 #include "../render/camera.h"
 
 Skybox::Skybox(): Entity(generate_entity_id()), render_comp{this} {
-    render_comp.set_cube_map_texture(Texture::SKYBOX);
+//    render_comp.set_cube_map_texture(Texture::SKYBOX);
     scale = 300;
 }
 

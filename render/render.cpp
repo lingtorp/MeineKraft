@@ -20,6 +20,7 @@ typedef enum { png, jpg } FileFormat;
 
 /// Texture loading order; right, left, top, bottom, back, front
 GLuint load_cube_map(std::vector<std::string> faces, FileFormat file_format) {
+    assert(faces.size() == 6);
     GLuint texture;
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
@@ -31,26 +32,25 @@ GLuint load_cube_map(std::vector<std::string> faces, FileFormat file_format) {
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glGenerateMipmap(GL_TEXTURE_2D);
 
-    GLint internalFormat;
+    GLint internal_format;
     switch (file_format) {
         case png:
-            internalFormat = GL_RGBA;
+            internal_format = GL_RGBA;
             break;
         case jpg:
-            internalFormat = GL_RGB;
+            internal_format = GL_RGB;
             break;
         default:
-            internalFormat = GL_RGBA;
+            internal_format = GL_RGBA;
     }
 
     int i = 0;
     for (auto filepath : faces) {
         SDL_Surface *image = IMG_Load(filepath.c_str());
-        int width = image->w;
+        int width  = image->w;
         int height = image->h;
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, internalFormat, width,
-                     height, 0, internalFormat, GL_UNSIGNED_BYTE, image->pixels);
-        free(image);
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, internal_format, width, height, 0, internal_format, GL_UNSIGNED_BYTE, image->pixels);
+        SDL_FreeSurface(image);
         i++;
     }
     return texture;
@@ -115,7 +115,7 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
                                            base + std::string("res/blocks/grass/bottom.jpg"),
                                            base + std::string("res/blocks/grass/side.jpg"),
                                            base + std::string("res/blocks/grass/side.jpg")};
-    this->textures[Texture::GRASS] = load_cube_map(cube_faces, jpg);
+    // this->textures[Texture::GRASS] = load_cube_map(cube_faces, jpg);
 
     std::vector<std::string> skybox_faces = {base + std::string("res/sky/right.jpg"),
                                              base + std::string("res/sky/left.jpg"),
@@ -123,7 +123,7 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
                                              base + std::string("res/sky/bottom.jpg"),
                                              base + std::string("res/sky/back.jpg"),
                                              base + std::string("res/sky/front.jpg")};
-    this->textures[Texture::SKYBOX] = load_cube_map(skybox_faces, jpg);
+    // this->textures[Texture::SKYBOX] = load_cube_map(skybox_faces, jpg);
 
     /// Compile shaders
     // Files are truly horrible and filepaths are even worse, therefore this is not scalable
@@ -151,7 +151,7 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
     shader_file_monitor->add_file(shader_base_filepath + "block/fragment-shader.glsl");
     shader_file_monitor->start_monitor();
 
-    // Camera
+    /// Camera
     const auto position  = Vec3<float>{0.0f, 0.0f, 0.0f};  // cam position
     const auto direction = Vec3<float>{0.0f, 0.0f, -1.0f}; // position of where the cam is looking
     const auto world_up  = Vec3<float>{0.0, 1.0f, 0.0f};   // world up
@@ -212,27 +212,33 @@ void Renderer::render() {
         glUseProgram(shaders.at(batch.gl_shader_program).gl_program);
         glUniformMatrix4fv(batch.gl_camera_view, 1, GL_FALSE, camera_view.data());
 
-//        // TODO: Setup glEnables and stuff, gotta set the defaults in GraphicsState too
-//        glEnable(GL_CULL_FACE);
-//        glCullFace(GL_FRONT);
-//        glFrontFace(GL_CCW);
+        // TODO: Setup glEnables and stuff, gotta set the defaults in GraphicsState too
+        // glEnable(GL_CULL_FACE);
+        // glCullFace(GL_BACK);
+        // glFrontFace(GL_CCW);
 
         std::vector<Mat4<float>> buffer{};
         for (auto &component : batch.components) {
-            // Frustrum cullling
-            if (point_inside_frustrum(component->entity->position, planes)) { continue; }
-
             // Draw distance
             auto camera_to_entity = camera->position - component->entity->position;
             if (camera_to_entity.length() >= DRAW_DISTANCE) { continue; }
 
-            glBindTexture(GL_TEXTURE_CUBE_MAP, textures[component->graphics_state.gl_texture]);
+            // Frustrum cullling
+            if (point_inside_frustrum(component->entity->position, planes)) { continue; }
+
+            // Dream:
+            // GL_TEXTURE_CUBE_MAP
+            // glBindTexture(component->graphics_state.texture.gl_texture_type, component->graphics_state.texture.gl_texture);
+
+            // Reality
+            glUniform1i(glGetUniformLocation(shaders.at(batch.gl_shader_program).gl_program, "tex_sampler"), 0);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(batch.mesh.texture.gl_texture_type, batch.mesh.texture.gl_texture);
 
             Mat4<float> model{};
             model = model.translate(component->entity->position);
             model = model.scale(component->entity->scale);
-            model = model.transpose();
-            buffer.push_back(model);
+            buffer.push_back(model.transpose());
         }
         glBindBuffer(GL_ARRAY_BUFFER, batch.gl_models_buffer_object);
         glBufferData(GL_ARRAY_BUFFER, buffer.size() * sizeof(Mat4<float>), buffer.data(), GL_DYNAMIC_DRAW);
@@ -292,7 +298,7 @@ void Renderer::update_projection_matrix(float fov) {
     SDL_GL_GetDrawableSize(this->window, &width, &height);
     float aspect = (float) width / (float) height;
     this->projection_matrix = gen_projection_matrix(1, -10, fov, aspect);
-    glViewport(0, 0, width, height);
+    glViewport(0, 0, width, height); // Update OpenGL viewport
     /// Update all shader programs projection matrices to the new one
     for (auto shader_program : shaders) {
         glUseProgram(shader_program.second.gl_program);
@@ -301,11 +307,11 @@ void Renderer::update_projection_matrix(float fov) {
     }
 }
 
-uint64_t Renderer::add_to_batch(RenderComponent *component, Mesh mesh) {
+void Renderer::add_to_batch(RenderComponent *component, Mesh mesh) {
     for (auto &batch : graphics_batches) {
         if (batch.hash_id == component->entity->hash_id) {
             batch.components.push_back(component);
-            return render_components_id++;
+            return;
         }
     }
 
@@ -316,18 +322,18 @@ uint64_t Renderer::add_to_batch(RenderComponent *component, Mesh mesh) {
 
     batch.components.push_back(component);
     graphics_batches.push_back(batch);
-
-    return render_components_id++;
 }
 
-Mesh Renderer::load_mesh_from_file(std::string filepath) {
+Mesh Renderer::load_mesh_from_file(std::string filepath, std::string directory_filepath) {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
     std::string err;
-    auto success = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, filepath.c_str(), filepath.c_str(), true);
+    auto success = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, filepath.c_str(), directory_filepath.c_str(), true);
     if (!success) { SDL_Log("Failed loading mesh %s: %s", filepath.c_str(), err.c_str()); return Mesh(); }
+    if (err.size() > 0) { SDL_Log("%s", err.c_str()); }
 
+    std::unordered_map<std::string, bool> loaded_textures{};
     std::unordered_map<Vertex<float>, size_t> unique_vertices{};
     Mesh mesh{};
     for (auto shape : shapes) { // Shapes
@@ -344,6 +350,7 @@ Mesh Renderer::load_mesh_from_file(std::string filepath) {
                 float tx = attrib.vertices[2 * idx.texcoord_index + 0];
                 float ty = attrib.vertices[2 * idx.texcoord_index + 1];
                 vertex.texCoord = {tx, ty};
+                // std::cout << "Texture coords: (" << tx << ", " << ty << ")" << std::endl;
 
                 float nx = attrib.normals[3 * idx.normal_index + 0];
                 float ny = attrib.normals[3 * idx.normal_index + 1];
@@ -357,9 +364,28 @@ Mesh Renderer::load_mesh_from_file(std::string filepath) {
                 } else {
                     mesh.indices.push_back(unique_vertices.at(vertex));
                 }
+
+                // Color map, a.k.a diffuse map
+                auto material = materials[shape.mesh.material_ids[face]];
+
+                // if (!loaded_textures[material.diffuse_texname]) {
+//                    Texture diffuse_texture{};
+//                    diffuse_texture.load(material.diffuse_texname, directory_filepath);
+//                    if (diffuse_texture.loaded_succesfully) {
+//                        mesh.texture = diffuse_texture;
+//                        loaded_textures[material.diffuse_texname] = true;
+//                    }
+                // }
             }
+
             index_offset += face;
         }
+    }
+
+    Texture diffuse_texture{};
+    diffuse_texture.load("chr_knight.png", directory_filepath);
+    if (diffuse_texture.loaded_succesfully) {
+        mesh.texture = diffuse_texture;
     }
 
     SDL_Log("Number of vertices: %lu for model %s", mesh.vertices.size(), filepath.c_str());
@@ -377,20 +403,28 @@ void Renderer::link_batch(GraphicsBatch &batch) {
     glGenBuffers(1, &gl_VBO);
     glBindBuffer(GL_ARRAY_BUFFER, gl_VBO);
     auto vertices = batch.mesh.to_floats();
-    glBufferData(GL_ARRAY_BUFFER, batch.mesh.byte_size_of_vertices(), vertices.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, batch.mesh.byte_size_of_vertices(), vertices.data(), GL_DYNAMIC_DRAW);
 
     // Then set our vertex attributes pointers, only doable AFTER linking
-    GLuint positionAttrib = glGetAttribLocation(batch_shader_program, "position");
+    GLint positionAttrib = glGetAttribLocation(batch_shader_program, "position");
     glVertexAttribPointer(positionAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *)offsetof(Vertex<float>, position));
     glEnableVertexAttribArray(positionAttrib);
 
-    GLuint colorAttrib = glGetAttribLocation(batch_shader_program, "vColor");
+    GLint colorAttrib = glGetAttribLocation(batch_shader_program, "vColor");
     glVertexAttribPointer(colorAttrib, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *)offsetof(Vertex<float>, color));
     glEnableVertexAttribArray(colorAttrib);
 
-    GLuint normalAttrib = glGetAttribLocation(batch_shader_program, "normal");
+    GLint normalAttrib = glGetAttribLocation(batch_shader_program, "normal");
     glVertexAttribPointer(normalAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *)offsetof(Vertex<float>, normal));
     glVertexAttribDivisor(normalAttrib, 3);
+    glEnableVertexAttribArray(normalAttrib);
+
+    GLint texCoordAttrib = glGetAttribLocation(batch_shader_program, "vTexCoord");
+    glVertexAttribPointer(texCoordAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *)offsetof(Vertex<float>, texCoord));
+    glEnableVertexAttribArray(texCoordAttrib);
+
+    GLuint texture_sampler = glGetUniformLocation(batch_shader_program, "tex_sampler");
+    batch.mesh.texture.gl_texture_location = texture_sampler;
 
     // Buffer for all the model matrices
     glGenBuffers(1, (GLuint *) &batch.gl_models_buffer_object);

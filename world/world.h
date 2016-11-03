@@ -20,7 +20,7 @@ public:
     std::vector<Entity *> entities;
     std::unordered_map<Vec3<float>, std::shared_ptr<Chunk>> chunks;
 
-    void world_tick(uint32_t delta, std::shared_ptr<Camera> camera);
+    void world_tick(uint32_t delta, const std::shared_ptr<Camera> &camera);
     void add_entity(Entity *entity);
 
     Vec3<float> world_position(Vec3<float> position) const;

@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <vector>
 #include "../math/vector.h"
+#include "texture.h"
 
 /// Colors
 template<typename T>
@@ -100,10 +101,11 @@ namespace std {
 struct Mesh {
     std::vector<Vertex<float>> vertices;
     std::vector<uint32_t> indices;
+    Texture texture; // FIXME: One texture per mesh for now
 
-    Mesh(): vertices{}, indices{} {};
+    Mesh(): vertices{}, indices{}, texture{} {};
 
-    Mesh(std::vector<Vertex<float>> vertices, std::vector<uint32_t> indices): vertices(vertices), indices(indices) {};
+    Mesh(std::vector<Vertex<float>> vertices, std::vector<uint32_t> indices): vertices(vertices), indices(indices), texture{} {};
 
     /// Return a vector of all the vertices data laid out as the Vertex struct
     std::vector<float> to_floats() const {
@@ -136,15 +138,12 @@ struct Mesh {
     }
 };
 
-enum Texture: uint64_t { SKYBOX, GRASS, NONE };
-
 struct Cube: Mesh {
     Vec3<float> position; // Lower left corner of the cube in world space
     float theta_x, theta_y, theta_z; // Rotation in object space
     float scale;
-    Texture texture;
 
-    Cube(): Mesh(), scale(1.0), texture(Texture::GRASS), position(Vec3<float>::ZERO()),
+    Cube(): Mesh(), scale(1.0), position(Vec3<float>::ZERO()),
             theta_x(0.0), theta_y(0.0), theta_z(0.0) {
         auto a = Vec3<float>(-0.5f, -0.5f, 0.5f);
         auto b = Vec3<float>(0.5f, -0.5f, 0.5f);
@@ -223,9 +222,9 @@ struct Plane {
 
 struct GraphicsState {
     Vec3<float> position;
-    Vec3<float> rotation; // Rotation
+    Vec3<float> rotation;
     float scale;
-    Texture gl_texture = Texture::SKYBOX;
+    // Texture texture = {};
 };
 
 struct RenderState {

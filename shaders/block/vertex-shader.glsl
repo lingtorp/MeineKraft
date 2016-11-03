@@ -3,12 +3,14 @@
 in vec3 position;
 in vec4 vColor;
 in vec3 normal; // Polygon normal
+in vec2 vTexCoord;
 
 // Model
 in mat4 model;
 
 out vec4 fColor; // This name must match the name in the fragment shader in order to work
 out vec3 fTexcoord;
+out vec2 tex_coord;
 
 // View or a.k.a camera matrix
 uniform mat4 camera_view;
@@ -21,8 +23,10 @@ const vec3 light_color = vec3(0.7, 0.7, 0.7);
 const float fog_max_distance = 150;
 
 void main() {
-  gl_Position = projection * camera_view * model * vec4(position, 1.0f);
-  fTexcoord = normalize(position);
+  gl_Position = projection * camera_view * model * vec4(position, 1.0);
+  // fTexcoord = normalize(position); // Blocks
+  fTexcoord = vec3(vTexCoord, 1.0);
+  tex_coord = vTexCoord;
 
   // Linear fog = 0, Exponential fog = 1, sqrt exponential fog, Disabled = -1
   int fog_type = -1;

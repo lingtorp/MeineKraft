@@ -7,6 +7,7 @@
 #include <vector>
 #include <unordered_map>
 #include "primitives.h"
+#include "texture.h"
 
 class World;
 class Camera;
@@ -16,15 +17,11 @@ class Shader;
 class FileMonitor;
 
 struct Cube;
-struct RenderState;
-
-enum Texture: uint64_t;
-enum ShaderType: uint64_t;
 
 class Renderer {
 public:
     Renderer(Renderer &render) = delete;
-    ~Renderer(); // Render does not dealloc properly atm
+    ~Renderer(); // FIXME: Render does not dealloc properly atm
 
     /// Singleton instance of core Render, use with caution.
     static Renderer &instance() {
@@ -36,10 +33,10 @@ public:
     void render();
 
     /// Loads a mesh from a file
-    Mesh load_mesh_from_file(std::string filepath);
+    Mesh load_mesh_from_file(std::string filepath, std::string directory_filepath);
 
     /// Adds the RenderComponent to a internal batch with the same Entity.hash_id
-    uint64_t add_to_batch(RenderComponent *component, Mesh mesh);
+    void add_to_batch(RenderComponent *component, Mesh mesh);
 
     /// Removes the RenderComponent from a internal batch with the same Entity.hash_id
     void remove_from_batch(RenderComponent *component);
@@ -60,7 +57,7 @@ private:
 
     Mat4<float> projection_matrix;
 
-    std::unordered_map<Texture, uint64_t, std::hash<int>> textures;
+    // std::unordered_map<Texture, uint64_t, std::hash<int>> textures;
     std::unordered_map<ShaderType, Shader, std::hash<int>> shaders;
 
     std::vector<GraphicsBatch> graphics_batches;

@@ -41,8 +41,8 @@ int main() {
     // Init the world with seed
     World world{1};
 
-    Skybox skybox{};
-    world.add_entity(&skybox);
+    // Skybox skybox{};
+    // world.add_entity(&skybox);
 
     Teapot teapot{};
     world.add_entity(&teapot);

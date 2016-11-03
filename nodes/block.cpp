@@ -1,7 +1,7 @@
 #include "block.h"
 
 Block::Block(): Entity(generate_entity_id()), render_comp{this} {
-    render_comp.set_cube_map_texture(Texture::GRASS);
+//    render_comp.set_cube_map_texture(Texture::GRASS);
 }
 
 Block::~Block() {

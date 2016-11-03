@@ -6,10 +6,12 @@
 World::World(uint64_t seed): noise(Noise(seed)) {}
 
 /// Ticks the world
-void World::world_tick(uint32_t delta, const std::shared_ptr<Camera> camera) {
+void World::world_tick(uint32_t delta, const std::shared_ptr<Camera> &camera) {
     for (auto entity : entities) {
         entity->update(delta, camera);
     }
+
+    return;
 
     /// Snap Camera/Player to the world coordinate grid
     auto camera_world_pos = world_position(camera->position);
@@ -29,9 +31,9 @@ void World::world_tick(uint32_t delta, const std::shared_ptr<Camera> camera) {
 
     for (auto &key_value : chunks) {
         auto &chunk = key_value.second;
-        auto direction = camera->position - chunk->position;
+        auto direction = chunk->position - camera->position;
         if (direction.length() >= 100) {
-            // chunks.erase(chunk->position); // Superslow
+            // chunks.erase(chunk->position);
         }
     }
 }
