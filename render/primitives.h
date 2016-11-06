@@ -35,7 +35,7 @@ struct Vertex {
     Vertex(Vec3<T> position, Color4<T> color, Vec2<T> texCoord): position(position), color(color), texCoord(texCoord), normal{} {};
 
     bool operator==(const Vertex<T> &rhs) const {
-        return position == rhs.position && color == rhs.color && texCoord == rhs.texCoord;
+        return position == rhs.position && color == rhs.color && texCoord == rhs.texCoord && normal == rhs.normal;
     }
 };
 
@@ -52,10 +52,6 @@ namespace std {
             auto hashed_x = hasher(vertex.position.x);
             auto hashed_y = hasher(vertex.position.y);
             auto hashed_z = hasher(vertex.position.z);
-            auto hashed_color_r = hasher(vertex.color.r);
-            auto hashed_color_g = hasher(vertex.color.g);
-            auto hashed_color_b = hasher(vertex.color.b);
-            auto hashed_color_a = hasher(vertex.color.a);
             auto hashed_texcoord_x = hasher(vertex.texCoord.x);
             auto hashed_texcoord_y = hasher(vertex.texCoord.y);
             auto hashed_normal_x = hasher(vertex.normal.x);
@@ -85,9 +81,10 @@ namespace std {
         }
 
         size_t operator() (const Vec3<T> &vec) const {
-            auto hashed_x = hash<T>{}(vec.x);
-            auto hashed_y = hash<T>{}(vec.y);
-            auto hashed_z = hash<T>{}(vec.z);
+            auto hasher = hash<float>{};
+            auto hashed_x = hasher(vec.x);
+            auto hashed_y = hasher(vec.y);
+            auto hashed_z = hasher(vec.z);
 
             size_t seed = 0;
             hash_combine(seed, hashed_x);
@@ -196,7 +193,7 @@ struct Plane {
 
     /// Normal of the plane
     /// @return Normal vector of the plane
-    Vec3<T> normal(bool normalized) {
+    Vec3<T> normal() {
         return Vec3<T>(a, b, c);
     }
 

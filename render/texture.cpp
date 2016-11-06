@@ -118,9 +118,9 @@ GLuint load_1d_texture(std::string filepath) {
 
 Texture::Texture(): gl_texture(0), gl_texture_type(0), gl_texture_location(0), loaded_succesfully(false) {}
 
-bool Texture::load(std::string filepath, std::string directory) {
-    gl_texture = load_1d_texture(directory + filepath);
-    gl_texture_type = GL_TEXTURE_1D;
+uint64_t Texture::load(std::string filepath, std::string directory) {
+    gl_texture = load_2d_texture(directory + filepath);
+    gl_texture_type = GL_TEXTURE_2D;
     loaded_succesfully = true;
-    return true;
+    return gl_texture;
 }

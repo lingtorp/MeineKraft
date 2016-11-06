@@ -7,7 +7,8 @@ class Texture {
 public:
     Texture();
 
-    bool load(std::string filepath, std::string directory);
+    /// Returns the OpenGL texture id
+    uint64_t load(std::string filepath, std::string directory);
 
     uint64_t gl_texture;
     uint64_t gl_texture_type;

@@ -213,9 +213,9 @@ void Renderer::render() {
         glUniformMatrix4fv(batch.gl_camera_view, 1, GL_FALSE, camera_view.data());
 
         // TODO: Setup glEnables and stuff, gotta set the defaults in GraphicsState too
-        // glEnable(GL_CULL_FACE);
-        // glCullFace(GL_BACK);
-        // glFrontFace(GL_CCW);
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_BACK);
+        glFrontFace(GL_CCW);
 
         std::vector<Mat4<float>> buffer{};
         for (auto &component : batch.components) {
@@ -231,9 +231,9 @@ void Renderer::render() {
             // glBindTexture(component->graphics_state.texture.gl_texture_type, component->graphics_state.texture.gl_texture);
 
             // Reality
-            glUniform1i(glGetUniformLocation(shaders.at(batch.gl_shader_program).gl_program, "tex_sampler"), 0);
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(batch.mesh.texture.gl_texture_type, batch.mesh.texture.gl_texture);
+            glUniform1i(glGetUniformLocation(shaders.at(batch.gl_shader_program).gl_program, "tex_sampler"), 0);
 
             Mat4<float> model{};
             model = model.translate(component->entity->position);
@@ -333,29 +333,24 @@ Mesh Renderer::load_mesh_from_file(std::string filepath, std::string directory_f
     if (!success) { SDL_Log("Failed loading mesh %s: %s", filepath.c_str(), err.c_str()); return Mesh(); }
     if (err.size() > 0) { SDL_Log("%s", err.c_str()); }
 
-    std::unordered_map<std::string, bool> loaded_textures{};
     std::unordered_map<Vertex<float>, size_t> unique_vertices{};
     Mesh mesh{};
-    for (auto shape : shapes) { // Shapes
-        size_t index_offset = 0;
-        for (auto face : shape.mesh.num_face_vertices) { // Faces (polygon)
-            for (auto v = 0; v < face; v++) {
-                tinyobj::index_t idx = shape.mesh.indices[index_offset + v];
+    for (const auto &shape : shapes) { // Shapes
+        for (const auto &idx : shape.mesh.indices) { // Faces
                 Vertex<float> vertex{};
                 float vx = attrib.vertices[3 * idx.vertex_index + 0];
                 float vy = attrib.vertices[3 * idx.vertex_index + 1];
                 float vz = attrib.vertices[3 * idx.vertex_index + 2];
                 vertex.position = {vx, vy, vz};
 
-                float tx = attrib.vertices[2 * idx.texcoord_index + 0];
-                float ty = attrib.vertices[2 * idx.texcoord_index + 1];
-                vertex.texCoord = {tx, ty};
-                // std::cout << "Texture coords: (" << tx << ", " << ty << ")" << std::endl;
+                float tx = attrib.texcoords[2 * idx.texcoord_index + 0];
+                float ty = attrib.texcoords[2 * idx.texcoord_index + 1];
+                vertex.texCoord = {tx, 1.0f - ty}; // .obj format has flipped y-axis compared to OpenGL
 
                 float nx = attrib.normals[3 * idx.normal_index + 0];
                 float ny = attrib.normals[3 * idx.normal_index + 1];
                 float nz = attrib.normals[3 * idx.normal_index + 2];
-                vertex.normal = {nx, ny, nz};
+                vertex.normal = Vec3<float>{nx, ny, nz}.normalize();
 
                 if (unique_vertices.count(vertex) == 0) {
                     unique_vertices[vertex] = mesh.vertices.size();
@@ -364,28 +359,20 @@ Mesh Renderer::load_mesh_from_file(std::string filepath, std::string directory_f
                 } else {
                     mesh.indices.push_back(unique_vertices.at(vertex));
                 }
-
-                // Color map, a.k.a diffuse map
-                auto material = materials[shape.mesh.material_ids[face]];
-
-                // if (!loaded_textures[material.diffuse_texname]) {
-//                    Texture diffuse_texture{};
-//                    diffuse_texture.load(material.diffuse_texname, directory_filepath);
-//                    if (diffuse_texture.loaded_succesfully) {
-//                        mesh.texture = diffuse_texture;
-//                        loaded_textures[material.diffuse_texname] = true;
-//                    }
-                // }
-            }
-
-            index_offset += face;
         }
     }
 
-    Texture diffuse_texture{};
-    diffuse_texture.load("chr_knight.png", directory_filepath);
-    if (diffuse_texture.loaded_succesfully) {
-        mesh.texture = diffuse_texture;
+    std::unordered_map<std::string, GLuint> loaded_textures{};
+    for (const auto &material : materials) {
+        /// Color map, a.k.a diffuse map
+        if (!loaded_textures[material.diffuse_texname]) {
+            Texture diffuse_texture{};
+            diffuse_texture.load(material.diffuse_texname, directory_filepath);
+            if (diffuse_texture.loaded_succesfully) {
+                mesh.texture = diffuse_texture;
+                loaded_textures[material.diffuse_texname] = diffuse_texture.gl_texture;
+            }
+        }
     }
 
     SDL_Log("Number of vertices: %lu for model %s", mesh.vertices.size(), filepath.c_str());
@@ -416,7 +403,6 @@ void Renderer::link_batch(GraphicsBatch &batch) {
 
     GLint normalAttrib = glGetAttribLocation(batch_shader_program, "normal");
     glVertexAttribPointer(normalAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *)offsetof(Vertex<float>, normal));
-    glVertexAttribDivisor(normalAttrib, 3);
     glEnableVertexAttribArray(normalAttrib);
 
     GLint texCoordAttrib = glGetAttribLocation(batch_shader_program, "vTexCoord");

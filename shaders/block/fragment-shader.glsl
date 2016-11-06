@@ -6,10 +6,11 @@ out vec4 outColor;
 in vec3 fTexcoord;   // passthrough shading for interpolated textures
 in vec2 tex_coord;
 // uniform samplerCube tex;
-uniform sampler1D tex_sampler;
-// uniform sampler2d tex_sampler;
+uniform sampler2D tex_sampler;
+
+const vec3 light_pos   = vec3(0, 1, 0);
+const vec3 light_color = vec3(1, 1, 1);
 
 void main() {
-  // outColor = texture(tex, fTexcoord) * fColor;
-  outColor = texture(tex_sampler, tex_coord.s);
+   outColor = texture(tex_sampler, tex_coord);
 }
