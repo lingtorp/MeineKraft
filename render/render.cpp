@@ -16,46 +16,6 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "../include/tinyobjloader/tiny_obj_loader.h"
 
-typedef enum { png, jpg } FileFormat;
-
-/// Texture loading order; right, left, top, bottom, back, front
-GLuint load_cube_map(std::vector<std::string> faces, FileFormat file_format) {
-    assert(faces.size() == 6);
-    GLuint texture;
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_REPEAT);
-
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glGenerateMipmap(GL_TEXTURE_2D);
-
-    GLint internal_format;
-    switch (file_format) {
-        case png:
-            internal_format = GL_RGBA;
-            break;
-        case jpg:
-            internal_format = GL_RGB;
-            break;
-        default:
-            internal_format = GL_RGBA;
-    }
-
-    int i = 0;
-    for (auto filepath : faces) {
-        SDL_Surface *image = IMG_Load(filepath.c_str());
-        int width  = image->w;
-        int height = image->h;
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, internal_format, width, height, 0, internal_format, GL_UNSIGNED_BYTE, image->pixels);
-        SDL_FreeSurface(image);
-        i++;
-    }
-    return texture;
-}
-
 /// Column major - Camera combined rotation matrix (y, x) & translation matrix
 Mat4<float> Renderer::FPSViewRH(Vec3<float> eye, float pitch, float yaw) {
     static constexpr float rad = M_PI / 180;
@@ -212,10 +172,16 @@ void Renderer::render() {
         glUseProgram(shaders.at(batch.gl_shader_program).gl_program);
         glUniformMatrix4fv(batch.gl_camera_view, 1, GL_FALSE, camera_view.data());
 
-        // TODO: Setup glEnables and stuff, gotta set the defaults in GraphicsState too
+        // TODO: Set the defaults in GraphicsState too
         glEnable(GL_CULL_FACE);
         glCullFace(GL_BACK);
         glFrontFace(GL_CCW);
+
+        // Add all the lights data to the uniforms
+        static float theta = 0;
+        Vec3<float> light_pos{150 * cosf(theta), 150 * sinf(theta), 0};
+        glUniform3fv(glGetUniformLocation(batch.gl_shader_program, "light_pos"), 1, &light_pos.x);
+        theta += 0.01;
 
         std::vector<Mat4<float>> buffer{};
         for (auto &component : batch.components) {
@@ -362,10 +328,10 @@ Mesh Renderer::load_mesh_from_file(std::string filepath, std::string directory_f
         }
     }
 
-    std::unordered_map<std::string, GLuint> loaded_textures{};
+    std::unordered_map<std::string, uint64_t> loaded_textures{};
     for (const auto &material : materials) {
         /// Color map, a.k.a diffuse map
-        if (!loaded_textures[material.diffuse_texname]) {
+        if (!loaded_textures[directory_filepath + material.diffuse_texname]) {
             Texture diffuse_texture{};
             diffuse_texture.load(material.diffuse_texname, directory_filepath);
             if (diffuse_texture.loaded_succesfully) {

@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <array>
 #include "primitives.h"
 #include "texture.h"
 
