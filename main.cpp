@@ -60,6 +60,7 @@ int main() {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             ImGui_ImplSdlGL3_ProcessEvent(&event);
+            renderer.camera->update(delta);
             switch (event.type) {
                 case SDL_MOUSEMOTION:
                     renderer.camera->pitch += event.motion.yrel;
