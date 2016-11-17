@@ -9,6 +9,8 @@
 #include <array>
 #include "primitives.h"
 #include "texture.h"
+#include "light.h"
+#include "transform.h"
 
 class World;
 class Camera;
@@ -31,7 +33,7 @@ public:
     }
 
     /// Main render function, renders all the graphics batches and so on
-    void render();
+    void render(uint32_t delta);
 
     /// Loads a mesh from a file
     Mesh load_mesh_from_file(std::string filepath, std::string directory_filepath);
@@ -53,11 +55,12 @@ public:
     SDL_Window *window;
 private:
     Renderer();
-    uint64_t render_components_id;
     double DRAW_DISTANCE;
 
     Mat4<float> projection_matrix;
 
+    std::vector<Transform> transformations;
+    std::vector<Light> lights;
     // std::unordered_map<Texture, uint64_t, std::hash<int>> textures;
     std::unordered_map<ShaderType, Shader, std::hash<int>> shaders;
 

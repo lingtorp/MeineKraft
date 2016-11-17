@@ -15,6 +15,7 @@
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "../include/tinyobjloader/tiny_obj_loader.h"
+#include "transform.h"
 
 /// Column major - Camera combined rotation matrix (y, x) & translation matrix
 Mat4<float> Renderer::FPSViewRH(Vec3<float> eye, float pitch, float yaw) {
@@ -63,9 +64,15 @@ Mat4<float> gen_projection_matrix(float z_near, float z_far, float fov, float as
 }
 
 Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), state{}, graphics_batches{}, shaders{},
-                      render_components_id(0), shader_file_monitor(std::make_unique<FileMonitor>()) {
+                      shader_file_monitor(std::make_unique<FileMonitor>()), lights{} {
     glewExperimental = (GLboolean) true;
     glewInit();
+
+    Light light{Vec3<float>{10.0, 10.0, 10.0}}; // Add a temporary light
+    lights.push_back(light);
+
+    Transform transform = {light.position, light.position + Vec3<float>{0.5, 0.5, 0.5}, 100000};
+    transformations.push_back(transform);
 
     /// Load all block & skybox textures
     const auto base = "/Users/AlexanderLingtorp/Google Drive/Repositories/MeineKraft/";
@@ -132,7 +139,7 @@ bool Renderer::point_inside_frustrum(Vec3<float> point, std::array<Plane<float>,
     return false;
 }
 
-void Renderer::render() {
+void Renderer::render(uint32_t delta) {
     /// Reset render stats
     state = RenderState();
 
@@ -146,7 +153,7 @@ void Renderer::render() {
             std::tie(success, err_msg) = shader.recompile();
             if (!success) { SDL_Log("%s", err_msg.c_str()); continue; }
             for (auto &batch : graphics_batches) {
-                if (batch.gl_shader_program == shader_key) {
+                if (batch.shader_program == shader_key) {
                     link_batch(batch); // relink the batch
                 }
             }
@@ -167,9 +174,11 @@ void Renderer::render() {
     glEnable(GL_MULTISAMPLE);
     glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
 
+    for (auto &transform : transformations) { transform.update(delta); }
+
     for (auto &batch : graphics_batches) {
         glBindVertexArray(batch.gl_VAO);
-        glUseProgram(shaders.at(batch.gl_shader_program).gl_program);
+        glUseProgram(shaders.at(batch.shader_program).gl_program);
         glUniformMatrix4fv(batch.gl_camera_view, 1, GL_FALSE, camera_view.data());
 
         // TODO: Set the defaults in GraphicsState too
@@ -178,10 +187,7 @@ void Renderer::render() {
         glFrontFace(GL_CCW);
 
         // Add all the lights data to the uniforms
-        static float theta = 0;
-        Vec3<float> light_pos{150 * cosf(theta), 150 * sinf(theta), 0};
-        glUniform3fv(glGetUniformLocation(batch.gl_shader_program, "light_pos"), 1, &light_pos.x);
-        theta += 0.01;
+        glUniform3fv(glGetUniformLocation(shaders.at(batch.shader_program).gl_program, "light_pos"), 1, (const GLfloat *) &transformations[0].current_position);
 
         std::vector<Mat4<float>> buffer{};
         for (auto &component : batch.components) {
@@ -199,7 +205,7 @@ void Renderer::render() {
             // Reality
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(batch.mesh.texture.gl_texture_type, batch.mesh.texture.gl_texture);
-            glUniform1i(glGetUniformLocation(shaders.at(batch.gl_shader_program).gl_program, "tex_sampler"), 0);
+            glUniform1i(glGetUniformLocation(shaders.at(batch.shader_program).gl_program, "tex_sampler"), 0);
 
             Mat4<float> model{};
             model = model.translate(component->entity->position);
@@ -283,7 +289,7 @@ void Renderer::add_to_batch(RenderComponent *component, Mesh mesh) {
 
     GraphicsBatch batch{component->entity->hash_id};
     batch.mesh = mesh;
-    batch.gl_shader_program = ShaderType::STANDARD_SHADER;
+    batch.shader_program = ShaderType::STANDARD_SHADER;
     link_batch(batch);
 
     batch.components.push_back(component);
@@ -346,7 +352,7 @@ Mesh Renderer::load_mesh_from_file(std::string filepath, std::string directory_f
 }
 
 void Renderer::link_batch(GraphicsBatch &batch) {
-    auto batch_shader_program = shaders.at(batch.gl_shader_program).gl_program;
+    auto batch_shader_program = shaders.at(batch.shader_program).gl_program;
 
     glGenVertexArrays(1, (GLuint *) &batch.gl_VAO);
     glBindVertexArray(batch.gl_VAO);

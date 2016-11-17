@@ -22,11 +22,17 @@ const vec3 fog_color   = vec3(0.5, 0.5, 0.5);
 const vec3 light_color = vec3(0.7, 0.7, 0.7);
 const float fog_max_distance = 150;
 
+out vec3 fNormal;
+out vec4 fPosition;
+
 void main() {
   gl_Position = projection * camera_view * model * vec4(position, 1.0);
   // fTexcoord = normalize(position); // Blocks
   fTexcoord = vec3(vTexCoord, 1.0);
   tex_coord = vTexCoord;
+
+  fNormal   = normal;
+  fPosition = model * vec4(position, 1.0);
 
   // Linear fog = 0, Exponential fog = 1, sqrt exponential fog, Disabled = -1
   int fog_type = -1;

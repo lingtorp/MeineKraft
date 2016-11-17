@@ -102,7 +102,7 @@ int main() {
         world.world_tick(delta, renderer.camera);
 
         /// Render the world
-        renderer.render();
+        renderer.render(delta);
 
         /// ImGui - Debug instruments
         {

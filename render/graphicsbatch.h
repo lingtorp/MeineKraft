@@ -13,10 +13,10 @@ public:
     Mesh mesh;
     std::vector<RenderComponent *> components;
 
-    uint64_t gl_VAO;
-    uint64_t gl_models_buffer_object;
-    uint64_t gl_camera_view;
-    ShaderType gl_shader_program;
+    uint32_t gl_VAO;
+    uint32_t gl_models_buffer_object;
+    uint32_t gl_camera_view;
+    ShaderType shader_program;
 };
 
 #endif //MEINEKRAFT_GRAPHICSBATCH_H

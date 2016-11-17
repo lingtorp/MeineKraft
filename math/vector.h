@@ -132,6 +132,8 @@ public:
         rows[3] = Vec4<T>{0.0f, 0.0f, 0.0f, 1.0f};
     }
 
+    Mat4<T>(const Mat4<T> &rhs) = default; // Perf inc?
+
     /// Translation - moves the matrix projection in space ...
     inline Mat4<T> translate(Vec3<T> vec) const {
         Mat4<T> matrix;
