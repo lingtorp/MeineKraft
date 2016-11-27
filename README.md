@@ -4,6 +4,7 @@
  ![](/screenshots/perlin-hills.gif)
  ![](/screenshots/linear-fog.gif)
  ![](/screenshots/dynamic-shader-editing.gif)
+ ![](/screenshots/moving-lights.gif)
 
 # Notebook
 * Procedural generation
