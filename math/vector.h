@@ -4,7 +4,6 @@
 #include <math.h>
 #include <ostream>
 #include <cmath>
-#include <list>
 #include <vector>
 
 template<typename T>
@@ -12,6 +11,7 @@ struct Vec4 {
     T x, y, z, w;
 
     Vec4(T x, T y, T z, T w): x(x), y(y), z(z), w(w) { };
+    Vec4(T x, T y, T z): x(x), y(y), z(z), w(0.0f) { };
     Vec4(): x(0), y(0), z(0), w(0) { };
 
     /// Operators
@@ -43,8 +43,15 @@ struct Vec4 {
 template<typename T>
 struct Vec3 {
     T x, y, z;
+
     Vec3(T x, T y, T z): x(x), y(y), z(z) {};
     Vec3(): x(0), y(0), z(0) {};
+    Vec3(std::initializer_list<Vec3<T>> list) { // TODO: Is this really worth it? Perf?
+        static_assert(list.size() == 3, "Too many/few arguments");
+        auto carray = reinterpret_cast<T *>(list.begin());
+        x = carray[0]; y = carray[1]; z = carray[2];
+    };
+
     inline static Vec3 ZERO() { return Vec3(0.0, 0.0, 0.0); }
     inline double length() const { return std::sqrt(std::pow(x, 2) + std::pow(y, 2) + std::pow(z, 2)); }
 
