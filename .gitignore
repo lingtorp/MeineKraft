@@ -5,6 +5,9 @@
 .idea/vcs.xml
 .idea/jsLibraryMappings.xml
 
+# CLion specfic
+cmake-build-debug/
+
 # Sensitive or high-churn files:
 .idea/dataSources.ids
 .idea/dataSources.xml
