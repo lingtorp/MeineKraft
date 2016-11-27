@@ -6,28 +6,43 @@ out vec4 outColor;
 in vec3 fTexcoord;   // passthrough shading for interpolated textures
 in vec2 tex_coord;
 // uniform samplerCube tex;
-uniform sampler2D tex_sampler;
+uniform sampler2D diffuse_sampler;
 
 in vec3 fNormal;
 in vec4 fPosition;
 
-uniform vec3 light_pos;
+/// Lights
+struct Light {
+    vec3 position;
+    // vec4 color;
+};
+
+const int MAX_NUM_LIGHTS = 2;
+
+layout (std140) uniform lights_block {
+//    uint number_lights;
+    Light lights[MAX_NUM_LIGHTS];
+};
+
 const vec3 light_color = vec3(1, 1, 1);
-const vec3 light_posa  = vec3(15, 15, 0);
 
 void main() {
     // materialAmbient, materialDiffuse, materialSpecular
-   float ambient = 0.3;
-   vec3 distance = normalize(light_pos - fPosition.xyz);
+    vec3 total_light = vec3(0.0, 0.0, 0.0);
+    float ambient = 0.3;
+    total_light += ambient;
 
-   vec3 light = light_color * max(dot(fNormal, distance), 0.0) / distance*distance; // diffuse
-   light = light + ambient; // ambient
+    for (int i = 0; i < MAX_NUM_LIGHTS; i++) {
+        vec3 distance = normalize(lights[i].position.xyz - fPosition.xyz);
+        vec3 diffuse_light = light_color * max(dot(fNormal, distance), 0.0) / distance*distance; // diffuse
+        total_light += diffuse_light;
 
-   vec3 reflected = reflect(vec3(-1.0, -1.0, -1.0), fNormal); // specular
-   float cosAlpha = clamp(dot(distance, reflected), 0, 1);
-   vec3 specular = light_color*4 * pow(cosAlpha, 7.0) / distance*distance;
-   // light = light + specular; // Not working quite right
+        vec3 reflected = reflect(vec3(-1.0, -1.0, -1.0), fNormal); // specular
+        float cosAlpha = clamp(dot(distance, reflected), 0, 1);
+        vec3 specular = light_color*4 * pow(cosAlpha, 7.0) / distance*distance;
+        // light += specular; // Not working quite right
+    }
 
-   light = clamp(light, 0.0, 1.0);
-   outColor = texture(tex_sampler, tex_coord) * vec4(light, 1.0);
+   total_light = clamp(total_light, 0.0, 1.0);
+   outColor = texture(diffuse_sampler, tex_coord) * vec4(total_light, 1.0);
 }
