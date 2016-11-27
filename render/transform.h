@@ -11,6 +11,7 @@
 
 struct Transform {
     bool finished;
+    bool repeat;
 
     const Vec3<float> from_position;
     Vec3<float> current_position;
@@ -20,7 +21,7 @@ struct Transform {
     uint64_t time_elapsed;
     const uint64_t duration;
 
-    Transform(Vec3<float> from, Vec3<float> to, uint64_t duration): from_position(from), to_position(to), current_position(from), time_elapsed(0), duration(duration), finished(false) {};
+    Transform(Vec3<float> from, Vec3<float> to, uint64_t duration): from_position(from), to_position(to), current_position(from), time_elapsed(0), duration(duration), finished(false), repeat(false) {};
 
     void update(uint64_t delta) {
         if (time_elapsed >= duration) { finished = true; return; }
