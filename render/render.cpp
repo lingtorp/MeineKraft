@@ -12,10 +12,10 @@
 #include "../nodes/entity.h"
 #include "shader.h"
 #include "../util/filemonitor.h"
+#include "transform.h"
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "../include/tinyobjloader/tiny_obj_loader.h"
-#include "transform.h"
 
 /// Column major - Camera combined rotation matrix (y, x) & translation matrix
 Mat4<float> Renderer::FPSViewRH(Vec3<float> eye, float pitch, float yaw) {
@@ -68,11 +68,16 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
     glewExperimental = (GLboolean) true;
     glewInit();
 
-    Light light{Vec3<float>{10.0, 10.0, 10.0}}; // Add a temporary light
+    Light light{Vec3<float>{0.0, 10.0, 10.0}};
     lights.push_back(light);
 
     Transform transform = {light.position, light.position + Vec3<float>{0.5, 0.5, 0.5}, 100000};
     transformations.push_back(transform);
+
+    // Light uniform buffer
+    glGenBuffers(1, &gl_light_uniform_buffer);
+    glBindBuffer(GL_UNIFORM_BUFFER, gl_light_uniform_buffer);
+    glBufferData(GL_UNIFORM_BUFFER, sizeof(Light) * lights.size(), &lights, GL_DYNAMIC_DRAW);
 
     /// Load all block & skybox textures
     const auto base = "/Users/AlexanderLingtorp/Google Drive/Repositories/MeineKraft/";
@@ -174,7 +179,10 @@ void Renderer::render(uint32_t delta) {
     glEnable(GL_MULTISAMPLE);
     glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
 
-    for (auto &transform : transformations) { transform.update(delta); }
+    for (auto &transform : transformations) { transform.update(delta); } // TODO: Move this kind of comp. into seperate thread or something
+
+    // TODO: Update number of lights in the scene
+    // TODO: Cull the lights
 
     for (auto &batch : graphics_batches) {
         glBindVertexArray(batch.gl_VAO);
@@ -186,8 +194,9 @@ void Renderer::render(uint32_t delta) {
         glCullFace(GL_BACK);
         glFrontFace(GL_CCW);
 
-        // Add all the lights data to the uniforms
-        glUniform3fv(glGetUniformLocation(shaders.at(batch.shader_program).gl_program, "light_pos"), 1, (const GLfloat *) &transformations[0].current_position);
+        /// Update Light data for the batch
+        glBindBuffer(GL_UNIFORM_BUFFER, gl_light_uniform_buffer);
+        glBufferData(GL_UNIFORM_BUFFER, sizeof(Light) * lights.size(), lights.data(), GL_DYNAMIC_DRAW);
 
         std::vector<Mat4<float>> buffer{};
         for (auto &component : batch.components) {
@@ -205,7 +214,7 @@ void Renderer::render(uint32_t delta) {
             // Reality
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(batch.mesh.texture.gl_texture_type, batch.mesh.texture.gl_texture);
-            glUniform1i(glGetUniformLocation(shaders.at(batch.shader_program).gl_program, "tex_sampler"), 0);
+            glUniform1i(glGetUniformLocation(shaders.at(batch.shader_program).gl_program, "diffuse_sampler"), 0);
 
             Mat4<float> model{};
             model = model.translate(component->entity->position);
@@ -354,7 +363,7 @@ Mesh Renderer::load_mesh_from_file(std::string filepath, std::string directory_f
 void Renderer::link_batch(GraphicsBatch &batch) {
     auto batch_shader_program = shaders.at(batch.shader_program).gl_program;
 
-    glGenVertexArrays(1, (GLuint *) &batch.gl_VAO);
+    glGenVertexArrays(1, &batch.gl_VAO);
     glBindVertexArray(batch.gl_VAO);
     batch.gl_camera_view = glGetUniformLocation(batch_shader_program, "camera_view");
 
@@ -381,11 +390,16 @@ void Renderer::link_batch(GraphicsBatch &batch) {
     glVertexAttribPointer(texCoordAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *)offsetof(Vertex<float>, texCoord));
     glEnableVertexAttribArray(texCoordAttrib);
 
-    GLuint texture_sampler = glGetUniformLocation(batch_shader_program, "tex_sampler");
+    GLuint texture_sampler = glGetUniformLocation(batch_shader_program, "diffuse_sampler");
     batch.mesh.texture.gl_texture_location = texture_sampler;
 
+    // Lights UBO
+    auto block_index = glGetUniformBlockIndex(batch_shader_program, "lights_block");
+    glBindBuffer(GL_UNIFORM_BUFFER, gl_light_uniform_buffer);
+    glBindBufferBase(GL_UNIFORM_BUFFER, block_index, gl_light_uniform_buffer);
+
     // Buffer for all the model matrices
-    glGenBuffers(1, (GLuint *) &batch.gl_models_buffer_object);
+    glGenBuffers(1, &batch.gl_models_buffer_object);
     glBindBuffer(GL_ARRAY_BUFFER, batch.gl_models_buffer_object);
 
     GLuint modelAttrib = glGetAttribLocation(batch_shader_program, "model");

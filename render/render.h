@@ -56,9 +56,11 @@ public:
 private:
     Renderer();
     double DRAW_DISTANCE;
+    uint16_t MAX_NUM_LIGHTS = 100;
 
     Mat4<float> projection_matrix;
 
+    uint32_t gl_light_uniform_buffer;
     std::vector<Transform> transformations;
     std::vector<Light> lights;
     // std::unordered_map<Texture, uint64_t, std::hash<int>> textures;
