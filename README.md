@@ -7,7 +7,7 @@
 This project serves as a study for me into the realm of computer graphics and other
 related areas. Currently I am writing this during my spare time. My intent is to
 follow up with some articles relating to my learning experience, these articles
-can be found on my personal [site](lingtorp.com).
+can be found on my personal site lingtorp.com.
 
 # Build
 All the dependencies are bundled within the project folder /include.
