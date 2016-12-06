@@ -13,18 +13,16 @@ in vec4 fPosition;
 
 /// Lights
 struct Light {
+    vec4 color;
     vec3 position;
-    // vec4 color;
 };
 
-const int MAX_NUM_LIGHTS = 2;
+const int MAX_NUM_LIGHTS = 1;
 
 layout (std140) uniform lights_block {
 //    uint number_lights;
     Light lights[MAX_NUM_LIGHTS];
 };
-
-const vec3 light_color = vec3(1, 1, 1);
 
 void main() {
     // materialAmbient, materialDiffuse, materialSpecular
@@ -33,13 +31,14 @@ void main() {
     total_light += ambient;
 
     for (int i = 0; i < MAX_NUM_LIGHTS; i++) {
+        Light light = lights[i];
         vec3 distance = normalize(lights[i].position.xyz - fPosition.xyz);
-        vec3 diffuse_light = light_color * max(dot(fNormal, distance), 0.0) / distance*distance; // diffuse
+        vec3 diffuse_light = light.color.xyz * max(dot(fNormal, distance), 0.0) / distance*distance; // diffuse
         total_light += diffuse_light;
 
         vec3 reflected = reflect(vec3(-1.0, -1.0, -1.0), fNormal); // specular
         float cosAlpha = clamp(dot(distance, reflected), 0, 1);
-        vec3 specular = light_color*4 * pow(cosAlpha, 7.0) / distance*distance;
+        vec3 specular = light.color.xyz * 4 * pow(cosAlpha, 7.0) / distance*distance;
         // light += specular; // Not working quite right
     }
 

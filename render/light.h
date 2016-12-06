@@ -4,11 +4,15 @@
 #include "../math/vector.h"
 
 struct Light {
-    Vec3<float> position; // w is ignored ...
-//    Color4<float> light_color;
+    Color4<float> light_color;
+    Vec3<float> position;
 
-    Light(Vec3<float> position): position(position) {};
-    // Light(Vec3<float> position): position(position), light_color(Color4<float>::WHITE()) {};
+    Light(Vec3<float> position): position(position), light_color(Color4<float>::BLUE()) {};
+    Light(Vec3<float> position, Color4<float> rgb_color): position(position), light_color(rgb_color) {};
+
+    friend std::ostream &operator<<(std::ostream &os, const Light &light) {
+        return os << light.position;
+    }
 };
 
 #endif //MEINEKRAFT_LIGHT_H
