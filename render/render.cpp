@@ -68,7 +68,7 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
     glewExperimental = (GLboolean) true;
     glewInit();
 
-    Light light{Vec3<float>{0.0, 10.0, 10.0}};
+    Light light{Vec3<float>{15.0, 15.0, 15.0}, Color4<float>{0.4, 0.4, 0.8, 1.0}};
     lights.push_back(light);
 
     Transform transform = {light.position, light.position + Vec3<float>{0.5, 0.5, 0.5}, 100000};
@@ -180,6 +180,8 @@ void Renderer::render(uint32_t delta) {
     glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
 
     for (auto &transform : transformations) { transform.update(delta); } // TODO: Move this kind of comp. into seperate thread or something
+
+    lights[0] = transformations[0].current_position; // FIXME: Transforms are not updating their Entities..
 
     // TODO: Update number of lights in the scene
     // TODO: Cull the lights
@@ -390,7 +392,7 @@ void Renderer::link_batch(GraphicsBatch &batch) {
     glVertexAttribPointer(texCoordAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *)offsetof(Vertex<float>, texCoord));
     glEnableVertexAttribArray(texCoordAttrib);
 
-    GLuint texture_sampler = glGetUniformLocation(batch_shader_program, "diffuse_sampler");
+    GLint texture_sampler = glGetUniformLocation(batch_shader_program, "diffuse_sampler");
     batch.mesh.texture.gl_texture_location = texture_sampler;
 
     // Lights UBO
