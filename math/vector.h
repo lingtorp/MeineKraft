@@ -6,6 +6,16 @@
 #include <cmath>
 #include <vector>
 
+/// Forward declarations
+template<typename T>
+struct Vec2;
+
+template<typename T>
+struct Vec3;
+
+template<typename T>
+struct Vec4;
+
 template<typename T>
 struct Vec4 {
     T x, y, z, w;
