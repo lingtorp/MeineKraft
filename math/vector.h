@@ -197,36 +197,6 @@ public:
         return mat;
     }
 
-    /// Rotation matrix around x-axis (counterclockwise)
-    inline Mat4<T> rotate_x(float theta) const {
-        Mat4<T> matrix;
-        matrix[0] = {1.0f, 0.0f, 0.0f, 0.0f};
-        matrix[1] = {0.0f, cosf(theta * RADIAN), -sinf(theta * RADIAN), 0.0f};
-        matrix[2] = {0.0f, sinf(theta * RADIAN), cosf(theta * RADIAN), 0.0f};
-        matrix[3] = {0.0f, 0.0f, 0.0f, 1.0f};
-        return *this * matrix;
-    }
-
-    /// Rotation matrix around y-axis (counterclockwise)
-    inline Mat4<T> rotate_y(float theta) const {
-        Mat4<T> matrix;
-        matrix[0] = {cosf(theta * RADIAN), 0.0f, sinf(theta * RADIAN), 0.0f};
-        matrix[1] = {0.0f, 1.0f, 0.0f, 0.0f};
-        matrix[2] = {-sinf(theta * RADIAN), 0.0f, cosf(theta * RADIAN), 0.0f};
-        matrix[3] = {0.0f, 0.0f, 0.0f, 1.0f};
-        return *this * matrix;
-    }
-
-    /// Rotation matrix around z-axis (counterclockwise)
-    inline Mat4<T> rotate_z(float theta) const {
-        Mat4<T> matrix;
-        matrix[0] = {cosf(theta * RADIAN), -sinf(theta * RADIAN), 0.0f, 0.0f};
-        matrix[1] = {sinf(theta * RADIAN), cosf(theta * RADIAN), 0.0f, 0.0f};
-        matrix[2] = {0.0f, 0.0f, 1.0f, 0.0f};
-        matrix[3] = {0.0f, 0.0f, 0.0f, 1.0f};
-        return *this * matrix;
-    }
-
     /// Operators
     /// Standard matrix multiplication row-column wise; *this * mat
     inline Mat4<T> operator*(Mat4<T> &mat) const {
