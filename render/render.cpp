@@ -320,28 +320,28 @@ Mesh Renderer::load_mesh_from_file(std::string filepath, std::string directory_f
     Mesh mesh{};
     for (const auto &shape : shapes) { // Shapes
         for (const auto &idx : shape.mesh.indices) { // Faces
-                Vertex<float> vertex{};
-                float vx = attrib.vertices[3 * idx.vertex_index + 0];
-                float vy = attrib.vertices[3 * idx.vertex_index + 1];
-                float vz = attrib.vertices[3 * idx.vertex_index + 2];
-                vertex.position = {vx, vy, vz};
+            Vertex<float> vertex{};
+            float vx = attrib.vertices[3 * idx.vertex_index + 0];
+            float vy = attrib.vertices[3 * idx.vertex_index + 1];
+            float vz = attrib.vertices[3 * idx.vertex_index + 2];
+            vertex.position = {vx, vy, vz};
 
-                float tx = attrib.texcoords[2 * idx.texcoord_index + 0];
-                float ty = attrib.texcoords[2 * idx.texcoord_index + 1];
-                vertex.texCoord = {tx, 1.0f - ty}; // .obj format has flipped y-axis compared to OpenGL
+            float tx = attrib.texcoords[2 * idx.texcoord_index + 0];
+            float ty = attrib.texcoords[2 * idx.texcoord_index + 1];
+            vertex.texCoord = {tx, 1.0f - ty}; // .obj format has flipped y-axis compared to OpenGL
 
-                float nx = attrib.normals[3 * idx.normal_index + 0];
-                float ny = attrib.normals[3 * idx.normal_index + 1];
-                float nz = attrib.normals[3 * idx.normal_index + 2];
-                vertex.normal = Vec3<float>{nx, ny, nz}.normalize();
+            float nx = attrib.normals[3 * idx.normal_index + 0];
+            float ny = attrib.normals[3 * idx.normal_index + 1];
+            float nz = attrib.normals[3 * idx.normal_index + 2];
+            vertex.normal = Vec3<float>{nx, ny, nz}.normalize();
 
-                if (unique_vertices.count(vertex) == 0) {
-                    unique_vertices[vertex] = mesh.vertices.size();
-                    mesh.indices.push_back(mesh.vertices.size());
-                    mesh.vertices.push_back(vertex);
-                } else {
-                    mesh.indices.push_back(unique_vertices.at(vertex));
-                }
+            if (unique_vertices.count(vertex) == 0) {
+                unique_vertices[vertex] = mesh.vertices.size();
+                mesh.indices.push_back(mesh.vertices.size());
+                mesh.vertices.push_back(vertex);
+            } else {
+                mesh.indices.push_back(unique_vertices.at(vertex));
+            }
         }
     }
 
