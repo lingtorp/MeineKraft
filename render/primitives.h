@@ -14,6 +14,7 @@ public:
     constexpr Color4(): r(0), g(0), b(0), a(0) {};
     constexpr Color4(T r, T g, T b, T a): r(r), g(g), b(b), a(a) {};
     static constexpr Color4<float> WHITE() { return Color4{1.0f, 1.0f, 1.0f, 1.0f}; }
+    static constexpr Color4<float> BLUE() { return Color4{0.5f, 0.5f, 1.0f, 1.0f}; }
 
     bool operator==(const Color4<T> &rhs) const {
         return r == rhs.r && g == rhs.g && b == rhs.b && a == rhs.a;
