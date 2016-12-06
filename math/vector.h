@@ -23,6 +23,7 @@ struct Vec4 {
     Vec4(T x, T y, T z, T w): x(x), y(y), z(z), w(w) { };
     Vec4(T x, T y, T z): x(x), y(y), z(z), w(0.0f) { };
     Vec4(): x(0), y(0), z(0), w(0) { };
+    Vec4(Vec3<T> vec): x(vec.x), y(vec.y), z(vec.z), w(0.0) { };
 
     /// Operators
     /// Returns the members x, y, z, w in index order (invalid indexes returns w)
