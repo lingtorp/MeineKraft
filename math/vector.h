@@ -57,11 +57,6 @@ struct Vec3 {
 
     Vec3(T x, T y, T z): x(x), y(y), z(z) {};
     Vec3(): x(0), y(0), z(0) {};
-    Vec3(std::initializer_list<Vec3<T>> list) { // TODO: Is this really worth it? Perf?
-        static_assert(list.size() == 3, "Too many/few arguments");
-        auto carray = reinterpret_cast<T *>(list.begin());
-        x = carray[0]; y = carray[1]; z = carray[2];
-    };
 
     inline static Vec3 ZERO() { return Vec3(0.0, 0.0, 0.0); }
     inline double length() const { return std::sqrt(std::pow(x, 2) + std::pow(y, 2) + std::pow(z, 2)); }
@@ -114,14 +109,6 @@ struct Vec2 {
     Vec2(T x, T y): x(x), y(y) {};
     Vec2(): x(0), y(0) {};
 
-    inline Vec2<T> normalize() {
-        T length = sqrt(pow(x, 2) + pow(y, 2));
-        Vec2 result;
-        result.x = x / length;
-        result.y = y / length;
-        return result;
-    }
-
     /// Dot product
     inline T dot(Vec2<T> u) const { return x * u.x + y * u.y; }
 
@@ -135,7 +122,6 @@ template<typename T>
 struct Mat4 {
 private:
     Vec4<T> rows[4];
-    static constexpr float RADIAN = M_PI / 180;
 
 public:
     inline T *data() {
@@ -149,8 +135,6 @@ public:
         rows[2] = Vec4<T>{0.0f, 0.0f, 1.0f, 0.0f};
         rows[3] = Vec4<T>{0.0f, 0.0f, 0.0f, 1.0f};
     }
-
-    Mat4<T>(const Mat4<T> &rhs) = default; // Perf inc?
 
     /// Translation - moves the matrix projection in space ...
     inline Mat4<T> translate(Vec3<T> vec) const {
