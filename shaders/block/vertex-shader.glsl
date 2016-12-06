@@ -9,8 +9,7 @@ in vec2 vTexCoord;
 in mat4 model;
 
 out vec4 fColor; // This name must match the name in the fragment shader in order to work
-out vec3 fTexcoord;
-out vec2 tex_coord;
+out vec2 fTexcoord;
 
 // View or a.k.a camera matrix
 uniform mat4 camera_view;
@@ -27,10 +26,8 @@ out vec4 fPosition;
 
 void main() {
   gl_Position = projection * camera_view * model * vec4(position, 1.0);
-  // fTexcoord = normalize(position); // Blocks
-  fTexcoord = vec3(vTexCoord, 1.0);
-  tex_coord = vTexCoord;
 
+  fTexcoord = vTexCoord;
   fNormal   = normal;
   fPosition = model * vec4(position, 1.0);
 

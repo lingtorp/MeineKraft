@@ -3,9 +3,7 @@
 in  vec4 fColor; // This name must match the name in the vertex shader in order to work
 out vec4 outColor;
 
-in vec3 fTexcoord;   // passthrough shading for interpolated textures
-in vec2 tex_coord;
-// uniform samplerCube tex;
+in vec2 fTexcoord;   // passthrough shading for interpolated textures
 uniform sampler2D diffuse_sampler;
 
 in vec3 fNormal;
@@ -43,5 +41,5 @@ void main() {
     }
 
    total_light = clamp(total_light, 0.0, 1.0);
-   outColor = texture(diffuse_sampler, tex_coord) * vec4(total_light, 1.0);
+   outColor = texture(diffuse_sampler, fTexcoord) * vec4(total_light, 1.0);
 }
