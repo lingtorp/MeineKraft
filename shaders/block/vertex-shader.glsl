@@ -30,26 +30,4 @@ void main() {
   fTexcoord = vTexCoord;
   fNormal   = normal;
   fPosition = model * vec4(position, 1.0);
-
-  // Linear fog = 0, Exponential fog = 1, sqrt exponential fog, Disabled = -1
-  int fog_type = -1;
-  float distance = length(gl_Position);
-  if (fog_type == 0) { // linear
-    float fog_factor = (fog_max_distance - distance) / (fog_max_distance - (fog_max_distance / 2));
-    fog_factor = clamp(fog_factor, 0.0, 1.0);
-    fColor = vec4(fog_color * fog_factor, 1.0);
-  } else if (fog_type == 1) { // exponential
-    float fog_density = 0.0010;
-    float fog_factor = 1 / exp(distance * fog_density);
-    fog_factor = clamp(fog_factor, 0.0, 1.0);
-    fColor = vec4(fog_color * fog_factor, 1.0);
-  } else if (fog_type == 2) { // sqrt exponential
-    float fog_density = 0.0100;
-    float fog_factor = 1 / exp(sqrt(distance * fog_density));
-    fog_factor = clamp(fog_factor, 0.0, 1.0);
-    fColor = vec4(fog_color * fog_factor, 1.0);
-  } else if (fog_type == -1) {
-    fColor = vec4(1, 1, 1, 0);
-    // fColor = fColor * 1/(length(gl_Position) * 0.04);
-  }
 }
