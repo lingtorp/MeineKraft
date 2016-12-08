@@ -12,6 +12,7 @@ in vec4 fPosition;
 /// Lights
 struct Light {
     vec4 color;
+    vec4 light_intensity; // (ambient, diffuse, specular, padding) itensity
     vec3 position;
 };
 
@@ -22,22 +23,29 @@ layout (std140) uniform lights_block {
     Light lights[MAX_NUM_LIGHTS];
 };
 
+uniform vec3 camera_position; // Position of the eye/camera
+
 void main() {
-    // materialAmbient, materialDiffuse, materialSpecular
     vec3 total_light = vec3(0.0, 0.0, 0.0);
-    float ambient = 0.3;
-    total_light += ambient;
+    vec3 normal = normalize(fNormal);
+    vec3 eye = normalize(camera_position - fPosition.xyz);
+    float ambient_light;
 
     for (int i = 0; i < MAX_NUM_LIGHTS; i++) {
         Light light = lights[i];
-        vec3 distance = normalize(lights[i].position.xyz - fPosition.xyz);
-        vec3 diffuse_light = light.color.xyz * max(dot(fNormal, distance), 0.0) / distance*distance; // diffuse
-        total_light += diffuse_light;
+        float ambient_intensity = light.light_intensity.x;
+        float diffuse_intensity = light.light_intensity.y;
+        float specular_intensity = light.light_intensity.z;
+        vec3 direction = normalize(lights[i].position.xyz - fPosition.xyz);
 
-        vec3 reflected = reflect(vec3(-1.0, -1.0, -1.0), fNormal); // specular
-        float cosAlpha = clamp(dot(distance, reflected), 0, 1);
-        vec3 specular = light.color.xyz * 4 * pow(cosAlpha, 7.0) / distance*distance;
-        // light += specular; // Not working quite right
+        vec3 diffuse_light = light.color.xyz * max(dot(normal, direction), 0.0) * diffuse_intensity;
+
+        vec3 reflection = 2*dot(direction, normal)*normal - direction;
+        vec3 specular_light = vec3(dot(reflection, normalize(eye))) * specular_intensity;
+
+        total_light += diffuse_light;
+        total_light += specular_light;
+        total_light += vec3(ambient_intensity);
     }
 
    total_light = clamp(total_light, 0.0, 1.0);

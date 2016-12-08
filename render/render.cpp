@@ -49,7 +49,7 @@ Mat4<float> Renderer::FPSViewRH(Vec3<float> eye, float pitch, float yaw) {
 
 /// A.k.a perspective matrix
 Mat4<float> gen_projection_matrix(float z_near, float z_far, float fov, float aspect) {
-    float rad = M_PI / 180;
+    const float rad = M_PI / 180;
     float tanHalf = tanf(fov * rad / 2);
     float a = 1 / (tanHalf * aspect);
     float b = 1 / tanHalf;
@@ -79,7 +79,7 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
     glBindBuffer(GL_UNIFORM_BUFFER, gl_light_uniform_buffer);
     glBufferData(GL_UNIFORM_BUFFER, sizeof(Light) * lights.size(), &lights, GL_DYNAMIC_DRAW);
 
-    /// Load all block & skybox textures
+    // TODO: Load all block & skybox textures
     const auto base = "/Users/AlexanderLingtorp/Google Drive/Repositories/MeineKraft/";
     std::vector<std::string> cube_faces = {base + std::string("res/blocks/grass/side.jpg"),
                                            base + std::string("res/blocks/grass/side.jpg"),
@@ -190,6 +190,7 @@ void Renderer::render(uint32_t delta) {
         glBindVertexArray(batch.gl_VAO);
         glUseProgram(shaders.at(batch.shader_program).gl_program);
         glUniformMatrix4fv(batch.gl_camera_view, 1, GL_FALSE, camera_view.data());
+        glUniform3fv(batch.gl_camera_position, 1, (const GLfloat *) &camera->position);
 
         // TODO: Set the defaults in GraphicsState too
         glEnable(GL_CULL_FACE);
@@ -368,6 +369,7 @@ void Renderer::link_batch(GraphicsBatch &batch) {
     glGenVertexArrays(1, &batch.gl_VAO);
     glBindVertexArray(batch.gl_VAO);
     batch.gl_camera_view = glGetUniformLocation(batch_shader_program, "camera_view");
+    batch.gl_camera_position = glGetUniformLocation(batch_shader_program, "camera_position");
 
     GLuint gl_VBO;
     glGenBuffers(1, &gl_VBO);
