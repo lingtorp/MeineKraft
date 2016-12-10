@@ -1,10 +1,10 @@
-# MeineKraft - *Rendering engine written in C++14 & OpenGL*
-![Perlin Noise generated terrain](/screenshots/perlin-hills.gif)
-![Linear fog](/screenshots/linear-fog.gif)
-![Dynamic shader editing, with reloading!](/screenshots/dynamic-shader-editing.gif)
-![Basic lighting](/screenshots/moving-lights.gif)
+# MeineKraft
 
-This project serves as a study for me into the realm of computer graphics and other
+Various | GIFs
+------ | ------
+Perlin noise ![Perlin Noise generated terrain](/screenshots/perlin-hills.gif) | Linear fog![Linear fog](/screenshots/linear-fog.gif)
+Dynamic shader reloading![Dynamic shader editing, with reloading!](/screenshots/dynamic-shader-editing.gif) | Phong reflection model ![Basic lighting](/screenshots/moving-lights.gif)
+**MeineKraft** is a **rendering engine** written in **C++14** & **OpenGL** and serves as a study for me into the realm of computer graphics and other
 related areas. Currently I am writing this during my spare time. My intent is to
 follow up with some articles relating to my learning experience, these articles
 can be found on my personal [site](http://lingtorp.com).
@@ -27,8 +27,8 @@ Since it is a Cmake based project someone with the skills in Cmake can make this
 * Procedural generation
     * Perlin Noise
     * Simplex Noise'
-- [ ] Add all dependices to the README
-- [ ] Build instructions ..
+- [x] Add all dependencies to the README
+- [x] Build instructions ..
 
 Content streaming
 - [ ] Load new chunk dynamically depending on Player position
@@ -37,7 +37,7 @@ Content streaming
 - [ ] Multithreaded?
 
 Lightning
-- [ ] Implement Phong lightning to begin with
+- [x] Implement Phong lightning to begin with
 
 Rendering
 - [x] Merge all model matrices into a single matrix
@@ -76,10 +76,10 @@ Rendering
 
 Voxelize
 - [ ] Food, donuts, etc
-- [ ] Freja
+- [ ] Cats!
 - [ ] Pokemons!
 - [ ] Chips, ICs!
-- [ ] Macbooks
+- [ ] MacBooks
 - [ ] Handgranat
 
 Code hygiene
