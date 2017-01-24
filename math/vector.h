@@ -116,6 +116,16 @@ struct Vec2 {
     bool operator==(const Vec2 &rhs) const {
         return x == rhs.x && y == rhs.y;
     }
+
+    inline Vec2<T> normalize() const {
+        double length = this->length();
+        Vec2<T> result;
+        result.x = x / length;
+        result.y = y / length;
+        return result;
+    }
+
+    inline double length() const { return std::sqrt(std::pow(x, 2) + std::pow(y, 2)); }
 };
 
 template<typename T>

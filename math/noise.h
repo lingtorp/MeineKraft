@@ -18,7 +18,8 @@ public:
         for (int i = 0; i < grads.size(); i++) {
             double x = distr(engine);
             double y = distr(engine);
-            grads[i] = Vec2<double>{x, y};
+            auto grad_vector = Vec2<double>{x, y}.normalize();
+            grads[i] = grad_vector;
         }
 
         /// Fill gradient lookup array with random indices to the gradients list
