@@ -7,6 +7,7 @@
 
 # CLion specfic
 cmake-build-debug/
+cmake-build-release/
 
 # Sensitive or high-churn files:
 .idea/dataSources.ids
@@ -18,7 +19,7 @@ cmake-build-debug/
 
 .DS_Store
 
-.idea
+.idea/
 
 *.xml
 
