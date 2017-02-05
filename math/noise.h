@@ -31,38 +31,32 @@ public:
     }
 
     /// Octabes of 2D Perlin noise
-    double octaves_of_perlin2d(int x, int y, int intensity, int amplitude, Vec3<float> chunk_pos, int chunk_size) const {
+    double octaves_of_perlin_2d(double x, double y, int intensity, double amplitude) const {
         float total = 0.0;
-        int n = intensity; // noise intensity
-        int p = amplitude; // noise amplitude (0) - plains, (1) - rugged, (2) - hills, (3) - mountains
+        int n = intensity;
+        double p = amplitude;
 
         for (unsigned int i = 0; i < n; ++i )  {
             int freq = 1 << i; // 2^i
-            double amp = pow(p, i);
-            // tot += noise( x * freq ) * amp;
-            total += perlin2d(x * freq, y * freq, chunk_pos, chunk_size) * amp;
+            double amp = std::pow(p, i);
+            // total += noise( x * freq ) * amp;
+            total += perlin_2d(x * freq, y * freq) * amp;
         }
         return total;
     }
 
     /// 2D Perlin noise (x, y), chunk_pos gives the frame for the coord (x, y) and dimension is the chunks size
-    double perlin2d(int x, int y, Vec3<float> chunk_pos, int chunk_size) const {
+    double perlin_2d(double X, double Y) const {
         /// Compress the coordinates inside the chunk; double part + int part = point coordinate
-        double a = y % chunk_size; // Integer offset inside the chunk
-        double yf = 1 - std::abs(a / chunk_size); // Float offset inside the chunk (0, 1)
-        double yi = chunk_pos.z / chunk_size; // Integer bounds from the world
-        double Y = yf + yi; // Relative position inside the chunk and the chunk from the world coords perspective
-
-        double b = x % chunk_size;
-        double xf = 1 - std::abs(b / chunk_size);
-        double xi = chunk_pos.x / chunk_size;
-        double X = xf + xi;
-
+        X += 0.01; Y += 0.01; // Scale coordinates to avoid integer becoming zero
         /// Grid points from the chunk in the world
-        int X0 = (int) (chunk_pos.x / chunk_size);
-        int X1 = (int) (chunk_pos.x + chunk_size) / chunk_size;
-        int Y0 = (int) chunk_pos.z / chunk_size;
-        int Y1 = (int) (chunk_pos.z + chunk_size) / chunk_size;
+        int X0 = (int) std::floor(X);
+        int Y0 = (int) std::floor(Y);
+        int X1 = (int) std::ceil(X);
+        int Y1 = (int) std::ceil(Y);
+
+        double yf = Y - Y0; // Float offset inside the chunk (0, 1)
+        double xf = X - X0; // Float offset inside the chunk (0, 1)
 
         /// Gradients using hashed indices from lookup list
         Vec2<double> x0y0 = grads[perms[(X0 + perms[Y0 % perms.size()]) % perms.size()]];
@@ -70,11 +64,11 @@ public:
         Vec2<double> x0y1 = grads[perms[(X0 + perms[Y1 % perms.size()]) % perms.size()]];
         Vec2<double> x1y1 = grads[perms[(X1 + perms[Y1 % perms.size()]) % perms.size()]];
 
-        /// Vectors from gradients to point in unit squere
-        auto v00 = Vec2<double>{X0 - X, Y0 - Y};
-        auto v10 = Vec2<double>{X1 - X, Y0 - Y};
-        auto v01 = Vec2<double>{X0 - X, Y1 - Y};
-        auto v11 = Vec2<double>{X1 - X, Y1 - Y};
+        /// Vectors from gradients to point in unit square
+        auto v00 = Vec2<double>{X - X0, Y - Y0}.normalize();
+        auto v10 = Vec2<double>{X - X1, Y - Y0}.normalize();
+        auto v01 = Vec2<double>{X - X0, Y - Y1}.normalize();
+        auto v11 = Vec2<double>{X - X1, Y - Y1}.normalize();
 
         /// Contribution of gradient vectors by dot product between relative vectors and gradients
         double d00 = x0y0.dot(v00);
@@ -86,16 +80,19 @@ public:
         auto wx = fade(xf);
         auto wy = fade(yf);
 
+        /// Interpolate along x for the contributions from each of the gradients
         auto xa = lerp(wx, d00, d10);
         auto xb = lerp(wx, d01, d11);
+
         auto ya = lerp(wy, xa, xb);
 
-        return ya * 10;
+        return ya;
     }
 
 private:
+    static inline float smoothstep(const float &t) { return t * t * (3 - 2 * t); }
     static inline double fade(double t) { return t * t * t * (t * (t * 6 - 15) + 10); }
-    static inline double lerp(double t, double a, double b) { return a + t * (b - a); }
+    static inline double lerp(double t, double a, double b) { return (1 - t) * a + t * b; }
 };
 
 #endif //MEINEKRAFT_NOISE_H

@@ -15,6 +15,9 @@ public:
     Vec3<float> center_position;
     uint16_t num_blocks;
     std::vector<std::unique_ptr<Block>> blocks;
+
+    /// Transforms from world coordinates relative to Chunks coordinate system
+    Vec2<float> world_coord(float x, float z);
 };
 
 #endif //MEINEKRAFT_CHUNK_H
