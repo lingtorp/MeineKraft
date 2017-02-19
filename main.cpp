@@ -44,8 +44,21 @@ int main() {
     // Skybox skybox{};
     // world.add_entity(&skybox);
 
-    Teapot teapot{};
-    world.add_entity(&teapot);
+    std::string directory = "/Users/AlexanderLingtorp/Desktop/";
+    std::string falu_stuga = "/Users/AlexanderLingtorp/Desktop/falu-stuga.obj";
+    std::string dragon = "/Users/AlexanderLingtorp/Desktop/dragon.obj";
+    std::string teapot = "/Users/AlexanderLingtorp/Desktop/teapot.obj";
+
+    Teapot teapot0{falu_stuga, directory};
+
+    Teapot teapot1{falu_stuga, directory};
+    teapot1.position = {50, 0, 0};
+
+    Teapot teapot2{falu_stuga, directory};
+    teapot2.position = {50, 0, 50};
+
+    Teapot teapot3{falu_stuga, directory};
+    teapot3.position = {0, 0, 50};
 
     bool DONE = false;
     uint32_t last_tick = SDL_GetTicks(), current_tick, delta;

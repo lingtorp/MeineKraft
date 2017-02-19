@@ -6,14 +6,7 @@
 
 class Teapot: public Entity {
 public:
-    Teapot();
-
-    RenderComponent render_comp;
-
-    constexpr uint64_t generate_entity_id() {
-        // TODO: Iterate generate the next entity id
-        return 2;
-    }
+    Teapot(std::string mesh_file, std::string directory);
 };
 
 #endif //MEINEKRAFT_TEAPOT_H

@@ -18,6 +18,7 @@ class RenderComponent;
 class GraphicsBatch;
 class Shader;
 class FileMonitor;
+class MeshManager;
 
 struct Cube;
 
@@ -35,11 +36,11 @@ public:
     /// Main render function, renders all the graphics batches and so on
     void render(uint32_t delta);
 
-    /// Loads a mesh from a file
-    Mesh load_mesh_from_file(std::string filepath, std::string directory_filepath);
+    /// Request a loading of a mesh
+    uint64_t load_mesh(std::string filepath, std::string directory);
 
-    /// Adds the RenderComponent to a internal batch with the same Entity.hash_id
-    void add_to_batch(RenderComponent *component, Mesh mesh);
+    /// Adds the RenderComponent to a internal batch
+    void add_to_batch(RenderComponent *component, uint64_t mesh_id);
 
     /// Removes the RenderComponent from a internal batch with the same Entity.hash_id
     void remove_from_batch(RenderComponent *component);
@@ -67,6 +68,8 @@ private:
     std::unordered_map<ShaderType, Shader, std::hash<int>> shaders;
 
     std::vector<GraphicsBatch> graphics_batches;
+
+    MeshManager *mesh_manager;
 
     bool point_inside_frustrum(Vec3<float> point, std::array<Plane<float>, 6> planes);
     std::array<Plane<float>, 6> extract_planes(Mat4<float> matrix);

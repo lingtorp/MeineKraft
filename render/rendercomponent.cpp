@@ -1,20 +1,17 @@
 #include "rendercomponent.h"
 #include "render.h"
+#include "../nodes/entity.h"
 
-RenderComponent::RenderComponent(Entity *entity, std::string mesh_file, std::string directory_file): entity(entity), graphics_state{} {
-    auto mesh = Renderer::instance().load_mesh_from_file(mesh_file, directory_file);
-    Renderer::instance().add_to_batch(this, mesh);
+RenderComponent::RenderComponent(Entity *entity): entity(entity), graphics_state{} {}
+
+void RenderComponent::set_obj_mesh(std::string mesh_file, std::string directory_file) {
+    // TODO: Remove from previous batch - since we are chaning mesh and thus geo. data
+    auto mesh_id = Renderer::instance().load_mesh(mesh_file, directory_file);
+    Renderer::instance().add_to_batch(this, mesh_id);
 };
 
-RenderComponent::RenderComponent(Entity *entity): entity(entity), graphics_state{} {
-    auto mesh = Cube();
-    Renderer::instance().add_to_batch(this, mesh);
-}
-
-void RenderComponent::remove_component() {
-    Renderer::instance().remove_from_batch(this);
-}
-
-void RenderComponent::set_cube_map_texture(Texture texture) {
-//    graphics_state.gl_texture = texture;
-}
+void RenderComponent::update() {
+    // TODO: Copy entity positional data to graphics_state
+    graphics_state.scale = entity->scale;
+    graphics_state.position = entity->position;
+};

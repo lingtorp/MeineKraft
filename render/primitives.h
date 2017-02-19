@@ -215,11 +215,18 @@ struct Plane {
     }
 };
 
+/**
+ * Contains a copy of the Entity positional data which is used to render the object
+ * This will allow for double buffering in the future since the copy is before all
+ * the modifications are made by Transforms and other subsystems.
+ */
 struct GraphicsState {
     Vec3<float> position;
     Vec3<float> rotation;
     float scale;
-    // Texture texture = {};
+    Vec3<float> center;
+    double radius;
+    Texture texture;
 };
 
 struct RenderState {

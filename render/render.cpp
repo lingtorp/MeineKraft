@@ -9,10 +9,10 @@
 
 #include "graphicsbatch.h"
 #include "rendercomponent.h"
-#include "../nodes/entity.h"
 #include "shader.h"
 #include "../util/filemonitor.h"
 #include "transform.h"
+#include "MeshManager.hpp"
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "../include/tinyobjloader/tiny_obj_loader.h"
@@ -64,7 +64,7 @@ Mat4<float> gen_projection_matrix(float z_near, float z_far, float fov, float as
 }
 
 Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), state{}, graphics_batches{}, shaders{},
-                      shader_file_monitor(std::make_unique<FileMonitor>()), lights{} {
+                      shader_file_monitor(std::make_unique<FileMonitor>()), lights{}, mesh_manager{new MeshManager()} {
     glewExperimental = (GLboolean) true;
     glewInit();
 
@@ -140,8 +140,7 @@ bool Renderer::point_inside_frustrum(Vec3<float> point, std::array<Plane<float>,
     const auto dist_b = bot_plane.distance_to_point(point);
     const auto dist_n = near_plane.distance_to_point(point);
     const auto dist_f = far_plane.distance_to_point(point);
-    if (dist_l < 0 && dist_r < 0 && dist_t < 0 && dist_b < 0 && dist_n < 0 && dist_f < 0) { return true; }
-    return false;
+    return dist_l < 0 && dist_r < 0 && dist_t < 0 && dist_b < 0 && dist_n < 0 && dist_f < 0;
 }
 
 void Renderer::render(uint32_t delta) {
@@ -158,7 +157,7 @@ void Renderer::render(uint32_t delta) {
             std::tie(success, err_msg) = shader.recompile();
             if (!success) { SDL_Log("%s", err_msg.c_str()); continue; }
             for (auto &batch : graphics_batches) {
-                if (batch.shader_program == shader_key) {
+                if (batch.shader_type == shader_key) {
                     link_batch(batch); // relink the batch
                 }
             }
@@ -188,7 +187,7 @@ void Renderer::render(uint32_t delta) {
 
     for (auto &batch : graphics_batches) {
         glBindVertexArray(batch.gl_VAO);
-        glUseProgram(shaders.at(batch.shader_program).gl_program);
+        glUseProgram(shaders.at(batch.shader_type).gl_program);
         glUniformMatrix4fv(batch.gl_camera_view, 1, GL_FALSE, camera_view.data());
         glUniform3fv(batch.gl_camera_position, 1, (const GLfloat *) &camera->position);
 
@@ -203,12 +202,14 @@ void Renderer::render(uint32_t delta) {
 
         std::vector<Mat4<float>> buffer{};
         for (auto &component : batch.components) {
+            component->update();
+
             // Draw distance
-            auto camera_to_entity = camera->position - component->entity->position;
+            auto camera_to_entity = camera->position - component->graphics_state.position;
             if (camera_to_entity.length() >= DRAW_DISTANCE) { continue; }
 
             // Frustrum cullling
-            if (point_inside_frustrum(component->entity->position, planes)) { continue; }
+            if (point_inside_frustrum(component->graphics_state.position, planes)) { continue; }
 
             // Dream:
             // GL_TEXTURE_CUBE_MAP
@@ -217,11 +218,11 @@ void Renderer::render(uint32_t delta) {
             // Reality
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(batch.mesh.texture.gl_texture_type, batch.mesh.texture.gl_texture);
-            glUniform1i(glGetUniformLocation(shaders.at(batch.shader_program).gl_program, "diffuse_sampler"), 0);
+            glUniform1i(glGetUniformLocation((GLuint) shaders.at(batch.shader_type).gl_program, "diffuse_sampler"), 0);
 
             Mat4<float> model{};
-            model = model.translate(component->entity->position);
-            model = model.scale(component->entity->scale);
+            model = model.translate(component->graphics_state.position);
+            model = model.scale(component->graphics_state.scale);
             buffer.push_back(model.transpose());
         }
         glBindBuffer(GL_ARRAY_BUFFER, batch.gl_models_buffer_object);
@@ -291,80 +292,25 @@ void Renderer::update_projection_matrix(float fov) {
     }
 }
 
-void Renderer::add_to_batch(RenderComponent *component, Mesh mesh) {
+void Renderer::add_to_batch(RenderComponent *component, uint64_t mesh_id) {
     for (auto &batch : graphics_batches) {
-        if (batch.hash_id == component->entity->hash_id) {
+        if (batch.mesh_id == mesh_id) {
             batch.components.push_back(component);
             return;
         }
     }
 
-    GraphicsBatch batch{component->entity->hash_id};
-    batch.mesh = mesh;
-    batch.shader_program = ShaderType::STANDARD_SHADER;
+    GraphicsBatch batch{mesh_id};
+    batch.mesh = mesh_manager->mesh_from_id(mesh_id);
+    batch.shader_type = ShaderType::STANDARD_SHADER;
     link_batch(batch);
 
     batch.components.push_back(component);
     graphics_batches.push_back(batch);
 }
 
-Mesh Renderer::load_mesh_from_file(std::string filepath, std::string directory_filepath) {
-    tinyobj::attrib_t attrib;
-    std::vector<tinyobj::shape_t> shapes;
-    std::vector<tinyobj::material_t> materials;
-    std::string err;
-    auto success = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, filepath.c_str(), directory_filepath.c_str(), true);
-    if (!success) { SDL_Log("Failed loading mesh %s: %s", filepath.c_str(), err.c_str()); return Mesh(); }
-    if (err.size() > 0) { SDL_Log("%s", err.c_str()); }
-
-    std::unordered_map<Vertex<float>, size_t> unique_vertices{};
-    Mesh mesh{};
-    for (const auto &shape : shapes) { // Shapes
-        for (const auto &idx : shape.mesh.indices) { // Faces
-            Vertex<float> vertex{};
-            float vx = attrib.vertices[3 * idx.vertex_index + 0];
-            float vy = attrib.vertices[3 * idx.vertex_index + 1];
-            float vz = attrib.vertices[3 * idx.vertex_index + 2];
-            vertex.position = {vx, vy, vz};
-
-            float tx = attrib.texcoords[2 * idx.texcoord_index + 0];
-            float ty = attrib.texcoords[2 * idx.texcoord_index + 1];
-            vertex.texCoord = {tx, 1.0f - ty}; // .obj format has flipped y-axis compared to OpenGL
-
-            float nx = attrib.normals[3 * idx.normal_index + 0];
-            float ny = attrib.normals[3 * idx.normal_index + 1];
-            float nz = attrib.normals[3 * idx.normal_index + 2];
-            vertex.normal = Vec3<float>{nx, ny, nz}.normalize();
-
-            if (unique_vertices.count(vertex) == 0) {
-                unique_vertices[vertex] = mesh.vertices.size();
-                mesh.indices.push_back(mesh.vertices.size());
-                mesh.vertices.push_back(vertex);
-            } else {
-                mesh.indices.push_back(unique_vertices.at(vertex));
-            }
-        }
-    }
-
-    std::unordered_map<std::string, uint64_t> loaded_textures{};
-    for (const auto &material : materials) {
-        /// Color map, a.k.a diffuse map
-        if (!loaded_textures[directory_filepath + material.diffuse_texname]) {
-            Texture diffuse_texture{};
-            diffuse_texture.load(material.diffuse_texname, directory_filepath);
-            if (diffuse_texture.loaded_succesfully) {
-                mesh.texture = diffuse_texture;
-                loaded_textures[material.diffuse_texname] = diffuse_texture.gl_texture;
-            }
-        }
-    }
-
-    SDL_Log("Number of vertices: %lu for model %s", mesh.vertices.size(), filepath.c_str());
-    return mesh;
-}
-
 void Renderer::link_batch(GraphicsBatch &batch) {
-    auto batch_shader_program = shaders.at(batch.shader_program).gl_program;
+    auto batch_shader_program = shaders.at(batch.shader_type).gl_program;
 
     glGenVertexArrays(1, &batch.gl_VAO);
     glBindVertexArray(batch.gl_VAO);
@@ -430,6 +376,17 @@ void Renderer::remove_from_batch(RenderComponent *component) {
                 vec.erase(std::remove(vec.begin(), vec.end(), component), vec.end());
             }
         }
+    }
+}
+
+uint64_t Renderer::load_mesh(std::string filepath, std::string directory) {
+    uint64_t mesh_id;
+    bool loaded;
+    std::tie(mesh_id, loaded) = mesh_manager->is_mesh_loaded(filepath, directory);
+    if (loaded) {
+        return mesh_id;
+    } else {
+        return mesh_manager->load_mesh_from_file(filepath, directory);
     }
 }
 
