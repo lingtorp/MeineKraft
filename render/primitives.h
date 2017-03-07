@@ -93,6 +93,11 @@ namespace std {
     };
 }
 
+/// Represen
+enum class MeshPrimitive {
+    Cube
+};
+
 struct Mesh {
     std::vector<Vertex<float>> vertices;
     std::vector<uint32_t> indices;
