@@ -79,24 +79,6 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
     glBindBuffer(GL_UNIFORM_BUFFER, gl_light_uniform_buffer);
     glBufferData(GL_UNIFORM_BUFFER, sizeof(Light) * lights.size(), &lights, GL_DYNAMIC_DRAW);
 
-    // TODO: Load all block & skybox textures
-    const auto base = "/Users/AlexanderLingtorp/Google Drive/Repositories/MeineKraft/";
-    std::vector<std::string> cube_faces = {base + std::string("res/blocks/grass/side.jpg"),
-                                           base + std::string("res/blocks/grass/side.jpg"),
-                                           base + std::string("res/blocks/grass/top.jpg"),
-                                           base + std::string("res/blocks/grass/bottom.jpg"),
-                                           base + std::string("res/blocks/grass/side.jpg"),
-                                           base + std::string("res/blocks/grass/side.jpg")};
-    // this->textures[Texture::GRASS] = load_cube_map(cube_faces, jpg);
-
-    std::vector<std::string> skybox_faces = {base + std::string("res/sky/right.jpg"),
-                                             base + std::string("res/sky/left.jpg"),
-                                             base + std::string("res/sky/top.jpg"),
-                                             base + std::string("res/sky/bottom.jpg"),
-                                             base + std::string("res/sky/back.jpg"),
-                                             base + std::string("res/sky/front.jpg")};
-    // this->textures[Texture::SKYBOX] = load_cube_map(skybox_faces, jpg);
-
     /// Compile shaders
     // Files are truly horrible and filepaths are even worse, therefore this is not scalable
     const std::string shader_base_filepath = "/Users/AlexanderLingtorp/Google Drive/Repositories/MeineKraft/shaders/";
