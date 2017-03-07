@@ -41,8 +41,7 @@ int main() {
     // Init the world with seed
     World world{1};
 
-    // Skybox skybox{};
-    // world.add_entity(&skybox);
+    Skybox skybox{};
 
     std::string directory = "/Users/AlexanderLingtorp/Desktop/";
     std::string falu_stuga = "/Users/AlexanderLingtorp/Desktop/falu-stuga.obj";
@@ -59,6 +58,12 @@ int main() {
 
     Teapot teapot3{falu_stuga, directory};
     teapot3.position = {0, 0, 50};
+
+    Teapot *new_teapot;
+    for (int i = 0; i < 4; i++) {
+        new_teapot = new Teapot{falu_stuga, directory};
+        new_teapot->position = Vec3<float>{i * 50.0f, 0, i * 50.0f};
+    }
 
     bool DONE = false;
     uint32_t last_tick = SDL_GetTicks(), current_tick, delta;
@@ -112,7 +117,7 @@ int main() {
         ImGui_ImplSdlGL3_NewFrame(window);
 
         /// Tick/update the world
-        world.world_tick(delta, renderer.camera);
+        // world.world_tick(delta, renderer.camera);
 
         /// Render the world
         renderer.render(delta);
