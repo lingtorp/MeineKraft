@@ -23,6 +23,9 @@ private:
 
     /// Assumes the file exists and will seg. fault otherwise.
     const std::string load_shader_source(std::string filename) const;
+
+    /// Checks if a file exists
+    bool file_exists(std::string filename) const;
 };
 
 #endif //MEINEKRAFT_SHADER_H

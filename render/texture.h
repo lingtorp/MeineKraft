@@ -12,22 +12,26 @@ class Texture {
 public:
     Texture();
 
-    /// Returns the OpenGL texture id
-    uint64_t load(std::string filepath, std::string directory);
+    bool load_1d(std::string filepath);
+    bool load_2d(std::string filepath);
+    bool load_cube_map(std::vector<std::string> faces);
 
     uint64_t gl_texture;
     uint64_t gl_texture_type;
     uint64_t gl_texture_location;
-    bool loaded_succesfully;
+    bool loaded_successfully;
 
 private:
     /// Returns a default texture when no texture could be loaded for various reasons
     uint64_t default_texture();
+
     uint64_t load_1d_texture(std::string filepath);
     uint64_t load_2d_texture(std::string filepath);
-    uint64_t load_cube_map(std::vector<std::string> faces, FileExtension file_format);
+    uint64_t load_cube_map(std::vector<std::string> faces, FileExtension file_extension);
+
+    /// Conversion methods from and to FileExtension and their OpenGL counterparts
     FileExtension file_format_from_file_at(std::string filepath);
-    uint64_t gl_format_from_file_extension(FileExtension file_format);
+    uint64_t gl_format_from_file_extension(FileExtension file_extension);
 };
 
 #endif //MEINEKRAFT_TEXTURE_H

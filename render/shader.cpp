@@ -12,6 +12,10 @@ Shader::Shader(std::string vertex_filepath, std::string fragment_filepath): vert
                                                                             gl_program(0) {}
 
 std::pair<bool, std::string> Shader::compile() {
+    if (!file_exists(vertex_filepath) || !file_exists(fragment_filepath)) {
+        return {false, "File(s) do not exists: " + vertex_filepath + " and/or " + fragment_filepath};
+    }
+
     auto vertex_src   = load_shader_source(vertex_filepath);
     auto fragment_src = load_shader_source(fragment_filepath);
 
@@ -132,6 +136,11 @@ std::pair<bool, std::string> Shader::recompile() {
     glGetShaderInfoLog(vertex_shader  , err_size, NULL, (char *) vert_err_msg.c_str());
     return {false, frag_err_msg + vert_err_msg};
 };
+
+bool Shader::file_exists(std::string filename) const {
+    std::ifstream ifs(filename);
+    return ifs.good();
+}
 
 const std::string Shader::load_shader_source(std::string filename) const {
     std::ifstream ifs(filename);

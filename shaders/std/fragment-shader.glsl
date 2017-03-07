@@ -12,7 +12,7 @@ in vec4 fPosition;
 /// Lights
 struct Light {
     vec4 color;
-    vec4 light_intensity; // (ambient, diffuse, specular, padding) itensity
+    vec4 light_intensity; // (ambient, diffuse, specular, padding) - itensities
     vec3 position;
 };
 
