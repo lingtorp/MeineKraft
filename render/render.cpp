@@ -390,4 +390,44 @@ uint64_t Renderer::load_mesh(std::string filepath, std::string directory) {
     }
 }
 
+uint64_t Renderer::load_mesh_primitive(MeshPrimitive primitive) {
+    return mesh_manager->mesh_id_from_primitive(primitive);
+}
 
+Texture Renderer::setup_texture(RenderComponent *component, Texture texture) {
+    for (auto &batch : graphics_batches) {
+        for (auto &batch_comp : batch.components) {
+            if (batch_comp == component) {
+                std::string uniform_location = "diffuse_sampler";
+                texture.gl_texture_location = glGetUniformLocation(batch.shader_type, uniform_location.c_str());
+            }
+        }
+    }
+    return texture;
+}
+
+void Renderer::load_obj_textures(RenderComponent *component, std::string filepath, std::string directory) {
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+    std::string err;
+    auto success = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, filepath.c_str(), directory.c_str(), true);
+    if (!success) { SDL_Log("Failed loading .obj textures %s: %s", filepath.c_str(), err.c_str()); return; }
+    if (err.size() > 0) { SDL_Log("%s", err.c_str()); return; }
+
+    std::unordered_map<std::string, bool> loaded_textures{};
+    for (const auto &material : materials) {
+        /// Color map, a.k.a diffuse map
+        if (!loaded_textures[directory + material.diffuse_texname]) {
+            Texture diffuse_texture{};
+            diffuse_texture.load_2d(directory + material.diffuse_texname);
+            if (diffuse_texture.loaded_successfully) {
+                diffuse_texture = setup_texture(component, diffuse_texture);
+                component->graphics_state.diffuse_texture = diffuse_texture;
+                loaded_textures[directory + material.diffuse_texname] = true;
+            }
+        }
+        // TODO: Support other textures
+        // TODO: Support more than one material per .obj mesh
+    }
+}
