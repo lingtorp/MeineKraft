@@ -31,13 +31,20 @@ public:
     /// Creates a RenderComponent with the mesh of a .obj file
     RenderComponent(Entity *entity);
 
-    void update() override;
-
+    /// Sets the mesh for the RenderComponent from the .obj file in directory_file
     void set_obj_mesh(std::string mesh_file, std::string directory_file);
 
-    void did_attach_to_entity(Entity *entity) override {
+    /// Sets the mesh to one of the Mesh primitives
+    void set_mesh(MeshPrimitive primitive);
 
-    }
+    /** Component Interface **/
+    void update() override;
+
+    void did_attach_to_entity(Entity *entity) override {}
+
+    /// Sets the cube map texture to the bounded mesh
+    /// order; right, left, top, bot, back, front
+    void set_cube_map_texture(std::vector<std::string> faces);
 };
 
 #endif //MEINEKRAFT_RENDERCOMPONENT_H
