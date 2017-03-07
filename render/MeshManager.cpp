@@ -2,7 +2,9 @@
 #include <SDL2/SDL_log.h>
 #include "../include/tinyobjloader/tiny_obj_loader.h"
 
-MeshManager::MeshManager(): meshes{} {}
+MeshManager::MeshManager(): meshes{}, meshes_loaded(0) {
+    meshes[++meshes_loaded] = {Cube(), ""};
+}
 
 std::pair<uint64_t, bool> MeshManager::is_mesh_loaded(std::string filepath, std::string directory) {
     for (auto &entry : meshes) {
@@ -14,6 +16,7 @@ std::pair<uint64_t, bool> MeshManager::is_mesh_loaded(std::string filepath, std:
 }
 
 uint64_t MeshManager::load_mesh_from_file(std::string filepath, std::string directory) {
+    // TODO: Support other formats, Open Asset Import lib?
     auto mesh = load_obj_mesh_from_file(filepath, directory);
     MeshInformation mesh_info{mesh, filepath + directory};
     meshes[++meshes_loaded] = mesh_info;
@@ -62,19 +65,13 @@ Mesh MeshManager::load_obj_mesh_from_file(std::string filepath, std::string dire
         }
     }
 
-    std::unordered_map<std::string, uint64_t> loaded_textures{};
-    for (const auto &material : materials) {
-        /// Color map, a.k.a diffuse map
-        if (!loaded_textures[directory + material.diffuse_texname]) {
-            Texture diffuse_texture{};
-            diffuse_texture.load(material.diffuse_texname, directory);
-            if (diffuse_texture.loaded_succesfully) {
-                mesh.texture = diffuse_texture;
-                loaded_textures[material.diffuse_texname] = diffuse_texture.gl_texture;
-            }
-        }
-    }
-
     SDL_Log("Number of vertices: %lu for model %s", mesh.vertices.size(), filepath.c_str());
     return mesh;
+}
+
+uint64_t MeshManager::mesh_id_from_primitive(MeshPrimitive primitive) {
+    switch (primitive) {
+        case MeshPrimitive::Cube:
+            return 0;
+    }
 }
