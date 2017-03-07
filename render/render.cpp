@@ -76,14 +76,13 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
     transform.repeat = true;
     transformations.push_back(transform);
 
-    // Light uniform buffer
+    /// Light uniform buffer
     glGenBuffers(1, &gl_light_uniform_buffer);
     glBindBuffer(GL_UNIFORM_BUFFER, gl_light_uniform_buffer);
     glBufferData(GL_UNIFORM_BUFFER, sizeof(Light) * lights.size(), &lights, GL_DYNAMIC_DRAW);
 
     /// Compile shaders
-    // Files are truly horrible and filepaths are even worse, therefore this is not scalable
-    const std::string shader_base_filepath = "/Users/AlexanderLingtorp/Google Drive/Repositories/MeineKraft/shaders/";
+    const std::string shader_base_filepath = "/Users/AlexanderLingtorp/Repositories/MeineKraft/shaders/";
     std::string err_msg;
     bool success;
 
@@ -91,20 +90,22 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
     const auto skybox_frag = shader_base_filepath + "skybox/fragment-shader.glsl";
     Shader skybox_shader(skybox_vert, skybox_frag);
     std::tie(success, err_msg) = skybox_shader.compile();
-    shaders.insert({ShaderType::SKYBOX_SHADER, skybox_shader});
     if (!success) { SDL_Log("%s", err_msg.c_str()); }
 
-    const auto std_vert = shader_base_filepath + "block/vertex-shader.glsl";
-    const auto std_frag = shader_base_filepath + "block/fragment-shader.glsl";
+    shaders.insert({ShaderType::SKYBOX_SHADER, skybox_shader});
+
+    const auto std_vert = shader_base_filepath + "std/vertex-shader.glsl";
+    const auto std_frag = shader_base_filepath + "std/fragment-shader.glsl";
     Shader std_shader(std_vert, std_frag);
     std::tie(success, err_msg) = std_shader.compile();
-    shaders.insert({ShaderType::STANDARD_SHADER, std_shader});
     if (!success) { SDL_Log("%s", err_msg.c_str()); }
+
+    shaders.insert({ShaderType::STANDARD_SHADER, std_shader});
 
     shader_file_monitor->add_file(shader_base_filepath + "skybox/vertex-shader.glsl");
     shader_file_monitor->add_file(shader_base_filepath + "skybox/fragment-shader.glsl");
-    shader_file_monitor->add_file(shader_base_filepath + "block/vertex-shader.glsl");
-    shader_file_monitor->add_file(shader_base_filepath + "block/fragment-shader.glsl");
+    shader_file_monitor->add_file(shader_base_filepath + "std/vertex-shader.glsl");
+    shader_file_monitor->add_file(shader_base_filepath + "std/fragment-shader.glsl");
     shader_file_monitor->start_monitor();
 
     /// Camera
@@ -162,9 +163,9 @@ void Renderer::render(uint32_t delta) {
     glEnable(GL_MULTISAMPLE);
     glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
 
-    for (auto &transform : transformations) { transform.update(delta); } // TODO: Move this kind of comp. into seperate thread or something
-
-    lights[0] = transformations[0].current_position; // FIXME: Transforms are not updating their Entities..
+    // TODO: Move this kind of comp. into seperate thread or something
+    for (auto &transform : transformations) { transform.update(delta); }
+    lights[0].position = transformations[0].current_position; // FIXME: Transforms are not updating their Entities..
 
     // TODO: Update number of lights in the scene
     // TODO: Cull the lights
@@ -175,7 +176,6 @@ void Renderer::render(uint32_t delta) {
         glUniformMatrix4fv(batch.gl_camera_view, 1, GL_FALSE, camera_view.data());
         glUniform3fv(batch.gl_camera_position, 1, (const GLfloat *) &camera->position);
 
-        // TODO: Set the defaults in GraphicsState too
         glEnable(GL_CULL_FACE);
         glCullFace(GL_BACK);
         glFrontFace(GL_CCW);
@@ -186,7 +186,7 @@ void Renderer::render(uint32_t delta) {
 
         std::vector<Mat4<float>> buffer{};
         for (auto &component : batch.components) {
-            component->update();
+            component->update(); // Copy all graphics state
 
             // Draw distance
             auto camera_to_entity = camera->position - component->graphics_state.position;
@@ -195,13 +195,10 @@ void Renderer::render(uint32_t delta) {
             // Frustrum cullling
             if (point_inside_frustrum(component->graphics_state.position, planes)) { continue; }
 
-            // Dream:
-            // GL_TEXTURE_CUBE_MAP
-            // glBindTexture(component->graphics_state.texture.gl_texture_type, component->graphics_state.texture.gl_texture);
-
-            // Reality
             glActiveTexture(GL_TEXTURE0);
-            glBindTexture(batch.mesh.texture.gl_texture_type, batch.mesh.texture.gl_texture);
+            auto texture_type = (GLuint) component->graphics_state.diffuse_texture.gl_texture_type;
+            auto texture_location = (GLuint) component->graphics_state.diffuse_texture.gl_texture;
+            glBindTexture(texture_type, texture_location);
             glUniform1i(glGetUniformLocation((GLuint) shaders.at(batch.shader_type).gl_program, "diffuse_sampler"), 0);
 
             Mat4<float> model{};
@@ -323,9 +320,6 @@ void Renderer::link_batch(GraphicsBatch &batch) {
     GLint texCoordAttrib = glGetAttribLocation(batch_shader_program, "vTexCoord");
     glVertexAttribPointer(texCoordAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *)offsetof(Vertex<float>, texCoord));
     glEnableVertexAttribArray(texCoordAttrib);
-
-    GLint texture_sampler = glGetUniformLocation(batch_shader_program, "diffuse_sampler");
-    batch.mesh.texture.gl_texture_location = texture_sampler;
 
     // Lights UBO
     auto block_index = glGetUniformBlockIndex(batch_shader_program, "lights_block");
