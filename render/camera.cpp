@@ -1,5 +1,9 @@
 #include "camera.h"
 
+Camera::Camera(Vec3<float> position, Vec3<float> direction, Vec3<float> world_up):
+        position(position), direction(direction), up(world_up),
+        pitch(0), yaw(0), velocity(0), max_velocity(2), acceleration(0.1) {};
+
 Vec3<float> Camera::move_forward(double delta) {
     velocity = std::min(velocity + acceleration * delta, max_velocity);
     return position + direction * velocity;
@@ -29,6 +33,4 @@ Vec3<float> Camera::recalculate_direction() const {
     return result.normalize();
 }
 
-void Camera::update(double delta) {
-    acceleration = std::max(std::abs(acceleration - 0.1 * delta), 0.0);
-}
+void Camera::update(double delta) {}
