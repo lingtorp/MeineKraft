@@ -3,12 +3,6 @@
 
 #include "../math/vector.h"
 
-/**
- * There is a oppotunity here to create some template meta-programming madness with transform settings and transforms.
- * 1. Create a transform-settings struct to contain all the crazy options a transform can have
- * 2. Pass that into a factory which will generate the source for each of the transforms
- */
-
 struct Transform {
     bool finished;
     bool repeat;
@@ -21,13 +15,22 @@ struct Transform {
     uint64_t time_elapsed;
     const uint64_t duration;
 
-    Transform(Vec3<float> from, Vec3<float> to, uint64_t duration): from_position(from), to_position(to), current_position(from), time_elapsed(0), duration(duration), finished(false), repeat(false) {};
+    Transform(): from_position{}, current_position{}, to_position{}, duration(0), time_elapsed(0), repeat(false), finished(false) {};
+    // std::function ...
+
+    void start() const {
+        // Start the transform by adding it to the runloop?
+    }
 
     void update(uint64_t delta) {
-        if (time_elapsed >= duration) { finished = true; return; }
+        if (time_elapsed >= duration && !repeat) {
+            finished = true;
+            return;
+        }
         time_elapsed += delta;
         current_position.x = 30 * sinf(time_elapsed * M_PI_2 / 1000);
         current_position.z = 30 * cosf(time_elapsed * M_PI_2 / 1000);
+
     }
 };
 

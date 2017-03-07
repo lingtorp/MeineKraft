@@ -71,7 +71,9 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
     Light light{Vec3<float>{15.0, 15.0, 15.0}, Color4<float>{0.4, 0.4, 0.8, 1.0}};
     lights.push_back(light);
 
-    Transform transform = {light.position, light.position + Vec3<float>{0.5, 0.5, 0.5}, 100000};
+    Transform transform;
+    transform.current_position = light.position;
+    transform.repeat = true;
     transformations.push_back(transform);
 
     // Light uniform buffer
