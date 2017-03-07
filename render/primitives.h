@@ -96,11 +96,10 @@ namespace std {
 struct Mesh {
     std::vector<Vertex<float>> vertices;
     std::vector<uint32_t> indices;
-    Texture texture; // FIXME: One texture per mesh for now
 
-    Mesh(): vertices{}, indices{}, texture{} {};
+    Mesh(): vertices{}, indices{} {};
 
-    Mesh(std::vector<Vertex<float>> vertices, std::vector<uint32_t> indices): vertices(vertices), indices(indices), texture{} {};
+    Mesh(std::vector<Vertex<float>> vertices, std::vector<uint32_t> indices): vertices(vertices), indices(indices) {};
 
     /// Return a vector of all the vertices data laid out as the Vertex struct
     std::vector<float> to_floats() const {
@@ -134,12 +133,7 @@ struct Mesh {
 };
 
 struct Cube: Mesh {
-    Vec3<float> position; // Lower left corner of the cube in world space
-    float theta_x, theta_y, theta_z; // Rotation in object space
-    float scale;
-
-    Cube(): Mesh(), scale(1.0), position(Vec3<float>::ZERO()),
-            theta_x(0.0), theta_y(0.0), theta_z(0.0) {
+    Cube(): Mesh() {
         auto a = Vec3<float>(-0.5f, -0.5f, 0.5f);
         auto b = Vec3<float>(0.5f, -0.5f, 0.5f);
         auto c = Vec3<float>(0.5f, 0.5f, 0.5f);
@@ -191,7 +185,7 @@ struct Plane {
 
     /// Normal of the plane
     /// @return Normal vector of the plane
-    Vec3<T> normal() {
+    Vec3<T> normal() const {
         return Vec3<T>(a, b, c);
     }
 
@@ -224,11 +218,12 @@ struct GraphicsState {
     Vec3<float> position;
     Vec3<float> rotation;
     float scale;
+    Texture diffuse_texture;
     Vec3<float> center;
     double radius;
-    Texture texture;
 };
 
+/// Represents the state of the Render, used for ImGUI debug panes
 struct RenderState {
     uint64_t entities;
     uint64_t graphic_batches;
