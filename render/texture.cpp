@@ -8,6 +8,8 @@
 #include <SDL2/SDL_surface.h>
 #include <SDL2/SDL_image.h>
 
+Texture::Texture(): gl_texture(0), gl_texture_type(0), gl_texture_location(0), loaded_successfully(false) {}
+
 uint64_t Texture::default_texture() {
     // TODO: Implement
     return 0;
@@ -24,18 +26,19 @@ FileExtension Texture::file_format_from_file_at(std::string filepath) {
     }
 }
 
-uint64_t Texture::gl_format_from_file_extension(FileExtension file_format) {
-    switch (file_format) {
+uint64_t Texture::gl_format_from_file_extension(FileExtension file_extension) {
+    switch (file_extension) {
         case FileExtension::png:
             return GL_RGBA;
+        case FileExtension ::jpg:
+            return GL_RGB;
         default:
-            return 0;
+            return GL_RGBA;
     }
 }
 
 /// Texture loading order; right, left, top, bottom, back, front
-uint64_t Texture::load_cube_map(std::vector<std::string> faces, FileExtension file_format) {
-    assert(faces.size() == 6);
+uint64_t Texture::load_cube_map(std::vector<std::string> faces, FileExtension file_extension) {
     GLuint texture;
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
@@ -47,21 +50,12 @@ uint64_t Texture::load_cube_map(std::vector<std::string> faces, FileExtension fi
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glGenerateMipmap(GL_TEXTURE_2D);
 
-    GLint internal_format;
-    switch (file_format) {
-        case FileExtension::png:
-            internal_format = GL_RGBA;
-            break;
-        case FileExtension::jpg:
-            internal_format = GL_RGB;
-            break;
-        default:
-            internal_format = GL_RGBA;
-    }
+    GLint internal_format = (GLint) gl_format_from_file_extension(file_extension);
 
     int i = 0;
     for (auto filepath : faces) {
         SDL_Surface *image = IMG_Load(filepath.c_str());
+        if (image == nullptr) { continue; }
         int width  = image->w;
         int height = image->h;
         glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, internal_format, width, height, 0, internal_format, GL_UNSIGNED_BYTE, image->pixels);
@@ -88,7 +82,7 @@ uint64_t Texture::load_2d_texture(std::string filepath) {
     glGenerateMipmap(GL_TEXTURE_2D);
     auto file_format = file_format_from_file_at(filepath);
     if (file_format == FileExtension::unknown) { SDL_Log("%s %s", "Invalid file type:", filepath.c_str()); return default_texture();}
-    GLuint internal_format = gl_format_from_file_extension(file_format);
+    GLuint internal_format = (GLint) gl_format_from_file_extension(file_format);
     glTexImage2D(GL_TEXTURE_2D, 0, internal_format, width, height, 0, internal_format, GL_UNSIGNED_BYTE, image->pixels);
     SDL_FreeSurface(image);
     return texture;
@@ -108,19 +102,36 @@ uint64_t Texture::load_1d_texture(std::string filepath) {
     glGenerateMipmap(GL_TEXTURE_1D);
     auto file_format = file_format_from_file_at(filepath);
     if (file_format == FileExtension::unknown) { SDL_Log("%s %s", "Invalid file type:", filepath.c_str()); return default_texture();}
-    GLuint internal_format = gl_format_from_file_extension(file_format);
+    GLuint internal_format = (GLint) gl_format_from_file_extension(file_format);
     glTexImage1D(GL_TEXTURE_1D, 0, internal_format, width, 0, internal_format, GL_UNSIGNED_BYTE, image->pixels);
     SDL_FreeSurface(image);
     return texture;
 }
 
-Texture::Texture(): gl_texture(0), gl_texture_type(0), gl_texture_location(0), loaded_succesfully(false) {}
+bool Texture::load_cube_map(std::vector<std::string> faces) {
+    if (faces.size() != 6) { return false; }
+    auto file_extension = file_format_from_file_at(faces[0]);
+    if (file_extension == FileExtension::unknown) { return false; }
+    gl_texture = load_cube_map(faces, file_extension);
+    gl_texture_type = GL_TEXTURE_CUBE_MAP;
+    loaded_successfully = true;
+    return loaded_successfully;
+}
 
-uint64_t Texture::load(std::string filepath, std::string directory) {
-    // TODO: Figure out what type of file filepath is
-    // TODO: Figure out the color encoding of the file at filepath
-    gl_texture = load_2d_texture(directory + filepath);
+bool Texture::load_2d(std::string filepath) {
+    auto file_extension = file_format_from_file_at(filepath);
+    if (file_extension == FileExtension::unknown) { return false; }
+    gl_texture = load_2d_texture(filepath);
     gl_texture_type = GL_TEXTURE_2D;
-    loaded_succesfully = true;
-    return gl_texture;
+    loaded_successfully = true;
+    return loaded_successfully;
+}
+
+bool Texture::load_1d(std::string filepath) {
+    auto file_extension = file_format_from_file_at(filepath);
+    if (file_extension == FileExtension::unknown) { return false; }
+    gl_texture = load_1d_texture(filepath);
+    gl_texture_type = GL_TEXTURE_1D;
+    loaded_successfully = true;
+    return loaded_successfully;
 }
