@@ -26,7 +26,7 @@ public:
     Vec3<float> center;
     double radius;
 
-    Entity(): entity_id(generate_entity_id()), position{}, rotation{}, scale(1), center{}, radius(0) {}
+    Entity(): entity_id(generate_entity_id()), position{}, rotation{}, scale(1.0f), center{}, radius(0) {}
     ~Entity();
 
     /// Called once every frame
