@@ -3,10 +3,10 @@
 #include "../render/rendercomponent.h"
 
 Skybox::Skybox(): Entity() {
-    scale = 10;
+    scale = 100;
     auto render_comp = new RenderComponent(this);
     render_comp->set_mesh(MeshPrimitive::Cube);
-    const auto base = "/Users/AlexanderLingtorp/Google Drive/Repositories/MeineKraft/";
+    const auto base = "/Users/AlexanderLingtorp/Repositories/MeineKraft/";
     std::vector<std::string> faces = {base + std::string("res/sky/right.jpg"),
                                       base + std::string("res/sky/left.jpg"),
                                       base + std::string("res/sky/top.jpg"),
