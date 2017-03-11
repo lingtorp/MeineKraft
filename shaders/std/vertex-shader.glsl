@@ -17,10 +17,6 @@ uniform mat4 camera_view;
 // Projection or a.k.a perspective matrix
 uniform mat4 projection;
 
-const vec3 fog_color   = vec3(0.5, 0.5, 0.5);
-const vec3 light_color = vec3(0.7, 0.7, 0.7);
-const float fog_max_distance = 150;
-
 out vec3 fNormal;
 out vec4 fPosition;
 
