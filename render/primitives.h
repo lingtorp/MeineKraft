@@ -93,7 +93,7 @@ namespace std {
     };
 }
 
-/// Represen
+/// Represents primitive types of meshes supported
 enum class MeshPrimitive {
     Cube
 };
