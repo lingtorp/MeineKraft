@@ -154,9 +154,6 @@ void Renderer::render(uint32_t delta) {
     auto camera_view = FPSViewRH(camera->position, camera->pitch, camera->yaw);
     auto frustrum_view = camera_view * projection_matrix;
     std::array<Plane<float>, 6> planes = extract_planes(frustrum_view.transpose());
-    auto left_plane = planes[0]; auto right_plane = planes[1];
-    auto top_plane  = planes[2]; auto bot_plane   = planes[3];
-    auto near_plane = planes[4]; auto far_plane   = planes[5];
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
