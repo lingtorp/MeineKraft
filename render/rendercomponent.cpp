@@ -1,3 +1,4 @@
+#include <SDL2/SDL_log.h>
 #include "rendercomponent.h"
 #include "render.h"
 #include "../nodes/entity.h"
@@ -25,6 +26,7 @@ void RenderComponent::set_mesh(MeshPrimitive primitive) {
 
 void RenderComponent::set_cube_map_texture(std::vector<std::string> faces) {
     auto texture = Texture();
-    texture.load_cube_map(faces);
+    auto success = texture.load_cube_map(faces);
+    if (!success) { SDL_Log("RenderComponent: Failed to load cube map"); }
     graphics_state.diffuse_texture = Renderer::instance().setup_texture(this, texture);
 };
