@@ -194,17 +194,6 @@ struct Plane {
         return Vec3<T>(a, b, c);
     }
 
-    /// Normalizes the plane
-    /// @return Normalized plane (self)
-    Plane<T> normalize() {
-        const double mag = sqrt(a * a + b * b + c * c);
-        a = a / mag;
-        b = b / mag;
-        c = c / mag;
-        d = d / mag;
-        return *this;
-    }
-
     /// Distance to point from the plane
     /// distance < 0, then point lies in the negative halfspace
     /// distance = 0, then point lies in the plane
