@@ -13,7 +13,6 @@ public:
     T r, g, b, a = 0;
     constexpr Color4(): r(0), g(0), b(0), a(0) {};
     constexpr Color4(T r, T g, T b, T a): r(r), g(g), b(b), a(a) {};
-    static constexpr Color4<float> WHITE() { return Color4{1.0f, 1.0f, 1.0f, 1.0f}; }
     static constexpr Color4<float> BLUE() { return Color4{0.5f, 0.5f, 1.0f, 1.0f}; }
 
     bool operator==(const Color4<T> &rhs) const {
@@ -30,7 +29,6 @@ struct Vertex {
     Vertex(): position{}, color{}, texCoord{}, normal{} {};
     Vertex(Vec3<T> position): position(position), texCoord{}, color{}, normal{} {};
     Vertex(Vec3<T> position, Vec2<T> texCoord): position(position), texCoord(texCoord), color{}, normal{} {};
-    Vertex(Vec3<T> position, Color4<T> color, Vec2<T> texCoord): position(position), color(color), texCoord(texCoord), normal{} {};
 
     bool operator==(const Vertex<T> &rhs) const {
         return position == rhs.position && color == rhs.color && texCoord == rhs.texCoord && normal == rhs.normal;
