@@ -373,7 +373,8 @@ Texture Renderer::setup_texture(RenderComponent *component, Texture texture) {
         for (auto &batch_comp : batch.components) {
             if (batch_comp == component) {
                 std::string uniform_location = "diffuse_sampler";
-                texture.gl_texture_location = glGetUniformLocation(batch.shader_type, uniform_location.c_str());
+                auto gl_shader_program = shaders.at(batch.shader_type).gl_program;
+                texture.gl_texture_location = glGetUniformLocation(gl_shader_program, uniform_location.c_str());
             }
         }
     }
