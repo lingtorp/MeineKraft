@@ -173,9 +173,10 @@ void Renderer::render(uint32_t delta) {
         glUniformMatrix4fv(batch.gl_camera_view, 1, GL_FALSE, camera_view.data());
         glUniform3fv(batch.gl_camera_position, 1, (const GLfloat *) &camera->position);
 
-        glEnable(GL_CULL_FACE);
-        glCullFace(GL_BACK);
-        glFrontFace(GL_CCW);
+        // TODO: These are dependent on the shader and not the batch or the RenderComp.
+//        glEnable(GL_CULL_FACE);
+//        glCullFace(GL_BACK);
+//        glFrontFace(GL_CCW);
 
         /// Update Light data for the batch
         glBindBuffer(GL_UNIFORM_BUFFER, gl_light_uniform_buffer);
