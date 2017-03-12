@@ -81,7 +81,7 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
     glBindBuffer(GL_UNIFORM_BUFFER, gl_light_uniform_buffer);
     glBufferData(GL_UNIFORM_BUFFER, sizeof(Light) * lights.size(), &lights, GL_DYNAMIC_DRAW);
 
-    /// Compile shaders
+    /// Compile shaderss
     const std::string shader_base_filepath = "/Users/AlexanderLingtorp/Repositories/MeineKraft/shaders/";
     const auto vertex_shader = shader_base_filepath + "std/vertex-shader.glsl";
     const auto fragment_shader = shader_base_filepath + "std/fragment-shader.glsl";
@@ -89,14 +89,16 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
     bool success;
 
     Shader skybox_shader(vertex_shader, fragment_shader);
-    skybox_shader.add("#define CUBE_MAP_TEXTURE \n");
+    skybox_shader.add("#define FLAG_CUBE_MAP_TEXTURE \n");
+    skybox_shader.add("#define FLAG_BLINN_PHONG_SHADING \n");
     std::tie(success, err_msg) = skybox_shader.compile();
     if (!success) { SDL_Log("%s", err_msg.c_str()); }
 
     shaders.insert({ShaderType::SKYBOX_SHADER, skybox_shader});
 
     Shader std_shader(vertex_shader, fragment_shader);
-    std_shader.add("#define BLINN_PHONG_SHADING \n");
+    std_shader.add("#define FLAG_BLINN_PHONG_SHADING \n");
+    std_shader.add("#define FLAG_2D_TEXTURE \n");
     std::tie(success, err_msg) = std_shader.compile();
     if (!success) { SDL_Log("%s", err_msg.c_str()); }
 
@@ -107,7 +109,7 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
     shader_file_monitor->start_monitor();
 
     /// Camera
-    const auto position  = Vec3<float>{0.0f, 0.0f, 0.0f};  // cam position
+    const auto position  = Vec3<float>{0.0f, 20.0f, 0.0f};  // cam position
     const auto direction = Vec3<float>{0.0f, 0.0f, -1.0f}; // position of where the cam is looking
     const auto world_up  = Vec3<float>{0.0, 1.0f, 0.0f};   // world up
     this->camera = std::make_shared<Camera>(position, direction, world_up);
