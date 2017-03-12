@@ -13,7 +13,6 @@ public:
     T r, g, b, a = 0;
     constexpr Color4(): r(0), g(0), b(0), a(0) {};
     constexpr Color4(T r, T g, T b, T a): r(r), g(g), b(b), a(a) {};
-    static constexpr Color4<float> WHITE() { return Color4{1.0f, 1.0f, 1.0f, 1.0f}; }
     static constexpr Color4<float> BLUE() { return Color4{0.5f, 0.5f, 1.0f, 1.0f}; }
 
     bool operator==(const Color4<T> &rhs) const {
@@ -30,7 +29,6 @@ struct Vertex {
     Vertex(): position{}, color{}, texCoord{}, normal{} {};
     Vertex(Vec3<T> position): position(position), texCoord{}, color{}, normal{} {};
     Vertex(Vec3<T> position, Vec2<T> texCoord): position(position), texCoord(texCoord), color{}, normal{} {};
-    Vertex(Vec3<T> position, Color4<T> color, Vec2<T> texCoord): position(position), color(color), texCoord(texCoord), normal{} {};
 
     bool operator==(const Vertex<T> &rhs) const {
         return position == rhs.position && color == rhs.color && texCoord == rhs.texCoord && normal == rhs.normal;
@@ -93,7 +91,7 @@ namespace std {
     };
 }
 
-/// Represen
+/// Represents primitive types of meshes supported
 enum class MeshPrimitive {
     Cube
 };
@@ -192,17 +190,6 @@ struct Plane {
     /// @return Normal vector of the plane
     Vec3<T> normal() const {
         return Vec3<T>(a, b, c);
-    }
-
-    /// Normalizes the plane
-    /// @return Normalized plane (self)
-    Plane<T> normalize() {
-        const double mag = sqrt(a * a + b * b + c * c);
-        a = a / mag;
-        b = b / mag;
-        c = c / mag;
-        d = d / mag;
-        return *this;
     }
 
     /// Distance to point from the plane

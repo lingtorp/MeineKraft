@@ -44,7 +44,7 @@ int main() {
     Skybox skybox{};
 
     std::string directory = "/Users/AlexanderLingtorp/Desktop/";
-    std::string model_file = "/Users/AlexanderLingtorp/Desktop/falu-stuga3.obj";
+    std::string model_file = "/Users/AlexanderLingtorp/Desktop/falu-stuga4.obj";
     Teapot model{model_file, directory};
 
     bool DONE = false;
@@ -99,7 +99,7 @@ int main() {
         ImGui_ImplSdlGL3_NewFrame(window);
 
         /// Tick/update the world
-        // world.world_tick(delta, renderer.camera);
+        world.world_tick(delta, renderer.camera);
 
         /// Render the world
         renderer.render(delta);

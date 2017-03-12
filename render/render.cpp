@@ -81,35 +81,35 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
     glBindBuffer(GL_UNIFORM_BUFFER, gl_light_uniform_buffer);
     glBufferData(GL_UNIFORM_BUFFER, sizeof(Light) * lights.size(), &lights, GL_DYNAMIC_DRAW);
 
-    /// Compile shaders
+    /// Compile shaderss
     const std::string shader_base_filepath = "/Users/AlexanderLingtorp/Repositories/MeineKraft/shaders/";
+    const auto vertex_shader = shader_base_filepath + "std/vertex-shader.glsl";
+    const auto fragment_shader = shader_base_filepath + "std/fragment-shader.glsl";
     std::string err_msg;
     bool success;
 
-    const auto skybox_vert = shader_base_filepath + "skybox/vertex-shader.glsl";
-    const auto skybox_frag = shader_base_filepath + "skybox/fragment-shader.glsl";
-    Shader skybox_shader(skybox_vert, skybox_frag);
+    Shader skybox_shader(vertex_shader, fragment_shader);
+    skybox_shader.add("#define FLAG_CUBE_MAP_TEXTURE \n");
+    skybox_shader.add("#define FLAG_BLINN_PHONG_SHADING \n");
     std::tie(success, err_msg) = skybox_shader.compile();
     if (!success) { SDL_Log("%s", err_msg.c_str()); }
 
     shaders.insert({ShaderType::SKYBOX_SHADER, skybox_shader});
 
-    const auto std_vert = shader_base_filepath + "std/vertex-shader.glsl";
-    const auto std_frag = shader_base_filepath + "std/fragment-shader.glsl";
-    Shader std_shader(std_vert, std_frag);
+    Shader std_shader(vertex_shader, fragment_shader);
+    std_shader.add("#define FLAG_BLINN_PHONG_SHADING \n");
+    std_shader.add("#define FLAG_2D_TEXTURE \n");
     std::tie(success, err_msg) = std_shader.compile();
     if (!success) { SDL_Log("%s", err_msg.c_str()); }
 
     shaders.insert({ShaderType::STANDARD_SHADER, std_shader});
 
-    shader_file_monitor->add_file(shader_base_filepath + "skybox/vertex-shader.glsl");
-    shader_file_monitor->add_file(shader_base_filepath + "skybox/fragment-shader.glsl");
     shader_file_monitor->add_file(shader_base_filepath + "std/vertex-shader.glsl");
     shader_file_monitor->add_file(shader_base_filepath + "std/fragment-shader.glsl");
     shader_file_monitor->start_monitor();
 
     /// Camera
-    const auto position  = Vec3<float>{0.0f, 0.0f, 0.0f};  // cam position
+    const auto position  = Vec3<float>{0.0f, 20.0f, 0.0f};  // cam position
     const auto direction = Vec3<float>{0.0f, 0.0f, -1.0f}; // position of where the cam is looking
     const auto world_up  = Vec3<float>{0.0, 1.0f, 0.0f};   // world up
     this->camera = std::make_shared<Camera>(position, direction, world_up);
@@ -154,9 +154,6 @@ void Renderer::render(uint32_t delta) {
     auto camera_view = FPSViewRH(camera->position, camera->pitch, camera->yaw);
     auto frustrum_view = camera_view * projection_matrix;
     std::array<Plane<float>, 6> planes = extract_planes(frustrum_view.transpose());
-    auto left_plane = planes[0]; auto right_plane = planes[1];
-    auto top_plane  = planes[2]; auto bot_plane   = planes[3];
-    auto near_plane = planes[4]; auto far_plane   = planes[5];
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
@@ -176,9 +173,10 @@ void Renderer::render(uint32_t delta) {
         glUniformMatrix4fv(batch.gl_camera_view, 1, GL_FALSE, camera_view.data());
         glUniform3fv(batch.gl_camera_position, 1, (const GLfloat *) &camera->position);
 
-        glEnable(GL_CULL_FACE);
-        glCullFace(GL_BACK);
-        glFrontFace(GL_CCW);
+        // TODO: These are dependent on the shader and not the batch or the RenderComp.
+//        glEnable(GL_CULL_FACE);
+//        glCullFace(GL_BACK);
+//        glFrontFace(GL_CCW);
 
         /// Update Light data for the batch
         glBindBuffer(GL_UNIFORM_BUFFER, gl_light_uniform_buffer);
@@ -273,7 +271,7 @@ void Renderer::update_projection_matrix(float fov) {
     }
 }
 
-void Renderer::add_to_batch(RenderComponent *component, uint64_t mesh_id) {
+void Renderer::add_to_batch(RenderComponent *component, uint64_t mesh_id, ShaderType shader_type) {
     for (auto &batch : graphics_batches) {
         if (batch.mesh_id == mesh_id) {
             batch.components.push_back(component);
@@ -283,7 +281,7 @@ void Renderer::add_to_batch(RenderComponent *component, uint64_t mesh_id) {
 
     GraphicsBatch batch{mesh_id};
     batch.mesh = mesh_manager->mesh_from_id(mesh_id);
-    batch.shader_type = ShaderType::STANDARD_SHADER;
+    batch.shader_type = shader_type;
     link_batch(batch);
 
     batch.components.push_back(component);
@@ -377,7 +375,8 @@ Texture Renderer::setup_texture(RenderComponent *component, Texture texture) {
         for (auto &batch_comp : batch.components) {
             if (batch_comp == component) {
                 std::string uniform_location = "diffuse_sampler";
-                texture.gl_texture_location = glGetUniformLocation(batch.shader_type, uniform_location.c_str());
+                auto gl_shader_program = shaders.at(batch.shader_type).gl_program;
+                texture.gl_texture_location = glGetUniformLocation(gl_shader_program, uniform_location.c_str());
             }
         }
     }

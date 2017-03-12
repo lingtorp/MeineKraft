@@ -3,7 +3,7 @@
 #include "../include/tinyobjloader/tiny_obj_loader.h"
 
 MeshManager::MeshManager(): meshes{}, meshes_loaded(0) {
-    meshes[++meshes_loaded] = {Cube(), ""};
+    meshes[meshes_loaded++] = {Cube(), ""};
 }
 
 std::pair<uint64_t, bool> MeshManager::is_mesh_loaded(std::string filepath, std::string directory) {
