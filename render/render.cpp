@@ -270,7 +270,7 @@ void Renderer::update_projection_matrix(float fov) {
     }
 }
 
-void Renderer::add_to_batch(RenderComponent *component, uint64_t mesh_id) {
+void Renderer::add_to_batch(RenderComponent *component, uint64_t mesh_id, ShaderType shader_type) {
     for (auto &batch : graphics_batches) {
         if (batch.mesh_id == mesh_id) {
             batch.components.push_back(component);
@@ -280,7 +280,7 @@ void Renderer::add_to_batch(RenderComponent *component, uint64_t mesh_id) {
 
     GraphicsBatch batch{mesh_id};
     batch.mesh = mesh_manager->mesh_from_id(mesh_id);
-    batch.shader_type = ShaderType::STANDARD_SHADER;
+    batch.shader_type = shader_type;
     link_batch(batch);
 
     batch.components.push_back(component);
