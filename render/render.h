@@ -41,7 +41,7 @@ public:
     uint64_t load_mesh_primitive(MeshPrimitive primitive);
 
     /// Adds the RenderComponent to a internal batch
-    void add_to_batch(RenderComponent *component, uint64_t mesh_id);
+    void add_to_batch(RenderComponent *component, uint64_t mesh_id, ShaderType shader_type);
 
     /// Removes the RenderComponent from a internal batch with the same Entity.hash_id
     void remove_from_batch(RenderComponent *component);

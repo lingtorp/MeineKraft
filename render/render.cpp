@@ -83,27 +83,25 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
 
     /// Compile shaders
     const std::string shader_base_filepath = "/Users/AlexanderLingtorp/Repositories/MeineKraft/shaders/";
+    const auto vertex_shader = shader_base_filepath + "std/vertex-shader.glsl";
+    const auto fragment_shader = shader_base_filepath + "std/fragment-shader.glsl";
     std::string err_msg;
     bool success;
 
-    const auto skybox_vert = shader_base_filepath + "skybox/vertex-shader.glsl";
-    const auto skybox_frag = shader_base_filepath + "skybox/fragment-shader.glsl";
-    Shader skybox_shader(skybox_vert, skybox_frag);
+    Shader skybox_shader(vertex_shader, fragment_shader);
+    skybox_shader.add("#define CUBE_MAP_TEXTURE \n");
     std::tie(success, err_msg) = skybox_shader.compile();
     if (!success) { SDL_Log("%s", err_msg.c_str()); }
 
     shaders.insert({ShaderType::SKYBOX_SHADER, skybox_shader});
 
-    const auto std_vert = shader_base_filepath + "std/vertex-shader.glsl";
-    const auto std_frag = shader_base_filepath + "std/fragment-shader.glsl";
-    Shader std_shader(std_vert, std_frag);
+    Shader std_shader(vertex_shader, fragment_shader);
+    std_shader.add("#define BLINN_PHONG_SHADING \n");
     std::tie(success, err_msg) = std_shader.compile();
     if (!success) { SDL_Log("%s", err_msg.c_str()); }
 
     shaders.insert({ShaderType::STANDARD_SHADER, std_shader});
 
-    shader_file_monitor->add_file(shader_base_filepath + "skybox/vertex-shader.glsl");
-    shader_file_monitor->add_file(shader_base_filepath + "skybox/fragment-shader.glsl");
     shader_file_monitor->add_file(shader_base_filepath + "std/vertex-shader.glsl");
     shader_file_monitor->add_file(shader_base_filepath + "std/fragment-shader.glsl");
     shader_file_monitor->start_monitor();

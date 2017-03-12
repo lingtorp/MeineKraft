@@ -9,7 +9,8 @@ Shader::Shader(std::string vertex_filepath, std::string fragment_filepath): vert
                                                                             fragment_filepath(fragment_filepath),
                                                                             vertex_shader(0),
                                                                             fragment_shader(0),
-                                                                            gl_program(0) {}
+                                                                            gl_program(0),
+                                                                            defines{} {}
 
 std::pair<bool, std::string> Shader::compile() {
     if (!file_exists(vertex_filepath) || !file_exists(fragment_filepath)) {
@@ -18,6 +19,14 @@ std::pair<bool, std::string> Shader::compile() {
 
     auto vertex_src   = load_shader_source(vertex_filepath);
     auto fragment_src = load_shader_source(fragment_filepath);
+
+    for (auto &define : defines) {
+        vertex_src.insert(0, define);
+        fragment_src.insert(0, define);
+    }
+
+    vertex_src.insert(0, "#version 330 core \n");
+    fragment_src.insert(0, "#version 330 core \n");
 
     auto raw_str = vertex_src.c_str();
     vertex_shader = glCreateShader(GL_VERTEX_SHADER);
@@ -145,4 +154,8 @@ bool Shader::file_exists(std::string filename) const {
 const std::string Shader::load_shader_source(std::string filename) const {
     std::ifstream ifs(filename);
     return std::string((std::istreambuf_iterator<char>(ifs)), (std::istreambuf_iterator<char>()));
+}
+
+void Shader::add(std::string define) {
+    defines.push_back(define);
 }
