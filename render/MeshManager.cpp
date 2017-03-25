@@ -1,6 +1,9 @@
 #include "MeshManager.hpp"
 #include <SDL2/SDL_log.h>
 #include "../include/tinyobjloader/tiny_obj_loader.h"
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+#include <assimp/Importer.hpp>
 
 MeshManager::MeshManager(): meshes{}, meshes_loaded(0) {
     meshes[meshes_loaded++] = {Cube(), ""};
@@ -15,12 +18,78 @@ std::pair<uint64_t, bool> MeshManager::is_mesh_loaded(std::string filepath, std:
     return {0, false};
 }
 
-uint64_t MeshManager::load_mesh_from_file(std::string filepath, std::string directory) {
-    // TODO: Support other formats, Open Asset Import lib?
-    auto mesh = load_obj_mesh_from_file(filepath, directory);
-    MeshInformation mesh_info{mesh, filepath + directory};
-    meshes[++meshes_loaded] = mesh_info;
-    return meshes_loaded;
+std::pair<uint64_t, std::vector<std::pair<Texture::Type, std::string>>>
+MeshManager::load_mesh_from_file(std::string filepath,
+                                 std::string directory) {
+    Assimp::Importer importer;
+    auto result = importer.ReadFile(filepath, aiProcess_Triangulate | aiProcess_JoinIdenticalVertices);
+
+    if (result == nullptr) {
+        SDL_Log("Error: %s", importer.GetErrorString());
+        return {0, {}};
+    }
+
+    std::vector<std::pair<Texture::Type, std::string>> texture_info;
+    MeshInformation mesh_info;
+    mesh_info.loaded_from_filepath = directory + filepath;
+
+    if (result->HasMaterials()) {
+        for (size_t i = 0; i < result->mNumMaterials; i++) {
+            auto material = result->mMaterials[i];
+            aiString material_name;
+            material->Get(AI_MATKEY_NAME, material_name);
+            SDL_Log("%s", material_name.C_Str());
+
+            aiString tex_filepath;
+            if (material->GetTexture(aiTextureType_DIFFUSE, 0, &tex_filepath) == AI_SUCCESS) {
+                SDL_Log("%s%s, %i", directory.c_str(), tex_filepath.data, material->GetTextureCount(aiTextureType_DIFFUSE));
+                std::string texture_filepath(tex_filepath.data);
+                texture_filepath.insert(0, directory);
+                // TODO: Cache textures in TextureManager
+                texture_info.push_back({Texture::Type::Diffuse, texture_filepath});
+            }
+        }
+    }
+
+    if (result->HasMeshes()) {
+        for (size_t i = 0; i < result->mNumMeshes; i++) {
+            auto mesh = result->mMeshes[i];
+            for (size_t i = 0; i < mesh->mNumVertices; i++) {
+                auto position = mesh->mVertices[i];
+                Vertex<float> vertex;
+                vertex.position.x = position.x;
+                vertex.position.y = position.y;
+                vertex.position.z = position.z;
+                mesh_info.mesh.vertices.push_back(vertex);
+                aiVector3D *tex_coords = mesh->HasTextureCoords(0) ? &mesh->mTextureCoords[0][i] : nullptr;
+                if (tex_coords) {
+                    vertex.texCoord.x = tex_coords->x;
+                    vertex.texCoord.y = tex_coords->y;
+                }
+                if (mesh->HasNormals()) {
+                    auto normal = mesh->mNormals[i];
+                    vertex.normal.x = normal.x;
+                    vertex.normal.y = normal.y;
+                    vertex.normal.z = normal.z;
+                }
+            }
+
+            for (size_t i = 0; i < mesh->mNumFaces; i++) {
+                auto face = &mesh->mFaces[i];
+                if (face->mNumIndices != 3) {
+                    SDL_Log("Not 3 vertices per face.");
+                    return {0, {}};
+                }
+                mesh_info.mesh.indices.push_back(face->mIndices[0]);
+                mesh_info.mesh.indices.push_back(face->mIndices[1]);
+                mesh_info.mesh.indices.push_back(face->mIndices[2]);
+            }
+        }
+    }
+
+    meshes_loaded++;
+    meshes[meshes_loaded] = mesh_info;
+    return {meshes_loaded, texture_info};
 }
 
 Mesh MeshManager::mesh_from_id(uint64_t mesh_id) {
