@@ -71,7 +71,7 @@ Rendering
 - [ ] Translate normals and trnasform them if object moves
 - [ ] Implement flat shading
 - [ ] !, Gouraud shading
-- [ ] Blink-Phong shading
+- [ ] Blinn-Phong shading
 - [ ] Light material: light power, light color,
 
 Voxelize
