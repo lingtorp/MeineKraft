@@ -19,6 +19,7 @@ class GraphicsBatch;
 class Shader;
 class FileMonitor;
 class MeshManager;
+class TextureManager;
 
 class Renderer {
 public:
@@ -34,14 +35,14 @@ public:
     /// Main render function, renders all the graphics batches and so on
     void render(uint32_t delta);
 
-    /// Request a loading of a mesh
-    uint64_t load_mesh(std::string filepath, std::string directory);
+    /// Request a loading of a mesh, return mesh_id
+    uint64_t load_mesh(GraphicsState *state, std::string filepath, std::string directory);
 
     /// Request a loading of a standard primitive mesh
     uint64_t load_mesh_primitive(MeshPrimitive primitive);
 
     /// Adds the RenderComponent to a internal batch
-    void add_to_batch(RenderComponent *component, uint64_t mesh_id, ShaderType shader_type);
+    void add_to_batch(RenderComponent *component, uint64_t mesh_id);
 
     /// Removes the RenderComponent from a internal batch with the same Entity.hash_id
     void remove_from_batch(RenderComponent *component);
@@ -52,10 +53,7 @@ public:
     ///
     Texture setup_texture(RenderComponent *component, Texture texture);
 
-    ///
-    void load_obj_textures(RenderComponent *component, std::string filepath, std::string directory);
-
-    std::shared_ptr<Camera> camera;
+        std::shared_ptr<Camera> camera;
     RenderState state;
     SDL_Window *window;
 private:
@@ -76,13 +74,15 @@ private:
 
     MeshManager *mesh_manager;
 
+    TextureManager *texture_manager;
+
     std::unique_ptr<FileMonitor> shader_file_monitor;
 
     bool point_inside_frustrum(Vec3<float> point, std::array<Plane<float>, 6> planes);
     std::array<Plane<float>, 6> extract_planes(Mat4<float> matrix);
 
     /// Setups the VAO and uniforms up between the batch and OpenGL
-    void link_batch(GraphicsBatch &batch);
+    void link_batch(GraphicsBatch &batch, const GraphicsState &state);
 
     /// Creates a camera view matrix based on the euler angles (x, y) and position of the eye
     Mat4<float> FPSViewRH(Vec3<float> eye, float pitch, float yaw);

@@ -25,7 +25,8 @@ public:
     std::pair<uint64_t, bool> is_mesh_loaded(std::string filepath, std::string directory);
 
     /// Loads the mesh from the specified file (only .obj at this point)
-    uint64_t load_mesh_from_file(std::string filepath, std::string directory);
+    std::pair<uint64_t, std::vector<std::pair<Texture::Type, std::string>>>
+    load_mesh_from_file(std::string filepath, std::string directory);
 
     Mesh mesh_from_id(uint64_t mesh_id);
 

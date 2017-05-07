@@ -5,6 +5,8 @@
 #include <fstream>
 #include <SDL_log.h>
 
+Shader::Shader() {}
+
 Shader::Shader(std::string vertex_filepath, std::string fragment_filepath): vertex_filepath(vertex_filepath),
                                                                             fragment_filepath(fragment_filepath),
                                                                             vertex_shader(0),
@@ -114,7 +116,7 @@ std::pair<bool, std::string> Shader::recompile() {
         glAttachShader(gl_program, vertex_shader);
         glAttachShader(gl_program, fragment_shader);
         glLinkProgram(gl_program);
-        GLint is_linked = 0;
+        GLint is_linked = GL_FALSE;
         glGetProgramiv(gl_program, GL_LINK_STATUS, &is_linked);
         SDL_Log("Shader relinking is success: %i", is_linked == GL_TRUE);
 
@@ -159,3 +161,4 @@ const std::string Shader::load_shader_source(std::string filename) const {
 void Shader::add(std::string define) {
     defines.push_back(define);
 }
+

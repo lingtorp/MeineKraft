@@ -5,8 +5,8 @@ uniform samplerCube diffuse_sampler;
 uniform sampler2D diffuse_sampler;
 #endif
 
-in vec4 fColor; // This name must match the name in the vertex shader in order to work
-in vec2 fTexcoord;   // passthrough shading for interpolated textures
+in vec4 fColor;    // This name must match the name in the vertex shader in order to work
+in vec2 fTexcoord; // passthrough shading for interpolated textures
 in vec3 fNormal;
 in vec4 fPosition;
 
