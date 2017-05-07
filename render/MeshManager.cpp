@@ -1,6 +1,9 @@
 #include "MeshManager.hpp"
 #include <SDL2/SDL_log.h>
-#include "../include/tinyobjloader/tiny_obj_loader.h"
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+#include <assimp/Importer.hpp>
+#include <iostream>
 
 MeshManager::MeshManager(): meshes{}, meshes_loaded(0) {
     meshes[meshes_loaded++] = {Cube(), ""};
@@ -15,58 +18,85 @@ std::pair<uint64_t, bool> MeshManager::is_mesh_loaded(std::string filepath, std:
     return {0, false};
 }
 
-uint64_t MeshManager::load_mesh_from_file(std::string filepath, std::string directory) {
-    // TODO: Support other formats, Open Asset Import lib?
-    auto mesh = load_obj_mesh_from_file(filepath, directory);
-    MeshInformation mesh_info{mesh, filepath + directory};
-    meshes[++meshes_loaded] = mesh_info;
-    return meshes_loaded;
-}
+std::pair<uint64_t, std::vector<std::pair<Texture::Type, std::string>>>
+MeshManager::load_mesh_from_file(std::string filepath,
+                                 std::string directory) {
+    Assimp::Importer importer;
+    auto scene = importer.ReadFile(filepath.c_str(), aiProcess_Triangulate | aiProcess_JoinIdenticalVertices);
 
-Mesh MeshManager::mesh_from_id(uint64_t mesh_id) {
-    return meshes[mesh_id].mesh;
-}
+    if (scene == nullptr) {
+        SDL_Log("Error: %s", importer.GetErrorString());
+        return {0, {}};
+    }
 
-Mesh MeshManager::load_obj_mesh_from_file(std::string filepath, std::string directory) {
-    tinyobj::attrib_t attrib;
-    std::vector<tinyobj::shape_t> shapes;
-    std::vector<tinyobj::material_t> materials;
-    std::string err;
-    auto success = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, filepath.c_str(), directory.c_str(), true);
-    if (!success) { SDL_Log("Failed loading mesh %s: %s", filepath.c_str(), err.c_str()); return Mesh(); }
-    if (err.size() > 0) { SDL_Log("%s", err.c_str()); }
+    std::vector<std::pair<Texture::Type, std::string>> texture_info;
+    MeshInformation mesh_info;
+    mesh_info.loaded_from_filepath = directory + filepath;
 
-    std::unordered_map<Vertex<float>, size_t> unique_vertices{};
-    Mesh mesh{};
-    for (const auto &shape : shapes) { // Shapes
-        for (const auto &idx : shape.mesh.indices) { // Faces
-            Vertex<float> vertex{};
-            float vx = attrib.vertices[3 * idx.vertex_index + 0];
-            float vy = attrib.vertices[3 * idx.vertex_index + 1];
-            float vz = attrib.vertices[3 * idx.vertex_index + 2];
-            vertex.position = {vx, vy, vz};
+    if (scene->HasMaterials()) {
+        for (size_t i = 0; i < scene->mNumMaterials; i++) {
+            auto material = scene->mMaterials[i];
 
-            float tx = attrib.texcoords[2 * idx.texcoord_index + 0];
-            float ty = attrib.texcoords[2 * idx.texcoord_index + 1];
-            vertex.texCoord = {tx, 1.0f - ty}; // .obj format has flipped y-axis compared to OpenGL
+            aiString material_name;
+            material->Get(AI_MATKEY_NAME, material_name);
+            SDL_Log("%s", material_name.C_Str());
 
-            float nx = attrib.normals[3 * idx.normal_index + 0];
-            float ny = attrib.normals[3 * idx.normal_index + 1];
-            float nz = attrib.normals[3 * idx.normal_index + 2];
-            vertex.normal = Vec3<float>{nx, ny, nz}.normalize();
-
-            if (unique_vertices.count(vertex) == 0) {
-                unique_vertices[vertex] = mesh.vertices.size();
-                mesh.indices.push_back(mesh.vertices.size());
-                mesh.vertices.push_back(vertex);
-            } else {
-                mesh.indices.push_back(unique_vertices.at(vertex));
+            aiString tex_filepath;
+            if (material->GetTexture(aiTextureType_DIFFUSE, 0, &tex_filepath) == AI_SUCCESS) {
+                SDL_Log("%s%s, %i", directory.c_str(), tex_filepath.data, material->GetTextureCount(aiTextureType_DIFFUSE));
+                std::string texture_filepath(tex_filepath.data);
+                texture_filepath.insert(0, directory);
+                // TODO: Cache textures in TextureManager
+                texture_info.push_back({Texture::Type::Diffuse, texture_filepath});
             }
         }
     }
 
-    SDL_Log("Number of vertices: %lu for model %s", mesh.vertices.size(), filepath.c_str());
-    return mesh;
+    if (scene->HasMeshes()) {
+        for (size_t i = 0; i < scene->mNumMeshes; i++) {
+            auto mesh = scene->mMeshes[i];
+
+            for (size_t i = 0; i < mesh->mNumVertices; i++) {
+                Vertex<float> vertex;
+
+                auto pos = mesh->mVertices[i];
+                vertex.position = {pos.x, pos.y, pos.z};
+
+                if (mesh->HasTextureCoords(0)) {
+                    auto texCoord = mesh->mTextureCoords[0][i];
+                    // FIXME: Assumes the model file is a .obj file with an inverted y-axis
+                    vertex.texCoord = {texCoord.x, -texCoord.y};
+                }
+
+                if (mesh->HasNormals()) {
+                    auto normal = mesh->mNormals[i];
+                    vertex.normal = {normal.x, normal.y, normal.z};
+                }
+
+                mesh_info.mesh.vertices.push_back(vertex);
+            }
+
+            for (size_t i = 0; i < mesh->mNumFaces; i++) {
+                auto face = &mesh->mFaces[i];
+                if (face->mNumIndices != 3) {
+                    SDL_Log("Not 3 vertices per face.");
+                    return {0, {}};
+                }
+                for (size_t j = 0; j < 3; j++) {
+                    auto index = face->mIndices[j];
+                    mesh_info.mesh.indices.push_back(index);
+                }
+            }
+        }
+    }
+
+    meshes_loaded++;
+    meshes[meshes_loaded] = mesh_info;
+    return {meshes_loaded, texture_info};
+}
+
+Mesh MeshManager::mesh_from_id(uint64_t mesh_id) {
+    return meshes[mesh_id].mesh;
 }
 
 uint64_t MeshManager::mesh_id_from_primitive(MeshPrimitive primitive) {

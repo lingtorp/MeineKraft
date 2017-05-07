@@ -6,6 +6,7 @@
 
 class Shader {
 public:
+    Shader();
     Shader(std::string vertex_filepath, std::string fragment_filepath);
 
     /// Loads and compiles the shader source, return compile error message in the pair.

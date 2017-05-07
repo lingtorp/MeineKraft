@@ -4,7 +4,6 @@ project(MeineKraft)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
 
 file(GLOB IMGUI_SRC "include/imgui/*.cpp" "include/imgui/*.h") # Adds all imgui related files into the application
-file(GLOB TINYOBJLOADER_SRC "include/tinyobjloader/*.h") # Add all tinyobjloader files
 
 set(SOURCE_FILES main.cpp render/render.cpp render/render.h math/vector.h world/world.cpp world/world.h render/primitives.h
         render/camera.cpp render/camera.h nodes/chunk.cpp nodes/chunk.h math/noise.h render/ray.h render/graphicsbatch.h
@@ -12,6 +11,10 @@ set(SOURCE_FILES main.cpp render/render.cpp render/render.h math/vector.h world/
         render/shader.cpp render/shader.h ${IMGUI_SRC} nodes/Skybox.cpp nodes/Skybox.h nodes/block.cpp nodes/block.h
         nodes/Skybox.cpp nodes/Skybox.h ${TINYOBJLOADER_SRC} nodes/teapot.cpp nodes/teapot.h util/filemonitor.cpp util/filemonitor.h render/texture.cpp render/texture.h render/transform.h render/light.h render/MeshManager.cpp render/MeshManager.hpp render/TextureManager.cpp render/TextureManager.hpp)
 add_executable(MeineKraft ${SOURCE_FILES})
+
+find_package(ASSIMP REQUIRED)
+include_directories(${ASSIMP_INCLUDE_DIRS})
+target_link_libraries(MeineKraft ${ASSIMP_LIBRARIES})
 
 find_package(GLEW REQUIRED)
 include_directories(${GLEW_INCLUDE_DIRS})

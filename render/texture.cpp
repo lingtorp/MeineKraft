@@ -135,3 +135,22 @@ bool Texture::load_1d(std::string filepath) {
     loaded_successfully = true;
     return loaded_successfully;
 }
+
+bool Texture::load(std::string filepath) {
+    auto file_extension = file_format_from_file_at(filepath);
+    if (file_extension == FileExtension::unknown) { return false; }
+    SDL_Surface *image = IMG_Load(filepath.c_str());
+    if (!image) {
+        SDL_Log("%s", IMG_GetError());
+        return false;
+    }
+    if (image->h > 1) {
+        gl_texture = load_2d_texture(filepath);
+        gl_texture_type = GL_TEXTURE_2D;
+    } else {
+        gl_texture = load_1d_texture(filepath);
+        gl_texture_type = GL_TEXTURE_1D;
+    }
+    loaded_successfully = true;
+    return loaded_successfully;
+}

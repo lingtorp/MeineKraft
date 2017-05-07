@@ -23,4 +23,5 @@ void main() {
   fTexcoord = vTexCoord;
   fNormal   = normal;
   fPosition = model * vec4(position, 1.0);
+  fColor = vColor;
 }

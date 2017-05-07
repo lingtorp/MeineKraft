@@ -5,6 +5,7 @@
 #include <vector>
 #include "../math/vector.h"
 #include "texture.h"
+#include "shader.h"
 
 /// Colors
 template<typename T>
@@ -213,6 +214,7 @@ struct GraphicsState {
     Texture diffuse_texture;
     Vec3<float> center;
     double radius;
+    Shader shader;
 };
 
 /// Represents the state of the Render, used for ImGUI debug panes

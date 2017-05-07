@@ -13,9 +13,21 @@
 #include "../util/filemonitor.h"
 #include "transform.h"
 #include "MeshManager.hpp"
+#include "TextureManager.hpp"
 
-#define TINYOBJLOADER_IMPLEMENTATION
-#include "../include/tinyobjloader/tiny_obj_loader.h"
+void log_gl_error() {
+    GLenum err = glGetError();
+    switch(err) {
+        case GL_INVALID_VALUE:
+            SDL_Log("GL_INVALID_VALUE");
+            break;
+        default:
+            if (err != 0) {
+                SDL_Log("OpenGL error: %i", err);
+            }
+            break;
+    }
+}
 
 /// Column major - Camera combined rotation matrix (y, x) & translation matrix
 Mat4<float> Renderer::FPSViewRH(Vec3<float> eye, float pitch, float yaw) {
@@ -64,7 +76,8 @@ Mat4<float> gen_projection_matrix(float z_near, float z_far, float fov, float as
 }
 
 Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), state{}, graphics_batches{}, shaders{},
-                      shader_file_monitor(std::make_unique<FileMonitor>()), lights{}, mesh_manager{new MeshManager()} {
+                      shader_file_monitor(std::make_unique<FileMonitor>()), lights{}, mesh_manager{new MeshManager()},
+                      texture_manager{new TextureManager()}{
     glewExperimental = (GLboolean) true;
     glewInit();
 
@@ -81,37 +94,10 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
     glBindBuffer(GL_UNIFORM_BUFFER, gl_light_uniform_buffer);
     glBufferData(GL_UNIFORM_BUFFER, sizeof(Light) * lights.size(), &lights, GL_DYNAMIC_DRAW);
 
-    /// Compile shaderss
-    const std::string shader_base_filepath = "/Users/AlexanderLingtorp/Repositories/MeineKraft/shaders/";
-    const auto vertex_shader = shader_base_filepath + "std/vertex-shader.glsl";
-    const auto fragment_shader = shader_base_filepath + "std/fragment-shader.glsl";
-    std::string err_msg;
-    bool success;
-
-    Shader skybox_shader(vertex_shader, fragment_shader);
-    skybox_shader.add("#define FLAG_CUBE_MAP_TEXTURE \n");
-    skybox_shader.add("#define FLAG_BLINN_PHONG_SHADING \n");
-    std::tie(success, err_msg) = skybox_shader.compile();
-    if (!success) { SDL_Log("%s", err_msg.c_str()); }
-
-    shaders.insert({ShaderType::SKYBOX_SHADER, skybox_shader});
-
-    Shader std_shader(vertex_shader, fragment_shader);
-    std_shader.add("#define FLAG_BLINN_PHONG_SHADING \n");
-    std_shader.add("#define FLAG_2D_TEXTURE \n");
-    std::tie(success, err_msg) = std_shader.compile();
-    if (!success) { SDL_Log("%s", err_msg.c_str()); }
-
-    shaders.insert({ShaderType::STANDARD_SHADER, std_shader});
-
-    shader_file_monitor->add_file(shader_base_filepath + "std/vertex-shader.glsl");
-    shader_file_monitor->add_file(shader_base_filepath + "std/fragment-shader.glsl");
-    shader_file_monitor->start_monitor();
-
     /// Camera
     const auto position  = Vec3<float>{0.0f, 20.0f, 0.0f};  // cam position
-    const auto direction = Vec3<float>{0.0f, 0.0f, -1.0f}; // position of where the cam is looking
-    const auto world_up  = Vec3<float>{0.0, 1.0f, 0.0f};   // world up
+    const auto direction = Vec3<float>{0.0f, 0.0f, -1.0f};  // position of where the cam is looking
+    const auto world_up  = Vec3<float>{0.0, 1.0f, 0.0f};    // world up
     this->camera = std::make_shared<Camera>(position, direction, world_up);
 }
 
@@ -132,24 +118,6 @@ void Renderer::render(uint32_t delta) {
     /// Reset render stats
     state = RenderState();
 
-    /// Check shader files for modifications
-    if (shader_file_monitor->files_modfied) {
-        for (auto &kv : shaders) {
-            auto shader_key = kv.first;
-            auto shader     = kv.second;
-            std::string err_msg;
-            bool success;
-            std::tie(success, err_msg) = shader.recompile();
-            if (!success) { SDL_Log("%s", err_msg.c_str()); continue; }
-            for (auto &batch : graphics_batches) {
-                if (batch.shader_type == shader_key) {
-                    link_batch(batch); // relink the batch
-                }
-            }
-        }
-        shader_file_monitor->clear_all_modification_flags();
-    }
-
     /// Frustrum planes
     auto camera_view = FPSViewRH(camera->position, camera->pitch, camera->yaw);
     auto frustrum_view = camera_view * projection_matrix;
@@ -158,7 +126,7 @@ void Renderer::render(uint32_t delta) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_MULTISAMPLE);
-    glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+    glClearColor(0.9f, 0.5f, 0.5f, 1.0f);
 
     // TODO: Move this kind of comp. into seperate thread or something
     for (auto &transform : transformations) { transform.update(delta); }
@@ -168,11 +136,11 @@ void Renderer::render(uint32_t delta) {
     // TODO: Cull the lights
 
     for (auto &batch : graphics_batches) {
+        auto shader_program = batch.components.front()->graphics_state.shader.gl_program;
         glBindVertexArray(batch.gl_VAO);
-        glUseProgram(shaders.at(batch.shader_type).gl_program);
+        glUseProgram(shader_program);
         glUniformMatrix4fv(batch.gl_camera_view, 1, GL_FALSE, camera_view.data());
         glUniform3fv(batch.gl_camera_position, 1, (const GLfloat *) &camera->position);
-
         // TODO: These are dependent on the shader and not the batch or the RenderComp.
 //        glEnable(GL_CULL_FACE);
 //        glCullFace(GL_BACK);
@@ -185,6 +153,7 @@ void Renderer::render(uint32_t delta) {
         std::vector<Mat4<float>> buffer{};
         for (auto &component : batch.components) {
             component->update(); // Copy all graphics state
+            glUseProgram(component->graphics_state.shader.gl_program);
 
             // Draw distance
             auto camera_to_entity = camera->position - component->graphics_state.position;
@@ -197,7 +166,7 @@ void Renderer::render(uint32_t delta) {
             auto texture_type = (GLuint) component->graphics_state.diffuse_texture.gl_texture_type;
             auto texture_location = (GLuint) component->graphics_state.diffuse_texture.gl_texture;
             glBindTexture(texture_type, texture_location);
-            glUniform1i(glGetUniformLocation((GLuint) shaders.at(batch.shader_type).gl_program, "diffuse_sampler"), 0);
+            glUniform1i(glGetUniformLocation(shader_program, "diffuse_sampler"), 0);
 
             Mat4<float> model{};
             model = model.translate(component->graphics_state.position);
@@ -271,7 +240,7 @@ void Renderer::update_projection_matrix(float fov) {
     }
 }
 
-void Renderer::add_to_batch(RenderComponent *component, uint64_t mesh_id, ShaderType shader_type) {
+void Renderer::add_to_batch(RenderComponent *component, uint64_t mesh_id) {
     for (auto &batch : graphics_batches) {
         if (batch.mesh_id == mesh_id) {
             batch.components.push_back(component);
@@ -281,20 +250,19 @@ void Renderer::add_to_batch(RenderComponent *component, uint64_t mesh_id, Shader
 
     GraphicsBatch batch{mesh_id};
     batch.mesh = mesh_manager->mesh_from_id(mesh_id);
-    batch.shader_type = shader_type;
-    link_batch(batch);
+    link_batch(batch, component->graphics_state);
 
     batch.components.push_back(component);
     graphics_batches.push_back(batch);
 }
 
-void Renderer::link_batch(GraphicsBatch &batch) {
-    auto batch_shader_program = shaders.at(batch.shader_type).gl_program;
+void Renderer::link_batch(GraphicsBatch &batch, const GraphicsState &state) {
+    auto shader = state.shader.gl_program;
 
     glGenVertexArrays(1, &batch.gl_VAO);
     glBindVertexArray(batch.gl_VAO);
-    batch.gl_camera_view = glGetUniformLocation(batch_shader_program, "camera_view");
-    batch.gl_camera_position = glGetUniformLocation(batch_shader_program, "camera_position");
+    batch.gl_camera_view = glGetUniformLocation(shader, "camera_view");
+    batch.gl_camera_position = glGetUniformLocation(shader, "camera_position");
 
     GLuint gl_VBO;
     glGenBuffers(1, &gl_VBO);
@@ -303,24 +271,24 @@ void Renderer::link_batch(GraphicsBatch &batch) {
     glBufferData(GL_ARRAY_BUFFER, batch.mesh.byte_size_of_vertices(), vertices.data(), GL_DYNAMIC_DRAW);
 
     // Then set our vertex attributes pointers, only doable AFTER linking
-    GLint positionAttrib = glGetAttribLocation(batch_shader_program, "position");
+    GLint positionAttrib = glGetAttribLocation(shader, "position");
     glVertexAttribPointer(positionAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *)offsetof(Vertex<float>, position));
     glEnableVertexAttribArray(positionAttrib);
 
-    GLint colorAttrib = glGetAttribLocation(batch_shader_program, "vColor");
+    GLint colorAttrib = glGetAttribLocation(shader, "vColor");
     glVertexAttribPointer(colorAttrib, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *)offsetof(Vertex<float>, color));
     glEnableVertexAttribArray(colorAttrib);
 
-    GLint normalAttrib = glGetAttribLocation(batch_shader_program, "normal");
+    GLint normalAttrib = glGetAttribLocation(shader, "normal");
     glVertexAttribPointer(normalAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *)offsetof(Vertex<float>, normal));
     glEnableVertexAttribArray(normalAttrib);
 
-    GLint texCoordAttrib = glGetAttribLocation(batch_shader_program, "vTexCoord");
+    GLint texCoordAttrib = glGetAttribLocation(shader, "vTexCoord");
     glVertexAttribPointer(texCoordAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *)offsetof(Vertex<float>, texCoord));
     glEnableVertexAttribArray(texCoordAttrib);
 
     // Lights UBO
-    auto block_index = glGetUniformBlockIndex(batch_shader_program, "lights_block");
+    auto block_index = glGetUniformBlockIndex(shader, "lights_block");
     glBindBuffer(GL_UNIFORM_BUFFER, gl_light_uniform_buffer);
     glBindBufferBase(GL_UNIFORM_BUFFER, block_index, gl_light_uniform_buffer);
 
@@ -328,7 +296,7 @@ void Renderer::link_batch(GraphicsBatch &batch) {
     glGenBuffers(1, &batch.gl_models_buffer_object);
     glBindBuffer(GL_ARRAY_BUFFER, batch.gl_models_buffer_object);
 
-    GLuint modelAttrib = glGetAttribLocation(batch_shader_program, "model");
+    GLuint modelAttrib = glGetAttribLocation(shader, "model");
     for (int i = 0; i < 4; i++) {
         glVertexAttribPointer(modelAttrib + i, 4, GL_FLOAT, GL_FALSE, sizeof(Mat4<float>), (const void *) (sizeof(float) * i * 4));
         glEnableVertexAttribArray(modelAttrib + i);
@@ -340,29 +308,70 @@ void Renderer::link_batch(GraphicsBatch &batch) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, batch.mesh.byte_size_of_indices(), batch.mesh.indices.data(), GL_STATIC_DRAW);
 
-    GLuint projection = glGetUniformLocation(batch_shader_program, "projection");
+    glUseProgram(shader); // Must use the program object before accessing uniforms!
+    GLuint projection = glGetUniformLocation(shader, "projection");
     glUniformMatrix4fv(projection, 1, GL_FALSE, projection_matrix.data());
 }
 
-void Renderer::remove_from_batch(RenderComponent *component) {
-    for (auto &batch : graphics_batches) {
-        for (auto &comp : batch.components) {
-            if (comp == component) {
-                auto &vec = batch.components;
-                vec.erase(std::remove(vec.begin(), vec.end(), component), vec.end());
-            }
-        }
-    }
-}
-
-uint64_t Renderer::load_mesh(std::string filepath, std::string directory) {
+uint64_t Renderer::load_mesh(GraphicsState *state, std::string filepath, std::string directory) {
     uint64_t mesh_id;
     bool loaded;
     std::tie(mesh_id, loaded) = mesh_manager->is_mesh_loaded(filepath, directory);
     if (loaded) {
+        // TODO: Load the textures for the mesh as well
+        // texture_manager->load_textures(state, mesh_id);
         return mesh_id;
     } else {
-        return mesh_manager->load_mesh_from_file(filepath, directory);
+        std::vector<std::pair<Texture::Type, std::string>> texture_info;
+        std::tie(mesh_id, texture_info) = mesh_manager->load_mesh_from_file(filepath, directory);
+        auto textures = texture_manager->load_textures(texture_info);
+
+        /// Compile shader
+        const std::string shader_base_filepath = "/Users/AlexanderLingtorp/Repositories/MeineKraft/shaders/";
+        const auto vertex_shader   = shader_base_filepath + "std/vertex-shader.glsl";
+        const auto fragment_shader = shader_base_filepath + "std/fragment-shader.glsl";
+        Shader shader(vertex_shader, fragment_shader);
+        shader.add("#define FLAG_BLINN_PHONG_SHADING \n");
+
+        for (auto &texture_pair : textures) {
+            auto texture = texture_pair.second;
+            switch (texture.gl_texture_type) {
+                case GL_TEXTURE_2D:
+                    shader.add("#define FLAG_2D_TEXTURE \n");
+                    break;
+                case GL_TEXTURE_CUBE_MAP:
+                    shader.add("#define FLAG_CUBE_MAP_TEXTURE \n");
+                    break;
+                default:
+                    SDL_Log("Renderer: Unknown OpenGL texture type when creating custom shader. %s", filepath.c_str());
+                    break;
+            }
+        }
+
+        std::string err_msg;
+        bool success;
+        std::tie(success, err_msg) = shader.compile();
+        if (!success) {
+            SDL_Log("Renderer: Shader compilation failed; %s", err_msg.c_str());
+            return 0;
+        }
+
+        for (auto &texture_pair : textures) {
+            auto texture_type = texture_pair.first;
+            auto texture      = texture_pair.second;
+            std::string uniform_location = "diffuse_sampler";
+            switch (texture_type) {
+                case Texture::Type::Diffuse:
+                    texture.gl_texture_location = glGetUniformLocation(shader.gl_program, uniform_location.c_str());
+                    state->diffuse_texture = texture;
+                    break;
+                default:
+                    SDL_Log("Renderer: Unknown Texture::Type when creating custom shader. %s", filepath.c_str());
+                    break;
+            }
+        }
+        state->shader = shader;
+        return mesh_id;
     }
 }
 
@@ -371,40 +380,24 @@ uint64_t Renderer::load_mesh_primitive(MeshPrimitive primitive) {
 }
 
 Texture Renderer::setup_texture(RenderComponent *component, Texture texture) {
-    for (auto &batch : graphics_batches) {
-        for (auto &batch_comp : batch.components) {
-            if (batch_comp == component) {
-                std::string uniform_location = "diffuse_sampler";
-                auto gl_shader_program = shaders.at(batch.shader_type).gl_program;
-                texture.gl_texture_location = glGetUniformLocation(gl_shader_program, uniform_location.c_str());
-            }
-        }
+    /// Compile shader
+    const std::string shader_base_filepath = "/Users/AlexanderLingtorp/Repositories/MeineKraft/shaders/";
+    const auto vertex_shader   = shader_base_filepath + "std/vertex-shader.glsl";
+    const auto fragment_shader = shader_base_filepath + "std/fragment-shader.glsl";
+    Shader shader(vertex_shader, fragment_shader);
+    shader.add("#define FLAG_CUBE_MAP_TEXTURE \n");
+
+    std::string err_msg;
+    bool success;
+    std::tie(success, err_msg) = shader.compile();
+    if (!success) {
+        SDL_Log("Renderer: Shader compilation failed; %s", err_msg.c_str());
     }
+    component->graphics_state.shader = shader;
+
+    glUseProgram(shader.gl_program);
+    std::string uniform_location = "diffuse_sampler";
+    texture.gl_texture_location = glGetUniformLocation(shader.gl_program, uniform_location.c_str());
     return texture;
 }
 
-void Renderer::load_obj_textures(RenderComponent *component, std::string filepath, std::string directory) {
-    tinyobj::attrib_t attrib;
-    std::vector<tinyobj::shape_t> shapes;
-    std::vector<tinyobj::material_t> materials;
-    std::string err;
-    auto success = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, filepath.c_str(), directory.c_str(), true);
-    if (!success) { SDL_Log("Failed loading .obj textures %s: %s", filepath.c_str(), err.c_str()); return; }
-    if (err.size() > 0) { SDL_Log("%s", err.c_str()); return; }
-
-    std::unordered_map<std::string, bool> loaded_textures{};
-    for (const auto &material : materials) {
-        /// Color map, a.k.a diffuse map
-        if (!loaded_textures[directory + material.diffuse_texname]) {
-            Texture diffuse_texture{};
-            diffuse_texture.load_2d(directory + material.diffuse_texname);
-            if (diffuse_texture.loaded_successfully) {
-                diffuse_texture = setup_texture(component, diffuse_texture);
-                component->graphics_state.diffuse_texture = diffuse_texture;
-                loaded_textures[directory + material.diffuse_texname] = true;
-            }
-        }
-        // TODO: Support other textures
-        // TODO: Support more than one material per .obj mesh
-    }
-}

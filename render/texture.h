@@ -12,6 +12,7 @@ class Texture {
 public:
     Texture();
 
+    bool load(std::string filepath);
     bool load_1d(std::string filepath);
     bool load_2d(std::string filepath);
     bool load_cube_map(std::vector<std::string> faces);
@@ -19,7 +20,13 @@ public:
     uint64_t gl_texture;
     uint64_t gl_texture_type;
     uint64_t gl_texture_location;
+
     bool loaded_successfully;
+
+    /// Function of the texture
+    enum class Type {
+        Diffuse, Specular
+    };
 
 private:
     /// Returns a default texture when no texture could be loaded for various reasons
