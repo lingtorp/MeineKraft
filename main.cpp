@@ -44,7 +44,7 @@ int main() {
     Skybox skybox{};
 
     std::string directory = "/Users/AlexanderLingtorp/Desktop/";
-    std::string model_file = "/Users/AlexanderLingtorp/Desktop/falu-stuga.obj"; // FIXME
+    std::string model_file = "falu-stuga.obj"; // FIXME
     Teapot model{model_file, directory};
 
     bool DONE = false;

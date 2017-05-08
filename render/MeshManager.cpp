@@ -21,8 +21,11 @@ std::pair<uint64_t, bool> MeshManager::is_mesh_loaded(std::string filepath, std:
 std::pair<uint64_t, std::vector<std::pair<Texture::Type, std::string>>>
 MeshManager::load_mesh_from_file(std::string filepath,
                                  std::string directory) {
+    MeshInformation mesh_info;
+    mesh_info.loaded_from_filepath = directory + filepath;
+
     Assimp::Importer importer;
-    auto scene = importer.ReadFile(filepath.c_str(), aiProcess_Triangulate | aiProcess_JoinIdenticalVertices);
+    auto scene = importer.ReadFile(mesh_info.loaded_from_filepath.c_str(), aiProcess_Triangulate | aiProcess_JoinIdenticalVertices);
 
     if (scene == nullptr) {
         SDL_Log("Error: %s", importer.GetErrorString());
@@ -30,9 +33,6 @@ MeshManager::load_mesh_from_file(std::string filepath,
     }
 
     std::vector<std::pair<Texture::Type, std::string>> texture_info;
-    MeshInformation mesh_info;
-    mesh_info.loaded_from_filepath = directory + filepath;
-
     if (scene->HasMaterials()) {
         for (size_t i = 0; i < scene->mNumMaterials; i++) {
             auto material = scene->mMaterials[i];
