@@ -6,7 +6,7 @@
 #include <cmath>
 #include <vector>
 
-/// Forward declarations
+/************ Forward declarations ************/
 template<typename T>
 struct Vec2;
 
@@ -25,7 +25,7 @@ struct Vec4 {
     Vec4(): x(0), y(0), z(0), w(0) { };
     Vec4(Vec3<T> vec): x(vec.x), y(vec.y), z(vec.z), w(0.0) { };
 
-    /// Operators
+    /************ Operators ************/
     /// Returns the members x, y, z, w in index order (invalid indexes returns w)
     T& operator[] (const int index) {
         switch (index) { // Should be a jump table when optimised
@@ -58,9 +58,22 @@ struct Vec3 {
     Vec3(T x, T y, T z): x(x), y(y), z(z) {};
     Vec3(): x(0), y(0), z(0) {};
 
+    /// Zeroed vector
     inline static Vec3 ZERO() { return Vec3(0.0, 0.0, 0.0); }
+
+    /// Unit vector along x-axis
+    inline static Vec3 X()    { return Vec3(1.0, 1.0, 0.0); }
+
+    /// Unit vector along y-axis
+    inline static Vec3 Y()    { return Vec3(0.0, 1.0, 0.0); }
+
+    /// Unit vector along z-axis
+    inline static Vec3 Z()    { return Vec3(0.0, 0.0, 1.0); }
+
+    /// Length of the vector
     inline double length() const { return std::sqrt(std::pow(x, 2) + std::pow(y, 2) + std::pow(z, 2)); }
 
+    /// Normalizes a copy of this vector and returns it
     inline Vec3<T> normalize() const {
         double length = this->length();
         Vec3 result;
@@ -79,9 +92,10 @@ struct Vec3 {
         return result;
     }
 
+    /// Dot product of this and the vector u
     inline T dot(Vec3<T> u) const { return x * u.x + y * u.y + z * u.z; }
 
-    /// Operators
+    /************ Operators ************/
     inline Vec3<T> operator+(const Vec3 &rhs) const {
         return Vec3<T>{x + rhs.x, y + rhs.y, z + rhs.z};
     }
@@ -112,7 +126,7 @@ struct Vec2 {
     /// Dot product
     inline T dot(Vec2<T> u) const { return x * u.x + y * u.y; }
 
-    /// Operators
+    /************ Operators ************/
     bool operator==(const Vec2 &rhs) const {
         return x == rhs.x && y == rhs.y;
     }
@@ -191,7 +205,7 @@ public:
         return mat;
     }
 
-    /// Operators
+    /************ Operators ************/
     /// Standard matrix multiplication row-column wise; *this * mat
     inline Mat4<T> operator*(Mat4<T> &mat) const {
         Mat4<T> matrix;
