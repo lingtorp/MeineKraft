@@ -1,3 +1,4 @@
+#include <SDL2/SDL_log.h>
 #include "camera.h"
 
 Camera::Camera(Vec3<float> position, Vec3<float> direction, Vec3<float> world_up):
@@ -33,6 +34,6 @@ Vec3<float> Camera::recalculate_direction() const {
     return result.normalize();
 }
 
-void Camera::update(double delta) {
-    // TODO: Implement
+void Camera::update(uint32_t delta) {
+    SDL_Log("Delta: %u", delta);
 }

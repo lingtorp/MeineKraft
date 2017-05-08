@@ -16,7 +16,7 @@ public:
 
     Camera(Vec3<float> position, Vec3<float> direction, Vec3<float> world_up);
 
-    void update(double delta);
+    void update(uint32_t delta);
     Vec3<float> move_forward(double delta);
     Vec3<float> move_backward(double delta);
     Vec3<float> move_right(double delta) const;

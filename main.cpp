@@ -44,7 +44,7 @@ int main() {
     Skybox skybox{};
 
     std::string directory = "/Users/AlexanderLingtorp/Desktop/";
-    std::string model_file = "/Users/AlexanderLingtorp/Desktop/falu-stuga.obj";
+    std::string model_file = "/Users/AlexanderLingtorp/Desktop/falu-stuga.obj"; // FIXME
     Teapot model{model_file, directory};
 
     bool DONE = false;
@@ -80,6 +80,9 @@ int main() {
                             break;
                         case SDLK_d:
                             renderer.camera->position = renderer.camera->move_right(delta);
+                            break;
+                        case SDLK_ESCAPE:
+                            DONE = true;
                             break;
                     }
                     break;

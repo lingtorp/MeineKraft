@@ -53,7 +53,7 @@ public:
     ///
     Texture setup_texture(RenderComponent *component, Texture texture);
 
-        std::shared_ptr<Camera> camera;
+    std::shared_ptr<Camera> camera;
     RenderState state;
     SDL_Window *window;
 private:
