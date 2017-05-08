@@ -22,7 +22,6 @@ public:
     uint32_t gl_models_buffer_object;
     uint32_t gl_camera_view;
     uint32_t gl_camera_position;
-    ShaderType shader_type;
 };
 
 #endif //MEINEKRAFT_GRAPHICSBATCH_H

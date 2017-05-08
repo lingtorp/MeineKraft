@@ -75,7 +75,7 @@ Mat4<float> gen_projection_matrix(float z_near, float z_far, float fov, float as
     return matrix;
 }
 
-Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), state{}, graphics_batches{}, shaders{},
+Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), state{}, graphics_batches{},
                       shader_file_monitor(std::make_unique<FileMonitor>()), lights{}, mesh_manager{new MeshManager()},
                       texture_manager{new TextureManager()}{
     glewExperimental = (GLboolean) true;
@@ -160,7 +160,7 @@ void Renderer::render(uint32_t delta) {
             if (camera_to_entity.length() >= DRAW_DISTANCE) { continue; }
 
             // Frustrum cullling
-            if (point_inside_frustrum(component->graphics_state.position, planes)) { continue; }
+            // if (point_inside_frustrum(component->graphics_state.position, planes)) { continue; }
 
             glActiveTexture(GL_TEXTURE0);
             auto texture_type = (GLuint) component->graphics_state.diffuse_texture.gl_texture_type;
@@ -233,10 +233,11 @@ void Renderer::update_projection_matrix(float fov) {
     this->projection_matrix = gen_projection_matrix(1, -10, fov, aspect);
     glViewport(0, 0, width, height); // Update OpenGL viewport
     // TODO: Update all shader programs projection matrices to the new one
-    for (auto shader_program : shaders) {
-        glUseProgram(shader_program.second.gl_program);
-        GLuint projection = glGetUniformLocation(shader_program.second.gl_program, "projection");
-        glUniformMatrix4fv(projection, 1, GL_FALSE, projection_matrix.data());
+    for (auto shader_program : graphics_batches) { // FIXME
+//        shader_program.components[0]->graphics_state.shader;
+//        glUseProgram(shader_program.second.gl_program);
+//        GLuint projection = glGetUniformLocation(shader_program.second.gl_program, "projection");
+//        glUniformMatrix4fv(projection, 1, GL_FALSE, projection_matrix.data());
     }
 }
 
@@ -324,7 +325,6 @@ uint64_t Renderer::load_mesh(GraphicsState *state, std::string filepath, std::st
     } else {
         std::vector<std::pair<Texture::Type, std::string>> texture_info;
         std::tie(mesh_id, texture_info) = mesh_manager->load_mesh_from_file(filepath, directory);
-        auto textures = texture_manager->load_textures(texture_info);
 
         /// Compile shader
         const std::string shader_base_filepath = "/Users/AlexanderLingtorp/Repositories/MeineKraft/shaders/";
@@ -333,6 +333,7 @@ uint64_t Renderer::load_mesh(GraphicsState *state, std::string filepath, std::st
         Shader shader(vertex_shader, fragment_shader);
         shader.add("#define FLAG_BLINN_PHONG_SHADING \n");
 
+        auto textures = texture_manager->load_textures(texture_info);
         for (auto &texture_pair : textures) {
             auto texture = texture_pair.second;
             switch (texture.gl_texture_type) {

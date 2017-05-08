@@ -223,8 +223,4 @@ struct RenderState {
     uint64_t graphic_batches;
 };
 
-enum ShaderType: uint64_t {
-    STANDARD_SHADER, SKYBOX_SHADER
-};
-
 #endif //MEINEKRAFT_PRIMITIVES_H

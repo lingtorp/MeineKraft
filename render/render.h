@@ -68,8 +68,6 @@ private:
 
     std::vector<Transform> transformations;
 
-    std::unordered_map<ShaderType, Shader, std::hash<int>> shaders;
-
     std::vector<GraphicsBatch> graphics_batches;
 
     MeshManager *mesh_manager;
