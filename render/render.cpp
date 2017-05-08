@@ -12,8 +12,8 @@
 #include "shader.h"
 #include "../util/filemonitor.h"
 #include "transform.h"
-#include "MeshManager.hpp"
-#include "TextureManager.hpp"
+#include "meshmanager.h"
+#include "texturemanager.h"
 
 void log_gl_error() {
     GLenum err = glGetError();
@@ -81,7 +81,7 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
     glewExperimental = (GLboolean) true;
     glewInit();
 
-    Light light{Vec3<float>{15.0, 15.0, 15.0}, Color4<float>{0.4, 0.4, 0.8, 1.0}};
+    Light light{Vec3<float>{15.0, 15.0, 15.0}, Color4<float>{0.5, 0.4, 0.8, 1.0}};
     lights.push_back(light);
 
     Transform transform;
@@ -232,7 +232,7 @@ void Renderer::update_projection_matrix(float fov) {
     float aspect = (float) width / (float) height;
     this->projection_matrix = gen_projection_matrix(1, -10, fov, aspect);
     glViewport(0, 0, width, height); // Update OpenGL viewport
-    /// Update all shader programs projection matrices to the new one
+    // TODO: Update all shader programs projection matrices to the new one
     for (auto shader_program : shaders) {
         glUseProgram(shader_program.second.gl_program);
         GLuint projection = glGetUniformLocation(shader_program.second.gl_program, "projection");

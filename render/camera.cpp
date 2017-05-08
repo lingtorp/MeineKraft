@@ -33,4 +33,6 @@ Vec3<float> Camera::recalculate_direction() const {
     return result.normalize();
 }
 
-void Camera::update(double delta) {}
+void Camera::update(double delta) {
+    // TODO: Implement
+}

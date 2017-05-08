@@ -1,9 +1,9 @@
-#include "Skybox.h"
+#include "skybox.h"
 #include "../render/camera.h"
 #include "../render/rendercomponent.h"
 
 Skybox::Skybox(): Entity() {
-    scale = 100;
+    scale = 110;
     auto render_comp = new RenderComponent(this);
     const auto base = "/Users/AlexanderLingtorp/Repositories/MeineKraft/";
     std::vector<std::string> faces = {base + std::string("res/sky/right.jpg"),

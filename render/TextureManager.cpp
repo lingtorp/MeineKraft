@@ -1,5 +1,5 @@
 #include <SDL2/SDL_log.h>
-#include "TextureManager.hpp"
+#include "texturemanager.h"
 
 TextureManager::TextureManager() {}
 

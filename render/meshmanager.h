@@ -15,16 +15,17 @@ struct MeshInformation {
 class MeshManager {
 private:
     std::unordered_map<uint64_t, MeshInformation> meshes;
-
-    /// Loads a mesh from a file
-    Mesh load_obj_mesh_from_file(std::string filepath, std::string directory);
 public:
     MeshManager();
 
     /// Return the mesh_id if flag is true
     std::pair<uint64_t, bool> is_mesh_loaded(std::string filepath, std::string directory);
 
-    /// Loads the mesh from the specified file (only .obj at this point)
+    /**
+     * Loads a model file and its textures, blocking.
+     * @param filepath Filepath to the model file to be loaded
+     * @return Mesh ID that identifies the loaded Mesh and a list of Textures (type, filepath).
+     */
     std::pair<uint64_t, std::vector<std::pair<Texture::Type, std::string>>>
     load_mesh_from_file(std::string filepath, std::string directory);
 

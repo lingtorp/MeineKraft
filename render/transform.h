@@ -3,6 +3,7 @@
 
 #include "../math/vector.h"
 
+// TODO: Implement Quaternion transformations
 struct Transform {
     bool finished;
     bool repeat;
@@ -30,7 +31,6 @@ struct Transform {
         time_elapsed += delta;
         current_position.x = 30 * sinf(time_elapsed * M_PI_2 / 1000);
         current_position.z = 30 * cosf(time_elapsed * M_PI_2 / 1000);
-
     }
 };
 

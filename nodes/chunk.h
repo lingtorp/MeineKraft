@@ -10,7 +10,7 @@ class Noise;
 class Chunk {
 public:
     Chunk(Vec3<float> world_position, const Noise &noise);
-    static const uint16_t dimension = 32; // The 'width' of the chunk in number of cubes
+    static const uint16_t dimension = 8; // The 'width' of the chunk in number of cubes
     Vec3<float> position;
     Vec3<float> center_position;
     uint16_t num_blocks;

@@ -23,8 +23,6 @@ public:
     void world_tick(uint32_t delta, const std::shared_ptr<Camera> &camera);
     void add_entity(Entity *entity);
 
-    Vec3<float> world_position(Vec3<float> position) const;
-
 private:
     Noise noise;
 };

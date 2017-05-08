@@ -1,4 +1,4 @@
-#include "MeshManager.hpp"
+#include "meshmanager.h"
 #include <SDL2/SDL_log.h>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
@@ -46,7 +46,6 @@ MeshManager::load_mesh_from_file(std::string filepath,
                 SDL_Log("%s%s, %i", directory.c_str(), tex_filepath.data, material->GetTextureCount(aiTextureType_DIFFUSE));
                 std::string texture_filepath(tex_filepath.data);
                 texture_filepath.insert(0, directory);
-                // TODO: Cache textures in TextureManager
                 texture_info.push_back({Texture::Type::Diffuse, texture_filepath});
             }
         }

@@ -3,6 +3,7 @@
 
 #include "../math/vector.h"
 
+// TODO: Improve the camera
 class Camera {
 public:
     Vec3<float> direction, position, up;

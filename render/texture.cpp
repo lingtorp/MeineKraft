@@ -10,11 +10,6 @@
 
 Texture::Texture(): gl_texture(0), gl_texture_type(0), gl_texture_location(0), loaded_successfully(false) {}
 
-uint64_t Texture::default_texture() {
-    // TODO: Implement
-    return 0;
-}
-
 FileExtension Texture::file_format_from_file_at(std::string filepath) {
     std::string extension{SDL_strrchr(filepath.c_str(), '.')};
     if (extension == ".png") {
@@ -69,7 +64,7 @@ uint64_t Texture::load_cube_map(std::vector<std::string> faces, FileExtension fi
 uint64_t Texture::load_2d_texture(std::string filepath) {
     assert(filepath.size() > 0);
     SDL_Surface *image = IMG_Load(filepath.c_str());
-    if (!image) { SDL_Log("%s", IMG_GetError()); return default_texture(); }
+    if (!image) { SDL_Log("%s", IMG_GetError()); }
     int width  = image->w;
     int height = image->h;
     GLuint texture;
@@ -81,7 +76,7 @@ uint64_t Texture::load_2d_texture(std::string filepath) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glGenerateMipmap(GL_TEXTURE_2D);
     auto file_format = file_format_from_file_at(filepath);
-    if (file_format == FileExtension::unknown) { SDL_Log("%s %s", "Invalid file type:", filepath.c_str()); return default_texture();}
+    if (file_format == FileExtension::unknown) { SDL_Log("%s %s", "Invalid file type:", filepath.c_str());}
     GLuint internal_format = (GLint) gl_format_from_file_extension(file_format);
     glTexImage2D(GL_TEXTURE_2D, 0, internal_format, width, height, 0, internal_format, GL_UNSIGNED_BYTE, image->pixels);
     SDL_FreeSurface(image);
@@ -91,7 +86,7 @@ uint64_t Texture::load_2d_texture(std::string filepath) {
 uint64_t Texture::load_1d_texture(std::string filepath) {
     assert(filepath.size() > 0);
     SDL_Surface *image = IMG_Load(filepath.c_str());
-    if (!image) { SDL_Log("%s", IMG_GetError()); return default_texture(); }
+    if (!image) { SDL_Log("%s", IMG_GetError()); }
     int width  = image->w;
     GLuint texture;
     glGenTextures(1, &texture);
@@ -101,7 +96,7 @@ uint64_t Texture::load_1d_texture(std::string filepath) {
     glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glGenerateMipmap(GL_TEXTURE_1D);
     auto file_format = file_format_from_file_at(filepath);
-    if (file_format == FileExtension::unknown) { SDL_Log("%s %s", "Invalid file type:", filepath.c_str()); return default_texture();}
+    if (file_format == FileExtension::unknown) { SDL_Log("%s %s", "Invalid file type:", filepath.c_str()); }
     GLuint internal_format = (GLint) gl_format_from_file_extension(file_format);
     glTexImage1D(GL_TEXTURE_1D, 0, internal_format, width, 0, internal_format, GL_UNSIGNED_BYTE, image->pixels);
     SDL_FreeSurface(image);

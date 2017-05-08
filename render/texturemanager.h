@@ -8,6 +8,7 @@
  * Loads, stores, Textures used by the Renderer
  */
 // TODO: Need to change so that not every texture is loaded multiple times, TextureManager should coordinate it
+// TODO: Cache textures in TextureManager
 class TextureManager {
 public:
     TextureManager();

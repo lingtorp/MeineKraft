@@ -29,9 +29,6 @@ public:
     };
 
 private:
-    /// Returns a default texture when no texture could be loaded for various reasons
-    uint64_t default_texture();
-
     uint64_t load_1d_texture(std::string filepath);
     uint64_t load_2d_texture(std::string filepath);
     uint64_t load_cube_map(std::vector<std::string> faces, FileExtension file_extension);
