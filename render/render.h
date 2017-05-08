@@ -21,6 +21,9 @@ class FileMonitor;
 class MeshManager;
 class TextureManager;
 
+// TODO: Implement sparse id hash table array thingy
+// TODO: Replace all the uint64_t with the new ID type in order to clarify the usage
+
 class Renderer {
 public:
     Renderer(Renderer &render) = delete;
@@ -36,13 +39,13 @@ public:
     void render(uint32_t delta);
 
     /// Request a loading of a mesh, return mesh_id
-    uint64_t load_mesh(GraphicsState *state, std::string filepath, std::string directory);
+    uint64_t load_mesh(RenderComponent *comp, std::string filepath, std::string directory);
 
     /// Request a loading of a standard primitive mesh
-    uint64_t load_mesh_primitive(MeshPrimitive primitive);
+    uint64_t load_mesh_primitive(MeshPrimitive primitive, RenderComponent *comp);
 
     /// Adds the RenderComponent to a internal batch
-    void add_to_batch(RenderComponent *component, uint64_t mesh_id);
+    uint64_t add_to_batch(RenderComponent *component, uint64_t mesh_id, Shader shader);
 
     /// Removes the RenderComponent from a internal batch with the same Entity.hash_id
     void remove_from_batch(RenderComponent *component);
@@ -80,7 +83,7 @@ private:
     std::array<Plane<float>, 6> extract_planes(Mat4<float> matrix);
 
     /// Setups the VAO and uniforms up between the batch and OpenGL
-    void link_batch(GraphicsBatch &batch, const GraphicsState &state);
+    void link_batch(GraphicsBatch &batch, const Shader &shader);
 
     /// Creates a camera view matrix based on the euler angles (x, y) and position of the eye
     Mat4<float> FPSViewRH(Vec3<float> eye, float pitch, float yaw);

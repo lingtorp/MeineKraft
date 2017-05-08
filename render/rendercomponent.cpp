@@ -7,8 +7,7 @@ RenderComponent::RenderComponent(Entity *entity): entity(entity), graphics_state
 
 void RenderComponent::set_mesh(std::string mesh_file, std::string directory_file) {
     // TODO: Remove from previous batch - since we are changing mesh and thus geo. data
-    auto mesh_id = Renderer::instance().load_mesh(&graphics_state, mesh_file, directory_file);
-    Renderer::instance().add_to_batch(this, mesh_id);
+    graphics_state.mesh_id = Renderer::instance().load_mesh(this, mesh_file, directory_file);
 };
 
 void RenderComponent::update() {
@@ -18,8 +17,7 @@ void RenderComponent::update() {
 
 void RenderComponent::set_mesh(MeshPrimitive primitive) {
     // TODO: Remove from previous batch - since we are changing mesh and thus geo. data
-    auto mesh_id = Renderer::instance().load_mesh_primitive(primitive);
-    Renderer::instance().add_to_batch(this, mesh_id);
+    graphics_state.mesh_id = Renderer::instance().load_mesh_primitive(primitive, this);
 }
 
 void RenderComponent::set_cube_map_texture(std::vector<std::string> faces) {

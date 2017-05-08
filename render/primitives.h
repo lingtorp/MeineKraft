@@ -214,7 +214,7 @@ struct GraphicsState {
     Texture diffuse_texture;
     Vec3<float> center;
     double radius;
-    Shader shader;
+    uint64_t mesh_id;
 };
 
 /// Represents the state of the Render, used for ImGUI debug panes

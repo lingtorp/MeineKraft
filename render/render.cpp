@@ -136,9 +136,8 @@ void Renderer::render(uint32_t delta) {
     // TODO: Cull the lights
 
     for (auto &batch : graphics_batches) {
-        auto shader_program = batch.components.front()->graphics_state.shader.gl_program;
         glBindVertexArray(batch.gl_VAO);
-        glUseProgram(shader_program);
+        glUseProgram(batch.shader.gl_program);
         glUniformMatrix4fv(batch.gl_camera_view, 1, GL_FALSE, camera_view.data());
         glUniform3fv(batch.gl_camera_position, 1, (const GLfloat *) &camera->position);
         // TODO: These are dependent on the shader and not the batch or the RenderComp.
@@ -153,7 +152,6 @@ void Renderer::render(uint32_t delta) {
         std::vector<Mat4<float>> buffer{};
         for (auto &component : batch.components) {
             component->update(); // Copy all graphics state
-            glUseProgram(component->graphics_state.shader.gl_program);
 
             // Draw distance
             auto camera_to_entity = camera->position - component->graphics_state.position;
@@ -166,7 +164,7 @@ void Renderer::render(uint32_t delta) {
             auto texture_type = (GLuint) component->graphics_state.diffuse_texture.gl_texture_type;
             auto texture_location = (GLuint) component->graphics_state.diffuse_texture.gl_texture;
             glBindTexture(texture_type, texture_location);
-            glUniform1i(glGetUniformLocation(shader_program, "diffuse_sampler"), 0);
+            glUniform1i(glGetUniformLocation(batch.shader.gl_program, "diffuse_sampler"), 0);
 
             Mat4<float> model{};
             model = model.translate(component->graphics_state.position);
@@ -233,37 +231,43 @@ void Renderer::update_projection_matrix(float fov) {
     this->projection_matrix = gen_projection_matrix(1, -10, fov, aspect);
     glViewport(0, 0, width, height); // Update OpenGL viewport
     // TODO: Update all shader programs projection matrices to the new one
-    for (auto shader_program : graphics_batches) { // FIXME
-//        shader_program.components[0]->graphics_state.shader;
-//        glUseProgram(shader_program.second.gl_program);
-//        GLuint projection = glGetUniformLocation(shader_program.second.gl_program, "projection");
-//        glUniformMatrix4fv(projection, 1, GL_FALSE, projection_matrix.data());
+    for (auto &batch : graphics_batches) {
+        glUseProgram(batch.shader.gl_program);
+        GLuint projection = glGetUniformLocation(batch.shader.gl_program, "projection");
+        glUniformMatrix4fv(projection, 1, GL_FALSE, projection_matrix.data());
     }
 }
 
-void Renderer::add_to_batch(RenderComponent *component, uint64_t mesh_id) {
-    for (auto &batch : graphics_batches) {
-        if (batch.mesh_id == mesh_id) {
-            batch.components.push_back(component);
-            return;
+uint64_t Renderer::add_to_batch(RenderComponent *component, uint64_t mesh_id, Shader shader) {
+    for (uint64_t i = 0; i < graphics_batches.size(); i++) {
+        GraphicsBatch *batch = &graphics_batches[i];
+        if (batch->mesh_id == mesh_id) {
+            batch->components.push_back(component);
+            return i;
         }
     }
 
     GraphicsBatch batch{mesh_id};
     batch.mesh = mesh_manager->mesh_from_id(mesh_id);
-    link_batch(batch, component->graphics_state);
+    batch.shader = shader;
+    link_batch(batch, shader);
 
     batch.components.push_back(component);
     graphics_batches.push_back(batch);
+
+    // FIXME: Really want to implement the sparse array that Bitsquid blogged about
+    uint64_t batch_id = graphics_batches.size() - 1;
+
+    return batch_id;
 }
 
-void Renderer::link_batch(GraphicsBatch &batch, const GraphicsState &state) {
-    auto shader = state.shader.gl_program;
+void Renderer::link_batch(GraphicsBatch &batch, const Shader &shader) {
+    auto program = shader.gl_program;
 
     glGenVertexArrays(1, &batch.gl_VAO);
     glBindVertexArray(batch.gl_VAO);
-    batch.gl_camera_view = glGetUniformLocation(shader, "camera_view");
-    batch.gl_camera_position = glGetUniformLocation(shader, "camera_position");
+    batch.gl_camera_view = glGetUniformLocation(program, "camera_view");
+    batch.gl_camera_position = glGetUniformLocation(program, "camera_position");
 
     GLuint gl_VBO;
     glGenBuffers(1, &gl_VBO);
@@ -272,24 +276,24 @@ void Renderer::link_batch(GraphicsBatch &batch, const GraphicsState &state) {
     glBufferData(GL_ARRAY_BUFFER, batch.mesh.byte_size_of_vertices(), vertices.data(), GL_DYNAMIC_DRAW);
 
     // Then set our vertex attributes pointers, only doable AFTER linking
-    GLint positionAttrib = glGetAttribLocation(shader, "position");
+    GLint positionAttrib = glGetAttribLocation(program, "position");
     glVertexAttribPointer(positionAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *)offsetof(Vertex<float>, position));
     glEnableVertexAttribArray(positionAttrib);
 
-    GLint colorAttrib = glGetAttribLocation(shader, "vColor");
+    GLint colorAttrib = glGetAttribLocation(program, "vColor");
     glVertexAttribPointer(colorAttrib, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *)offsetof(Vertex<float>, color));
     glEnableVertexAttribArray(colorAttrib);
 
-    GLint normalAttrib = glGetAttribLocation(shader, "normal");
+    GLint normalAttrib = glGetAttribLocation(program, "normal");
     glVertexAttribPointer(normalAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *)offsetof(Vertex<float>, normal));
     glEnableVertexAttribArray(normalAttrib);
 
-    GLint texCoordAttrib = glGetAttribLocation(shader, "vTexCoord");
+    GLint texCoordAttrib = glGetAttribLocation(program, "vTexCoord");
     glVertexAttribPointer(texCoordAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *)offsetof(Vertex<float>, texCoord));
     glEnableVertexAttribArray(texCoordAttrib);
 
     // Lights UBO
-    auto block_index = glGetUniformBlockIndex(shader, "lights_block");
+    auto block_index = glGetUniformBlockIndex(program, "lights_block");
     glBindBuffer(GL_UNIFORM_BUFFER, gl_light_uniform_buffer);
     glBindBufferBase(GL_UNIFORM_BUFFER, block_index, gl_light_uniform_buffer);
 
@@ -297,7 +301,7 @@ void Renderer::link_batch(GraphicsBatch &batch, const GraphicsState &state) {
     glGenBuffers(1, &batch.gl_models_buffer_object);
     glBindBuffer(GL_ARRAY_BUFFER, batch.gl_models_buffer_object);
 
-    GLuint modelAttrib = glGetAttribLocation(shader, "model");
+    GLuint modelAttrib = glGetAttribLocation(program, "model");
     for (int i = 0; i < 4; i++) {
         glVertexAttribPointer(modelAttrib + i, 4, GL_FLOAT, GL_FALSE, sizeof(Mat4<float>), (const void *) (sizeof(float) * i * 4));
         glEnableVertexAttribArray(modelAttrib + i);
@@ -309,17 +313,18 @@ void Renderer::link_batch(GraphicsBatch &batch, const GraphicsState &state) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, batch.mesh.byte_size_of_indices(), batch.mesh.indices.data(), GL_STATIC_DRAW);
 
-    glUseProgram(shader); // Must use the program object before accessing uniforms!
-    GLuint projection = glGetUniformLocation(shader, "projection");
+    glUseProgram(program); // Must use the program object before accessing uniforms!
+    GLuint projection = glGetUniformLocation(program, "projection");
     glUniformMatrix4fv(projection, 1, GL_FALSE, projection_matrix.data());
 }
 
-uint64_t Renderer::load_mesh(GraphicsState *state, std::string filepath, std::string directory) {
+uint64_t Renderer::load_mesh(RenderComponent *comp, std::string filepath, std::string directory) {
     uint64_t mesh_id;
     bool loaded;
     std::tie(mesh_id, loaded) = mesh_manager->is_mesh_loaded(filepath, directory);
     if (loaded) {
         // TODO: Load the textures for the mesh as well
+        // TODO: Add to batch, etc
         // texture_manager->load_textures(state, mesh_id);
         return mesh_id;
     } else {
@@ -364,23 +369,23 @@ uint64_t Renderer::load_mesh(GraphicsState *state, std::string filepath, std::st
             switch (texture_type) {
                 case Texture::Type::Diffuse:
                     texture.gl_texture_location = glGetUniformLocation(shader.gl_program, uniform_location.c_str());
-                    state->diffuse_texture = texture;
+                    comp->graphics_state.diffuse_texture = texture;
                     break;
                 default:
                     SDL_Log("Renderer: Unknown Texture::Type when creating custom shader. %s", filepath.c_str());
                     break;
             }
         }
-        state->shader = shader;
+
+        uint64_t batch_id = add_to_batch(comp, mesh_id, shader); // FIXME: batch_id?
+
         return mesh_id;
     }
 }
 
-uint64_t Renderer::load_mesh_primitive(MeshPrimitive primitive) {
-    return mesh_manager->mesh_id_from_primitive(primitive);
-}
+uint64_t Renderer::load_mesh_primitive(MeshPrimitive primitive, RenderComponent *comp) {
+    uint64_t mesh_id = mesh_manager->mesh_id_from_primitive(primitive);
 
-Texture Renderer::setup_texture(RenderComponent *component, Texture texture) {
     /// Compile shader
     const std::string shader_base_filepath = "/Users/AlexanderLingtorp/Repositories/MeineKraft/shaders/";
     const auto vertex_shader   = shader_base_filepath + "std/vertex-shader.glsl";
@@ -394,11 +399,22 @@ Texture Renderer::setup_texture(RenderComponent *component, Texture texture) {
     if (!success) {
         SDL_Log("Renderer: Shader compilation failed; %s", err_msg.c_str());
     }
-    component->graphics_state.shader = shader;
 
-    glUseProgram(shader.gl_program);
-    std::string uniform_location = "diffuse_sampler";
-    texture.gl_texture_location = glGetUniformLocation(shader.gl_program, uniform_location.c_str());
+    add_to_batch(comp, mesh_id, shader);
+
+    return mesh_id;
+}
+
+Texture Renderer::setup_texture(RenderComponent *component, Texture texture) {
+    for (auto &batch : graphics_batches) {
+        if (batch.mesh_id == component->graphics_state.mesh_id) {
+            auto &shader = batch.shader;
+            glUseProgram(shader.gl_program);
+            std::string uniform_location = "diffuse_sampler";
+            texture.gl_texture_location = glGetUniformLocation(shader.gl_program, uniform_location.c_str());
+            return texture;
+        }
+    }
     return texture;
 }
 
