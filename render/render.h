@@ -51,7 +51,7 @@ public:
     void update_projection_matrix(float fov);
 
     ///
-    Texture setup_texture(RenderComponent *component, Texture texture);
+    Texture setup_texture(RenderComponent *component, Texture texture); // FIXME
 
     std::shared_ptr<Camera> camera;
     RenderState state;

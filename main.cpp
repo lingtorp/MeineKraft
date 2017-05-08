@@ -60,32 +60,57 @@ int main() {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             ImGui_ImplSdlGL3_ProcessEvent(&event);
-            renderer.camera->update(delta);
             switch (event.type) {
                 case SDL_MOUSEMOTION:
                     renderer.camera->pitch += event.motion.yrel;
-                    renderer.camera->yaw += event.motion.xrel;
+                    renderer.camera->yaw   += event.motion.xrel;
                     renderer.camera->direction = renderer.camera->recalculate_direction();
                     break;
                 case SDL_KEYDOWN:
                     switch (event.key.keysym.sym) {
                         case SDLK_w:
-                            renderer.camera->position = renderer.camera->move_forward(delta);
+                            renderer.camera->move_forward(true);
                             break;
                         case SDLK_a:
-                            renderer.camera->position = renderer.camera->move_left(delta);
+                            renderer.camera->move_left(true);
                             break;
                         case SDLK_s:
-                            renderer.camera->position = renderer.camera->move_backward(delta);
+                            renderer.camera->move_backward(true);
                             break;
                         case SDLK_d:
-                            renderer.camera->position = renderer.camera->move_right(delta);
+                            renderer.camera->move_right(true);
+                            break;
+                        case SDLK_q:
+                            renderer.camera->move_down(true);
+                            break;
+                        case SDLK_e:
+                            renderer.camera->move_up(true);
                             break;
                         case SDLK_ESCAPE:
                             DONE = true;
                             break;
                     }
                     break;
+                case SDL_KEYUP:
+                    switch (event.key.keysym.sym) {
+                        case SDLK_w:
+                            renderer.camera->move_forward(false);
+                            break;
+                        case SDLK_a:
+                            renderer.camera->move_left(false);
+                            break;
+                        case SDLK_s:
+                            renderer.camera->move_backward(false);
+                            break;
+                        case SDLK_d:
+                            renderer.camera->move_right(false);
+                            break;
+                        case SDLK_q:
+                            renderer.camera->move_down(false);
+                            break;
+                        case SDLK_e:
+                            renderer.camera->move_up(false);
+                    }
                 case SDL_WINDOWEVENT:
                     switch (event.window.event) {
                         case SDL_WINDOWEVENT_RESIZED:
@@ -98,6 +123,8 @@ int main() {
                     break;
             }
         }
+
+        renderer.camera->position = renderer.camera->update(delta);
 
         ImGui_ImplSdlGL3_NewFrame(window);
 
