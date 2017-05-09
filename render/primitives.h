@@ -214,17 +214,13 @@ struct GraphicsState {
     Texture diffuse_texture;
     Vec3<float> center;
     double radius;
-    Shader shader;
+    uint64_t mesh_id;
 };
 
 /// Represents the state of the Render, used for ImGUI debug panes
 struct RenderState {
     uint64_t entities;
     uint64_t graphic_batches;
-};
-
-enum ShaderType: uint64_t {
-    STANDARD_SHADER, SKYBOX_SHADER
 };
 
 #endif //MEINEKRAFT_PRIMITIVES_H
