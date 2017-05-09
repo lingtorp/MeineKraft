@@ -48,7 +48,7 @@ public:
     uint64_t add_to_batch(RenderComponent *component, uint64_t mesh_id, Shader shader);
 
     /// Removes the RenderComponent from a internal batch with the same Entity.hash_id
-    void remove_from_batch(RenderComponent *component);
+    void remove_from_batch(RenderComponent *component); // FIXME
 
     /// Updates all the shaders projection matrices in order to support resizing of the window
     void update_projection_matrix(float fov);
@@ -79,7 +79,10 @@ private:
 
     std::unique_ptr<FileMonitor> shader_file_monitor;
 
+    // TODO Docs
     bool point_inside_frustrum(Vec3<float> point, std::array<Plane<float>, 6> planes);
+
+    // TODO Docs
     std::array<Plane<float>, 6> extract_planes(Mat4<float> matrix);
 
     /// Setups the VAO and uniforms up between the batch and OpenGL
