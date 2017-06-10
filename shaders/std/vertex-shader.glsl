@@ -18,10 +18,10 @@ out vec3 fNormal;
 out vec4 fPosition;
 
 void main() {
-  gl_Position = projection * camera_view * model * vec4(position, 1.0);
+  gl_Position = projection * camera_view * model * vec4(position, 1.0f);
 
   fTexcoord = vTexCoord;
   fNormal   = normal;
-  fPosition = model * vec4(position, 1.0);
+  fPosition = model * vec4(position, 1.0f);
   fColor = vColor;
 }
