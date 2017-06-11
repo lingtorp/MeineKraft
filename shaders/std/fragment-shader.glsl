@@ -1,5 +1,3 @@
-layout(early_fragment_tests) in;
-
 #ifdef FLAG_CUBE_MAP_TEXTURE
 uniform samplerCube diffuse_sampler;
 #endif
