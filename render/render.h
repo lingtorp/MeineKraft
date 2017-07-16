@@ -62,6 +62,9 @@ public:
 private:
     Renderer();
     double DRAW_DISTANCE;
+    
+    std::array<std::array<float, 256>, 256> noise_map;
+    Texture noise_texture;
 
     Mat4<float> projection_matrix;
 
@@ -90,6 +93,9 @@ private:
 
     /// Creates a camera view matrix based on the euler angles (x, y) and position of the eye
     Mat4<float> FPSViewRH(Vec3<float> eye, float pitch, float yaw);
+    
+    
+    int gl_noise_texture;
 };
 
 #endif //MEINEKRAFT_RENDER_H

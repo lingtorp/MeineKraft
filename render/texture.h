@@ -17,8 +17,13 @@ public:
     bool load_2d(std::string filepath);
     bool load_cube_map(std::vector<std::string> faces);
 
+    /// OpenCL texture name from glGenTexture
     uint64_t gl_texture;
+
+    /// OpenGL texture type; CUBE_MAP, TEXTURE_2D, etc
     uint64_t gl_texture_type;
+
+    /// OpenGL texture location in shader
     uint64_t gl_texture_location;
 
     bool loaded_successfully;

@@ -5,6 +5,8 @@ uniform samplerCube diffuse_sampler;
 uniform sampler2D diffuse_sampler;
 #endif
 
+uniform sampler2D noise_map;
+
 in vec4 fColor;    // This name must match the name in the vertex shader in order to work
 in vec2 fTexcoord; // passthrough shading for interpolated textures
 in vec3 fNormal;
@@ -36,6 +38,8 @@ uniform mat4 projection;
 #define CRYTEK_AO
 #define M_PI 3.1415926535897932384626433832795
 
+float rand(float n) { return fract(sin(n) * 43758.5453123); }
+
 // Given a z-buffer value it linearizes it depending on the n (near plane) and f (far plane) of the view frustrum
 float LinearizeDepth(float z, float n, float f) {
     float depth = (2.0 * n) / (f + n - z * (f - n));  // convert to linear values
@@ -47,8 +51,10 @@ void main() {
     vec4 default_light = vec4(1.0, 1.0, 1.0, 1.0);
     float occlusion_factor = 0.0f;
 
+    outColor = vec4(texture(noise_map, vec2(gl_FragCoord.x, gl_FragCoord.y)));
+
     // AO pass
-#ifndef FLAG_2D_TEXTURE
+    #ifdef SKIP_PLZ
     float z = gl_FragCoord.z; // depth-buffer value for the current pixel
     int occluding_points = 0;
     #ifdef CRYTEK_AO
@@ -59,8 +65,8 @@ void main() {
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 10; j++) {
                 // Generate sample point in world space
-                float f = fis[i];
-                float t = thetas[j];
+                float f = fis[i]; // * rand(fPosition.x);
+                float t = thetas[j]; // * rand(fPosition.y);
                 vec4 sample_point = vec4(R * cos(2 * M_PI * t) * sin(M_PI * f) + fPosition.x,
                                          R * sin(2 * M_PI * t) * sin(M_PI * f) + fPosition.y,
                                          R * sin(M_PI * f) + fPosition.z,
@@ -76,9 +82,9 @@ void main() {
         }
         occlusion_factor = float(occluding_points) / float(10.0f * 4.0f);
     #endif
-    // outColor = vec4(occlusion_factor);
+    // outColor = vec4(LinearizeDepth(z, 1.0f, 10.0f));
     outColor = vec4(1.0f - occlusion_factor); // Ambient occlusion
-#endif
+    #endif
 
 #ifndef FLAG_BLINN_PHONG_SHADING
     vec3 total_light = vec3(0.0, 0.0, 0.0);
@@ -93,24 +99,24 @@ void main() {
         float specular_intensity = light.light_intensity.z;
         vec3 direction = normalize(lights[i].position.xyz - fPosition.xyz);
 
-        vec3 diffuse_light = light.color.xyz * max(dot(normal, direction), 0.0) * diffuse_intensity;
+        vec3 diffuse_light = light.color.xyz * max(dot(normal, direction), 0.0f) * diffuse_intensity;
 
         vec3 reflection = 2 * dot(direction, normal) * normal - direction;
         vec3 specular_light = vec3(dot(reflection, normalize(eye))) * specular_intensity;
 
-        total_light += diffuse_light;
+        // total_light += diffuse_light;
         // total_light += specular_light;
-        total_light += vec3(ambient_intensity) * (1.0f - occlusion_factor);
+        // total_light += vec3(ambient_intensity) * (1.0f - occlusion_factor);
     }
 
-   default_light = vec4(clamp(total_light, 0.0, 1.0), 1.0);
-   outColor = default_light;
+   // default_light = vec4(clamp(total_light, 0.0f, 1.0f), 1.0f);
+   // outColor = default_light;
 #endif
 
-#ifdef FLAG_2D_TEXTURE
-    outColor = texture(diffuse_sampler, fTexcoord) * default_light;
-#endif
-#ifdef FLAG_CUBE_MAP_TEXTURE
-    outColor = texture(diffuse_sampler, normalize(fPosition.xyz)) * default_light;
-#endif
+//#ifdef FLAG_2D_TEXTURE
+//    outColor = texture(diffuse_sampler, fTexcoord) * default_light;
+//#endif
+//#ifdef FLAG_CUBE_MAP_TEXTURE
+//    outColor = texture(diffuse_sampler, normalize(fPosition.xyz)) * default_light;
+//#endif
 }

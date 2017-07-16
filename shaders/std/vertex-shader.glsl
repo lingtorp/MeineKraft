@@ -12,6 +12,7 @@ uniform mat4 camera_view;
 // Projection or a.k.a perspective matrix
 uniform mat4 projection;
 
+// All output variables gets interpolated 
 out vec4 fColor; // This name must match the name in the fragment shader in order to work
 out vec2 fTexcoord;
 out vec3 fNormal;
