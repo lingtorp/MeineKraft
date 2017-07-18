@@ -2,6 +2,7 @@
 #define MEINEKRAFT_NOISE_H
 
 #include <random>
+#include <algorithm>
 #include "vector.h"
 #include <iostream>
 
