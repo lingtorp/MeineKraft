@@ -39,6 +39,9 @@ private:
 
     /// Filepaths and their modification time in seconds
     std::unordered_map<std::string, uint64_t> files_modification_time;
+    
+    /// Returns the modification time of the file of which the stats struct were generated of
+    uint64_t get_time_modified(struct stat &stats);
 };
 
 #endif //MEINEKRAFT_FILEMONITOR_H
