@@ -29,7 +29,7 @@ int main() {
     // Init sdl2_image
     atexit(IMG_Quit);
     IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG);
-
+    
     // Init ImGui
     ImGui_ImplSdlGL3_Init(window);
 

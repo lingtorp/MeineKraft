@@ -77,7 +77,7 @@ Mat4<float> gen_projection_matrix(float z_near, float z_far, float fov, float as
 
 Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), state{}, graphics_batches{},
                       shader_file_monitor(std::make_unique<FileMonitor>()), lights{}, mesh_manager{new MeshManager()},
-                      texture_manager{new TextureManager()}, noise_map{}, noise_texture{} {
+                      texture_manager{new TextureManager()} {
     glewExperimental = (GLboolean) true;
     glewInit();
 
@@ -99,24 +99,6 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
     const auto direction = Vec3<float>{0.0f, 0.0f, -1.0f};  // position of where the cam is looking
     const auto world_up  = Vec3<float>{0.0, 1.0f, 0.0f};    // world up
     this->camera = std::make_shared<Camera>(position, direction, world_up);
-    
-    /// Create noise texture
-    Perlin noise(1);
-    for (int i = 0; i < 256; i++) {
-        for (int j = 0; j < 256; j++) {
-            noise_map[i][j] = (float) noise.get_value(i, j) * 255;
-            std::cout << noise_map[i][j] << std::endl;
-        }
-    }
-    glGenTextures(1, (GLuint *) &gl_noise_texture);
-    glBindTexture(GL_TEXTURE_2D, gl_noise_texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, 256, 256, 0, GL_RGBA, GL_FLOAT, noise_map.data());
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    noise_texture.gl_texture = gl_noise_texture;
-    noise_texture.gl_texture_type = GL_TEXTURE_2D;
 }
 
 bool Renderer::point_inside_frustrum(Vec3<float> point, std::array<Plane<float>, 6> planes) {
@@ -178,13 +160,6 @@ void Renderer::render(uint32_t delta) {
 
             // Frustrum cullling
             // if (point_inside_frustrum(component->graphics_state.position, planes)) { continue; }
-            
-            auto textloc = glGetUniformLocation(batch.shader.gl_program, "noise_map");
-            glUniform1i(textloc, 0);
-            
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, gl_noise_texture);
-            
 
             Mat4<float> model{};
             model = model.translate(component->graphics_state.position);
@@ -345,7 +320,6 @@ uint64_t Renderer::load_mesh(RenderComponent *comp, std::string filepath, std::s
     if (loaded) {
         // TODO: Load the textures for the mesh as well
         // TODO: Add to batch, etc
-        // texture_manager->load_textures(state, mesh_id);
         return mesh_id;
     } else {
         std::vector<std::pair<Texture::Type, std::string>> texture_info;
@@ -356,14 +330,14 @@ uint64_t Renderer::load_mesh(RenderComponent *comp, std::string filepath, std::s
         const auto vertex_shader   = shader_base_filepath + "std/vertex-shader.glsl";
         const auto fragment_shader = shader_base_filepath + "std/fragment-shader.glsl";
         Shader shader(vertex_shader, fragment_shader);
-        // shader.add("#define FLAG_BLINN_PHONG_SHADING \n");
+        shader.add("#define FLAG_BLINN_PHONG_SHADING \n");
 
         auto textures = texture_manager->load_textures(texture_info);
         for (auto &texture_pair : textures) {
             auto texture = texture_pair.second;
             switch (texture.gl_texture_type) {
                 case GL_TEXTURE_2D:
-          //          shader.add("#define FLAG_2D_TEXTURE \n");
+                    shader.add("#define FLAG_2D_TEXTURE \n");
                     break;
                 case GL_TEXTURE_CUBE_MAP:
                     shader.add("#define FLAG_CUBE_MAP_TEXTURE \n");

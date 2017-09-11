@@ -30,7 +30,7 @@ public:
     ~Entity();
 
     /// Called once every frame
-    virtual void update(uint64_t delta, const std::shared_ptr<Camera> camera) {};
+    virtual void update(uint64_t delta, const std::shared_ptr<Camera> &camera) {};
 
     /** Component handling **/
     void attach_component(Component *comp) {
@@ -44,4 +44,4 @@ public:
     }
 };
 
-#endif //MEINEKRAFT_ENTITY_H
+#endif // MEINEKRAFT_ENTITY_H

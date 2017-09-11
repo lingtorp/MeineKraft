@@ -63,9 +63,6 @@ private:
     Renderer();
     double DRAW_DISTANCE;
     
-    std::array<std::array<float, 256>, 256> noise_map;
-    Texture noise_texture;
-
     Mat4<float> projection_matrix;
 
     uint16_t MAX_NUM_LIGHTS = 100;

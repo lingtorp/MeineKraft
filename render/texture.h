@@ -43,4 +43,4 @@ private:
     uint64_t gl_format_from_file_extension(FileExtension file_extension);
 };
 
-#endif //MEINEKRAFT_TEXTURE_H
+#endif // MEINEKRAFT_TEXTURE_H

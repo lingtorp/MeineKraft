@@ -35,9 +35,6 @@ uniform mat4 camera_view;
 // Projection or a.k.a perspective matrix
 uniform mat4 projection;
 
-#define CRYTEK_AO
-#define M_PI 3.1415926535897932384626433832795
-
 float rand(float n) { return fract(sin(n) * 43758.5453123); }
 
 // Given a z-buffer value it linearizes it depending on the n (near plane) and f (far plane) of the view frustrum
@@ -53,40 +50,7 @@ void main() {
 
     outColor = vec4(texture(noise_map, vec2(gl_FragCoord.x, gl_FragCoord.y)));
 
-    // AO pass
-    #ifdef SKIP_PLZ
-    float z = gl_FragCoord.z; // depth-buffer value for the current pixel
-    int occluding_points = 0;
-    #ifdef CRYTEK_AO
-        const int NUM_SAMPLES = 10 * 4;
-        float R = 1.0f;
-        const float[10] thetas = float[](0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.9f, 1.0f);
-        const float[4]  fis    = float[](0.25f, 0.5f, 0.75f, 1.0f);
-        for (int i = 0; i < 4; i++) {
-            for (int j = 0; j < 10; j++) {
-                // Generate sample point in world space
-                float f = fis[i]; // * rand(fPosition.x);
-                float t = thetas[j]; // * rand(fPosition.y);
-                vec4 sample_point = vec4(R * cos(2 * M_PI * t) * sin(M_PI * f) + fPosition.x,
-                                         R * sin(2 * M_PI * t) * sin(M_PI * f) + fPosition.y,
-                                         R * sin(M_PI * f) + fPosition.z,
-                                         1.0f);
-                // Transform sample point from view space to screen space to get its depth value
-                sample_point = projection * camera_view * sample_point; // Clip space
-                sample_point = sample_point / sample_point.w;           // Perspective division - Normalized device coordinate
-                float sample_depth = 0.5f * sample_point.z + 0.5f;      // Viewport transform for z - window space
-
-                // Check whether sample_point is behind current pixel depth
-                if (z < sample_depth) { occluding_points++; }
-            }
-        }
-        occlusion_factor = float(occluding_points) / float(10.0f * 4.0f);
-    #endif
-    // outColor = vec4(LinearizeDepth(z, 1.0f, 10.0f));
-    outColor = vec4(1.0f - occlusion_factor); // Ambient occlusion
-    #endif
-
-#ifndef FLAG_BLINN_PHONG_SHADING
+#ifdef FLAG_BLINN_PHONG_SHADING
     vec3 total_light = vec3(0.0, 0.0, 0.0);
     vec3 normal = fNormal; // already normalized
     vec3 eye = normalize(camera_position - fPosition.xyz);
@@ -104,19 +68,19 @@ void main() {
         vec3 reflection = 2 * dot(direction, normal) * normal - direction;
         vec3 specular_light = vec3(dot(reflection, normalize(eye))) * specular_intensity;
 
-        // total_light += diffuse_light;
-        // total_light += specular_light;
-        // total_light += vec3(ambient_intensity) * (1.0f - occlusion_factor);
+        total_light += diffuse_light;
+        total_light += specular_light;
+        total_light += vec3(ambient_intensity) * (1.0f - occlusion_factor);
     }
 
-   // default_light = vec4(clamp(total_light, 0.0f, 1.0f), 1.0f);
-   // outColor = default_light;
+   default_light = vec4(clamp(total_light, 0.0f, 1.0f), 1.0f);
+   outColor = default_light;
 #endif
 
-//#ifdef FLAG_2D_TEXTURE
-//    outColor = texture(diffuse_sampler, fTexcoord) * default_light;
-//#endif
-//#ifdef FLAG_CUBE_MAP_TEXTURE
-//    outColor = texture(diffuse_sampler, normalize(fPosition.xyz)) * default_light;
-//#endif
+#ifdef FLAG_2D_TEXTURE
+    outColor = texture(diffuse_sampler, fTexcoord) * default_light;
+#endif
+#ifdef FLAG_CUBE_MAP_TEXTURE
+    outColor = texture(diffuse_sampler, normalize(fPosition.xyz)) * default_light;
+#endif
 }
