@@ -3,12 +3,12 @@
 
 Vec2<float> Chunk::world_coord(float x, float z) {
     /// Compress the coordinates inside the chunk; double part + int part = point coordinate
-    float a = std::fmodf(x, dimension);     // Integer offset inside the chunk
-    float xf = 1 - std::abs(a / dimension); // Float offset inside the chunk (0, 1)
-    float xi = x / dimension;               // Integer bounds from the world
-    float X = xf + xi;                      // Relative position inside the chunk
+    float a = (float) std::fmod(x, dimension); // Integer offset inside the chunk
+    float xf = 1 - std::abs(a / dimension);    // Float offset inside the chunk (0, 1)
+    float xi = x / dimension;                  // Integer bounds from the world
+    float X = xf + xi;                         // Relative position inside the chunk
 
-    float b = std::fmodf(z, dimension);
+    float b = (float) std::fmod(z, dimension);
     float yf = 1 - std::abs(b / dimension);
     float yi = z / dimension;
     float Y = yf + yi;

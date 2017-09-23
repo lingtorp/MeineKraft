@@ -7,6 +7,7 @@
 #include <vector>
 #include <unordered_map>
 #include <array>
+#include <memory>
 #include "primitives.h"
 #include "texture.h"
 #include "light.h"

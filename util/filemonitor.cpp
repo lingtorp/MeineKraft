@@ -15,16 +15,15 @@ void FileMonitor::poll_files() {
             struct stat stats;
             stat(filepath.c_str(), &stats);
             if (files_modification_time.count(filepath) == 0) { // First time checked
-                files_modification_time[filepath] = (uint64_t) stats.st_mtimespec.tv_sec;
+                files_modification_time[filepath] = get_time_modified(stats);
                 continue;
             }
             auto old_timestamp = files_modification_time[filepath];
-            auto new_timestamp = (uint64_t) stats.st_mtimespec.tv_sec;
+            auto new_timestamp = get_time_modified(stats);
             if (old_timestamp == new_timestamp) { continue; }
             files_modfied = true;
             modified_files[filepath] = true;
-            files_modification_time[filepath] = (uint64_t) stats.st_mtimespec.tv_sec;
-            std::cout << stats.st_mtimespec.tv_sec << std::endl;
+            files_modification_time[filepath] = get_time_modified(stats);
         }
         internal_lock.unlock();
         std::this_thread::sleep_for(milliseconds(500));
@@ -60,4 +59,14 @@ void FileMonitor::start_monitor() {
         std::thread t1{[=]{ poll_files(); }};
         t1.detach();
     }
+}
+
+uint64_t FileMonitor::get_time_modified(struct stat &stats) {
+#ifdef __APPLE__
+    return (uint64_t) stats.st_mtimespec.tv_sec;
+#elif __linux__
+    return (uint64_t) stats.st_mtim.tv_sec;
+#else
+#error Unknown platform.
+#endif
 }
