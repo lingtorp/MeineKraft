@@ -23,6 +23,7 @@ void log_gl_error() {
             break;
         default:
             if (err != 0) {
+                std::cout << glewGetErrorString(err) << std::endl;
                 SDL_Log("OpenGL error: %i", err);
             }
             break;
@@ -141,7 +142,7 @@ void Renderer::render(uint32_t delta) {
         glUniformMatrix4fv(batch.gl_camera_view, 1, GL_FALSE, camera_view.data());
         glUniform3fv(batch.gl_camera_position, 1, (const GLfloat *) &camera->position);
         
-      // TODO: These are dependent on the shader and not the batch or the RenderComp.
+        // TODO: These are dependent on the shader and not the batch or the RenderComp.
         glEnable(GL_CULL_FACE);
         glCullFace(GL_BACK);
         glFrontFace(GL_CCW);
@@ -160,11 +161,12 @@ void Renderer::render(uint32_t delta) {
 
             // Frustrum cullling
             // if (point_inside_frustrum(component->graphics_state.position, planes)) { continue; }
-
+          
             Mat4<float> model{};
             model = model.translate(component->graphics_state.position);
             model = model.scale(component->graphics_state.scale);
             buffer.push_back(model.transpose());
+            log_gl_error();
         }
         glBindBuffer(GL_ARRAY_BUFFER, batch.gl_models_buffer_object);
         glBufferData(GL_ARRAY_BUFFER, buffer.size() * sizeof(Mat4<float>), buffer.data(), GL_DYNAMIC_DRAW);
@@ -405,7 +407,7 @@ Texture Renderer::setup_texture(RenderComponent *component, Texture texture) {
         if (batch.mesh_id == component->graphics_state.mesh_id) {
             auto &shader = batch.shader;
             glUseProgram(shader.gl_program);
-            std::string uniform_location = "diffuse_sampler";
+            std::string uniform_location = "diffuse_sampler"; // TODO: Shader objects should abstract these away ...
             texture.gl_texture_location = glGetUniformLocation(shader.gl_program, uniform_location.c_str());
         }
     }

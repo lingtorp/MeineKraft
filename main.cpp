@@ -39,14 +39,13 @@ int main() {
     renderer.update_projection_matrix(70);
 
     // Init the world with seed
-    // World world{1};
+    World world{1};
 
-    Skybox skybox{};
+    // Skybox skybox{};
 
     std::string directory = "/Users/AlexanderLingtorp/Desktop/";
-    std::string model_file = "falu-stuga.obj";
-    // Teapot falu_stuga{model_file, directory};
-  
+    std::string model_file;
+    
     model_file = "stanford-bunny.obj";
     Model bunny{model_file, directory};
     bunny.position = {0, 5, 0};
@@ -67,7 +66,7 @@ int main() {
         // SDL_Log("Delta: %u ms \n", delta);
 
         /// Process input
-        SDL_Event event;
+        SDL_Event event{};
         while (SDL_PollEvent(&event)) {
             ImGui_ImplSdlGL3_ProcessEvent(&event);
             switch (event.type) {
@@ -137,7 +136,7 @@ int main() {
         renderer.camera->position = renderer.camera->update(delta);
 
         /// Tick/update the world
-        // world.world_tick(delta, renderer.camera);
+        world.world_tick(delta, renderer.camera);
 
         /// Render the world
         renderer.render(delta);

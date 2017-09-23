@@ -5,12 +5,11 @@ uniform samplerCube diffuse_sampler;
 uniform sampler2D diffuse_sampler;
 #endif
 
-uniform sampler2D noise_map;
-
 in vec4 fColor;    // This name must match the name in the vertex shader in order to work
 in vec2 fTexcoord; // passthrough shading for interpolated textures
 in vec3 fNormal;
-in vec4 fPosition;
+in vec4 fPosition; // Model position
+in vec4 fNonModelPos; // Local space position, needed by cubeSampler
 
 out vec4 outColor; // Defaults to zero when the frag shader only has 1 out variable
 
@@ -35,20 +34,9 @@ uniform mat4 camera_view;
 // Projection or a.k.a perspective matrix
 uniform mat4 projection;
 
-float rand(float n) { return fract(sin(n) * 43758.5453123); }
-
-// Given a z-buffer value it linearizes it depending on the n (near plane) and f (far plane) of the view frustrum
-float LinearizeDepth(float z, float n, float f) {
-    float depth = (2.0 * n) / (f + n - z * (f - n));  // convert to linear values
-    return depth;
-}
-
 void main() {
     outColor = vec4(1.0f); // Sets a default color of white to all objects
     vec4 default_light = vec4(1.0, 1.0, 1.0, 1.0);
-    float occlusion_factor = 0.0f;
-
-    outColor = vec4(texture(noise_map, vec2(gl_FragCoord.x, gl_FragCoord.y)));
 
 #ifdef FLAG_BLINN_PHONG_SHADING
     vec3 total_light = vec3(0.0, 0.0, 0.0);
@@ -70,7 +58,7 @@ void main() {
 
         total_light += diffuse_light;
         total_light += specular_light;
-        total_light += vec3(ambient_intensity) * (1.0f - occlusion_factor);
+        total_light += ambient_intensity;
     }
 
    default_light = vec4(clamp(total_light, 0.0f, 1.0f), 1.0f);
@@ -81,6 +69,6 @@ void main() {
     outColor = texture(diffuse_sampler, fTexcoord) * default_light;
 #endif
 #ifdef FLAG_CUBE_MAP_TEXTURE
-    outColor = texture(diffuse_sampler, normalize(fPosition.xyz)) * default_light;
+    outColor = texture(diffuse_sampler, normalize(fNonModelPos.xyz)) * default_light;
 #endif
 }

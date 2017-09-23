@@ -47,13 +47,9 @@ public:
     /// Adds the RenderComponent to a internal batch
     uint64_t add_to_batch(RenderComponent *component, uint64_t mesh_id, Shader shader);
 
-    /// Removes the RenderComponent from a internal batch with the same Entity.hash_id
-    void remove_from_batch(RenderComponent *component); // FIXME
-
     /// Updates all the shaders projection matrices in order to support resizing of the window
     void update_projection_matrix(float fov);
 
-    ///
     Texture setup_texture(RenderComponent *component, Texture texture); // FIXME
 
     std::shared_ptr<Camera> camera;
@@ -90,9 +86,6 @@ private:
 
     /// Creates a camera view matrix based on the euler angles (x, y) and position of the eye
     Mat4<float> FPSViewRH(Vec3<float> eye, float pitch, float yaw);
-    
-    
-    int gl_noise_texture;
 };
 
 #endif //MEINEKRAFT_RENDER_H

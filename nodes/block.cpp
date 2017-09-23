@@ -1,3 +1,4 @@
+#include <SDL2/SDL_log.h>
 #include "block.h"
 
 Block::Block(): Entity() {
