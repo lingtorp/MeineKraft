@@ -23,6 +23,7 @@ void log_gl_error() {
             break;
         default:
             if (err != 0) {
+                std::cout << glewGetErrorString(err) << std::endl;
                 SDL_Log("OpenGL error: %i", err);
             }
             break;
@@ -77,7 +78,7 @@ Mat4<float> gen_projection_matrix(float z_near, float z_far, float fov, float as
 
 Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), state{}, graphics_batches{},
                       shader_file_monitor(std::make_unique<FileMonitor>()), lights{}, mesh_manager{new MeshManager()},
-                      texture_manager{new TextureManager()}{
+                      texture_manager{new TextureManager()} {
     glewExperimental = (GLboolean) true;
     glewInit();
 
@@ -120,13 +121,13 @@ void Renderer::render(uint32_t delta) {
 
     /// Frustrum planes
     auto camera_view = FPSViewRH(camera->position, camera->pitch, camera->yaw);
-    auto frustrum_view = camera_view * projection_matrix;
+    auto frustrum_view = camera_view * projection_matrix; // FIXME: Matrix multiplication is probably defined backwards
     std::array<Plane<float>, 6> planes = extract_planes(frustrum_view.transpose());
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_MULTISAMPLE);
-    glClearColor(0.9f, 0.5f, 0.5f, 1.0f);
+    glClearColor(0.8f, 0.5f, 0.5f, 1.0f);
 
     // TODO: Move this kind of comp. into seperate thread or something
     for (auto &transform : transformations) { transform.update(delta); }
@@ -140,15 +141,16 @@ void Renderer::render(uint32_t delta) {
         glUseProgram(batch.shader.gl_program);
         glUniformMatrix4fv(batch.gl_camera_view, 1, GL_FALSE, camera_view.data());
         glUniform3fv(batch.gl_camera_position, 1, (const GLfloat *) &camera->position);
+        
         // TODO: These are dependent on the shader and not the batch or the RenderComp.
-//        glEnable(GL_CULL_FACE);
-//        glCullFace(GL_BACK);
-//        glFrontFace(GL_CCW);
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_BACK);
+        glFrontFace(GL_CCW);
 
         /// Update Light data for the batch
         glBindBuffer(GL_UNIFORM_BUFFER, gl_light_uniform_buffer);
         glBufferData(GL_UNIFORM_BUFFER, sizeof(Light) * lights.size(), lights.data(), GL_DYNAMIC_DRAW);
-
+        
         std::vector<Mat4<float>> buffer{};
         for (auto &component : batch.components) {
             component->update(); // Copy all graphics state
@@ -159,17 +161,12 @@ void Renderer::render(uint32_t delta) {
 
             // Frustrum cullling
             // if (point_inside_frustrum(component->graphics_state.position, planes)) { continue; }
-
-            glActiveTexture(GL_TEXTURE0);
-            auto texture_type = (GLuint) component->graphics_state.diffuse_texture.gl_texture_type;
-            auto texture_location = (GLuint) component->graphics_state.diffuse_texture.gl_texture;
-            glBindTexture(texture_type, texture_location);
-            glUniform1i(glGetUniformLocation(batch.shader.gl_program, "diffuse_sampler"), 0);
-
+          
             Mat4<float> model{};
             model = model.translate(component->graphics_state.position);
             model = model.scale(component->graphics_state.scale);
             buffer.push_back(model.transpose());
+            log_gl_error();
         }
         glBindBuffer(GL_ARRAY_BUFFER, batch.gl_models_buffer_object);
         glBufferData(GL_ARRAY_BUFFER, buffer.size() * sizeof(Mat4<float>), buffer.data(), GL_DYNAMIC_DRAW);
@@ -228,12 +225,12 @@ void Renderer::update_projection_matrix(float fov) {
     int height, width;
     SDL_GL_GetDrawableSize(this->window, &width, &height);
     float aspect = (float) width / (float) height;
-    this->projection_matrix = gen_projection_matrix(1, -10, fov, aspect);
+    this->projection_matrix = gen_projection_matrix(1, 10, fov, aspect);
     glViewport(0, 0, width, height); // Update OpenGL viewport
     // TODO: Update all shader programs projection matrices to the new one
     for (auto &batch : graphics_batches) {
         glUseProgram(batch.shader.gl_program);
-        GLuint projection = glGetUniformLocation(batch.shader.gl_program, "projection");
+        GLint projection = glGetUniformLocation(batch.shader.gl_program, "projection");
         glUniformMatrix4fv(projection, 1, GL_FALSE, projection_matrix.data());
     }
 }
@@ -325,7 +322,6 @@ uint64_t Renderer::load_mesh(RenderComponent *comp, std::string filepath, std::s
     if (loaded) {
         // TODO: Load the textures for the mesh as well
         // TODO: Add to batch, etc
-        // texture_manager->load_textures(state, mesh_id);
         return mesh_id;
     } else {
         std::vector<std::pair<Texture::Type, std::string>> texture_info;
@@ -386,6 +382,7 @@ uint64_t Renderer::load_mesh(RenderComponent *comp, std::string filepath, std::s
 uint64_t Renderer::load_mesh_primitive(MeshPrimitive primitive, RenderComponent *comp) {
     uint64_t mesh_id = mesh_manager->mesh_id_from_primitive(primitive);
 
+    // FIXME: Creating a new Shader each time a object is added to a batch, not good
     /// Compile shader
     const std::string shader_base_filepath = "/Users/AlexanderLingtorp/Repositories/MeineKraft/shaders/";
     const auto vertex_shader   = shader_base_filepath + "std/vertex-shader.glsl";
@@ -410,11 +407,9 @@ Texture Renderer::setup_texture(RenderComponent *component, Texture texture) {
         if (batch.mesh_id == component->graphics_state.mesh_id) {
             auto &shader = batch.shader;
             glUseProgram(shader.gl_program);
-            std::string uniform_location = "diffuse_sampler";
+            std::string uniform_location = "diffuse_sampler"; // TODO: Shader objects should abstract these away ...
             texture.gl_texture_location = glGetUniformLocation(shader.gl_program, uniform_location.c_str());
-            return texture;
         }
     }
     return texture;
 }
-

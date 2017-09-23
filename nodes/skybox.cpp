@@ -3,8 +3,9 @@
 #include "../render/rendercomponent.h"
 
 Skybox::Skybox(): Entity() {
-    scale = 110;
+    scale = 100;
     auto render_comp = new RenderComponent(this);
+    render_comp->set_mesh(MeshPrimitive::Cube);
     const auto base = "/Users/AlexanderLingtorp/Repositories/MeineKraft/";
     std::vector<std::string> faces = {base + std::string("res/sky/right.jpg"),
                                       base + std::string("res/sky/left.jpg"),
@@ -13,10 +14,9 @@ Skybox::Skybox(): Entity() {
                                       base + std::string("res/sky/back.jpg"),
                                       base + std::string("res/sky/front.jpg")};
     render_comp->set_cube_map_texture(faces);
-    render_comp->set_mesh(MeshPrimitive::Cube);
     attach_component(render_comp);
 }
 
-void Skybox::update(uint64_t delta, const std::shared_ptr<Camera> camera) {
+void Skybox::update(uint64_t delta, const std::shared_ptr<Camera> &camera) {
     position = camera->position;
 }

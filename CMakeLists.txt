@@ -13,9 +13,9 @@ set(SOURCE_FILES main.cpp render/render.cpp render/render.h math/vector.h world/
         render/camera.cpp render/camera.h nodes/chunk.cpp nodes/chunk.h math/noise.h render/ray.h render/graphicsbatch.h
         render/graphicsbatch.cpp render/rendercomponent.cpp render/rendercomponent.h nodes/entity.cpp nodes/entity.h
         render/shader.cpp render/shader.h ${IMGUI_SRC} nodes/skybox.cpp nodes/skybox.h nodes/block.cpp nodes/block.h
-        nodes/skybox.cpp nodes/skybox.h ${TINYOBJLOADER_SRC} nodes/teapot.cpp nodes/teapot.h util/filemonitor.cpp
-        util/filemonitor.h render/texture.cpp render/texture.h render/transform.h render/light.h render/meshmanager.cpp
-        render/meshmanager.h render/texturemanager.cpp render/texturemanager.h)
+        nodes/skybox.cpp nodes/skybox.h nodes/model.cpp nodes/model.h util/filemonitor.cpp util/filemonitor.h
+        render/texture.cpp render/texture.h render/transform.h render/light.h render/meshmanager.cpp render/meshmanager.h
+        render/texturemanager.cpp render/texturemanager.h math/noise.h)
 add_executable(MeineKraft ${SOURCE_FILES})
 
 find_package(ASSIMP REQUIRED)

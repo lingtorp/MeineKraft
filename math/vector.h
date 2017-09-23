@@ -83,6 +83,12 @@ struct Vec3 {
         return result;
     }
 
+    /// Sum of the components of the vector
+    inline T sum() const { return x + y + z; }
+
+    /// Floors the components
+    Vec3<T> floor() const { return {std::floor(x), std::floor(y), std::floor(z)}; }
+
     /// Result = v x u
     inline Vec3<T> cross(Vec3<T> u) const {
         Vec3<T> result;
@@ -98,6 +104,14 @@ struct Vec3 {
     /************ Operators ************/
     inline Vec3<T> operator+(const Vec3 &rhs) const {
         return Vec3<T>{x + rhs.x, y + rhs.y, z + rhs.z};
+    }
+
+    inline Vec3<T> operator+(const double rhs) const {
+        return Vec3<T>{x + rhs, y + rhs, z + rhs};
+    }
+
+    inline Vec3<T> operator*(const Vec3 &rhs) const {
+        return Vec3<T>{x * rhs.x, y * rhs.y, z * rhs.z};
     }
 
     inline Vec3<T> operator*(const T s) const {
@@ -123,14 +137,29 @@ struct Vec2 {
     Vec2(T x, T y): x(x), y(y) {};
     Vec2(): x(0), y(0) {};
 
+    /// Sum of the components of the vector
+    inline T sum() const { return x + y; }
+
+    /// Floors the components and returns a copy
+    inline Vec2<T> floor() const { return {std::floor(x), std::floor(y)}; }
+
     /// Dot product
     inline T dot(Vec2<T> u) const { return x * u.x + y * u.y; }
 
     /************ Operators ************/
+    Vec2<T> operator+(const Vec2 &rhs) const {
+        return {x + rhs.x, y + rhs.y};
+    }
+
+    Vec2<T> operator-(const Vec2 &rhs) const {
+        return {x - rhs.x, y - rhs.y};
+    }
+
     bool operator==(const Vec2 &rhs) const {
         return x == rhs.x && y == rhs.y;
     }
 
+    /// Returns a copy of this vector normalized
     inline Vec2<T> normalize() const {
         double length = this->length();
         Vec2<T> result;
@@ -139,6 +168,7 @@ struct Vec2 {
         return result;
     }
 
+    /// Length of the vector
     inline double length() const { return std::sqrt(std::pow(x, 2) + std::pow(y, 2)); }
 };
 

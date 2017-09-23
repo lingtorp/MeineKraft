@@ -12,7 +12,7 @@ TextureManager::load_textures(std::vector<std::pair<Texture::Type, std::string>>
         Texture texture;
         texture.load(texture_filepath);
         if (texture.loaded_successfully) {
-            textures.push_back({texture_type, texture});
+            textures.emplace_back(texture_type, texture);
         } else {
             SDL_Log("TextureManager: Could not load texture from %s", texture_filepath.c_str());
         }

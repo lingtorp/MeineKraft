@@ -48,13 +48,9 @@ public:
     /// Adds the RenderComponent to a internal batch
     uint64_t add_to_batch(RenderComponent *component, uint64_t mesh_id, Shader shader);
 
-    /// Removes the RenderComponent from a internal batch with the same Entity.hash_id
-    void remove_from_batch(RenderComponent *component); // FIXME
-
     /// Updates all the shaders projection matrices in order to support resizing of the window
     void update_projection_matrix(float fov);
 
-    ///
     Texture setup_texture(RenderComponent *component, Texture texture); // FIXME
 
     std::shared_ptr<Camera> camera;
@@ -63,7 +59,7 @@ public:
 private:
     Renderer();
     double DRAW_DISTANCE;
-
+    
     Mat4<float> projection_matrix;
 
     uint16_t MAX_NUM_LIGHTS = 100;

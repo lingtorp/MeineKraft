@@ -6,9 +6,8 @@
 #include <cstdlib>
 #include <vector>
 #include <unordered_map>
-#include "../math/vector.h"
-#include "../math/noise.h"
 #include "../nodes/chunk.h"
+#include "../math/noise.h"
 
 class Entity;
 class Camera;
@@ -24,7 +23,7 @@ public:
     void add_entity(Entity *entity);
 
 private:
-    Noise noise;
+    Noise *noise;
 };
 
 #endif //MEINEKRAFT_WORLD_H

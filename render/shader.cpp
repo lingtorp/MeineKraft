@@ -27,8 +27,8 @@ std::pair<bool, std::string> Shader::compile() {
         fragment_src.insert(0, define);
     }
 
-    vertex_src.insert(0, "#version 330 core \n");
-    fragment_src.insert(0, "#version 330 core \n");
+    vertex_src.insert(0, "#version 410 core \n");
+    fragment_src.insert(0, "#version 410 core \n");
 
     auto raw_str = vertex_src.c_str();
     vertex_shader = glCreateShader(GL_VERTEX_SHADER);
@@ -51,37 +51,36 @@ std::pair<bool, std::string> Shader::compile() {
     GLint fragment_shader_status;
     glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &fragment_shader_status);
 
-    // Always detach shaders after a successful link.
-    glDetachShader(shader_program, vertex_shader);
-    glDetachShader(shader_program, fragment_shader);
-    glDeleteShader(vertex_shader);
-    glDeleteShader(fragment_shader);
+    // FIXME: Always detach shaders after a successful link.
+    // glDetachShader(shader_program, vertex_shader);
+    // glDetachShader(shader_program, fragment_shader);
+    // glDeleteShader(vertex_shader);
+    // glDeleteShader(fragment_shader);
 
-    if (vertex_shader_status == 1 && fragment_shader_status == 1) {
+    if (vertex_shader_status == GL_TRUE && fragment_shader_status == GL_TRUE) {
         gl_program = shader_program;
         return {true, ""};
     }
 
-    int err_size = 0;
-    glGetShaderiv(vertex_shader, GL_INFO_LOG_LENGTH, (GLint *) &err_size);
-    std::string vert_err_msg = "";
-    vert_err_msg.reserve(err_size);
-    glGetShaderInfoLog(vertex_shader, err_size, NULL, (char *) vert_err_msg.c_str());
+    GLint err_size = 0;
+    glGetShaderiv(vertex_shader, GL_INFO_LOG_LENGTH, &err_size);
+    char vert_err_msg[err_size];
+    glGetShaderInfoLog(vertex_shader, err_size, NULL, &vert_err_msg[0]);
 
-    glGetShaderiv(fragment_shader, GL_INFO_LOG_LENGTH, (GLint *) &err_size);
-    std::string frag_err_msg = "";
-    frag_err_msg.reserve(err_size);
-    glGetShaderInfoLog(fragment_shader, err_size, NULL, (char *) frag_err_msg.c_str());
+    glGetShaderiv(fragment_shader, GL_INFO_LOG_LENGTH, &err_size);
+    char frag_err_msg[err_size];
+    glGetShaderInfoLog(fragment_shader, err_size, NULL, &frag_err_msg[0]);
 
     glGetProgramiv(shader_program, GL_INFO_LOG_LENGTH, &err_size);
-    std::string program_err_msg = "";
-    program_err_msg.reserve(err_size);
-    glGetProgramInfoLog(shader_program, err_size, NULL, (char *) program_err_msg.c_str());
+    char prog_err_msg[err_size];
+    glGetProgramInfoLog(shader_program, err_size, NULL, &prog_err_msg[0]);
 
     auto gl_error = glGetError();
-    SDL_Log("0x%08x", gl_error);
-
-    return {false, frag_err_msg + vert_err_msg};
+    SDL_Log("OpenGL Error: 0x%08x", gl_error);
+    
+    glDeleteProgram(shader_program);
+  
+    return {false, std::string(vert_err_msg) + std::string(frag_err_msg) + std::string(prog_err_msg)};
 };
 
 std::pair<bool, std::string> Shader::recompile() {
@@ -111,7 +110,7 @@ std::pair<bool, std::string> Shader::recompile() {
     GLint fragment_shader_status;
     glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &fragment_shader_status);
 
-    if (vertex_shader_status == 1 && fragment_shader_status == 1) {
+    if (vertex_shader_status == GL_TRUE && fragment_shader_status == GL_TRUE) {
         // Relink shader program
         glAttachShader(gl_program, vertex_shader);
         glAttachShader(gl_program, fragment_shader);
