@@ -45,6 +45,8 @@ public:
   /// Sets the cube map texture to the bounded mesh
   /// order; right, left, top, bot, back, front
   void set_cube_map_texture(const std::vector<std::string>& faces);
+  
+  void enable_shading();
 };
 
 #endif //MEINEKRAFT_RENDERCOMPONENT_H

@@ -36,6 +36,9 @@ void RenderComponent::did_attach_to_entity(Entity* entity) {
   const auto vertex_shader   = shader_base_filepath + "std/vertex-shader.glsl";
   const auto fragment_shader = shader_base_filepath + "std/fragment-shader.glsl";
   Shader shader(vertex_shader, fragment_shader);
+  if (graphics_state.shading) {
+    shader.add("#define FLAG_BLINN_PHONG_SHADING \n");
+  }
   
   if (graphics_state.diffuse_texture.loaded_successfully) {
     if (graphics_state.diffuse_texture.gl_texture_type == GL_TEXTURE_CUBE_MAP) {
@@ -61,4 +64,8 @@ void RenderComponent::did_attach_to_entity(Entity* entity) {
   
   // ?. Add to batch
   graphics_state.batch_id = Renderer::instance().add_to_batch(this, shader);
+}
+
+void RenderComponent::enable_shading() {
+  graphics_state.shading = true;
 };

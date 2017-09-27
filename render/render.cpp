@@ -320,44 +320,12 @@ uint64_t Renderer::load_mesh(RenderComponent* comp, std::string filepath, std::s
   std::vector<std::pair<Texture::Type, std::string>> texture_info;
   std::tie(mesh_id, texture_info) = mesh_manager->load_mesh_from_file(filepath, directory);
 
-  /// Compile shader
-  const std::string shader_base_filepath = "/Users/AlexanderLingtorp/Repositories/MeineKraft/shaders/";
-  const auto vertex_shader   = shader_base_filepath + "std/vertex-shader.glsl";
-  const auto fragment_shader = shader_base_filepath + "std/fragment-shader.glsl";
-  Shader shader(vertex_shader, fragment_shader);
-  shader.add("#define FLAG_BLINN_PHONG_SHADING \n");
-
   auto textures = texture_manager->load_textures(texture_info);
-  for (auto &texture_pair : textures) {
-    auto texture = texture_pair.second;
-    switch (texture.gl_texture_type) {
-      case GL_TEXTURE_2D:
-        shader.add("#define FLAG_2D_TEXTURE \n");
-        break;
-      case GL_TEXTURE_CUBE_MAP:
-        shader.add("#define FLAG_CUBE_MAP_TEXTURE \n");
-        break;
-      default:
-        SDL_Log("Renderer: Unknown OpenGL texture type when creating custom shader. %s", filepath.c_str());
-        break;
-    }
-  }
-
-  std::string err_msg;
-  bool success;
-  std::tie(success, err_msg) = shader.compile();
-  if (!success) {
-    SDL_Log("Renderer: Shader compilation failed; %s", err_msg.c_str());
-    return 0;
-  }
-
   for (auto &texture_pair : textures) {
     auto texture_type = texture_pair.first;
     auto texture      = texture_pair.second;
-    std::string uniform_location = "diffuse_sampler";
     switch (texture_type) {
       case Texture::Type::Diffuse:
-        texture.gl_texture_location = glGetUniformLocation(shader.gl_program, uniform_location.c_str());
         comp->graphics_state.diffuse_texture = texture;
         break;
       default:
@@ -365,6 +333,5 @@ uint64_t Renderer::load_mesh(RenderComponent* comp, std::string filepath, std::s
         break;
     }
   }
-  add_to_batch(comp, shader);
   return mesh_id;
 }
