@@ -54,7 +54,8 @@ int main() {
   Model dragon{model_file, directory};
   dragon.position = {18, 5, 0};
   dragon.scale = 2;
-
+  
+  bool toggle_mouse_capture = false;
   bool DONE = false;
   uint32_t last_tick = SDL_GetTicks(), current_tick, delta;
 
@@ -70,6 +71,7 @@ int main() {
         ImGui_ImplSdlGL3_ProcessEvent(&event);
       switch (event.type) {
         case SDL_MOUSEMOTION:
+          if (toggle_mouse_capture) { break; }
           renderer.camera->pitch += event.motion.yrel;
           renderer.camera->yaw   += event.motion.xrel;
           renderer.camera->direction = renderer.camera->recalculate_direction();
@@ -93,6 +95,9 @@ int main() {
               break;
             case SDLK_e:
               renderer.camera->move_up(true);
+              break;
+            case SDLK_TAB:
+              toggle_mouse_capture = !toggle_mouse_capture;
               break;
             case SDLK_ESCAPE:
               DONE = true;
@@ -160,7 +165,7 @@ int main() {
             ImGui::ShowTestWindow(&show_test_window);
         }
     }
-    // ImGui::Render();
+    ImGui::Render();
 
     SDL_GL_SwapWindow(window);
   }
