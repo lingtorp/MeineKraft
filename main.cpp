@@ -148,22 +148,22 @@ int main() {
     /// ImGui - Debug instruments
     ImGui_ImplSdlGL3_NewFrame(window);
     {
-        auto io = ImGui::GetIO();
+      auto io = ImGui::GetIO();
 
-        static bool show_test_window;
+      static bool show_test_window;
 
-        ImGui::Begin("Render state");
-        // ImGui::Text("Chunks: %lu", world.chunks.size());
-        ImGui::Text("Graphics batches: %llu", renderer.state.graphic_batches);
-        ImGui::Text("Entities: %llu", renderer.state.entities);
-        ImGui::Text("Application average %u ms / frame (%.1f FPS)", delta, io.Framerate);
-        if (ImGui::Button("ImGui Palette")) show_test_window ^= 1;
-        ImGui::End();
+      ImGui::Begin("Render state");
+      // ImGui::Text("Chunks: %lu", world.chunks.size());
+      ImGui::Text("Graphics batches: %llu", renderer.state.graphic_batches);
+      ImGui::Text("Entities: %llu", renderer.state.entities);
+      ImGui::Text("Application average %u ms / frame (%.1f FPS)", delta, io.Framerate);
+      if (ImGui::Button("ImGui Palette")) show_test_window ^= 1;
+      ImGui::End();
 
-        if (show_test_window) {
-            ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiSetCond_FirstUseEver);
-            ImGui::ShowTestWindow(&show_test_window);
-        }
+      if (show_test_window) {
+        ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiSetCond_FirstUseEver);
+        ImGui::ShowTestWindow(&show_test_window);
+      }
     }
     ImGui::Render();
 
