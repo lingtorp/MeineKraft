@@ -6,21 +6,23 @@
 class RenderComponent;
 
 /**
- * Contains the rendering context for a given set of geometry data
- * RenderComponents are batched in to a GraphicsBatch based on this geometry data
- */
+* Contains the rendering context for a given set of geometry data
+* RenderComponents are batched in to a GraphicsBatch based on this geometry data & shader config.
+*/
 class GraphicsBatch {
 public:
   explicit GraphicsBatch(uint64_t mesh_id);
 
   /// Id given to each unique mesh loaded by MeshManager
   uint64_t mesh_id;
-  
   Mesh mesh;
   
+  /// Batch id
+  uint64_t id;
+
   // TODO Docs
-  std::vector<RenderComponent *> components;
-  
+  std::vector<RenderComponent*> components;
+
   // TODO Docs
   uint32_t gl_VAO;
   uint32_t gl_models_buffer_object;

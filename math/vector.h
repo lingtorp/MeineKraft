@@ -276,4 +276,4 @@ public:
     }
 };
 
-#endif //MEINEKRAFT_VECTOR_H
+#endif // MEINEKRAFT_VECTOR_H

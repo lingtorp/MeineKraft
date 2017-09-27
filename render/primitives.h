@@ -214,6 +214,7 @@ struct GraphicsState {
     Vec3<float> center;
     double radius;
     uint64_t mesh_id;
+    uint64_t batch_id;
 };
 
 /// Represents the state of the Render, used for ImGUI debug panes
@@ -222,4 +223,4 @@ struct RenderState {
     uint64_t graphic_batches;
 };
 
-#endif //MEINEKRAFT_PRIMITIVES_H
+#endif // MEINEKRAFT_PRIMITIVES_H

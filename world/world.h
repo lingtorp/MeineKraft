@@ -14,16 +14,16 @@ class Camera;
 
 class World {
 public:
-    World(uint64_t seed);
+  World(uint64_t seed);
 
-    std::vector<Entity *> entities;
-    std::unordered_map<Vec3<float>, std::shared_ptr<Chunk>> chunks;
+  std::vector<Entity *> entities;
+  std::unordered_map<Vec3<float>, std::shared_ptr<Chunk>> chunks;
 
-    void world_tick(uint32_t delta, const std::shared_ptr<Camera> &camera);
-    void add_entity(Entity *entity);
+  void world_tick(uint32_t delta, const std::shared_ptr<Camera> &camera);
+  void add_entity(Entity *entity);
 
 private:
-    Noise *noise;
+  Noise *noise;
 };
 
 #endif //MEINEKRAFT_WORLD_H

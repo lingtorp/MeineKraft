@@ -8,8 +8,6 @@
 #include <SDL2/SDL_surface.h>
 #include <SDL2/SDL_image.h>
 
-Texture::Texture(): gl_texture(0), gl_texture_type(0), gl_texture_location(0), loaded_successfully(false) {}
-
 FileExtension Texture::file_format_from_file_at(std::string filepath) {
     std::string extension{SDL_strrchr(filepath.c_str(), '.')};
     if (extension == ".png") {
