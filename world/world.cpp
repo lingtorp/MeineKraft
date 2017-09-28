@@ -4,8 +4,8 @@
 World::World(uint64_t seed): noise(new Perlin(seed)) {
   /// Spawn terrain
   size_t max_altitude = 4;
-  size_t width = 10;
-  size_t height = 10;
+  size_t width = 2;
+  size_t height = 2;
   for (size_t x = 0; x < width; x++) {
   for (size_t y = 0; y < height; y++) {
       double noise_value = noise->turbulence(x, y, 32);

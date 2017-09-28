@@ -46,7 +46,7 @@ uint64_t Texture::load_cube_map(std::vector<std::string> faces, FileExtension fi
     GLint internal_format = (GLint) gl_format_from_file_extension(file_extension);
 
     int i = 0;
-    for (auto filepath : faces) {
+    for (auto& filepath : faces) {
         SDL_Surface *image = IMG_Load(filepath.c_str());
         if (image == nullptr) { continue; }
         int width  = image->w;
@@ -132,7 +132,7 @@ bool Texture::load_1d(std::string filepath) {
 bool Texture::load(std::string filepath) {
     auto file_extension = file_format_from_file_at(filepath);
     if (file_extension == FileExtension::unknown) { return false; }
-    SDL_Surface *image = IMG_Load(filepath.c_str());
+    SDL_Surface* image = IMG_Load(filepath.c_str());
     if (!image) {
         SDL_Log("%s", IMG_GetError());
         return false;

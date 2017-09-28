@@ -133,13 +133,12 @@ void Renderer::render(uint32_t delta) {
   // TODO: Update number of lights in the scene
   // TODO: Cull the lights
 
-  for (auto &batch : graphics_batches) {
+  for (auto& batch : graphics_batches) {
     glBindVertexArray(batch.gl_VAO);
     glUseProgram(batch.shader.gl_program);
     glUniformMatrix4fv(batch.gl_camera_view, 1, GL_FALSE, camera_view.data());
     glUniform3fv(batch.gl_camera_position, 1, (const GLfloat *) &camera->position);
     
-    // TODO: These are dependent on the shader and not the batch or the RenderComp.
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
@@ -149,7 +148,7 @@ void Renderer::render(uint32_t delta) {
     glBufferData(GL_UNIFORM_BUFFER, sizeof(Light) * lights.size(), lights.data(), GL_DYNAMIC_DRAW);
     
     std::vector<Mat4<float>> buffer{};
-    for (auto &component : batch.components) {
+    for (auto& component : batch.components) {
       component->update(); // Copy all graphics state
 
       // Draw distance
@@ -158,10 +157,10 @@ void Renderer::render(uint32_t delta) {
 
       // Frustrum cullling
       // if (point_inside_frustrum(component->graphics_state.position, planes)) { continue; }
-    
-      glActiveTexture(GL_TEXTURE0);
+  
       auto texture = component->graphics_state.diffuse_texture;
-      glBindTexture(texture.gl_texture_type, texture.gl_texture_location);
+      glActiveTexture(0);
+      glBindTexture(texture.gl_texture_type, texture.gl_texture);
       // glUniform1i(texture.gl_texture_location, texture.gl_texture);
       
       Mat4<float> model{};
@@ -237,7 +236,7 @@ void Renderer::update_projection_matrix(float fov) {
   }
 }
 
-void Renderer::link_batch(GraphicsBatch &batch, const Shader &shader) {
+void Renderer::link_batch(GraphicsBatch& batch, const Shader& shader) {
   auto program = shader.gl_program;
   
   glGenVertexArrays(1, &batch.gl_VAO);
@@ -294,7 +293,7 @@ void Renderer::link_batch(GraphicsBatch &batch, const Shader &shader) {
   glUniformMatrix4fv(projection, 1, GL_FALSE, projection_matrix.data());
 }
 
-uint64_t Renderer::add_to_batch(RenderComponent *comp, Shader shader) {
+uint64_t Renderer::add_to_batch(RenderComponent* comp, Shader shader) {
   auto mesh_id = comp->graphics_state.mesh_id;
   for (uint64_t i = 0; i < graphics_batches.size(); i++) {
     GraphicsBatch* batch = &graphics_batches[i];
