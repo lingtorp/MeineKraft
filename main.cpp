@@ -40,8 +40,8 @@ int main() {
 
   // Init the world with seed
   World world{1};
-  // Skybox skybox{};
-
+  Skybox skybox{};
+/*
   std::string directory = "/Users/AlexanderLingtorp/Desktop/";
   std::string model_file;
   
@@ -53,7 +53,7 @@ int main() {
   model_file = "stanford-dragon.obj";
   Model dragon{model_file, directory};
   dragon.position = {18, 5, 0};
-  dragon.scale = 2;
+  dragon.scale = 2;*/
   
   bool toggle_mouse_capture = false;
   bool DONE = false;
