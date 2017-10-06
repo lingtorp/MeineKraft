@@ -5,7 +5,6 @@
 #include <vector>
 #include "../math/vector.h"
 #include "texture.h"
-#include "shader.h"
 
 /// Colors
 template<typename T>
@@ -201,6 +200,9 @@ struct Plane {
   }
 };
 
+/// Opaque ID type used to reference resources throughout the engine
+typedef uint64_t ID;
+
 /**
 * Contains a copy of the Entity positional data which is used to render the object
 * This will allow for double buffering in the future since the copy is before all
@@ -213,8 +215,8 @@ struct GraphicsState {
   Texture diffuse_texture;
   Vec3<float> center;
   double radius;
-  uint64_t mesh_id;
-  uint64_t batch_id;
+  ID mesh_id;
+  ID batch_id;
   bool shading;
 };
 

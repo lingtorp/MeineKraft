@@ -2,6 +2,9 @@ in vec3 position;
 in vec4 vColor;
 in vec3 normal; // Polygon normal
 in vec2 vTexCoord;
+#ifdef FLAG_CUBE_MAP_TEXTURE
+in int diffuse_texture_idx;
+#endif
 
 // Model
 in mat4 model;
@@ -18,6 +21,9 @@ out vec2 fTexcoord;
 out vec3 fNormal;
 out vec4 fPosition;
 out vec4 fNonModelPos;
+#ifdef FLAG_CUBE_MAP_TEXTURE
+flat out int fDiffuse_texture_idx;
+#endif
 
 void main() {
   gl_Position = projection * camera_view * model * vec4(position, 1.0f);
@@ -27,4 +33,7 @@ void main() {
   fPosition = model * vec4(position, 1.0f);
   fNonModelPos = vec4(position, 1.0f);
   fColor = vColor;
+#ifdef FLAG_CUBE_MAP_TEXTURE
+  fDiffuse_texture_idx = diffuse_texture_idx;
+#endif
 }

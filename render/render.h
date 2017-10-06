@@ -12,6 +12,7 @@
 #include "texture.h"
 #include "light.h"
 #include "transform.h"
+#include "texturemanager.h"
 
 class World;
 class Camera;
@@ -52,7 +53,7 @@ public:
   RenderState state;
   SDL_Window *window;
   MeshManager* mesh_manager;
-  TextureManager* texture_manager;
+  TextureManager texture_manager;
   double DRAW_DISTANCE;
   Mat4<float> projection_matrix;
 private:

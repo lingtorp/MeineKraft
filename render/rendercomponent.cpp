@@ -2,6 +2,7 @@
 #include <SDL_opengl.h> // TODO: Remove.
 #include "rendercomponent.h"
 #include "render.h"
+#include "shader.h"
 #include "../nodes/entity.h"
 #include "meshmanager.h"
 
@@ -23,12 +24,14 @@ void RenderComponent::set_mesh(MeshPrimitive primitive) {
 }
 
 void RenderComponent::set_cube_map_texture(const std::vector<std::string>& faces) {
-  auto texture = Texture();
-  auto success = texture.load_cube_map(faces);
-  if (!success) { SDL_Log("RenderComponent: Failed to load cube map"); }
-  graphics_state.diffuse_texture = texture;
+  TextureResource texture_resource;
+  texture_resource.files = faces;
+  graphics_state.diffuse_texture.resource = texture_resource;
+  graphics_state.diffuse_texture.gl_texture_type = GL_TEXTURE_CUBE_MAP_ARRAY;
+  graphics_state.diffuse_texture.used = true;
 }
 
+/// RenderComponents are not supposed to be modified and only re-created
 void RenderComponent::did_attach_to_entity(Entity* entity) {
   // 1. Generate a Shader
   /// Compile shader
@@ -40,8 +43,8 @@ void RenderComponent::did_attach_to_entity(Entity* entity) {
     shader.add("#define FLAG_BLINN_PHONG_SHADING \n");
   }
   
-  if (graphics_state.diffuse_texture.loaded_successfully) {
-    if (graphics_state.diffuse_texture.gl_texture_type == GL_TEXTURE_CUBE_MAP) {
+  if (graphics_state.diffuse_texture.used) {
+    if (graphics_state.diffuse_texture.gl_texture_type == GL_TEXTURE_CUBE_MAP_ARRAY) {
       shader.add("#define FLAG_CUBE_MAP_TEXTURE \n");
     }
     if (graphics_state.diffuse_texture.gl_texture_type == GL_TEXTURE_2D) {
@@ -57,12 +60,13 @@ void RenderComponent::did_attach_to_entity(Entity* entity) {
     return;
   }
   
-  // 2. Setup the textures
-  if (graphics_state.diffuse_texture.loaded_successfully) {
+  // 2. Connect Shader with the textures
+  if (graphics_state.diffuse_texture.used) {
     graphics_state.diffuse_texture.gl_texture_location = shader.get_uniform_location(Texture::Type::Diffuse);
+    graphics_state.diffuse_texture.id = graphics_state.diffuse_texture.resource.to_hash();
   }
   
-  // ?. Add to batch
+  // 5. Add to batch
   graphics_state.batch_id = Renderer::instance().add_to_batch(this, shader);
 }
 

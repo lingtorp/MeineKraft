@@ -4,19 +4,28 @@
 #include "texture.h"
 #include "primitives.h"
 
-/**
- * Loads, stores, Textures used by the Renderer
- */
-// TODO: Need to change so that not every texture is loaded multiple times, TextureManager should coordinate it
-// TODO: Cache textures in TextureManager
+struct RawTexture {
+  ID id;
+  uint8_t* data = nullptr;
+  size_t size;
+  uint32_t width;
+  uint32_t height;
+  RawTexture(ID id, uint8_t* data): id(id), data(data), width(0), height(0), size(0) {}
+  // Texture encoding (GL_RGB, etc)
+};
+
 class TextureManager {
 public:
-    TextureManager();
+  TextureManager() = default;
 
-    std::vector<std::pair<Texture::Type, Texture>>
-    load_textures(std::vector<std::pair<Texture::Type, std::string>> texture_info);
+  std::vector<std::pair<Texture::Type, Texture>>
+  load_textures(std::vector<std::pair<Texture::Type, std::string>> texture_info);
+  
+  RawTexture lookup(ID id);
+  ID insert(RawTexture texture);
 
 private:
+  std::vector<RawTexture> cache;
 };
 
 #endif //MEINEKRAFT_TEXTUREMANAGER_HPP

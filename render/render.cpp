@@ -75,7 +75,7 @@ Mat4<float> gen_projection_matrix(float z_near, float z_far, float fov, float as
 
 Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), state{}, graphics_batches{},
                     shader_file_monitor(std::make_unique<FileMonitor>()), lights{}, mesh_manager{new MeshManager()},
-                    texture_manager{new TextureManager()} {
+                    texture_manager{TextureManager{}} {
   glewExperimental = (GLboolean) true;
   glewInit();
 
@@ -146,8 +146,11 @@ void Renderer::render(uint32_t delta) {
     /// Update Light data for the batch
     glBindBuffer(GL_UNIFORM_BUFFER, gl_light_uniform_buffer);
     glBufferData(GL_UNIFORM_BUFFER, sizeof(Light) * lights.size(), lights.data(), GL_DYNAMIC_DRAW);
-    
+  
+    glActiveTexture(batch.gl_diffuse_texture_unit);
+  
     std::vector<Mat4<float>> buffer{};
+    std::vector<uint32_t> diffuse_texture_idxs{};
     for (auto& component : batch.components) {
       component->update(); // Copy all graphics state
 
@@ -158,19 +161,22 @@ void Renderer::render(uint32_t delta) {
       // Frustrum cullling
       // if (point_inside_frustrum(component->graphics_state.position, planes)) { continue; }
   
-      auto texture = component->graphics_state.diffuse_texture;
-      glActiveTexture(0);
-      glBindTexture(texture.gl_texture_type, texture.gl_texture);
-      // glUniform1i(texture.gl_texture_location, texture.gl_texture);
+      /// Add the diffuse texture layer index to the streaming buffer
+      diffuse_texture_idxs.push_back(component->graphics_state.diffuse_texture.layer_idx);
       
       Mat4<float> model{};
       model = model.translate(component->graphics_state.position);
       model = model.scale(component->graphics_state.scale);
       buffer.push_back(model.transpose());
+      
       log_gl_error();
     }
     glBindBuffer(GL_ARRAY_BUFFER, batch.gl_models_buffer_object);
     glBufferData(GL_ARRAY_BUFFER, buffer.size() * sizeof(Mat4<float>), buffer.data(), GL_DYNAMIC_DRAW);
+    
+    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_diffuse_texture_layer_idx);
+    glBufferData(GL_ARRAY_BUFFER, diffuse_texture_idxs.size() * sizeof(uint32_t), diffuse_texture_idxs.data(), GL_DYNAMIC_DRAW);
+    
     glDrawElementsInstanced(GL_TRIANGLES, batch.mesh.indices.size(), GL_UNSIGNED_INT, 0, buffer.size());
 
     /// Update render stats
@@ -251,21 +257,21 @@ void Renderer::link_batch(GraphicsBatch& batch, const Shader& shader) {
   glBufferData(GL_ARRAY_BUFFER, batch.mesh.byte_size_of_vertices(), vertices.data(), GL_DYNAMIC_DRAW);
   
   // Then set our vertex attributes pointers, only doable AFTER linking
-  GLint positionAttrib = glGetAttribLocation(program, "position");
-  glVertexAttribPointer(positionAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *)offsetof(Vertex<float>, position));
-  glEnableVertexAttribArray(positionAttrib);
+  auto position_attrib = glGetAttribLocation(program, "position");
+  glVertexAttribPointer(position_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *)offsetof(Vertex<float>, position));
+  glEnableVertexAttribArray(position_attrib);
   
-  GLint colorAttrib = glGetAttribLocation(program, "vColor");
-  glVertexAttribPointer(colorAttrib, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *)offsetof(Vertex<float>, color));
-  glEnableVertexAttribArray(colorAttrib);
+  auto color_attrib = glGetAttribLocation(program, "vColor");
+  glVertexAttribPointer(color_attrib, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *)offsetof(Vertex<float>, color));
+  glEnableVertexAttribArray(color_attrib);
   
-  GLint normalAttrib = glGetAttribLocation(program, "normal");
-  glVertexAttribPointer(normalAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *)offsetof(Vertex<float>, normal));
-  glEnableVertexAttribArray(normalAttrib);
+  auto normal_attrib = glGetAttribLocation(program, "normal");
+  glVertexAttribPointer(normal_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *)offsetof(Vertex<float>, normal));
+  glEnableVertexAttribArray(normal_attrib);
   
-  GLint texCoordAttrib = glGetAttribLocation(program, "vTexCoord");
-  glVertexAttribPointer(texCoordAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *)offsetof(Vertex<float>, texCoord));
-  glEnableVertexAttribArray(texCoordAttrib);
+  auto tex_attrib = glGetAttribLocation(program, "vTexCoord");
+  glVertexAttribPointer(tex_attrib, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *)offsetof(Vertex<float>, texCoord));
+  glEnableVertexAttribArray(tex_attrib);
   
   // Lights UBO
   auto block_index = glGetUniformBlockIndex(program, "lights_block");
@@ -276,12 +282,19 @@ void Renderer::link_batch(GraphicsBatch& batch, const Shader& shader) {
   glGenBuffers(1, &batch.gl_models_buffer_object);
   glBindBuffer(GL_ARRAY_BUFFER, batch.gl_models_buffer_object);
   
-  GLuint modelAttrib = glGetAttribLocation(program, "model");
+  auto model_attrib = glGetAttribLocation(program, "model");
   for (int i = 0; i < 4; i++) {
-    glVertexAttribPointer(modelAttrib + i, 4, GL_FLOAT, GL_FALSE, sizeof(Mat4<float>), (const void *) (sizeof(float) * i * 4));
-    glEnableVertexAttribArray(modelAttrib + i);
-    glVertexAttribDivisor(modelAttrib + i, 1);
+    glVertexAttribPointer(model_attrib + i, 4, GL_FLOAT, GL_FALSE, sizeof(Mat4<float>), (const void *) (sizeof(float) * i * 4));
+    glEnableVertexAttribArray(model_attrib + i);
+    glVertexAttribDivisor(model_attrib + i, 1);
   }
+  
+  auto diffuse_texture_idx = glGetAttribLocation(program, "diffuse_texture_idx");
+  glGenBuffers(1, &batch.gl_diffuse_texture_layer_idx);
+  glBindBuffer(GL_ARRAY_BUFFER, batch.gl_diffuse_texture_layer_idx);
+  glVertexAttribIPointer(diffuse_texture_idx, 1, GL_UNSIGNED_INT, sizeof(uint32_t), 0);
+  glEnableVertexAttribArray(diffuse_texture_idx);
+  glVertexAttribDivisor(diffuse_texture_idx, 1);
   
   GLuint EBO;
   glGenBuffers(1, &EBO);
@@ -289,17 +302,45 @@ void Renderer::link_batch(GraphicsBatch& batch, const Shader& shader) {
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, batch.mesh.byte_size_of_indices(), batch.mesh.indices.data(), GL_STATIC_DRAW);
   
   glUseProgram(program); // Must use the program object before accessing uniforms!
-  GLuint projection = glGetUniformLocation(program, "projection");
+  auto projection = glGetUniformLocation(program, "projection");
   glUniformMatrix4fv(projection, 1, GL_FALSE, projection_matrix.data());
 }
 
 uint64_t Renderer::add_to_batch(RenderComponent* comp, Shader shader) {
   auto mesh_id = comp->graphics_state.mesh_id;
-  for (uint64_t i = 0; i < graphics_batches.size(); i++) {
-    GraphicsBatch* batch = &graphics_batches[i];
-    if (batch->mesh_id == mesh_id && batch->shader == shader) {
-      batch->components.push_back(comp);
-      return i; // TODO: Return real ID
+  for (auto& batch : graphics_batches) {
+    if (batch.mesh_id == mesh_id && batch.shader == shader) {
+      batch.components.push_back(comp);
+      auto& g_state = comp->graphics_state;
+      for (const auto& id : batch.texture_ids) {
+        if (id == g_state.diffuse_texture.id) {
+          g_state.diffuse_texture.layer_idx = batch.layer_idxs[id];
+          return batch.id;
+        }
+      }
+      /// Handle size changes for texture buffer for this texture unit
+  
+      /// Load all the GState's textures
+      RawTexture texture = batch.load_textures(&comp->graphics_state);
+      texture_manager.insert(texture);
+      
+      /// Assign layer index to the latest the texture and increment
+      g_state.diffuse_texture.layer_idx = batch.diffuse_textures_count++;
+      /// Add to all the known texture ids in the batch
+      batch.texture_ids.push_back(g_state.diffuse_texture.id);
+      /// Update the mapping from texuture id to layer idx
+      batch.layer_idxs[g_state.diffuse_texture.id] = g_state.diffuse_texture.layer_idx;
+      
+      /// Upload the texture to OpenGL
+      glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, batch.gl_diffuse_texture_array);
+      glTexSubImage3D(GL_TEXTURE_CUBE_MAP_ARRAY,
+                      0,                     // Mipmap number
+                      0, 0, g_state.diffuse_texture.layer_idx * 6, // xoffset, yoffset, zoffset = layer face
+                      512, 512, 6,           // width, height, depth = faces
+                      GL_RGB,                // format
+                      GL_UNSIGNED_BYTE,      // type
+                      texture.data);         // pointer to data
+      return batch.id;
     }
   }
 
@@ -307,11 +348,33 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp, Shader shader) {
   batch.mesh = mesh_manager->mesh_from_id(mesh_id);
   batch.shader = shader;
   link_batch(batch, shader);
+  
+  auto& g_state = comp->graphics_state;
+  /// Assign layer index to the latest the texture and increment
+  g_state.diffuse_texture.layer_idx = batch.diffuse_textures_count++;
+  /// Add to all the known texture ids in the batch
+  batch.texture_ids.push_back(g_state.diffuse_texture.id);
+  /// Update the mapping from texture id to layer idx
+  batch.layer_idxs[g_state.diffuse_texture.id] = g_state.diffuse_texture.layer_idx;
+  
+  /// Load all the GState's textures
+  RawTexture texture = batch.load_textures(&comp->graphics_state);
+  texture_manager.insert(texture);
+  /// Upload the texture to OpenGL
+  glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, batch.gl_diffuse_texture_array);
+  glTexSubImage3D(GL_TEXTURE_CUBE_MAP_ARRAY,
+                  0,                     // Mipmap number
+                  0, 0, g_state.diffuse_texture.layer_idx * 6, // xoffset, yoffset, zoffset = layer face
+                  512, 512, 6,           // width, height, depth = faces
+                  GL_RGB,                // format
+                  GL_UNSIGNED_BYTE,      // type
+                  texture.data);         // pointer to data
 
   batch.components.push_back(comp);
   graphics_batches.push_back(batch);
+  batch.id = graphics_batches.size(); // TODO: Return real ID
   
-  return graphics_batches.size(); // TODO: Return real ID
+  return batch.id;
 }
 
 uint64_t Renderer::load_mesh(RenderComponent* comp, std::string filepath, std::string directory) {
@@ -319,7 +382,7 @@ uint64_t Renderer::load_mesh(RenderComponent* comp, std::string filepath, std::s
   std::vector<std::pair<Texture::Type, std::string>> texture_info;
   std::tie(mesh_id, texture_info) = mesh_manager->load_mesh_from_file(filepath, directory);
 
-  auto textures = texture_manager->load_textures(texture_info);
+  auto textures = texture_manager.load_textures(texture_info);
   for (auto &texture_pair : textures) {
     auto texture_type = texture_pair.first;
     auto texture      = texture_pair.second;

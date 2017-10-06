@@ -4,6 +4,21 @@
 #include <fstream>
 #include <SDL_log.h>
 
+static void log_gl_error() {
+  GLenum err = glGetError();
+  switch(err) {
+    case GL_INVALID_VALUE:
+      SDL_Log("GL_INVALID_VALUE");
+      break;
+    default:
+      if (err != 0) {
+        std::cout << glewGetErrorString(err) << std::endl;
+        SDL_Log("OpenGL error: %i", err);
+      }
+      break;
+  }
+}
+
 Shader::Shader(std::string vertex_filepath, std::string fragment_filepath): vertex_filepath(vertex_filepath),
                                                                           fragment_filepath(fragment_filepath),
                                                                           vertex_shader(0),
@@ -53,7 +68,7 @@ std::pair<bool, std::string> Shader::compile() {
   // glDetachShader(shader_program, fragment_shader);
   // glDeleteShader(vertex_shader);
   // glDeleteShader(fragment_shader);
-
+  
   if (vertex_shader_status == GL_TRUE && fragment_shader_status == GL_TRUE) {
       gl_program = shader_program;
       return {true, ""};
@@ -74,6 +89,7 @@ std::pair<bool, std::string> Shader::compile() {
 
   auto gl_error = glGetError();
   SDL_Log("OpenGL Error: 0x%08x", gl_error);
+  log_gl_error();
   
   glDeleteProgram(shader_program);
 
@@ -166,8 +182,9 @@ uint64_t Shader::get_uniform_location(Texture::Type type) {
     default:
       break;
   }
-  auto res = glGetUniformLocation(this->gl_program, uniform_location.c_str());
-  if (res < 0) { SDL_Log("glGetUniformLocation failed"); return 0; }
+  glUseProgram(gl_program);
+  auto res = glGetUniformLocation(gl_program, uniform_location.c_str());
+  if (res < 0) { SDL_Log("glGetUniformLocation failed"); log_gl_error(); return 0; }
   return res;
 }
 
