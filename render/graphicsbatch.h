@@ -43,7 +43,7 @@ public:
     glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, gl_diffuse_texture_array);
     
     // For now create a existent buffer to hold cube maps
-    auto layers_faces = 6 * 2; // Room for 2 cube maps
+    auto layers_faces = 6 * 3; // Room for 2 cube maps
     glTexStorage3D(GL_TEXTURE_CUBE_MAP_ARRAY, 1, GL_RGB8, 512, 512, layers_faces);
     diffuse_textures_count = 0;
   };
@@ -95,7 +95,7 @@ public:
   uint32_t gl_models_buffer_object;
   uint32_t gl_camera_view;
   uint32_t gl_camera_position;
-  uint32_t gl_diffuse_texture_layer_idx; // sampler layer index
+  uint32_t gl_diffuse_texture_layer_idx; // sampler layer index buffer
 
   Shader shader;
 };

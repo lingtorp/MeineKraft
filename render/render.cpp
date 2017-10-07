@@ -318,7 +318,7 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp, Shader shader) {
           return batch.id;
         }
       }
-      /// Handle size changes for texture buffer for this texture unit
+      // FIXME: Handle size changes for texture buffer for this texture unit
   
       /// Load all the GState's textures
       RawTexture texture = batch.load_textures(&comp->graphics_state);

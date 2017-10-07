@@ -6,7 +6,9 @@
 #include "../nodes/entity.h"
 #include "meshmanager.h"
 
-RenderComponent::RenderComponent(Entity *entity): entity(entity), graphics_state{} {}
+RenderComponent::RenderComponent(Entity *entity): entity(entity), graphics_state{} {
+  graphics_state.shading = true;
+}
 
 void RenderComponent::set_mesh(const std::string& mesh_file, const std::string& directory_file) {
   // TODO: Remove from previous batch - since we are changing mesh and thus geo. data
