@@ -319,6 +319,9 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp, Shader shader) {
         }
       }
       // FIXME: Handle size changes for texture buffer for this texture unit
+      if (batch.diffuse_textures_count + 1 > batch.diffuse_textures_capacity) {
+      
+      }
   
       /// Load all the GState's textures
       RawTexture texture = batch.load_textures(&comp->graphics_state);
@@ -344,7 +347,8 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp, Shader shader) {
     }
   }
 
-  GraphicsBatch batch{mesh_id};
+  auto diffuse_texture_gl_type = comp->graphics_state.diffuse_texture.gl_texture_type;
+  GraphicsBatch batch{mesh_id, static_cast<uint32_t>(diffuse_texture_gl_type)};
   batch.mesh = mesh_manager->mesh_from_id(mesh_id);
   batch.shader = shader;
   link_batch(batch, shader);

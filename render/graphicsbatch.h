@@ -36,14 +36,15 @@ public:
     }
   }
   
-  explicit GraphicsBatch(ID mesh_id): mesh_id(mesh_id), components{}, mesh{}, gl_camera_view(0),
-  gl_models_buffer_object(0), gl_VAO(0), id(0), diffuse_textures{}, layer_idxs{} {
+  explicit GraphicsBatch(ID mesh_id, uint32_t diffuse_texture_gl_type): mesh_id(mesh_id), components{}, mesh{},
+    gl_camera_view(0), gl_models_buffer_object(0), gl_VAO(0), id(0), diffuse_textures{}, layer_idxs{},
+    diffuse_textures_capacity(2) {
     glGenTextures(1, &gl_diffuse_texture_array);
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, gl_diffuse_texture_array);
     
+    glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, gl_diffuse_texture_array);
     // For now create a existent buffer to hold cube maps
-    auto layers_faces = 6 * 3; // Room for 2 cube maps
+    auto layers_faces = 6 * diffuse_textures_capacity; // Room for 2 cube maps
     glTexStorage3D(GL_TEXTURE_CUBE_MAP_ARRAY, 1, GL_RGB8, 512, 512, layers_faces);
     diffuse_textures_count = 0;
   };
@@ -85,7 +86,8 @@ public:
   std::map<ID, uint32_t> layer_idxs;
   // Diffuse
   std::vector<ID> diffuse_textures;
-  uint32_t diffuse_textures_count;
+  uint32_t diffuse_textures_count;    // # texture currently in the GL buffer
+  uint32_t diffuse_textures_capacity; // # textures the GL buffer can hold
   uint32_t gl_diffuse_texture_array;
   uint32_t gl_diffuse_texture_unit = GL_TEXTURE0;
   
