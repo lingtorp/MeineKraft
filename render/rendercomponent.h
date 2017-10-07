@@ -32,7 +32,7 @@ public:
   explicit RenderComponent(Entity* entity);
 
   /// Sets the mesh for the RenderComponent from the .obj file in directory_file
-  void set_mesh(const std::string& mesh_file, const std::string& directory_file);
+  void set_mesh(const std::string& directory, const std::string& file);
 
   /// Sets the mesh to one of the Mesh primitives
   void set_mesh(MeshPrimitive primitive);

@@ -17,9 +17,6 @@ struct RawTexture {
 class TextureManager {
 public:
   TextureManager() = default;
-
-  std::vector<std::pair<Texture::Type, Texture>>
-  load_textures(std::vector<std::pair<Texture::Type, std::string>> texture_info);
   
   RawTexture lookup(ID id);
   ID insert(RawTexture texture);

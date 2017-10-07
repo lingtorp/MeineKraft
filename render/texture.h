@@ -16,6 +16,8 @@ struct TextureResource {
   TextureResource() = default;
   std::vector<std::string> files;
   
+  explicit TextureResource(std::string file): files{file} {};
+  
   uint64_t to_hash() const {
     uint64_t hash = 0;
     for (const auto& file : files) {
@@ -46,9 +48,11 @@ struct Texture {
   uint32_t layer_idx;
   
   /// Function of the texture
-  enum class Type {
+  enum class Type: int8_t {
       Diffuse, Specular
   };
+  
+  Texture::Type type;
   
   /// Texture id
   ID id;

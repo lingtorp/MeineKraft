@@ -6,7 +6,7 @@
 
 class Model: public Entity {
 public:
-    Model(std::string mesh_file, std::string directory);
+    Model(std::string directory, std::string file);
 };
 
 #endif //MEINEKRAFT_TEAPOT_H

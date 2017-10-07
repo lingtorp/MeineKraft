@@ -3,6 +3,7 @@ flat in int fDiffuse_texture_idx;
 uniform samplerCubeArray diffuse_sampler;
 #endif
 #ifdef FLAG_2D_TEXTURE
+flat in int fDiffuse_texture_idx;
 uniform sampler2D diffuse_sampler;
 #endif
 
@@ -67,7 +68,7 @@ void main() {
 #endif
 
 #ifdef FLAG_2D_TEXTURE
-    outColor = texture(diffuse_sampler, fTexcoord) * default_light;
+    outColor = texture(diffuse_sampler, vec3(fTexcoord, fDiffuse_texture_idx)) * default_light;
 #endif
 #ifdef FLAG_CUBE_MAP_TEXTURE
     outColor = texture(diffuse_sampler, vec4(normalize(fNonModelPos.xyz), fDiffuse_texture_idx)) * default_light;

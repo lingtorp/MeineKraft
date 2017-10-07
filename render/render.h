@@ -39,10 +39,7 @@ public:
 
   /// Main render function, renders all the graphics batches and so on
   void render(uint32_t delta);
-
-  /// Request a loading of a mesh, return mesh_id
-  uint64_t load_mesh(RenderComponent* comp, std::string filepath, std::string directory);
-
+  
   /// Adds the RenderComponent to a internal batch
   uint64_t add_to_batch(RenderComponent* comp, Shader shader);
 

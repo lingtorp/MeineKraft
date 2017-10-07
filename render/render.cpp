@@ -376,24 +376,3 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp, Shader shader) {
   
   return batch.id;
 }
-
-uint64_t Renderer::load_mesh(RenderComponent* comp, std::string filepath, std::string directory) {
-  uint64_t mesh_id;
-  std::vector<std::pair<Texture::Type, std::string>> texture_info;
-  std::tie(mesh_id, texture_info) = mesh_manager->load_mesh_from_file(filepath, directory);
-
-  auto textures = texture_manager.load_textures(texture_info);
-  for (auto &texture_pair : textures) {
-    auto texture_type = texture_pair.first;
-    auto texture      = texture_pair.second;
-    switch (texture_type) {
-      case Texture::Type::Diffuse:
-        comp->graphics_state.diffuse_texture = texture;
-        break;
-      default:
-        SDL_Log("Renderer: Unknown Texture::Type when creating custom shader. %s", filepath.c_str());
-        break;
-    }
-  }
-  return mesh_id;
-}

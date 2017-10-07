@@ -27,7 +27,7 @@ public:
      * @return Mesh ID that identifies the loaded Mesh and a list of Textures (type, filepath).
      */
     std::pair<uint64_t, std::vector<std::pair<Texture::Type, std::string>>>
-    load_mesh_from_file(std::string filepath, std::string directory);
+    load_mesh(std::string directory, std::string file);
 
     Mesh mesh_from_id(uint64_t mesh_id);
 

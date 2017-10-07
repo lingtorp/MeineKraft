@@ -10,9 +10,23 @@ RenderComponent::RenderComponent(Entity *entity): entity(entity), graphics_state
   graphics_state.shading = true;
 }
 
-void RenderComponent::set_mesh(const std::string& mesh_file, const std::string& directory_file) {
+void RenderComponent::set_mesh(const std::string& directory, const std::string& file) {
   // TODO: Remove from previous batch - since we are changing mesh and thus geo. data
-  graphics_state.mesh_id = Renderer::instance().load_mesh(this, mesh_file, directory_file);
+  ID mesh_id;
+  std::vector<std::pair<Texture::Type, std::string>> texture_info;
+  std::tie(mesh_id, texture_info) = Renderer::instance().mesh_manager->load_mesh(directory, file);
+  graphics_state.mesh_id = mesh_id;
+  for (const auto& pair : texture_info) {
+    auto texture_type = pair.first;
+    auto texture_file = pair.second;
+    switch (texture_type) {
+      case Texture::Type::Diffuse:
+        graphics_state.diffuse_texture.resource = TextureResource{texture_file};
+        graphics_state.diffuse_texture.gl_texture_type = GL_TEXTURE_2D_ARRAY; // FIXME: Assumes texture format
+        graphics_state.diffuse_texture.used = true;
+        break;
+    }
+  }
 };
 
 void RenderComponent::update() {
@@ -49,7 +63,7 @@ void RenderComponent::did_attach_to_entity(Entity* entity) {
     if (graphics_state.diffuse_texture.gl_texture_type == GL_TEXTURE_CUBE_MAP_ARRAY) {
       shader.add("#define FLAG_CUBE_MAP_TEXTURE \n");
     }
-    if (graphics_state.diffuse_texture.gl_texture_type == GL_TEXTURE_2D) {
+    if (graphics_state.diffuse_texture.gl_texture_type == GL_TEXTURE_2D_ARRAY) {
       shader.add("#define FLAG_2D_TEXTURE \n");
     }
   }

@@ -41,20 +41,21 @@ int main() {
   // Init the world with seed
   World world{1};
   Skybox skybox{};
-/*
+
+  /*
   std::string directory = "/Users/AlexanderLingtorp/Desktop/";
   std::string model_file;
   
   model_file = "stanford-bunny.obj";
-  Model bunny{model_file, directory};
+  Model bunny{directory, model_file};
   bunny.position = {0, 5, 0};
   bunny.scale = 100;
 
   model_file = "stanford-dragon.obj";
-  Model dragon{model_file, directory};
+  Model dragon{directory, model_file};
   dragon.position = {18, 5, 0};
-  dragon.scale = 2;*/
-  
+  dragon.scale = 2;
+  */
   bool toggle_mouse_capture = false;
   bool DONE = false;
   uint32_t last_tick = SDL_GetTicks(), current_tick, delta;

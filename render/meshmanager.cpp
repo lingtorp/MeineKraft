@@ -19,10 +19,9 @@ std::pair<uint64_t, bool> MeshManager::is_mesh_loaded(std::string filepath, std:
 }
 
 std::pair<uint64_t, std::vector<std::pair<Texture::Type, std::string>>>
-MeshManager::load_mesh_from_file(std::string filepath,
-                                 std::string directory) {
+MeshManager::load_mesh(std::string directory, std::string file) {
     MeshInformation mesh_info;
-    mesh_info.loaded_from_filepath = directory + filepath;
+    mesh_info.loaded_from_filepath = directory + file;
 
     Assimp::Importer importer;
     auto scene = importer.ReadFile(mesh_info.loaded_from_filepath.c_str(), aiProcess_Triangulate | aiProcess_JoinIdenticalVertices);
