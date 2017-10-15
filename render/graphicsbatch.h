@@ -36,18 +36,37 @@ public:
     }
   }
   
-  explicit GraphicsBatch(ID mesh_id, uint32_t diffuse_texture_gl_type): mesh_id(mesh_id), components{}, mesh{},
+  explicit GraphicsBatch(ID mesh_id): mesh_id(mesh_id), components{}, mesh{},
     gl_camera_view(0), gl_models_buffer_object(0), gl_VAO(0), id(0), diffuse_textures{}, layer_idxs{},
-    diffuse_textures_capacity(2) {
-    glGenTextures(1, &gl_diffuse_texture_array);
-    glActiveTexture(GL_TEXTURE0);
-    
-    glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, gl_diffuse_texture_array);
-    // For now create a existent buffer to hold cube maps
-    auto layers_faces = 6 * diffuse_textures_capacity; // Room for 2 cube maps
-    glTexStorage3D(GL_TEXTURE_CUBE_MAP_ARRAY, 1, GL_RGB8, 512, 512, layers_faces);
+    diffuse_textures_capacity(3) {};
+  
+  // FIXME: Handle size changes for texture buffer(s)
+  
+  void init_buffer(uint32_t* gl_buffer, uint32_t gl_buffer_type, uint32_t buffer_size) {
+    glGenTextures(1, gl_buffer);
+    glBindTexture(gl_buffer_type, *gl_buffer);
+    // FIXME: Texture information is assumed here
+    auto layers_faces = 6 * buffer_size; // FIXME: Assumes cube map ..
+    glTexStorage3D(gl_buffer_type, 1, GL_RGB8, 512, 512, layers_faces);
     diffuse_textures_count = 0;
-  };
+  }
+  
+  void expand_buffer(uint32_t gl_buffer, uint32_t gl_buffer_type) {
+    /// Allocate new memory
+    uint32_t gl_new_diffuse_texture_array;
+    glGenTextures(1, &gl_new_diffuse_texture_array);
+    glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, gl_new_diffuse_texture_array);
+    auto new_textures_capacity = (uint32_t) std::ceil(diffuse_textures_capacity * texture_array_growth_factor); // number of new textures to accomodate
+    auto layers_faces = 6 * new_textures_capacity;
+    glTexStorage3D(GL_TEXTURE_CUBE_MAP_ARRAY, 1, GL_RGB8, 512, 512, layers_faces);
+    /// Copy
+    auto size = 512 * 512 * diffuse_textures_count; // 1 pixel = 1B given GL_RGB8
+    // FIXME: Copy data from texture to texture seems impossible in a sane way w/o > 4.1
+    // glCopyBufferSubData(gl_diffuse_texture_array, gl_new_diffuse_texture_array, 0, 0, size);
+    /// Update state
+    gl_diffuse_texture_array  = gl_new_diffuse_texture_array;
+    diffuse_textures_capacity = new_textures_capacity;
+  }
   
   RawTexture load_textures(GraphicsState* g_state) {
     RawTexture texture{0, nullptr};
@@ -85,11 +104,15 @@ public:
   std::vector<ID> texture_ids;
   std::map<ID, uint32_t> layer_idxs;
   // Diffuse
+  bool diffuse_textures_used;
   std::vector<ID> diffuse_textures;
   uint32_t diffuse_textures_count;    // # texture currently in the GL buffer
   uint32_t diffuse_textures_capacity; // # textures the GL buffer can hold
   uint32_t gl_diffuse_texture_array;
+  uint32_t gl_diffuse_texture_type; // CUBE_MAP_ARRAY, 2D_TEXTURE_ARRAY, etc
   uint32_t gl_diffuse_texture_unit = GL_TEXTURE0;
+  
+  float texture_array_growth_factor = 1.5; // new_buf_size = ceil(old_buf_size * growth_factor)
   
   std::vector<RenderComponent*> components;
 

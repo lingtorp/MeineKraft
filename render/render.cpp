@@ -308,19 +308,20 @@ void Renderer::link_batch(GraphicsBatch& batch, const Shader& shader) {
 
 uint64_t Renderer::add_to_batch(RenderComponent* comp, Shader shader) {
   auto mesh_id = comp->graphics_state.mesh_id;
+  auto& g_state = comp->graphics_state;
   for (auto& batch : graphics_batches) {
     if (batch.mesh_id == mesh_id && batch.shader == shader) {
       batch.components.push_back(comp);
-      auto& g_state = comp->graphics_state;
+      // TODO: Check if batch buffer is in use and initialized
       for (const auto& id : batch.texture_ids) {
         if (id == g_state.diffuse_texture.id) {
           g_state.diffuse_texture.layer_idx = batch.layer_idxs[id];
           return batch.id;
         }
       }
-      // FIXME: Handle size changes for texture buffer for this texture unit
+      /// Expand texture buffer if needed
       if (batch.diffuse_textures_count + 1 > batch.diffuse_textures_capacity) {
-      
+        batch.expand_buffer(batch.gl_diffuse_texture_array, batch.gl_diffuse_texture_type);
       }
   
       /// Load all the GState's textures
@@ -346,14 +347,18 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp, Shader shader) {
       return batch.id;
     }
   }
-
-  auto diffuse_texture_gl_type = comp->graphics_state.diffuse_texture.gl_texture_type;
-  GraphicsBatch batch{mesh_id, static_cast<uint32_t>(diffuse_texture_gl_type)};
+  
+  GraphicsBatch batch{mesh_id};
+  if (comp->graphics_state.diffuse_texture.used) {
+    auto buffer_size = 3; // # textures to hold
+    batch.init_buffer(&batch.gl_diffuse_texture_array, g_state.diffuse_texture.gl_texture_type, buffer_size);
+    batch.diffuse_textures_used = true;
+  }
+  batch.gl_diffuse_texture_type = comp->graphics_state.diffuse_texture.gl_texture_type;
   batch.mesh = mesh_manager->mesh_from_id(mesh_id);
   batch.shader = shader;
   link_batch(batch, shader);
   
-  auto& g_state = comp->graphics_state;
   /// Assign layer index to the latest the texture and increment
   g_state.diffuse_texture.layer_idx = batch.diffuse_textures_count++;
   /// Add to all the known texture ids in the batch
