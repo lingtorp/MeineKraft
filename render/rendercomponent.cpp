@@ -5,6 +5,7 @@
 #include "shader.h"
 #include "../nodes/entity.h"
 #include "meshmanager.h"
+#include "../util/filesystem.h"
 
 RenderComponent::RenderComponent(Entity *entity): entity(entity), graphics_state{} {
   graphics_state.shading = true;
@@ -51,9 +52,8 @@ void RenderComponent::set_cube_map_texture(const std::vector<std::string>& faces
 void RenderComponent::did_attach_to_entity(Entity* entity) {
   // 1. Generate a Shader
   /// Compile shader
-  const std::string shader_base_filepath = "/Users/AlexanderLingtorp/Repositories/MeineKraft/shaders/";
-  const auto vertex_shader   = shader_base_filepath + "std/vertex-shader.glsl";
-  const auto fragment_shader = shader_base_filepath + "std/fragment-shader.glsl";
+  const auto vertex_shader   = FileSystem::base + "std/vertex-shader.glsl";
+  const auto fragment_shader = FileSystem::base + "std/fragment-shader.glsl";
   Shader shader(vertex_shader, fragment_shader);
   if (graphics_state.shading) {
     shader.add("#define FLAG_BLINN_PHONG_SHADING \n");
