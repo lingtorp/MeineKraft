@@ -36,13 +36,13 @@ struct Texture {
   bool used;
   
   /// OpenCL texture name from glGenTexture
-  uint64_t gl_texture;
+  uint32_t gl_texture;
 
   /// OpenGL texture type; CUBE_MAP, CUBE_MAP_ARRAY, TEXTURE_2D, etc
-  uint64_t gl_texture_type;
+  uint32_t gl_texture_type;
 
   /// OpenGL texture location in shader from glUniformLocation
-  uint64_t gl_texture_location;
+  uint32_t gl_texture_location;
   
   /// Layer index for the textures sampler type
   uint32_t layer_idx;

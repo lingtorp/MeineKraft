@@ -23,17 +23,17 @@ public:
 
   std::string vertex_filepath;
   std::string fragment_filepath;
-  uint64_t gl_program;
+  uint32_t gl_program;
   
-  uint64_t get_uniform_location(Texture::Type type);
+  uint32_t get_uniform_location(Texture::Type type);
 
 private:
-  uint64_t vertex_shader;
-  uint64_t fragment_shader;
+  uint32_t vertex_shader;
+  uint32_t fragment_shader;
 
   std::set<std::string> defines;
   
-  /// Validates that all of the work together
+  /// Validates that all of the defines work together
   bool validate();
 
   /// Assumes the file exists and will seg. fault otherwise.

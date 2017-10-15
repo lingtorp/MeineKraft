@@ -49,8 +49,8 @@ std::pair<bool, std::string> Shader::compile() {
   raw_str = fragment_src.c_str();
   fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
   glShaderSource(fragment_shader, 1, &raw_str, NULL);
-
-  uint64_t shader_program = glCreateProgram();
+  
+  GLint shader_program = glCreateProgram();
   glCompileShader(vertex_shader);
   glCompileShader(fragment_shader);
   glAttachShader(shader_program, vertex_shader);
@@ -150,9 +150,9 @@ std::pair<bool, std::string> Shader::recompile() {
       return {true, ""};
   }
 
-  uint64_t err_size = 512;
-  std::string frag_err_msg = "";
-  std::string vert_err_msg = "";
+  uint32_t err_size = 512;
+  std::string frag_err_msg;
+  std::string vert_err_msg;
   frag_err_msg.reserve(err_size);
   vert_err_msg.reserve(err_size);
   glGetShaderInfoLog(fragment_shader, err_size, NULL, (char *) frag_err_msg.c_str());
@@ -174,7 +174,7 @@ void Shader::add(std::string define) {
   defines.insert(define);
 }
 
-uint64_t Shader::get_uniform_location(Texture::Type type) {
+uint32_t Shader::get_uniform_location(Texture::Type type) {
   std::string uniform_location;
   switch (type) {
     case Texture::Type::Diffuse:
