@@ -24,7 +24,3 @@ void World::world_tick(uint32_t delta, const std::shared_ptr<Camera> &camera) {
     entity->update(delta, camera);
   }
 }
-
-void World::add_entity(Entity *entity) {
-  entities.push_back(entity);
-}
