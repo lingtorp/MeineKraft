@@ -63,12 +63,11 @@ std::pair<bool, std::string> Shader::compile() {
   GLint fragment_shader_status;
   glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &fragment_shader_status);
 
-  // FIXME: Always detach shaders after a successful link.
-  // glDetachShader(shader_program, vertex_shader);
-  // glDetachShader(shader_program, fragment_shader);
-  // glDeleteShader(vertex_shader);
-  // glDeleteShader(fragment_shader);
-  
+  glDetachShader(shader_program, vertex_shader);
+  glDetachShader(shader_program, fragment_shader);
+  glDeleteShader(vertex_shader);
+  glDeleteShader(fragment_shader);
+
   if (vertex_shader_status == GL_TRUE && fragment_shader_status == GL_TRUE) {
       gl_program = shader_program;
       return {true, ""};
