@@ -5,9 +5,9 @@
 
 class Skybox: public Entity {
 public:
-    Skybox();
+  Skybox();
 
-    virtual void update(uint64_t delta, const std::shared_ptr<Camera> &camera) override;
+  void update(uint64_t delta, const std::shared_ptr<Camera> &camera) override;
 };
 
 #endif //MEINEKRAFT_SKYBOX_H
