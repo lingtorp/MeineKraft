@@ -7,7 +7,7 @@
 #include "meshmanager.h"
 #include "../util/filesystem.h"
 
-RenderComponent::RenderComponent(Entity *entity): entity(entity), graphics_state{} {
+RenderComponent::RenderComponent(Entity* entity): entity(entity), graphics_state{} {
   graphics_state.shading = true;
 }
 

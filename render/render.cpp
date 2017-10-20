@@ -321,7 +321,7 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp, Shader shader) {
       }
       /// Expand texture buffer if needed
       if (batch.diffuse_textures_count + 1 > batch.diffuse_textures_capacity) {
-        batch.expand_buffer(batch.gl_diffuse_texture_array, batch.gl_diffuse_texture_type);
+        batch.expand_texture_buffer(&batch.gl_diffuse_texture_array, batch.gl_diffuse_texture_type);
       }
   
       /// Load all the GState's textures

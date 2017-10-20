@@ -51,21 +51,22 @@ public:
     glTexStorage3D(gl_buffer_type, 1, GL_RGB8, 512, 512, layers_faces);
     diffuse_textures_count = 0;
   }
-  
-  void expand_buffer(uint32_t gl_buffer, uint32_t gl_buffer_type) {
+
+  /// GL buffer type or in GL-speak target rather than type
+  void expand_texture_buffer(uint32_t* gl_buffer, uint32_t gl_buffer_type) {
     /// Allocate new memory
-    uint32_t gl_new_diffuse_texture_array;
-    glGenTextures(1, &gl_new_diffuse_texture_array);
-    glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, gl_new_diffuse_texture_array);
-    auto new_textures_capacity = (uint32_t) std::ceil(diffuse_textures_capacity * texture_array_growth_factor); // number of new textures to accomodate
+    uint32_t gl_new_texture_array;
+    glGenTextures(1, &gl_new_texture_array);
+    glBindTexture(gl_buffer_type, gl_new_texture_array);
+    // # of new textures to accommodate
+    auto new_textures_capacity = (uint32_t) std::ceil(diffuse_textures_capacity * texture_array_growth_factor);
     auto layers_faces = 6 * new_textures_capacity;
-    glTexStorage3D(GL_TEXTURE_CUBE_MAP_ARRAY, 1, GL_RGB8, 512, 512, layers_faces);
+    glTexStorage3D(gl_buffer_type, 1, GL_RGB8, 512, 512, layers_faces);
     /// Copy
     auto size = 512 * 512 * diffuse_textures_count; // 1 pixel = 1B given GL_RGB8
-    // FIXME: Copy data from texture to texture seems impossible in a sane way w/o > 4.1
-    // glCopyBufferSubData(gl_diffuse_texture_array, gl_new_diffuse_texture_array, 0, 0, size);
+    
     /// Update state
-    gl_diffuse_texture_array  = gl_new_diffuse_texture_array;
+    *gl_buffer  = gl_new_texture_array;
     diffuse_textures_capacity = new_textures_capacity;
   }
   
@@ -104,7 +105,7 @@ public:
   /// Textures
   std::vector<ID> texture_ids;
   std::map<ID, uint32_t> layer_idxs;
-  // Diffuse
+  // Diffuse texture buffer
   bool diffuse_textures_used;
   std::vector<ID> diffuse_textures;
   uint32_t diffuse_textures_count;    // # texture currently in the GL buffer
