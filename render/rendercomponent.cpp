@@ -52,8 +52,8 @@ void RenderComponent::set_cube_map_texture(const std::vector<std::string>& faces
 void RenderComponent::did_attach_to_entity(Entity* entity) {
   // 1. Generate a Shader
   /// Compile shader
-  const auto vertex_shader   = FileSystem::base + "std/vertex-shader.glsl";
-  const auto fragment_shader = FileSystem::base + "std/fragment-shader.glsl";
+  const auto vertex_shader   = FileSystem::base + "shaders/std/vertex-shader.glsl";
+  const auto fragment_shader = FileSystem::base + "shaders/std/fragment-shader.glsl";
   Shader shader(vertex_shader, fragment_shader);
   if (graphics_state.shading) {
     shader.add("#define FLAG_BLINN_PHONG_SHADING \n");
