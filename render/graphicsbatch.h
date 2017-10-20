@@ -6,6 +6,7 @@
 #include <SDL_log.h>
 #include <iostream>
 #include <SDL2/SDL_image.h>
+#include <cstring>
 #include "primitives.h"
 #include "shader.h"
 #include "texturemanager.h"
