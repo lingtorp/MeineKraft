@@ -18,7 +18,7 @@ int main() {
   SDL_Init(SDL_INIT_EVERYTHING);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 5);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
   auto window_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_MOUSE_CAPTURE;
   SDL_Window* window = SDL_CreateWindow("MeineKraft", 0, 0, HD.width, HD.height, window_flags);
   SDL_GLContext context = SDL_GL_CreateContext(window);
@@ -38,8 +38,7 @@ int main() {
   // Init the world with seed
   World world{1};
   Skybox skybox{};
-
-  /*
+  
   std::string directory = "/Users/AlexanderLingtorp/Desktop/";
   std::string model_file;
   
@@ -47,12 +46,14 @@ int main() {
   Model bunny{directory, model_file};
   bunny.position = {0, 5, 0};
   bunny.scale = 100;
-
+  
+  /*
   model_file = "stanford-dragon.obj";
   Model dragon{directory, model_file};
   dragon.position = {18, 5, 0};
   dragon.scale = 2;
-  */
+   */
+  
   bool toggle_mouse_capture = false;
   bool DONE = false;
   uint32_t last_tick = SDL_GetTicks(), current_tick, delta;

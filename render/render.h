@@ -55,7 +55,12 @@ public:
   Mat4<float> projection_matrix;
 private:
   Renderer();
-
+  
+  /// Depth pass related
+  Shader* depth_shader;
+  uint32_t depth_fb; // Depth framebuffer
+  uint32_t depth_texture;
+  
   uint16_t MAX_NUM_LIGHTS = 100;
   uint32_t gl_light_uniform_buffer;
   std::vector<Light> lights;

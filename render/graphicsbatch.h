@@ -66,13 +66,15 @@ public:
     auto size = 512 * 512 * diffuse_textures_count; // 1 pixel = 1B given GL_RGB8
     
     /// Update state
-    *gl_buffer  = gl_new_texture_array;
+    *gl_buffer = gl_new_texture_array;
     diffuse_textures_capacity = new_textures_capacity;
   }
   
   RawTexture load_textures(GraphicsState* g_state) {
     RawTexture texture{0, nullptr};
     auto& files = g_state->diffuse_texture.resource.files;
+    
+    if (files.empty()) { return texture; }
     
     auto& file = files.front();
     SDL_Surface* image = IMG_Load(file.c_str());
@@ -117,13 +119,20 @@ public:
   float texture_array_growth_factor = 1.5; // new_buf_size = ceil(old_buf_size * growth_factor)
   
   std::vector<RenderComponent*> components;
-
+  
+  /// Depth pass variables
+  uint32_t gl_depth_vao;
+  uint32_t gl_depth_models_buffer_object;
+  uint32_t gl_depth_camera_view; // Shader dependable (depth_shader)
+  
+  /// Rendering pass variables
   uint32_t gl_VAO;
   uint32_t gl_models_buffer_object;
+  
+  /// Shader dependables
   uint32_t gl_camera_view;
   uint32_t gl_camera_position;
   uint32_t gl_diffuse_texture_layer_idx; // sampler layer index buffer
-
   Shader shader;
 };
 
