@@ -36,6 +36,16 @@ uniform mat4 camera_view;
 // Projection or a.k.a perspective matrix
 uniform mat4 projection;
 
+// Depth texture
+uniform sampler2D depth_sampler;
+
+float linearize_depth(vec2 uv) {
+  float n = 1.0;  // camera z near
+  float f = 10.0; // camera z far
+  float z = texture(depth_sampler, uv).r;
+  return (2.0 * n) / (f + n - z * (f - n));
+}
+
 void main() {
     outColor = vec4(1.0f); // Sets a default color of white to all objects
     vec4 default_light = vec4(1.0, 1.0, 1.0, 1.0);
@@ -73,4 +83,8 @@ void main() {
 #ifdef FLAG_CUBE_MAP_TEXTURE
     outColor = texture(diffuse_sampler, vec4(normalize(fNonModelPos.xyz), fDiffuse_texture_idx)) * default_light;
 #endif
+
+    // TODO: Screen dimensions as uniforms
+   vec2 sample_pos = vec2(gl_FragCoord.x / 1280.0, gl_FragCoord.y / 720.0);
+   outColor = vec4(vec3(linearize_depth(sample_pos)), 1.0f);
 }

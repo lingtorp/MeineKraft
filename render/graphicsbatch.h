@@ -44,7 +44,8 @@ public:
   // FIXME: Handle size changes for texture buffer(s)
   
   void init_buffer(uint32_t* gl_buffer, uint32_t gl_buffer_type, uint32_t buffer_size) {
-    glGenTextures(1, gl_buffer);
+    glGenTextures(1, gl_buffer); // FIXME: OpenGL error 1280 (0x500) here in this function
+    glActiveTexture(gl_diffuse_texture_unit);
     glBindTexture(gl_buffer_type, *gl_buffer);
     // FIXME: Texture information is assumed here
     auto layers_faces = 6 * buffer_size; // FIXME: Assumes cube map ..
@@ -57,6 +58,7 @@ public:
     /// Allocate new memory
     uint32_t gl_new_texture_array;
     glGenTextures(1, &gl_new_texture_array);
+    glActiveTexture(gl_diffuse_texture_unit);
     glBindTexture(gl_buffer_type, gl_new_texture_array);
     // # of new textures to accommodate
     auto new_textures_capacity = (uint32_t) std::ceil(diffuse_textures_capacity * texture_array_growth_factor);

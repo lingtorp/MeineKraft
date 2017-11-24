@@ -94,13 +94,27 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
   glBufferData(GL_UNIFORM_BUFFER, sizeof(Light) * lights.size(), &lights, GL_DYNAMIC_DRAW);
 
   /// Create depth frame buffer
-  glGenFramebuffers(1, &depth_fb);
-  glGenTextures(1, &depth_texture);
+  glGenFramebuffers(1, &gl_depth_fbo);
+  glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
+  
+  glGenTextures(1, &gl_depth_texture);
+  int32_t max_texture_units;
+  glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max_texture_units);
+  gl_depth_texture_unit = max_texture_units - 1;
+  SDL_Log("Max texture units: %u", max_texture_units);
+  glActiveTexture(GL_TEXTURE0 + gl_depth_texture_unit);
+  glBindTexture(GL_TEXTURE_2D, gl_depth_texture);
   int screen_width = 1280;
   int screen_height = 720;
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, screen_width, screen_height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, screen_width, screen_height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, NULL);
+  glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, gl_depth_texture, 0);
+  
+  GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+  if (status != GL_FRAMEBUFFER_COMPLETE) {
+    SDL_Log("Framebuffer status not complete.");
+  }
   
   depth_shader = new Shader{FileSystem::base + "shaders/std/depth-vertex.glsl", FileSystem::base + "shaders/std/depth-fragment.glsl"};
   std::string err_msg;
@@ -114,7 +128,7 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
   /// Camera
   const auto position  = Vec3<float>{0.0f, 20.0f, 0.0f};  // cam position
   const auto direction = Vec3<float>{0.0f, 0.0f, -1.0f};  // position of where the cam is looking
-  const auto world_up  = Vec3<float>{0.0f, 1.0f, 0.0f};    // world up
+  const auto world_up  = Vec3<float>{0.0f, 1.0f, 0.0f};   // world up
   this->camera = std::make_shared<Camera>(position, direction, world_up);
 }
 
@@ -158,7 +172,7 @@ void Renderer::render(uint32_t delta) {
       glBindVertexArray(batch.gl_depth_vao);
       glUseProgram(depth_shader->gl_program);
       glUniformMatrix4fv(batch.gl_depth_camera_view, 1, GL_FALSE, camera_view.data());
-    
+      
       std::vector<Mat4<float>> model_buffer{};
       for (auto &component : batch.components) {
         component->update(); // Copy all graphics state
@@ -174,12 +188,13 @@ void Renderer::render(uint32_t delta) {
       
         log_gl_error();
       }
-      // TODO: Set up the depth texture we want to render to and then use it in the next pass as a sampler
-      glBindFramebuffer(GL_FRAMEBUFFER, depth_fb);
       glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_models_buffer_object);
       glBufferData(GL_ARRAY_BUFFER, model_buffer.size() * sizeof(Mat4<float>), model_buffer.data(), GL_DYNAMIC_DRAW);
+      glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
+      glClear(GL_DEPTH_BUFFER_BIT);
       glDrawElementsInstanced(GL_TRIANGLES, batch.mesh.indices.size(), GL_UNSIGNED_INT, 0, model_buffer.size());
     }
+    
     /// Remainder pass
     glBindFramebuffer(GL_FRAMEBUFFER, 0); // Reset framebuffer to default
     glBindVertexArray(batch.gl_VAO);
@@ -195,8 +210,11 @@ void Renderer::render(uint32_t delta) {
     glBindBuffer(GL_UNIFORM_BUFFER, gl_light_uniform_buffer);
     glBufferData(GL_UNIFORM_BUFFER, sizeof(Light) * lights.size(), lights.data(), GL_DYNAMIC_DRAW);
   
-    glActiveTexture(batch.gl_diffuse_texture_unit);
-  
+    // Depth texture
+    glActiveTexture(gl_depth_texture_unit);
+    glBindTexture(GL_TEXTURE_2D, gl_depth_texture);
+    glUniform1i(glGetUniformLocation(batch.shader.gl_program, "depth_sampler"), gl_depth_texture_unit);
+    
     std::vector<Mat4<float>> buffer{};
     std::vector<uint32_t> diffuse_texture_idxs{};
     for (auto& component : batch.components) {
@@ -280,7 +298,7 @@ void Renderer::update_projection_matrix(float fov) {
   int height, width;
   SDL_GL_GetDrawableSize(this->window, &width, &height);
   float aspect = (float) width / (float) height;
-  this->projection_matrix = gen_projection_matrix(1, 10, fov, aspect);
+  this->projection_matrix = gen_projection_matrix(1.0, 10.0, fov, aspect);
   glViewport(0, 0, width, height); // Update OpenGL viewport
   // TODO: Update all shader programs projection matrices to the new one
   for (auto &batch : graphics_batches) {
@@ -431,6 +449,7 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp, Shader shader) {
       batch.layer_idxs[g_state.diffuse_texture.id] = g_state.diffuse_texture.layer_idx;
       
       /// Upload the texture to OpenGL
+      glActiveTexture(batch.gl_diffuse_texture_unit);
       glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, batch.gl_diffuse_texture_array);
       glTexSubImage3D(GL_TEXTURE_CUBE_MAP_ARRAY,
                       0,                     // Mipmap number
@@ -465,6 +484,7 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp, Shader shader) {
   RawTexture texture = batch.load_textures(&comp->graphics_state);
   texture_manager.insert(texture);
   /// Upload the texture to OpenGL
+  glActiveTexture(batch.gl_diffuse_texture_unit);
   glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, batch.gl_diffuse_texture_array);
   glTexSubImage3D(GL_TEXTURE_CUBE_MAP_ARRAY,
                   0,                     // Mipmap number

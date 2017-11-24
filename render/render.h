@@ -13,6 +13,7 @@
 #include "light.h"
 #include "transform.h"
 #include "texturemanager.h"
+#include "shader.h"
 
 class World;
 class Camera;
@@ -53,13 +54,16 @@ public:
   TextureManager texture_manager;
   double DRAW_DISTANCE;
   Mat4<float> projection_matrix;
+  
+  float depth_buffer[1280][720];
 private:
   Renderer();
   
   /// Depth pass related
   Shader* depth_shader;
-  uint32_t depth_fb; // Depth framebuffer
-  uint32_t depth_texture;
+  uint32_t gl_depth_fbo;
+  uint32_t gl_depth_texture;
+  uint32_t gl_depth_texture_unit;
   
   uint16_t MAX_NUM_LIGHTS = 100;
   uint32_t gl_light_uniform_buffer;
