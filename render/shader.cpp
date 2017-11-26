@@ -73,19 +73,22 @@ std::pair<bool, std::string> Shader::compile() {
       return {true, ""};
   }
 
-  GLint err_size = 0;
+  GLint err_size = 1024;
   glGetShaderiv(vertex_shader, GL_INFO_LOG_LENGTH, &err_size);
-  char vert_err_msg[err_size];
-  glGetShaderInfoLog(vertex_shader, err_size, NULL, &vert_err_msg[0]);
+  char* vert_err_msg = new char[1024];
+  glGetShaderInfoLog(vertex_shader, err_size, NULL, vert_err_msg);
+  SDL_Log(vert_err_msg);
 
   glGetShaderiv(fragment_shader, GL_INFO_LOG_LENGTH, &err_size);
-  char frag_err_msg[err_size];
-  glGetShaderInfoLog(fragment_shader, err_size, NULL, &frag_err_msg[0]);
-
+  char* frag_err_msg = new char[1024];
+  glGetShaderInfoLog(fragment_shader, err_size, NULL, frag_err_msg);
+  SDL_Log(frag_err_msg);
+  
   glGetProgramiv(shader_program, GL_INFO_LOG_LENGTH, &err_size);
-  char prog_err_msg[err_size];
-  glGetProgramInfoLog(shader_program, err_size, NULL, &prog_err_msg[0]);
-
+  char* prog_err_msg = new char[1024];
+  glGetProgramInfoLog(shader_program, err_size, NULL, prog_err_msg);
+  SDL_Log(prog_err_msg);
+  
   auto gl_error = glGetError();
   SDL_Log("OpenGL Error: 0x%08x", gl_error);
   log_gl_error();

@@ -92,7 +92,7 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
   glGenBuffers(1, &gl_light_uniform_buffer);
   glBindBuffer(GL_UNIFORM_BUFFER, gl_light_uniform_buffer);
   glBufferData(GL_UNIFORM_BUFFER, sizeof(Light) * lights.size(), &lights, GL_DYNAMIC_DRAW);
-
+  
   /// Create depth frame buffer
   glGenFramebuffers(1, &gl_depth_fbo);
   glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
@@ -124,6 +124,23 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
     SDL_Log("Shader compilation failed; %s", err_msg.c_str());
     return;
   }
+  
+  /// SSAO noise
+  std::uniform_real_distribution<float> random(-1.0f, 1.0f);
+  std::default_random_engine gen;
+  std::vector<Vec3<float>> ssao_noise;
+  for (int i = 0; i < 16; i++) {
+    ssao_noise.push_back(Vec3<float>{random(gen), random(gen), 0.0f});
+  }
+  
+  glGenTextures(1, &gl_ssao_noise_texture);
+  glActiveTexture(GL_TEXTURE0 + max_texture_units - 2);
+  glBindTexture(GL_TEXTURE_2D, gl_ssao_noise_texture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, 4, 4, 0, GL_RGB, GL_FLOAT, ssao_noise.data());
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
   
   /// Camera
   const auto position  = Vec3<float>{0.0f, 20.0f, 0.0f};  // cam position
@@ -165,6 +182,23 @@ void Renderer::render(uint32_t delta) {
 
   // TODO: Update number of lights in the scene
   // TODO: Cull the lights
+  
+  /// Create SSAO sample sphere/kernel
+  std::uniform_real_distribution<float> random(0.0f, 1.0f);
+  std::default_random_engine gen;
+  
+  const int num_sample_per_kernel = 16;
+  std::vector<Vec3<float>> ssao_samples;
+  for (size_t i = 0; i < num_sample_per_kernel; i++) {
+    Vec3<float> sample_point = {
+      random(gen) * 2.0f - 1.0f, // [-1.0, 1.0]
+      random(gen) * 2.0f - 1.0f,
+      random(gen)
+    };
+    sample_point.normalize();
+    // TODO: Interpolate the samples so they end up close to the origin
+    ssao_samples.push_back(sample_point);
+  }
   
   for (auto& batch : graphics_batches) {
     /// Depth pass
@@ -214,6 +248,9 @@ void Renderer::render(uint32_t delta) {
     glActiveTexture(gl_depth_texture_unit);
     glBindTexture(GL_TEXTURE_2D, gl_depth_texture);
     glUniform1i(glGetUniformLocation(batch.shader.gl_program, "depth_sampler"), gl_depth_texture_unit);
+  
+    // Updates the kernel samples
+    glUniform1fv(glGetUniformLocation(batch.shader.gl_program, "ssao_samples"), ssao_samples.size(), &ssao_samples[0].x);
     
     std::vector<Mat4<float>> buffer{};
     std::vector<uint32_t> diffuse_texture_idxs{};
