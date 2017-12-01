@@ -13,7 +13,7 @@
 #include "texturemanager.h"
 #include "../util/filesystem.h"
 
-void log_gl_error() {
+void Renderer::log_gl_error() {
   GLenum err = glGetError();
   switch(err) {
     case GL_INVALID_VALUE:
@@ -130,11 +130,14 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
   std::default_random_engine gen;
   std::vector<Vec3<float>> ssao_noise;
   for (int i = 0; i < 16; i++) {
-    ssao_noise.push_back(Vec3<float>{random(gen), random(gen), 0.0f});
+    auto noise = Vec3<float>{random(gen), random(gen), 0.0f};
+    noise.normalize();
+    ssao_noise.push_back(noise);
   }
   
   glGenTextures(1, &gl_ssao_noise_texture);
-  glActiveTexture(GL_TEXTURE0 + max_texture_units - 2);
+  gl_ssao_noise_texture_unit = max_texture_units - 2;
+  glActiveTexture(GL_TEXTURE0 + gl_ssao_noise_texture_unit);
   glBindTexture(GL_TEXTURE_2D, gl_ssao_noise_texture);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, 4, 4, 0, GL_RGB, GL_FLOAT, ssao_noise.data());
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -196,6 +199,7 @@ void Renderer::render(uint32_t delta) {
       random(gen)
     };
     sample_point.normalize();
+    // sample_point *= random(gen); // Spread the samples inside the hemisphere
     // TODO: Interpolate the samples so they end up close to the origin
     ssao_samples.push_back(sample_point);
   }
@@ -206,6 +210,10 @@ void Renderer::render(uint32_t delta) {
       glBindVertexArray(batch.gl_depth_vao);
       glUseProgram(depth_shader->gl_program);
       glUniformMatrix4fv(batch.gl_depth_camera_view, 1, GL_FALSE, camera_view.data());
+  
+      glEnable(GL_CULL_FACE);
+      glCullFace(GL_BACK);
+      glFrontFace(GL_CCW);
       
       std::vector<Mat4<float>> model_buffer{};
       for (auto &component : batch.components) {
@@ -225,7 +233,7 @@ void Renderer::render(uint32_t delta) {
       glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_models_buffer_object);
       glBufferData(GL_ARRAY_BUFFER, model_buffer.size() * sizeof(Mat4<float>), model_buffer.data(), GL_DYNAMIC_DRAW);
       glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
-      glClear(GL_DEPTH_BUFFER_BIT);
+      glClear(GL_DEPTH_BUFFER_BIT); // Always update the depth buffer with the new values
       glDrawElementsInstanced(GL_TRIANGLES, batch.mesh.indices.size(), GL_UNSIGNED_INT, 0, model_buffer.size());
     }
     
@@ -245,10 +253,11 @@ void Renderer::render(uint32_t delta) {
     glBufferData(GL_UNIFORM_BUFFER, sizeof(Light) * lights.size(), lights.data(), GL_DYNAMIC_DRAW);
   
     // Depth texture
-    glActiveTexture(gl_depth_texture_unit);
-    glBindTexture(GL_TEXTURE_2D, gl_depth_texture);
     glUniform1i(glGetUniformLocation(batch.shader.gl_program, "depth_sampler"), gl_depth_texture_unit);
-  
+    
+    // SSAO noise texture
+    glUniform1i(glGetUniformLocation(batch.shader.gl_program, "noise_sampler"), gl_ssao_noise_texture_unit);
+    
     // Updates the kernel samples
     glUniform1fv(glGetUniformLocation(batch.shader.gl_program, "ssao_samples"), ssao_samples.size(), &ssao_samples[0].x);
     

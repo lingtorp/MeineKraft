@@ -117,6 +117,10 @@ struct Vec3 {
     inline Vec3<T> operator*(const T s) const {
         return Vec3<T>{x * s, y * s, z * s};
     }
+  
+    inline Vec3<T> operator*=(const T rhs) const {
+      return Vec3<T>{x * rhs, y * rhs, z * rhs};
+    }
 
     inline bool operator==(const Vec3 &rhs) const {
         return (x == rhs.x) && (y == rhs.y) && (z == rhs.z);

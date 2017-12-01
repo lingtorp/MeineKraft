@@ -55,7 +55,8 @@ public:
   double DRAW_DISTANCE;
   Mat4<float> projection_matrix;
   
-  float depth_buffer[1280][720];
+  void log_gl_error();
+
 private:
   Renderer();
   
@@ -64,6 +65,10 @@ private:
   uint32_t gl_depth_fbo;
   uint32_t gl_depth_texture;
   uint32_t gl_depth_texture_unit;
+  
+  /// SSAO
+  uint32_t gl_ssao_noise_texture;
+  uint32_t gl_ssao_noise_texture_unit;
   
   uint16_t MAX_NUM_LIGHTS = 100;
   uint32_t gl_light_uniform_buffer;

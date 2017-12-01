@@ -53,20 +53,22 @@ float linearize_depth(vec2 uv) {
 }
 
 void main() {
-    outColor = vec4(1.0f); // Sets a default color of white to all objects
+    outColor = vec4(1.0); // Sets a default color of white to all objects
     vec4 default_light = vec4(1.0, 1.0, 1.0, 1.0);
 
     /// SSAO
     float occlusion = 0.0;
 // #ifdef FLAG_SSAO
     vec3 origin = fPosition.xyz;
+    float origin_depth = linearize_depth(vec2(gl_FragCoord.x / 1280.0, gl_FragCoord.y / 720.0));
     const float kernel_radius = 1.0;
 
     // Orientate kernel sample hemisphere
-    vec3 rvec = texture(noise_sampler, fTexcoord * noise_scale).xyz * 2.0 - 1.0;
+    vec3 rvec = texture(noise_sampler, gl_FragCoord.xy * noise_scale).xyz * 2.0 - 1.0;
     vec3 tangent = normalize(rvec - fNormal * dot(rvec, fNormal));
     vec3 bitangent = cross(fNormal, tangent);
     mat3 tbn = mat3(tangent, bitangent, fNormal);
+    outColor = vec4(rvec, 1.0);
 
     for (int i = 0; i < NUM_SSAO_SAMPLES; i++) {
         // Get sample position
@@ -74,18 +76,19 @@ void main() {
         kernel_sample = origin + kernel_sample * kernel_radius;
         // Project sample position
         vec4 proj_sample = vec4(kernel_sample, 1.0);
-        proj_sample = projection * proj_sample;
+        proj_sample = projection * camera_view * proj_sample;
         proj_sample.xy /= proj_sample.w;
+        // proj_sample.xy = vec2(proj_sample.x / 1280.0, proj_sample.y / 720.0);
         proj_sample.xy = proj_sample.xy * 0.5 + 0.5;
         // Get samples depth
         float sample_depth = linearize_depth(proj_sample.xy);
         // Check for occlusion
-        float in_range = abs(origin.z - sample_depth) < kernel_radius ? 1.0 : 0.0;
+        float in_range = 1.0; // = abs(origin_depth - sample_depth) < kernel_radius ? 1.0 : 0.0;
         occlusion += (sample_depth <= proj_sample.z ? 1.0 : 0.0) * in_range;
     }
     occlusion = 1.0 - (occlusion / float(NUM_SSAO_SAMPLES));
 // #endif
-
+    return;
 #ifdef FLAG_BLINN_PHONG_SHADING
     vec3 total_light = vec3(0.0, 0.0, 0.0);
     vec3 normal = fNormal; // already normalized
@@ -119,8 +122,9 @@ void main() {
 #ifdef FLAG_CUBE_MAP_TEXTURE
     outColor = texture(diffuse_sampler, vec4(normalize(fNonModelPos.xyz), fDiffuse_texture_idx)) * default_light;
 #endif
+
     // TODO: Screen dimensions as uniforms
-    // vec2 sample_pos = vec2(gl_FragCoord.x / 1280.0, gl_FragCoord.y / 720.0);
-    // outColor = vec4(vec3(linearize_depth(sample_pos)), 1.0f);
+    vec2 sample_pos = vec2(gl_FragCoord.x / 1280.0, gl_FragCoord.y / 720.0);
+    outColor = vec4(vec3(linearize_depth(sample_pos)), 1.0);
     outColor = vec4(vec3(occlusion), 1.0);
 }

@@ -26,12 +26,12 @@ flat out int fDiffuse_texture_idx;
 #endif
 
 void main() {
-  gl_Position = projection * camera_view * model * vec4(position, 1.0f);
+  gl_Position = projection * camera_view * model * vec4(position, 1.0);
 
   fTexcoord = vTexCoord;
   fNormal   = normal;
-  fPosition = model * vec4(position, 1.0f);
-  fNonModelPos = vec4(position, 1.0f);
+  fPosition = model * vec4(position, 1.0);
+  fNonModelPos = vec4(position, 1.0);
   fColor = vColor;
 #if defined(FLAG_CUBE_MAP_TEXTURE) || defined(FLAG_2D_TEXTURE)
   fDiffuse_texture_idx = diffuse_texture_idx;
