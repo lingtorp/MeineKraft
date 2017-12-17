@@ -70,6 +70,11 @@ private:
   uint32_t gl_ssao_noise_texture;
   uint32_t gl_ssao_noise_texture_unit;
   
+  /// Global buffers
+  // Normals
+  uint32_t gl_normal_texture;
+  uint32_t gl_normal_texture_unit;
+  
   uint16_t MAX_NUM_LIGHTS = 100;
   uint32_t gl_light_uniform_buffer;
   std::vector<Light> lights;

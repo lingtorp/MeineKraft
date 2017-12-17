@@ -36,7 +36,7 @@ int main() {
   renderer.update_projection_matrix(70);
 
   // Init the world with seed
-  World world{1};
+  // World world{1};
   Skybox skybox{};
   
   std::string directory = "/Users/AlexanderLingtorp/Desktop/";
@@ -44,15 +44,7 @@ int main() {
   
   model_file = "stanford-bunny.obj";
   Model bunny{directory, model_file};
-  bunny.position = {0, 5, 0};
-  bunny.scale = 100;
-  
-  /*
-  model_file = "stanford-dragon.obj";
-  Model dragon{directory, model_file};
-  dragon.position = {18, 5, 0};
-  dragon.scale = 2;
-   */
+  bunny.position = {0, 15, 0};
   
   bool toggle_mouse_capture = false;
   bool DONE = false;
@@ -139,7 +131,7 @@ int main() {
     renderer.camera->position = renderer.camera->update(delta);
 
     /// Tick/update the world
-    world.world_tick(delta, renderer.camera);
+    // world.world_tick(delta, renderer.camera);
 
     /// Render the world
     renderer.render(delta);

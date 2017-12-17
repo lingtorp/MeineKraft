@@ -93,23 +93,39 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
   glBindBuffer(GL_UNIFORM_BUFFER, gl_light_uniform_buffer);
   glBufferData(GL_UNIFORM_BUFFER, sizeof(Light) * lights.size(), &lights, GL_DYNAMIC_DRAW);
   
-  /// Create depth frame buffer
+  /// Create depth framebuffer
   glGenFramebuffers(1, &gl_depth_fbo);
   glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
   
-  glGenTextures(1, &gl_depth_texture);
+  // global depth buffer
+  int screen_width = 1280;
+  int screen_height = 720;
+  
   int32_t max_texture_units;
   glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max_texture_units);
+  
+  glGenTextures(1, &gl_depth_texture);
   gl_depth_texture_unit = max_texture_units - 1;
   SDL_Log("Max texture units: %u", max_texture_units);
   glActiveTexture(GL_TEXTURE0 + gl_depth_texture_unit);
   glBindTexture(GL_TEXTURE_2D, gl_depth_texture);
-  int screen_width = 1280;
-  int screen_height = 720;
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, screen_width, screen_height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, NULL);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, gl_depth_texture, 0);
+  
+  // global normal buffer
+  glGenTextures(1, &gl_normal_texture);
+  gl_normal_texture_unit = max_texture_units - 3;
+  glActiveTexture(GL_TEXTURE0 + gl_normal_texture_unit);
+  glBindTexture(GL_TEXTURE_2D, gl_normal_texture_unit);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_COLOR_ATTACHMENT0, screen_width, screen_height, 0, GL_COLOR_ATTACHMENT0, GL_UNSIGNED_INT, NULL);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_normal_texture, 0);
+  
+  uint32_t attachments[1] = { GL_COLOR_ATTACHMENT0 };
+  glDrawBuffers(1, attachments);
   
   GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
   if (status != GL_FRAMEBUFFER_COMPLETE) {
@@ -129,7 +145,7 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
   std::uniform_real_distribution<float> random(-1.0f, 1.0f);
   std::default_random_engine gen;
   std::vector<Vec3<float>> ssao_noise;
-  for (int i = 0; i < 16; i++) {
+  for (int i = 0; i < 64; i++) {
     auto noise = Vec3<float>{random(gen), random(gen), 0.0f};
     noise.normalize();
     ssao_noise.push_back(noise);
@@ -139,7 +155,7 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
   gl_ssao_noise_texture_unit = max_texture_units - 2;
   glActiveTexture(GL_TEXTURE0 + gl_ssao_noise_texture_unit);
   glBindTexture(GL_TEXTURE_2D, gl_ssao_noise_texture);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, 4, 4, 0, GL_RGB, GL_FLOAT, ssao_noise.data());
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, 8, 8, 0, GL_RGB, GL_FLOAT, ssao_noise.data());
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -199,7 +215,7 @@ void Renderer::render(uint32_t delta) {
       random(gen)
     };
     sample_point.normalize();
-    // sample_point *= random(gen); // Spread the samples inside the hemisphere
+    sample_point *= random(gen); // Spread the samples inside the hemisphere
     // TODO: Interpolate the samples so they end up close to the origin
     ssao_samples.push_back(sample_point);
   }
@@ -233,12 +249,14 @@ void Renderer::render(uint32_t delta) {
       glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_models_buffer_object);
       glBufferData(GL_ARRAY_BUFFER, model_buffer.size() * sizeof(Mat4<float>), model_buffer.data(), GL_DYNAMIC_DRAW);
       glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
-      glClear(GL_DEPTH_BUFFER_BIT); // Always update the depth buffer with the new values
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Always update the depth buffer with the new values
       glDrawElementsInstanced(GL_TRIANGLES, batch.mesh.indices.size(), GL_UNSIGNED_INT, 0, model_buffer.size());
     }
     
     /// Remainder pass
     glBindFramebuffer(GL_FRAMEBUFFER, 0); // Reset framebuffer to default
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Always update the depth buffer with the new values
+  
     glBindVertexArray(batch.gl_VAO);
     glUseProgram(batch.shader.gl_program);
     glUniformMatrix4fv(batch.gl_camera_view, 1, GL_FALSE, camera_view.data());
@@ -258,8 +276,11 @@ void Renderer::render(uint32_t delta) {
     // SSAO noise texture
     glUniform1i(glGetUniformLocation(batch.shader.gl_program, "noise_sampler"), gl_ssao_noise_texture_unit);
     
+    // Normal texture
+    glUniform1i(glGetUniformLocation(batch.shader.gl_program, "normal_sampler"), gl_normal_texture_unit);
+  
     // Updates the kernel samples
-    glUniform1fv(glGetUniformLocation(batch.shader.gl_program, "ssao_samples"), ssao_samples.size(), &ssao_samples[0].x);
+    glUniform3fv(glGetUniformLocation(batch.shader.gl_program, "ssao_samples"), ssao_samples.size(), &ssao_samples[0].x);
     
     std::vector<Mat4<float>> buffer{};
     std::vector<uint32_t> diffuse_texture_idxs{};
@@ -372,23 +393,19 @@ void Renderer::link_batch(GraphicsBatch& batch, const Shader& shader) {
     
     // Then set our vertex attributes pointers, only doable AFTER linking
     auto position_attrib = glGetAttribLocation(program, "position");
-    glVertexAttribPointer(position_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>),
-                          (const void *) offsetof(Vertex<float>, position));
+    glVertexAttribPointer(position_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, position));
     glEnableVertexAttribArray(position_attrib);
     
     auto color_attrib = glGetAttribLocation(program, "vColor");
-    glVertexAttribPointer(color_attrib, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>),
-                          (const void *) offsetof(Vertex<float>, color));
+    glVertexAttribPointer(color_attrib, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, color));
     glEnableVertexAttribArray(color_attrib);
     
-    auto normal_attrib = glGetAttribLocation(program, "normal");
-    glVertexAttribPointer(normal_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>),
-                          (const void *) offsetof(Vertex<float>, normal));
+    auto normal_attrib = glGetAttribLocation(program, "vNormal");
+    glVertexAttribPointer(normal_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, normal));
     glEnableVertexAttribArray(normal_attrib);
     
     auto tex_attrib = glGetAttribLocation(program, "vTexCoord");
-    glVertexAttribPointer(tex_attrib, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>),
-                          (const void *) offsetof(Vertex<float>, texCoord));
+    glVertexAttribPointer(tex_attrib, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, texCoord));
     glEnableVertexAttribArray(tex_attrib);
     
     // Lights UBO
@@ -402,8 +419,7 @@ void Renderer::link_batch(GraphicsBatch& batch, const Shader& shader) {
     
     auto model_attrib = glGetAttribLocation(program, "model");
     for (int i = 0; i < 4; i++) {
-      glVertexAttribPointer(model_attrib + i, 4, GL_FLOAT, GL_FALSE, sizeof(Mat4<float>),
-                            (const void *) (sizeof(float) * i * 4));
+      glVertexAttribPointer(model_attrib + i, 4, GL_FLOAT, GL_FALSE, sizeof(Mat4<float>), (const void *) (sizeof(float) * i * 4));
       glEnableVertexAttribArray(model_attrib + i);
       glVertexAttribDivisor(model_attrib + i, 1);
     }
@@ -438,9 +454,12 @@ void Renderer::link_batch(GraphicsBatch& batch, const Shader& shader) {
     glBufferData(GL_ARRAY_BUFFER, batch.mesh.byte_size_of_vertices(), vertices.data(), GL_DYNAMIC_DRAW);
     
     auto position_attrib = glGetAttribLocation(program, "position");
-    glVertexAttribPointer(position_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>),
-                          (const void *) offsetof(Vertex<float>, position));
+    glVertexAttribPointer(position_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, position));
     glEnableVertexAttribArray(position_attrib);
+  
+    auto normal_attrib = glGetAttribLocation(program, "vNormal");
+    glVertexAttribPointer(normal_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, normal));
+    glEnableVertexAttribArray(normal_attrib);
     
     // Buffer for all the model matrices
     glGenBuffers(1, &batch.gl_depth_models_buffer_object);
@@ -448,8 +467,7 @@ void Renderer::link_batch(GraphicsBatch& batch, const Shader& shader) {
     
     auto model_attrib = glGetAttribLocation(program, "model");
     for (int i = 0; i < 4; i++) {
-      glVertexAttribPointer(model_attrib + i, 4, GL_FLOAT, GL_FALSE, sizeof(Mat4<float>),
-                            (const void *) (sizeof(float) * i * 4));
+      glVertexAttribPointer(model_attrib + i, 4, GL_FLOAT, GL_FALSE, sizeof(Mat4<float>), (const void *) (sizeof(float) * i * 4));
       glEnableVertexAttribArray(model_attrib + i);
       glVertexAttribDivisor(model_attrib + i, 1);
     }
