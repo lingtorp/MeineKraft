@@ -40,10 +40,11 @@ uniform sampler2D depth_sampler;
 uniform sampler2D normal_sampler;
 
 // SSAO Kernel samples
-const int NUM_SSAO_SAMPLES = 16;
-uniform vec3 ssao_samples[16];
+uniform int NUM_SSAO_SAMPLES;
+uniform vec3 ssao_samples[512];
 uniform sampler2D noise_sampler;
-const vec2 noise_scale = vec2(1280.0 / 4.0, 720.0 / 4.0);
+const vec2 noise_scale = vec2(1280.0 / 8.0, 720.0 / 8.0);
+const float ssao_kernel_radius = 1.0;
 
 float linearize_depth(vec2 uv) {
   float n = 1.0;  // camera z near
@@ -63,28 +64,27 @@ void main() {
     vec4 default_light = vec4(1.0, 1.0, 1.0, 1.0);
 
     /// SSAO
-    float occlusion = 0.0;
-    vec2 frag_coord = vec2(gl_FragCoord.x / 1280.0, gl_FragCoord.y / 720.0);
-    float origin_depth = linearize_depth(frag_coord);
+    float ambient_occlusion = 0.0;
 
     // Orientate kernel sample hemisphere
     vec3 rvec = texture(noise_sampler, fNormal.xy).xyz * 2.0 - 1.0;
     vec3 tangent = normalize(rvec - fNormal * dot(rvec, fNormal));
     vec3 bitangent = cross(fNormal, tangent);
-    mat3 tbn = mat3(tangent, bitangent, fNormal);
+    mat3 tbn = mat3(tangent, bitangent, fNormal); // World space to tangent space (tilted world space ... )
 
     for (int i = 0; i < NUM_SSAO_SAMPLES; i++) {
         // 1. Get sample point
-        vec4 point = vec4(vec3(fPosition.xyz + tbn * ssao_samples[i]), 1.0);
+        vec4 point = vec4(vec3(fPosition.xyz + tbn * ssao_samples[i] * ssao_kernel_radius), 1.0);
         // 2. Project the sample
         point = projection * camera_view * point;
         point.xy /= point.w;
         point.xy = point.xy * 0.5 + 0.5;
+        // 3. Lookup the sample's real depth
         float point_depth = linearize_depth(point.xy);
-        // 3. Compare depths
-        if (point_depth < point.z) { occlusion += 1.0; }
+        // 4. Compare depths
+        if (point_depth < point.z) { ambient_occlusion += 1.0; }
     }
-    occlusion = 1.0 - (occlusion / float(NUM_SSAO_SAMPLES));
+    ambient_occlusion = 1.0 - (ambient_occlusion / float(NUM_SSAO_SAMPLES));
 
 #ifdef FLAG_BLINN_PHONG_SHADING
     vec3 total_light = vec3(0.0, 0.0, 0.0);
@@ -119,11 +119,13 @@ void main() {
     outColor = texture(diffuse_sampler, vec4(normalize(fNonModelPos.xyz), fDiffuse_texture_idx)) * default_light;
 #endif
 
+    vec2 frag_coord = vec2(gl_FragCoord.x / 1280.0, gl_FragCoord.y / 720.0);
+    float origin_depth = linearize_depth(frag_coord);
     // outColor = vec4(vec3(origin_depth), 1.0);
     // vec3 tex_normal = texture(normal_sampler, frag_coord).xyz;
     // outColor = vec4(tex_normal, 1.0);
     // outColor = vec4(fNormal, 1.0);
-    outColor = vec4(vec3(occlusion), 1.0);
+    outColor = vec4(vec3(ambient_occlusion), 1.0);
     // outColor = vec4(rvec, 1.0);
     // outColor = vec4(vec3(ssao_samples[0]), 1.0);
 }
