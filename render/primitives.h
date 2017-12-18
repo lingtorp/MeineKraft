@@ -6,6 +6,11 @@
 #include "../math/vector.h"
 #include "texture.h"
 
+/// Linear interpolation of a, b given t
+static float lerp(float a, float b, float t) {
+  return a + t * (b - a);
+}
+
 /// Colors
 template<typename T>
 class Color4 {
