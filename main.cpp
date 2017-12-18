@@ -147,8 +147,11 @@ int main() {
       ImGui::Text("Graphics batches: %llu", renderer.state.graphic_batches);
       ImGui::Text("Entities: %llu", renderer.state.entities);
       ImGui::Text("Application average %u ms / frame (%.1f FPS)", delta, io.Framerate);
-      auto pos = renderer.camera->position;
-      ImGui::Text("Camera: (x: %f, y: %f, z: %f)", pos.x, pos.y, pos.z);
+  
+      if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::InputFloat3("Position", &renderer.camera->position.x);
+        ImGui::InputFloat3("Direction", &renderer.camera->direction.x);
+      }
       
       if (ImGui::CollapsingHeader("SSAO", ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::InputInt("Samples", (int*) &renderer.ssao_num_samples, 8, 16);
