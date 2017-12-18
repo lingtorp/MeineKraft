@@ -203,21 +203,39 @@ void Renderer::render(uint32_t delta) {
   // TODO: Cull the lights
   
   /// Create SSAO sample sphere/kernel
-  std::uniform_real_distribution<float> random(0.0f, 1.0f);
-  std::default_random_engine gen;
-  
-  const int num_sample_per_kernel = 16;
   std::vector<Vec3<float>> ssao_samples;
-  for (size_t i = 0; i < num_sample_per_kernel; i++) {
-    Vec3<float> sample_point = {
-      random(gen) * 2.0f - 1.0f, // [-1.0, 1.0]
-      random(gen) * 2.0f - 1.0f,
-      random(gen)
-    };
-    sample_point.normalize();
-    sample_point *= random(gen); // Spread the samples inside the hemisphere
-    // TODO: Interpolate the samples so they end up close to the origin
-    ssao_samples.push_back(sample_point);
+  {
+    std::uniform_real_distribution<float> random(0.0f, 1.0f);
+    std::default_random_engine gen;
+    
+    for (size_t i = 0; i < ssao_num_samples; i++) {
+      Vec3<float> sample_point = {
+        random(gen) * 2.0f - 1.0f, // [-1.0, 1.0]
+        random(gen) * 2.0f - 1.0f,
+        random(gen)
+      };
+      sample_point.normalize();
+      sample_point *= random(gen);
+      // Spread the samples inside the hemisphere to fall closer to the origin
+      float scale = float(i) / float(ssao_num_samples);
+      scale = lerp(0.1f, 1.0f, scale * scale);
+      sample_point *= random(gen);
+      ssao_samples.push_back(sample_point);
+    }
+  }
+  
+  /// SSAO noise
+  {
+    std::uniform_real_distribution<float> random(-1.0f, 1.0f);
+    std::default_random_engine gen;
+    std::vector<Vec3<float>> ssao_noise;
+    for (int i = 0; i < 64; i++) {
+      auto noise = Vec3<float>{random(gen), random(gen), 0.0f};
+      noise.normalize();
+      ssao_noise.push_back(noise);
+    }
+    glBindTexture(GL_TEXTURE_2D, gl_ssao_noise_texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, 8, 8, 0, GL_RGB, GL_FLOAT, ssao_noise.data());
   }
   
   for (auto& batch : graphics_batches) {
@@ -226,7 +244,7 @@ void Renderer::render(uint32_t delta) {
       glBindVertexArray(batch.gl_depth_vao);
       glUseProgram(depth_shader->gl_program);
       glUniformMatrix4fv(batch.gl_depth_camera_view, 1, GL_FALSE, camera_view.data());
-  
+
       glEnable(GL_CULL_FACE);
       glCullFace(GL_BACK);
       glFrontFace(GL_CCW);
@@ -281,6 +299,7 @@ void Renderer::render(uint32_t delta) {
   
     // Updates the kernel samples
     glUniform3fv(glGetUniformLocation(batch.shader.gl_program, "ssao_samples"), ssao_samples.size(), &ssao_samples[0].x);
+    glUniform1i(glGetUniformLocation(batch.shader.gl_program, "NUM_SSAO_SAMPLES"), ssao_num_samples);
     
     std::vector<Mat4<float>> buffer{};
     std::vector<uint32_t> diffuse_texture_idxs{};
