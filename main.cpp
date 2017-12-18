@@ -29,24 +29,23 @@ int main() {
   
   // Init ImGui
   ImGui_ImplSdlGL3_Init(window);
-
+  
   // Inits glew
   Renderer& renderer = Renderer::instance();
   renderer.window = window;
   renderer.update_projection_matrix(70);
+  renderer.camera->position = {-0.62f, 17.0f, 2.6f};
 
   // Init the world with seed
   // World world{1};
   Skybox skybox{};
   
   std::string directory = "/Users/AlexanderLingtorp/Desktop/";
-  std::string model_file;
   
-  model_file = "stanford-bunny.obj";
-  Model bunny{directory, model_file};
+  Model bunny{directory, "stanford-bunny.obj"};
   bunny.position = {0, 15, 0};
   
-  bool toggle_mouse_capture = false;
+  bool toggle_mouse_capture = true;
   bool DONE = false;
   uint32_t last_tick = SDL_GetTicks(), current_tick, delta;
 
@@ -148,13 +147,21 @@ int main() {
       ImGui::Text("Graphics batches: %llu", renderer.state.graphic_batches);
       ImGui::Text("Entities: %llu", renderer.state.entities);
       ImGui::Text("Application average %u ms / frame (%.1f FPS)", delta, io.Framerate);
+      auto pos = renderer.camera->position;
+      ImGui::Text("Camera: (x: %f, y: %f, z: %f)", pos.x, pos.y, pos.z);
+      
+      if (ImGui::CollapsingHeader("SSAO")) {
+        ImGui::InputInt("Samples", (int*) &renderer.ssao_num_samples, 8, 16);
+        ImGui::InputFloat("Kernel radius", &renderer.ssao_kernel_radius, 0.1f, 0.2f);
+      }
+  
       if (ImGui::Button("ImGui Palette")) show_test_window ^= 1;
-      ImGui::End();
-
       if (show_test_window) {
         ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiSetCond_FirstUseEver);
         ImGui::ShowTestWindow(&show_test_window);
       }
+      
+      ImGui::End();
     }
     ImGui::Render();
 
