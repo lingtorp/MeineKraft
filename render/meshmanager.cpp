@@ -51,6 +51,7 @@ MeshManager::load_mesh(std::string directory, std::string file) {
     }
 
     if (scene->HasMeshes()) {
+        // FIXME: Assumes the mesh is a single mesh and not a hierarchy
         for (size_t i = 0; i < scene->mNumMeshes; i++) {
             auto mesh = scene->mMeshes[i];
 
