@@ -236,8 +236,8 @@ void Renderer::render(uint32_t delta) {
         component->update(); // Copy all graphics state
       
         // Draw distance
-        auto camera_to_entity = camera->position - component->graphics_state.position;
-        if (camera_to_entity.length() >= DRAW_DISTANCE) { continue; }
+        // auto camera_to_entity = camera->position - component->graphics_state.position;
+        // if (camera_to_entity.length() >= DRAW_DISTANCE) { continue; }
       
         Mat4<float> model{};
         model = model.translate(component->graphics_state.position);
@@ -288,8 +288,8 @@ void Renderer::render(uint32_t delta) {
       // component->update(); // Copy all graphics state
 
       // Draw distance
-      auto camera_to_entity = camera->position - component->graphics_state.position;
-      if (camera_to_entity.length() >= DRAW_DISTANCE) { continue; }
+      // auto camera_to_entity = camera->position - component->graphics_state.position;
+      // if (camera_to_entity.length() >= DRAW_DISTANCE) { continue; }
 
       // Frustrum cullling
       // if (point_inside_frustrum(component->graphics_state.position, planes)) { continue; }
