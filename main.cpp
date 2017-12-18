@@ -150,7 +150,7 @@ int main() {
       auto pos = renderer.camera->position;
       ImGui::Text("Camera: (x: %f, y: %f, z: %f)", pos.x, pos.y, pos.z);
       
-      if (ImGui::CollapsingHeader("SSAO")) {
+      if (ImGui::CollapsingHeader("SSAO", ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::InputInt("Samples", (int*) &renderer.ssao_num_samples, 8, 16);
         ImGui::InputFloat("Kernel radius", &renderer.ssao_kernel_radius, 0.1f, 0.2f);
       }

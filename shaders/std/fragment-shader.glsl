@@ -44,7 +44,7 @@ uniform int NUM_SSAO_SAMPLES;
 uniform vec3 ssao_samples[512];
 uniform sampler2D noise_sampler;
 const vec2 noise_scale = vec2(1280.0 / 8.0, 720.0 / 8.0);
-const float ssao_kernel_radius = 1.0;
+uniform float ssao_kernel_radius;
 
 float linearize_depth(vec2 uv) {
   float n = 1.0;  // camera z near

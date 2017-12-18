@@ -300,6 +300,7 @@ void Renderer::render(uint32_t delta) {
     // Updates the kernel samples
     glUniform3fv(glGetUniformLocation(batch.shader.gl_program, "ssao_samples"), ssao_samples.size(), &ssao_samples[0].x);
     glUniform1i(glGetUniformLocation(batch.shader.gl_program, "NUM_SSAO_SAMPLES"), ssao_num_samples);
+    glUniform1f(glGetUniformLocation(batch.shader.gl_program, "ssao_kernel_radius"), ssao_kernel_radius);
     
     std::vector<Mat4<float>> buffer{};
     std::vector<uint32_t> diffuse_texture_idxs{};
