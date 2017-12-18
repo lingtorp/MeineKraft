@@ -67,7 +67,7 @@ void main() {
     float ambient_occlusion = 0.0;
 
     // Orientate kernel sample hemisphere
-    vec3 rvec = texture(noise_sampler, fNormal.xy).xyz * 2.0 - 1.0;
+    vec3 rvec = texture(noise_sampler, gl_FragCoord.xy * noise_scale).xyz;
     vec3 tangent = normalize(rvec - fNormal * dot(rvec, fNormal));
     vec3 bitangent = cross(fNormal, tangent);
     mat3 tbn = mat3(tangent, bitangent, fNormal); // World space to tangent space (tilted world space ... )
