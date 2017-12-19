@@ -156,6 +156,7 @@ int main() {
       if (ImGui::CollapsingHeader("SSAO", ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::InputInt("Samples", (int*) &renderer.ssao_num_samples, 8, 16);
         ImGui::InputFloat("Kernel radius", &renderer.ssao_kernel_radius, 0.1f, 0.2f);
+        ImGui::InputFloat("Effect power", &renderer.ssao_power, 0.1f, 0.2f);
       }
   
       if (ImGui::Button("ImGui Palette")) show_test_window ^= 1;

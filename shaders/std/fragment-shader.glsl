@@ -45,6 +45,7 @@ uniform vec3 ssao_samples[512];
 uniform sampler2D noise_sampler;
 const vec2 noise_scale = vec2(1280.0 / 8.0, 720.0 / 8.0);
 uniform float ssao_kernel_radius;
+uniform float ssao_power;
 
 float linearize_depth(vec2 uv) {
   float n = 1.0;  // camera z near
@@ -81,10 +82,13 @@ void main() {
         point.xy = point.xy * 0.5 + 0.5;
         // 3. Lookup the sample's real depth
         float point_depth = linearize_depth(point.xy);
-        // 4. Compare depths
+        // 4. Range check cuts samples outside the kernel hemisphere
+        if (abs(point_depth - point.z) > ssao_kernel_radius) { continue; }
+        // 5. Compare depths
         if (point_depth < point.z) { ambient_occlusion += 1.0; }
     }
     ambient_occlusion = 1.0 - (ambient_occlusion / float(NUM_SSAO_SAMPLES));
+    ambient_occlusion = pow(ambient_occlusion, ssao_power);
 
 #ifdef FLAG_BLINN_PHONG_SHADING
     vec3 total_light = vec3(0.0, 0.0, 0.0);

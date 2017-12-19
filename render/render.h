@@ -60,6 +60,7 @@ public:
   /// SSAO
   uint32_t ssao_num_samples = 64;
   float ssao_kernel_radius = 1.0;
+  float ssao_power = 1.0;
 
 private:
   Renderer();
