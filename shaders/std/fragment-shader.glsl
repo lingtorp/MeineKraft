@@ -54,12 +54,6 @@ float linearize_depth(vec2 uv) {
   return (2.0 * n) / (f + n - z * (f - n));
 }
 
-float linearize_depth(float z) {
-  float n = 1.0;  // camera z near
-  float f = 10.0; // camera z far
-  return (2.0 * n) / (f + n - z * (f - n));
-}
-
 void main() {
     outColor = vec4(1.0); // Sets a default color of white to all objects
     vec4 default_light = vec4(1.0, 1.0, 1.0, 1.0);
