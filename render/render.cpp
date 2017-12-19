@@ -253,16 +253,10 @@ void Renderer::render(uint32_t delta) {
       for (auto &component : batch.components) {
         component->update(); // Copy all graphics state
       
-        // Draw distance
-        // auto camera_to_entity = camera->position - component->graphics_state.position;
-        // if (camera_to_entity.length() >= DRAW_DISTANCE) { continue; }
-      
         Mat4<float> model{};
         model = model.translate(component->graphics_state.position);
         model = model.scale(component->graphics_state.scale);
         model_buffer.push_back(model.transpose());
-      
-        log_gl_error();
       }
       glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_models_buffer_object);
       glBufferData(GL_ARRAY_BUFFER, model_buffer.size() * sizeof(Mat4<float>), model_buffer.data(), GL_DYNAMIC_DRAW);
@@ -307,14 +301,6 @@ void Renderer::render(uint32_t delta) {
     std::vector<Mat4<float>> buffer{};
     std::vector<uint32_t> diffuse_texture_idxs{};
     for (auto& component : batch.components) {
-      // component->update(); // Copy all graphics state
-
-      // Draw distance
-      // auto camera_to_entity = camera->position - component->graphics_state.position;
-      // if (camera_to_entity.length() >= DRAW_DISTANCE) { continue; }
-
-      // Frustrum cullling
-      // if (point_inside_frustrum(component->graphics_state.position, planes)) { continue; }
   
       /// Add the diffuse texture layer index to the streaming buffer
       diffuse_texture_idxs.push_back(component->graphics_state.diffuse_texture.layer_idx);
