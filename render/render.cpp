@@ -297,6 +297,7 @@ void Renderer::render(uint32_t delta) {
     // Normal texture
     glUniform1i(glGetUniformLocation(batch.shader.gl_program, "normal_sampler"), gl_normal_texture_unit);
   
+    /// SSAO
     // Updates the kernel samples
     glUniform3fv(glGetUniformLocation(batch.shader.gl_program, "ssao_samples"), ssao_samples.size(), &ssao_samples[0].x);
     glUniform1i(glGetUniformLocation(batch.shader.gl_program, "NUM_SSAO_SAMPLES"), ssao_num_samples);
