@@ -144,8 +144,8 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
   }
   
   /// SSAO Shader
-  ssao_shader = new Shader{FileSystem::base + "shaders/ssao-vertex.glsl", FileSystem::base + "shaders/ssao-fragment.glsl"};
-  std::tie(success, err_msg) = depth_shader->compile();
+  ssao_shader = new Shader{FileSystem::base + "shaders/std/ssao-vertex.glsl", FileSystem::base + "shaders/std/ssao-fragment.glsl"};
+  std::tie(success, err_msg) = ssao_shader->compile();
   if (!success) {
     SDL_Log("Shader compilation failed; %s", err_msg.c_str());
   }
@@ -277,17 +277,18 @@ void Renderer::render(uint32_t delta) {
     
     /// SSAO pass
     {
+      auto program = ssao_shader->gl_program;
       glBindVertexArray(batch.gl_ssao_vao);
-      glUseProgram(ssao_shader->gl_program);
-      glUniformMatrix4fv(glGetUniformLocation(ssao_shader->gl_program, "camera_view"), 1, GL_FALSE, camera_view.data());
+      glUseProgram(program);
+      glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, camera_view.data());
       // Updates uniforms
-      glUniform1i(glGetUniformLocation(batch.shader.gl_program, "depth_sampler"), gl_depth_texture_unit);
-      glUniform1i(glGetUniformLocation(batch.shader.gl_program, "noise_sampler"), gl_ssao_noise_texture_unit);
-      glUniform1i(glGetUniformLocation(batch.shader.gl_program, "normal_sampler"), gl_normal_texture_unit);
-      glUniform3fv(glGetUniformLocation(batch.shader.gl_program, "ssao_samples"), ssao_samples.size(), &ssao_samples[0].x);
-      glUniform1i(glGetUniformLocation(batch.shader.gl_program, "num_ssao_samples"), ssao_num_samples);
-      glUniform1f(glGetUniformLocation(batch.shader.gl_program, "ssao_kernel_radius"), ssao_kernel_radius);
-      glUniform1f(glGetUniformLocation(batch.shader.gl_program, "ssao_power"), ssao_power);
+      glUniform1i(glGetUniformLocation(program, "depth_sampler"), gl_depth_texture_unit);
+      glUniform1i(glGetUniformLocation(program, "noise_sampler"), gl_ssao_noise_texture_unit);
+      glUniform1i(glGetUniformLocation(program, "normal_sampler"), gl_normal_texture_unit);
+      glUniform3fv(glGetUniformLocation(program, "ssao_samples"), ssao_samples.size(), &ssao_samples[0].x);
+      glUniform1i(glGetUniformLocation(program, "num_ssao_samples"), ssao_num_samples);
+      glUniform1f(glGetUniformLocation(program, "ssao_kernel_radius"), ssao_kernel_radius);
+      glUniform1f(glGetUniformLocation(program, "ssao_power"), ssao_power);
       glBindBuffer(GL_ARRAY_BUFFER, batch.gl_ssao_models_buffer_object);
       glBufferData(GL_ARRAY_BUFFER, model_buffer.size() * sizeof(Mat4<float>), model_buffer.data(), GL_DYNAMIC_DRAW);
       glBindFramebuffer(GL_FRAMEBUFFER, gl_ssao_fbo);
@@ -318,7 +319,6 @@ void Renderer::render(uint32_t delta) {
     std::vector<Mat4<float>> buffer{};
     std::vector<uint32_t> diffuse_texture_idxs{};
     for (auto& component : batch.components) {
-  
       /// Add the diffuse texture layer index to the streaming buffer
       diffuse_texture_idxs.push_back(component->graphics_state.diffuse_texture.layer_idx);
       
