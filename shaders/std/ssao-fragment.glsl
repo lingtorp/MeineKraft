@@ -28,7 +28,7 @@ void main() {
 
     // Orientate kernel sample hemisphere
     vec3 rvec = texture(noise_sampler, gl_FragCoord.xy * noise_scale).xyz;
-    vec3 tangent = normalize(rvec - normal * dot(rvec, fNormal));
+    vec3 tangent = normalize(rvec - normal * dot(rvec, normal));
     vec3 bitangent = cross(normal, tangent);
     mat3 tbn = mat3(tangent, bitangent, normal); // World space to tangent space (tilted world space ... )
 
@@ -46,6 +46,6 @@ void main() {
         // 5. Compare depths
         if (point_depth < point.z) { ambient_occlusion += 1.0; }
     }
-    ambient_occlusion = 1.0 - (ambient_occlusion / float(NUM_SSAO_SAMPLES));
+    ambient_occlusion = 1.0 - (ambient_occlusion / float(num_ssao_samples));
     ambient_occlusion = pow(ambient_occlusion, ssao_power);
 }
