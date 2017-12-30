@@ -12,41 +12,7 @@
 #include "meshmanager.h"
 #include "texturemanager.h"
 #include "../util/filesystem.h"
-
-void Renderer::log_gl_error() {
-  GLenum err = glGetError();
-  std::string err_str;
-  switch(err) {
-    case GL_NO_ERROR:
-      return;
-    case GL_INVALID_VALUE:
-      err_str = "GL_INVALID_VALUE";
-      break;
-    case GL_INVALID_ENUM:
-      err_str = "GL_INVALID_ENUM";
-      break;
-    case GL_INVALID_OPERATION:
-      err_str = "GL_INVALID_OPERATION";
-      break;
-    case GL_INVALID_FRAMEBUFFER_OPERATION:
-      err_str = "GL_INVALID_FRAMEBUFFER_OPERTION";
-      break;
-    case GL_OUT_OF_MEMORY:
-      err_str = "GL_OUT_OF_MEMORY";
-      break;
-    case GL_STACK_OVERFLOW:
-      err_str = "GL_STACK_OVERFLOW";
-      break;
-    case GL_STACK_UNDERFLOW:
-      err_str = "GL_STACK_UNDERFLOW";
-      break;
-    default:
-      err_str = "UNKNOWN ERROR";
-      break;
-  }
-  std::cout << glewGetErrorString(err) << std::endl;
-  SDL_Log("OpenGL error (%s): 0x%X (%i)", err_str.c_str(), err, err);
-}
+#include "debug_opengl.h"
 
 /// Column major - Camera combined rotation matrix (y, x) & translation matrix
 Mat4<float> Renderer::FPSViewRH(Vec3<float> eye, float pitch, float yaw) {
@@ -130,7 +96,7 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
   glBindTexture(GL_TEXTURE_2D, gl_depth_texture);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, screen_width, screen_height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, NULL);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, screen_width, screen_height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, nullptr);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, gl_depth_texture, 0);
   
   // Global normal buffer
@@ -138,7 +104,7 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
   glActiveTexture(GL_TEXTURE0 + gl_normal_texture_unit);
   glGenTextures(1, &gl_normal_texture);
   glBindTexture(GL_TEXTURE_2D, gl_normal_texture);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, screen_width, screen_height, 0, GL_RGB, GL_UNSIGNED_INT, NULL);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, screen_width, screen_height, 0, GL_RGB, GL_UNSIGNED_INT, nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_normal_texture, 0);
@@ -151,6 +117,7 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
     SDL_Log("Framebuffer status not complete.");
   }
   
+  /// Depth shader
   depth_shader = new Shader{FileSystem::base + "shaders/std/depth-vertex.glsl", FileSystem::base + "shaders/std/depth-fragment.glsl"};
   std::string err_msg;
   bool success;
@@ -167,7 +134,7 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
   glActiveTexture(GL_TEXTURE0 + gl_ssao_texture_unit);
   glGenTextures(1, &gl_ssao_texture);
   glBindTexture(GL_TEXTURE_2D, gl_ssao_texture);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_COLOR_ATTACHMENT0, screen_width, screen_height, 0, GL_COLOR_ATTACHMENT0, GL_UNSIGNED_INT, NULL);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, screen_width, screen_height, 0, GL_RGB, GL_UNSIGNED_INT, nullptr);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_normal_texture, 0);
   
   uint32_t attachments_2[1] = { GL_COLOR_ATTACHMENT0 };
@@ -178,6 +145,7 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
     SDL_Log("Framebuffer status not complete.");
   }
   
+  /// SSAO Shader
   ssao_shader = new Shader{FileSystem::base + "shaders/ssao-vertex.glsl", FileSystem::base + "shaders/ssao-fragment.glsl"};
   std::tie(success, err_msg) = depth_shader->compile();
   if (!success) {
@@ -535,10 +503,6 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     auto position_attrib = glGetAttribLocation(program, "position");
     glVertexAttribPointer(position_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, position));
     glEnableVertexAttribArray(position_attrib);
-    
-    auto color_attrib = glGetAttribLocation(program, "vColor");
-    glVertexAttribPointer(color_attrib, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, color));
-    glEnableVertexAttribArray(color_attrib);
     
     auto normal_attrib = glGetAttribLocation(program, "vNormal");
     glVertexAttribPointer(normal_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, normal));

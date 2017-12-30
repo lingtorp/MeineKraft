@@ -11,6 +11,7 @@
 #include "shader.h"
 #include "texturemanager.h"
 #include "SDL2/SDL_opengl.h"
+#include "debug_opengl.h"
 
 class RenderComponent;
 
@@ -21,22 +22,6 @@ class RenderComponent;
 // TODO: Docs
 class GraphicsBatch {
 public:
-  void log_gl_error() {
-    GLenum err = glGetError();
-    switch(err) {
-      case GL_INVALID_VALUE:
-        std::cout << glewGetErrorString(err) << std::endl;
-        SDL_Log("GL_INVALID_VALUE");
-        break;
-      default:
-        if (err != 0) {
-          std::cout << glewGetErrorString(err) << std::endl;
-          SDL_Log("OpenGL error: %i", err);
-        }
-        break;
-    }
-  }
-  
   explicit GraphicsBatch(ID mesh_id): mesh_id(mesh_id), components{}, mesh{},
     gl_camera_view(0), gl_models_buffer_object(0), gl_VAO(0), id(0), diffuse_textures{}, layer_idxs{},
     diffuse_textures_capacity(3) {};

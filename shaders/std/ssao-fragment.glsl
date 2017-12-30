@@ -1,4 +1,3 @@
-
 uniform mat4 projection;
 uniform mat4 camera_view;
 
@@ -7,11 +6,11 @@ uniform sampler2D normal_sampler;
 uniform sampler2D noise_sampler;
 
 uniform int NUM_SSAO_SAMPLES;
-uniform vec3 ssao_samples[512];
-
-const vec2 noise_scale = vec2(1280.0 / 8.0, 720.0 / 8.0);
+uniform vec3 ssao_samples[64];
 uniform float ssao_kernel_radius;
 uniform float ssao_power;
+
+const vec2 noise_scale = vec2(1280.0 / 8.0, 720.0 / 8.0);
 
 in vec4 fPosition; // Position in world space
 
@@ -25,7 +24,7 @@ float linearize_depth(vec2 uv) {
 }
 
 void main() {
-    vec3 normal = texture(normal_sampler, gl_FragCoord.xy);
+    vec3 normal = texture(normal_sampler, gl_FragCoord.xy).xyz;
 
     // Orientate kernel sample hemisphere
     vec3 rvec = texture(noise_sampler, gl_FragCoord.xy * noise_scale).xyz;
@@ -35,7 +34,7 @@ void main() {
 
     for (int i = 0; i < NUM_SSAO_SAMPLES; i++) {
         // 1. Get sample point
-        vec4 point = vec4(vec3(position.xyz + tbn * ssao_samples[i] * ssao_kernel_radius), 1.0);
+        vec4 point = vec4(vec3(fPosition.xyz + tbn * ssao_samples[i] * ssao_kernel_radius), 1.0);
         // 2. Project the sample
         point = projection * camera_view * point;
         point.xy /= point.w;

@@ -3,21 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <SDL_log.h>
-
-static void log_gl_error() {
-  GLenum err = glGetError();
-  switch(err) {
-    case GL_INVALID_VALUE:
-      SDL_Log("GL_INVALID_VALUE");
-      break;
-    default:
-      if (err != 0) {
-        std::cout << glewGetErrorString(err) << std::endl;
-        SDL_Log("OpenGL error: %i", err);
-      }
-      break;
-  }
-}
+#include "debug_opengl.h"
 
 Shader::Shader(std::string vertex_filepath, std::string fragment_filepath): vertex_filepath(vertex_filepath),
                                                                           fragment_filepath(fragment_filepath),
@@ -44,11 +30,11 @@ std::pair<bool, std::string> Shader::compile() {
 
   auto raw_str = vertex_src.c_str();
   vertex_shader = glCreateShader(GL_VERTEX_SHADER);
-  glShaderSource(vertex_shader, 1, &raw_str, NULL);
+  glShaderSource(vertex_shader, 1, &raw_str, nullptr);
 
   raw_str = fragment_src.c_str();
   fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-  glShaderSource(fragment_shader, 1, &raw_str, NULL);
+  glShaderSource(fragment_shader, 1, &raw_str, nullptr);
   
   GLint shader_program = glCreateProgram();
   glCompileShader(vertex_shader);
@@ -76,21 +62,19 @@ std::pair<bool, std::string> Shader::compile() {
   GLint err_size = 1024;
   glGetShaderiv(vertex_shader, GL_INFO_LOG_LENGTH, &err_size);
   char* vert_err_msg = new char[1024];
-  glGetShaderInfoLog(vertex_shader, err_size, NULL, vert_err_msg);
+  glGetShaderInfoLog(vertex_shader, err_size, nullptr, vert_err_msg);
   SDL_Log(vert_err_msg);
 
   glGetShaderiv(fragment_shader, GL_INFO_LOG_LENGTH, &err_size);
   char* frag_err_msg = new char[1024];
-  glGetShaderInfoLog(fragment_shader, err_size, NULL, frag_err_msg);
+  glGetShaderInfoLog(fragment_shader, err_size, nullptr, frag_err_msg);
   SDL_Log(frag_err_msg);
   
   glGetProgramiv(shader_program, GL_INFO_LOG_LENGTH, &err_size);
   char* prog_err_msg = new char[1024];
-  glGetProgramInfoLog(shader_program, err_size, NULL, prog_err_msg);
+  glGetProgramInfoLog(shader_program, err_size, nullptr, prog_err_msg);
   SDL_Log(prog_err_msg);
   
-  auto gl_error = glGetError();
-  SDL_Log("OpenGL Error: 0x%08x", gl_error);
   log_gl_error();
   
   glDeleteProgram(shader_program);

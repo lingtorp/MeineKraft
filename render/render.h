@@ -55,8 +55,6 @@ public:
   double DRAW_DISTANCE;
   Mat4<float> projection_matrix;
   
-  void log_gl_error();
-  
   /// SSAO
   uint32_t ssao_num_samples = 64;
   float ssao_kernel_radius = 1.0;
