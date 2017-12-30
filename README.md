@@ -1,43 +1,29 @@
 # MeineKraft
 
-Various | GIFs
------- | ------
-Perlin noise ![Perlin Noise generated terrain](/screenshots/perlin-hills.gif) | Linear fog![Linear fog](/screenshots/linear-fog.gif)
-Dynamic shader reloading![Dynamic shader editing, with reloading!](/screenshots/dynamic-shader-editing.gif) | Phong reflection model ![Basic lighting](/screenshots/moving-lights.gif)
-**MeineKraft** is a **rendering engine** written in **C++14** & **OpenGL** and serves as a study for me into the realm of computer graphics and other
-related areas. Currently I am writing this during my spare time. My intent is to
-follow up with some articles relating to my learning experience, these articles
-can be found on my personal [site](http://lingtorp.com).
+| Various | GIFs |
+| ------------- | ------------- |
+| Perlin noise ![Perlin Noise generated terrain](/screenshots/perlin-hills.gif) | Linear fog![Linear fog](/screenshots/linear-fog.gif) |
+| Dynamic shader reloading![Dynamic shader editing, with reloading!](/screenshots/dynamic-shader-editing.gif) | Phong reflection model ![Basic lighting](/screenshots/moving-lights.gif) |
+
+
+**MeineKraft** is a **rendering engine** written in **C++14** & **OpenGL 4.1**.
+My intent is to follow up the implementation of the most interesting parts with some articles relating to my learning experience,
+these articles can be found on my personal [site](http://lingtorp.com).
 
 # Build
-All the dependencies are bundled within the project folder /include.
-Currently only using header-only libraries.
-### *CLion*
-1. Download the project
-2. Open with CLion, boom!
-
-### *CMake*
-Since it is a Cmake based project someone with the skills in Cmake can make this happen!
+All the dependencies are bundled within the folder /include.
 
 # Dependencies
-* [dear imgui](https://github.com/ocornut/imgui)
-* [tinyobjloader](https://github.com/syoyo/tinyobjloader)
+* [dear imgui](https://github.com/ocornut/imgui) for debug GUI.
+* [assimp](https://github.com/syoyo/assimp) for model importing.
 
-# Notebook
-* Procedural generation
-    * Perlin Noise
-    * Simplex Noise'
-- [x] Add all dependencies to the README
-- [x] Build instructions ..
-
-Content streaming
-- [ ] Load new chunk dynamically depending on Player position
-- [ ] Deallocate old chunks
-- [ ] Save deallocated chunks (SQLite?)
-- [ ] Multithreaded?
+# TODO
+- [ ] Procedural generation
+    - [ ] Perlin Noise
+    - [ ] Simplex Noise
 
 Lightning
-- [x] Implement Phong lightning to begin with
+- [x] Phong lightning 
 
 Rendering
 - [x] Merge all model matrices into a single matrix
@@ -48,11 +34,12 @@ Rendering
 - [ ] Merge all 3 transformation matrices into one
 - [ ] Frustrum cull checks against parent Nodes (nodes with children)
 - [x] Resolution independence
-- [x] Watch shader files for changes (auto) reload them.
+- []  Watch shader files for changes (auto) reload them. It broked.
 - [x] Importing Meshes (tinyobjloader)
 - [x] Deduplication of imported Meshes
 - [x] Immediate mode GUI (imgui)
-- [ ] Use quaterions
+- [ ] Use quaterions for transformations
+- [ ] Implement a job system
 - [ ] Scene graph - with transforms and node parents
 - [ ]  Hit point cursor
 - [ ] Smoother movement
@@ -64,23 +51,11 @@ Rendering
 - [ ] Normal mapping!
 - [x] Diffuse textures
 - [ ] Console with lua or something to apply translations/transforms
-- [ ] Quaternions!
 - [x] Multiple lights - uniform buffers
 - [ ] Per object diffuse texture - texture buffers (?)
-- [ ] Octaves of Perlin noise
 - [ ] Translate normals and trnasform them if object moves
-- [ ] Implement flat shading
-- [ ] !, Gouraud shading
 - [ ] Blinn-Phong shading
 - [ ] Light material: light power, light color,
-
-Voxelize
-- [ ] Food, donuts, etc
-- [ ] Cats!
-- [ ] Pokemons!
-- [ ] Chips, ICs!
-- [ ] MacBooks
-- [ ] Handgranat
 
 Code hygiene
 - [ ] Prefix all functions that touch OpenGL with "gl_"
