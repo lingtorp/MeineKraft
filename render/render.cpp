@@ -99,7 +99,7 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
                     texture_manager{TextureManager{}} {
   glewExperimental = (GLboolean) true;
   glewInit();
-
+  
   Light light{Vec3<float>{15.0, 15.0, 15.0}, Color4<float>{0.5, 0.4, 0.8, 1.0}};
   lights.push_back(light);
 
@@ -113,33 +113,32 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
   glBindBuffer(GL_UNIFORM_BUFFER, gl_light_uniform_buffer);
   glBufferData(GL_UNIFORM_BUFFER, sizeof(Light) * lights.size(), &lights, GL_DYNAMIC_DRAW);
   
-  /// Create depth framebuffer
-  glGenFramebuffers(1, &gl_depth_fbo);
-  glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
-  
-  // global depth buffer
   int screen_width = 1280;
   int screen_height = 720;
   
   int32_t max_texture_units;
   glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max_texture_units);
-  
-  glGenTextures(1, &gl_depth_texture);
-  gl_depth_texture_unit = max_texture_units - 1;
   SDL_Log("Max texture units: %u", max_texture_units);
+  
+  /// Global depth framebuffer
+  glGenFramebuffers(1, &gl_depth_fbo);
+  glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
+  
+  gl_depth_texture_unit = max_texture_units - 1;
   glActiveTexture(GL_TEXTURE0 + gl_depth_texture_unit);
+  glGenTextures(1, &gl_depth_texture);
   glBindTexture(GL_TEXTURE_2D, gl_depth_texture);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, screen_width, screen_height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, NULL);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, gl_depth_texture, 0);
   
-  // global normal buffer
-  glGenTextures(1, &gl_normal_texture);
+  // Global normal buffer
   gl_normal_texture_unit = max_texture_units - 3;
   glActiveTexture(GL_TEXTURE0 + gl_normal_texture_unit);
-  glBindTexture(GL_TEXTURE_2D, gl_normal_texture_unit);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_COLOR_ATTACHMENT0, screen_width, screen_height, 0, GL_COLOR_ATTACHMENT0, GL_UNSIGNED_INT, NULL);
+  glGenTextures(1, &gl_normal_texture);
+  glBindTexture(GL_TEXTURE_2D, gl_normal_texture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, screen_width, screen_height, 0, GL_RGB, GL_UNSIGNED_INT, NULL);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_normal_texture, 0);
@@ -158,7 +157,31 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
   std::tie(success, err_msg) = depth_shader->compile();
   if (!success) {
     SDL_Log("Shader compilation failed; %s", err_msg.c_str());
-    return;
+  }
+  
+  /// Global SSAO framebuffer
+  glGenFramebuffers(1, &gl_ssao_fbo);
+  glBindFramebuffer(GL_FRAMEBUFFER, gl_ssao_fbo);
+  
+  gl_ssao_texture_unit = max_texture_units - 4;
+  glActiveTexture(GL_TEXTURE0 + gl_ssao_texture_unit);
+  glGenTextures(1, &gl_ssao_texture);
+  glBindTexture(GL_TEXTURE_2D, gl_ssao_texture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_COLOR_ATTACHMENT0, screen_width, screen_height, 0, GL_COLOR_ATTACHMENT0, GL_UNSIGNED_INT, NULL);
+  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_normal_texture, 0);
+  
+  uint32_t attachments_2[1] = { GL_COLOR_ATTACHMENT0 };
+  glDrawBuffers(1, attachments_2);
+  
+  status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+  if (status != GL_FRAMEBUFFER_COMPLETE) {
+    SDL_Log("Framebuffer status not complete.");
+  }
+  
+  ssao_shader = new Shader{FileSystem::base + "shaders/ssao-vertex.glsl", FileSystem::base + "shaders/ssao-fragment.glsl"};
+  std::tie(success, err_msg) = depth_shader->compile();
+  if (!success) {
+    SDL_Log("Shader compilation failed; %s", err_msg.c_str());
   }
   
   /// SSAO noise
@@ -259,6 +282,8 @@ void Renderer::render(uint32_t delta) {
   }
   
   for (auto& batch : graphics_batches) {
+    std::vector<Mat4<float>> model_buffer{};
+  
     /// Depth pass
     {
       glBindVertexArray(batch.gl_depth_vao);
@@ -269,7 +294,6 @@ void Renderer::render(uint32_t delta) {
       glCullFace(GL_BACK);
       glFrontFace(GL_CCW);
       
-      std::vector<Mat4<float>> model_buffer{};
       for (auto &component : batch.components) {
         component->update(); // Copy all graphics state
       
@@ -282,6 +306,26 @@ void Renderer::render(uint32_t delta) {
       glBufferData(GL_ARRAY_BUFFER, model_buffer.size() * sizeof(Mat4<float>), model_buffer.data(), GL_DYNAMIC_DRAW);
       glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Always update the depth buffer with the new values
+      glDrawElementsInstanced(GL_TRIANGLES, batch.mesh.indices.size(), GL_UNSIGNED_INT, 0, model_buffer.size());
+    }
+    
+    /// SSAO pass
+    {
+      glBindVertexArray(batch.gl_ssao_vao);
+      glUseProgram(ssao_shader->gl_program);
+      glUniformMatrix4fv(glGetUniformLocation(ssao_shader->gl_program, "camera_view"), 1, GL_FALSE, camera_view.data());
+      // Updates uniforms
+      glUniform1i(glGetUniformLocation(batch.shader.gl_program, "depth_sampler"), gl_depth_texture_unit);
+      glUniform1i(glGetUniformLocation(batch.shader.gl_program, "noise_sampler"), gl_ssao_noise_texture_unit);
+      glUniform1i(glGetUniformLocation(batch.shader.gl_program, "normal_sampler"), gl_normal_texture_unit);
+      glUniform3fv(glGetUniformLocation(batch.shader.gl_program, "ssao_samples"), ssao_samples.size(), &ssao_samples[0].x);
+      glUniform1i(glGetUniformLocation(batch.shader.gl_program, "NUM_SSAO_SAMPLES"), ssao_num_samples);
+      glUniform1f(glGetUniformLocation(batch.shader.gl_program, "ssao_kernel_radius"), ssao_kernel_radius);
+      glUniform1f(glGetUniformLocation(batch.shader.gl_program, "ssao_power"), ssao_power);
+      glBindBuffer(GL_ARRAY_BUFFER, batch.gl_ssao_models_buffer_object);
+      glBufferData(GL_ARRAY_BUFFER, model_buffer.size() * sizeof(Mat4<float>), model_buffer.data(), GL_DYNAMIC_DRAW);
+      glBindFramebuffer(GL_FRAMEBUFFER, gl_ssao_fbo);
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
       glDrawElementsInstanced(GL_TRIANGLES, batch.mesh.indices.size(), GL_UNSIGNED_INT, 0, model_buffer.size());
     }
     
@@ -301,22 +345,9 @@ void Renderer::render(uint32_t delta) {
     /// Update Light data for the batch
     glBindBuffer(GL_UNIFORM_BUFFER, gl_light_uniform_buffer);
     glBufferData(GL_UNIFORM_BUFFER, sizeof(Light) * lights.size(), lights.data(), GL_DYNAMIC_DRAW);
-  
-    // Depth texture
-    glUniform1i(glGetUniformLocation(batch.shader.gl_program, "depth_sampler"), gl_depth_texture_unit);
-    
-    // SSAO noise texture
-    glUniform1i(glGetUniformLocation(batch.shader.gl_program, "noise_sampler"), gl_ssao_noise_texture_unit);
     
     // Normal texture
     glUniform1i(glGetUniformLocation(batch.shader.gl_program, "normal_sampler"), gl_normal_texture_unit);
-  
-    /// SSAO
-    // Updates the kernel samples
-    glUniform3fv(glGetUniformLocation(batch.shader.gl_program, "ssao_samples"), ssao_samples.size(), &ssao_samples[0].x);
-    glUniform1i(glGetUniformLocation(batch.shader.gl_program, "NUM_SSAO_SAMPLES"), ssao_num_samples);
-    glUniform1f(glGetUniformLocation(batch.shader.gl_program, "ssao_kernel_radius"), ssao_kernel_radius);
-    glUniform1f(glGetUniformLocation(batch.shader.gl_program, "ssao_power"), ssao_power);
     
     std::vector<Mat4<float>> buffer{};
     std::vector<uint32_t> diffuse_texture_idxs{};
@@ -403,12 +434,93 @@ void Renderer::update_projection_matrix(float fov) {
   }
 }
 
-void Renderer::link_batch(GraphicsBatch& batch, const Shader& shader) {
+void Renderer::link_batch(GraphicsBatch& batch) {
   auto vertices = batch.mesh.to_floats();
+  
+  /// Depth pass setup
+  {
+    auto program = depth_shader->gl_program;
+    glGenVertexArrays(1, &batch.gl_depth_vao);
+    glBindVertexArray(batch.gl_depth_vao);
+    batch.gl_depth_camera_view = glGetUniformLocation(program, "camera_view");
+    
+    GLuint depth_vbo;
+    glGenBuffers(1, &depth_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, depth_vbo);
+    glBufferData(GL_ARRAY_BUFFER, batch.mesh.byte_size_of_vertices(), vertices.data(), GL_DYNAMIC_DRAW);
+    
+    auto position_attrib = glGetAttribLocation(program, "position");
+    glVertexAttribPointer(position_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, position));
+    glEnableVertexAttribArray(position_attrib);
+    
+    auto normal_attrib = glGetAttribLocation(program, "vNormal");
+    glVertexAttribPointer(normal_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, normal));
+    glEnableVertexAttribArray(normal_attrib);
+    
+    // Buffer for all the model matrices
+    glGenBuffers(1, &batch.gl_depth_models_buffer_object);
+    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_models_buffer_object);
+    
+    auto model_attrib = glGetAttribLocation(program, "model");
+    for (int i = 0; i < 4; i++) {
+      glVertexAttribPointer(model_attrib + i, 4, GL_FLOAT, GL_FALSE, sizeof(Mat4<float>), (const void *) (sizeof(float) * i * 4));
+      glEnableVertexAttribArray(model_attrib + i);
+      glVertexAttribDivisor(model_attrib + i, 1);
+    }
+    
+    GLuint EBO;
+    glGenBuffers(1, &EBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, batch.mesh.byte_size_of_indices(), batch.mesh.indices.data(), GL_STATIC_DRAW);
+    
+    glUseProgram(program); // Must use the program object before accessing uniforms!
+    auto projection = glGetUniformLocation(program, "projection");
+    glUniformMatrix4fv(projection, 1, GL_FALSE, projection_matrix.data());
+  }
+  
+  /// SSAO setup
+  {
+    auto program = ssao_shader->gl_program;
+    glGenVertexArrays(1, &batch.gl_ssao_vao);
+    glBindVertexArray(batch.gl_ssao_vao);
+    
+    GLuint ssao_vbo;
+    glGenBuffers(1, &ssao_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, ssao_vbo);
+    glBufferData(GL_ARRAY_BUFFER, batch.mesh.byte_size_of_vertices(), vertices.data(), GL_DYNAMIC_DRAW);
+  
+    auto position_attrib = glGetAttribLocation(program, "position");
+    glVertexAttribPointer(position_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, position));
+    glEnableVertexAttribArray(position_attrib);
+  
+    auto normal_attrib = glGetAttribLocation(program, "vNormal");
+    glVertexAttribPointer(normal_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, normal));
+    glEnableVertexAttribArray(normal_attrib);
+  
+    // Buffer for all the model matrices
+    glGenBuffers(1, &batch.gl_ssao_models_buffer_object);
+    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_ssao_models_buffer_object);
+  
+    auto model_attrib = glGetAttribLocation(program, "model");
+    for (int i = 0; i < 4; i++) {
+      glVertexAttribPointer(model_attrib + i, 4, GL_FLOAT, GL_FALSE, sizeof(Mat4<float>), (const void *) (sizeof(float) * i * 4));
+      glEnableVertexAttribArray(model_attrib + i);
+      glVertexAttribDivisor(model_attrib + i, 1);
+    }
+  
+    GLuint EBO;
+    glGenBuffers(1, &EBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, batch.mesh.byte_size_of_indices(), batch.mesh.indices.data(), GL_STATIC_DRAW);
+  
+    glUseProgram(program); // Must use the program object before accessing uniforms!
+    auto projection = glGetUniformLocation(program, "projection");
+    glUniformMatrix4fv(projection, 1, GL_FALSE, projection_matrix.data());
+  }
   
   /// Rendering pass setup
   {
-    auto program = shader.gl_program;
+    auto program = batch.shader.gl_program;
     glGenVertexArrays(1, &batch.gl_VAO);
     glBindVertexArray(batch.gl_VAO);
     batch.gl_camera_view = glGetUniformLocation(program, "camera_view");
@@ -458,47 +570,6 @@ void Renderer::link_batch(GraphicsBatch& batch, const Shader& shader) {
     glVertexAttribIPointer(diffuse_texture_idx, 1, GL_UNSIGNED_INT, sizeof(uint32_t), 0);
     glEnableVertexAttribArray(diffuse_texture_idx);
     glVertexAttribDivisor(diffuse_texture_idx, 1);
-    
-    GLuint EBO;
-    glGenBuffers(1, &EBO);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, batch.mesh.byte_size_of_indices(), batch.mesh.indices.data(), GL_STATIC_DRAW);
-    
-    glUseProgram(program); // Must use the program object before accessing uniforms!
-    auto projection = glGetUniformLocation(program, "projection");
-    glUniformMatrix4fv(projection, 1, GL_FALSE, projection_matrix.data());
-  }
-  
-  /// Depth pass setup
-  {
-    auto program = depth_shader->gl_program;
-    glGenVertexArrays(1, &batch.gl_depth_vao);
-    glBindVertexArray(batch.gl_depth_vao);
-    batch.gl_depth_camera_view = glGetUniformLocation(program, "camera_view");
-    
-    GLuint depth_vbo;
-    glGenBuffers(1, &depth_vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, depth_vbo);
-    glBufferData(GL_ARRAY_BUFFER, batch.mesh.byte_size_of_vertices(), vertices.data(), GL_DYNAMIC_DRAW);
-    
-    auto position_attrib = glGetAttribLocation(program, "position");
-    glVertexAttribPointer(position_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, position));
-    glEnableVertexAttribArray(position_attrib);
-  
-    auto normal_attrib = glGetAttribLocation(program, "vNormal");
-    glVertexAttribPointer(normal_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, normal));
-    glEnableVertexAttribArray(normal_attrib);
-    
-    // Buffer for all the model matrices
-    glGenBuffers(1, &batch.gl_depth_models_buffer_object);
-    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_models_buffer_object);
-    
-    auto model_attrib = glGetAttribLocation(program, "model");
-    for (int i = 0; i < 4; i++) {
-      glVertexAttribPointer(model_attrib + i, 4, GL_FLOAT, GL_FALSE, sizeof(Mat4<float>), (const void *) (sizeof(float) * i * 4));
-      glEnableVertexAttribArray(model_attrib + i);
-      glVertexAttribDivisor(model_attrib + i, 1);
-    }
     
     GLuint EBO;
     glGenBuffers(1, &EBO);
@@ -563,7 +634,7 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp, Shader shader) {
   batch.gl_diffuse_texture_type = comp->graphics_state.diffuse_texture.gl_texture_type;
   batch.mesh = mesh_manager->mesh_from_id(mesh_id);
   batch.shader = shader;
-  link_batch(batch, shader);
+  link_batch(batch);
   
   /// Assign layer index to the latest the texture and increment
   g_state.diffuse_texture.layer_idx = batch.diffuse_textures_count++;

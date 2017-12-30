@@ -71,7 +71,12 @@ private:
   uint32_t gl_depth_texture;
   uint32_t gl_depth_texture_unit;
   
-  /// SSAO
+  /// SSAO pass related
+  Shader* ssao_shader;
+  uint32_t gl_ssao_fbo;
+  uint32_t gl_ssao_texture;
+  uint32_t gl_ssao_texture_unit;
+  
   uint32_t gl_ssao_noise_texture;
   uint32_t gl_ssao_noise_texture_unit;
   
@@ -80,7 +85,6 @@ private:
   uint32_t gl_normal_texture;
   uint32_t gl_normal_texture_unit;
   
-  uint16_t MAX_NUM_LIGHTS = 100;
   uint32_t gl_light_uniform_buffer;
   std::vector<Light> lights;
 
@@ -97,7 +101,7 @@ private:
   std::array<Plane<float>, 6> extract_planes(Mat4<float> matrix);
 
   /// Setups the VAO and uniforms up between the batch and OpenGL
-  void link_batch(GraphicsBatch &batch, const Shader& shader);
+  void link_batch(GraphicsBatch &batch);
 
   /// Creates a camera view matrix based on the euler angles (x, y) and position of the eye
   Mat4<float> FPSViewRH(Vec3<float> eye, float pitch, float yaw);

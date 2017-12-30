@@ -127,6 +127,10 @@ public:
   uint32_t gl_depth_models_buffer_object;
   uint32_t gl_depth_camera_view; // Shader dependable (depth_shader)
   
+  /// SSAO pass variables
+  uint32_t gl_ssao_vao;
+  uint32_t gl_ssao_models_buffer_object;
+  
   /// Rendering pass variables
   uint32_t gl_VAO;
   uint32_t gl_models_buffer_object;
