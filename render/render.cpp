@@ -109,11 +109,10 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_normal_texture, 0);
   
-  uint32_t attachments[1] = { GL_COLOR_ATTACHMENT0 };
-  glDrawBuffers(1, attachments);
+  uint32_t depth_attachments[1] = { GL_COLOR_ATTACHMENT0 };
+  glDrawBuffers(1, depth_attachments);
   
-  GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-  if (status != GL_FRAMEBUFFER_COMPLETE) {
+  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
     SDL_Log("Framebuffer status not complete.");
   }
   
@@ -135,13 +134,12 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
   glGenTextures(1, &gl_ssao_texture);
   glBindTexture(GL_TEXTURE_2D, gl_ssao_texture);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, screen_width, screen_height, 0, GL_RGB, GL_UNSIGNED_INT, nullptr);
-  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_normal_texture, 0);
+  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_ssao_texture, 0);
   
-  uint32_t attachments_2[1] = { GL_COLOR_ATTACHMENT0 };
-  glDrawBuffers(1, attachments_2);
+  uint32_t ssao_attachments[1] = { GL_COLOR_ATTACHMENT0 };
+  glDrawBuffers(1, ssao_attachments);
   
-  status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-  if (status != GL_FRAMEBUFFER_COMPLETE) {
+  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
     SDL_Log("Framebuffer status not complete.");
   }
   
@@ -274,7 +272,7 @@ void Renderer::render(uint32_t delta) {
       glBufferData(GL_ARRAY_BUFFER, model_buffer.size() * sizeof(Mat4<float>), model_buffer.data(), GL_DYNAMIC_DRAW);
       glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Always update the depth buffer with the new values
-      glDrawElementsInstanced(GL_TRIANGLES, batch.mesh.indices.size(), GL_UNSIGNED_INT, 0, model_buffer.size());
+      glDrawElementsInstanced(GL_TRIANGLES, batch.mesh.indices.size(), GL_UNSIGNED_INT, nullptr, model_buffer.size());
     }
     
     /// SSAO pass
@@ -287,14 +285,14 @@ void Renderer::render(uint32_t delta) {
       glUniform1i(glGetUniformLocation(batch.shader.gl_program, "noise_sampler"), gl_ssao_noise_texture_unit);
       glUniform1i(glGetUniformLocation(batch.shader.gl_program, "normal_sampler"), gl_normal_texture_unit);
       glUniform3fv(glGetUniformLocation(batch.shader.gl_program, "ssao_samples"), ssao_samples.size(), &ssao_samples[0].x);
-      glUniform1i(glGetUniformLocation(batch.shader.gl_program, "NUM_SSAO_SAMPLES"), ssao_num_samples);
+      glUniform1i(glGetUniformLocation(batch.shader.gl_program, "num_ssao_samples"), ssao_num_samples);
       glUniform1f(glGetUniformLocation(batch.shader.gl_program, "ssao_kernel_radius"), ssao_kernel_radius);
       glUniform1f(glGetUniformLocation(batch.shader.gl_program, "ssao_power"), ssao_power);
       glBindBuffer(GL_ARRAY_BUFFER, batch.gl_ssao_models_buffer_object);
       glBufferData(GL_ARRAY_BUFFER, model_buffer.size() * sizeof(Mat4<float>), model_buffer.data(), GL_DYNAMIC_DRAW);
       glBindFramebuffer(GL_FRAMEBUFFER, gl_ssao_fbo);
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-      glDrawElementsInstanced(GL_TRIANGLES, batch.mesh.indices.size(), GL_UNSIGNED_INT, 0, model_buffer.size());
+      glDrawElementsInstanced(GL_TRIANGLES, batch.mesh.indices.size(), GL_UNSIGNED_INT, nullptr, model_buffer.size());
     }
     
     /// Remainder pass
@@ -337,7 +335,7 @@ void Renderer::render(uint32_t delta) {
     glBindBuffer(GL_ARRAY_BUFFER, batch.gl_diffuse_texture_layer_idx);
     glBufferData(GL_ARRAY_BUFFER, diffuse_texture_idxs.size() * sizeof(uint32_t), diffuse_texture_idxs.data(), GL_DYNAMIC_DRAW);
     
-    glDrawElementsInstanced(GL_TRIANGLES, batch.mesh.indices.size(), GL_UNSIGNED_INT, 0, buffer.size());
+    glDrawElementsInstanced(GL_TRIANGLES, batch.mesh.indices.size(), GL_UNSIGNED_INT, nullptr, buffer.size());
 
     /// Update render stats
     state.entities += buffer.size();
@@ -442,8 +440,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, batch.mesh.byte_size_of_indices(), batch.mesh.indices.data(), GL_STATIC_DRAW);
     
     glUseProgram(program); // Must use the program object before accessing uniforms!
-    auto projection = glGetUniformLocation(program, "projection");
-    glUniformMatrix4fv(projection, 1, GL_FALSE, projection_matrix.data());
+    glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, projection_matrix.data());
   }
   
   /// SSAO setup
@@ -460,10 +457,6 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     auto position_attrib = glGetAttribLocation(program, "position");
     glVertexAttribPointer(position_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, position));
     glEnableVertexAttribArray(position_attrib);
-  
-    auto normal_attrib = glGetAttribLocation(program, "vNormal");
-    glVertexAttribPointer(normal_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, normal));
-    glEnableVertexAttribArray(normal_attrib);
   
     // Buffer for all the model matrices
     glGenBuffers(1, &batch.gl_ssao_models_buffer_object);
@@ -482,8 +475,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, batch.mesh.byte_size_of_indices(), batch.mesh.indices.data(), GL_STATIC_DRAW);
   
     glUseProgram(program); // Must use the program object before accessing uniforms!
-    auto projection = glGetUniformLocation(program, "projection");
-    glUniformMatrix4fv(projection, 1, GL_FALSE, projection_matrix.data());
+    glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, projection_matrix.data());
   }
   
   /// Rendering pass setup
@@ -541,8 +533,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, batch.mesh.byte_size_of_indices(), batch.mesh.indices.data(), GL_STATIC_DRAW);
     
     glUseProgram(program); // Must use the program object before accessing uniforms!
-    auto projection = glGetUniformLocation(program, "projection");
-    glUniformMatrix4fv(projection, 1, GL_FALSE, projection_matrix.data());
+    glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, projection_matrix.data());
   }
 }
 

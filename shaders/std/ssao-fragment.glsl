@@ -5,8 +5,8 @@ uniform sampler2D depth_sampler;
 uniform sampler2D normal_sampler;
 uniform sampler2D noise_sampler;
 
-uniform int NUM_SSAO_SAMPLES;
-uniform vec3 ssao_samples[64];
+uniform int num_ssao_samples;
+uniform vec3 ssao_samples[512];
 uniform float ssao_kernel_radius;
 uniform float ssao_power;
 
@@ -32,7 +32,7 @@ void main() {
     vec3 bitangent = cross(normal, tangent);
     mat3 tbn = mat3(tangent, bitangent, normal); // World space to tangent space (tilted world space ... )
 
-    for (int i = 0; i < NUM_SSAO_SAMPLES; i++) {
+    for (int i = 0; i < num_ssao_samples; i++) {
         // 1. Get sample point
         vec4 point = vec4(vec3(fPosition.xyz + tbn * ssao_samples[i] * ssao_kernel_radius), 1.0);
         // 2. Project the sample
