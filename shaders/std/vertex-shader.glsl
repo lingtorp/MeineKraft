@@ -1,5 +1,5 @@
 in vec3 position;
-in vec2 vTexCoord;
+in vec2 texcoord;
 #if defined(FLAG_CUBE_MAP_TEXTURE) || defined(FLAG_2D_TEXTURE)
 in int diffuse_texture_idx;
 #endif
@@ -24,7 +24,7 @@ flat out int fDiffuse_texture_idx;
 void main() {
   gl_Position = projection * camera_view * model * vec4(position, 1.0);
 
-  fTexcoord = vTexCoord;
+  fTexcoord = texcoord;
   fPosition = model * vec4(position, 1.0);
   fNonModelPos = vec4(position, 1.0);
 #if defined(FLAG_CUBE_MAP_TEXTURE) || defined(FLAG_2D_TEXTURE)

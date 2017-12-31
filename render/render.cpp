@@ -419,7 +419,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glVertexAttribPointer(position_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, position));
     glEnableVertexAttribArray(position_attrib);
     
-    auto normal_attrib = glGetAttribLocation(program, "vNormal");
+    auto normal_attrib = glGetAttribLocation(program, "normal");
     glVertexAttribPointer(normal_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, normal));
     glEnableVertexAttribArray(normal_attrib);
     
@@ -496,11 +496,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glVertexAttribPointer(position_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, position));
     glEnableVertexAttribArray(position_attrib);
     
-    auto normal_attrib = glGetAttribLocation(program, "vNormal");
-    glVertexAttribPointer(normal_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, normal));
-    glEnableVertexAttribArray(normal_attrib);
-    
-    auto tex_attrib = glGetAttribLocation(program, "vTexCoord");
+    auto tex_attrib = glGetAttribLocation(program, "texcoord");
     glVertexAttribPointer(tex_attrib, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, texCoord));
     glEnableVertexAttribArray(tex_attrib);
     
