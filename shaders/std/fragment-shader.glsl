@@ -36,6 +36,8 @@ uniform mat4 camera_view;
 // Projection or a.k.a perspective matrix
 uniform mat4 projection;
 
+#define FLAG_SSAO
+
 #ifdef FLAG_SSAO
 uniform sampler2D ssao_sampler;
 #endif
