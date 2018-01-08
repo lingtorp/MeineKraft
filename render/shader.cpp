@@ -28,6 +28,11 @@ std::pair<bool, std::string> Shader::compile() {
   vertex_src.insert(0, "#version 410 core \n");
   fragment_src.insert(0, "#version 410 core \n");
 
+#ifdef DEBUG
+  vertex_shader_src = vertex_src;
+  fragment_shader_src = fragment_src;
+#endif 
+
   auto raw_str = vertex_src.c_str();
   vertex_shader = glCreateShader(GL_VERTEX_SHADER);
   glShaderSource(vertex_shader, 1, &raw_str, nullptr);
