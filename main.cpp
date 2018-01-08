@@ -6,6 +6,7 @@
 #include "world/world.h"
 #include "nodes/skybox.h"
 #include "nodes/model.h"
+#include "util/filesystem.h"
 
 struct Resolution {
   int width, height;
@@ -36,8 +37,7 @@ int main() {
   renderer.update_projection_matrix(70);
   renderer.camera->position = {-0.62f, 17.0f, 2.6f};
   
-  std::string directory = "/Users/AlexanderLingtorp/Desktop/";
-  Model bunny{directory, "stanford-bunny.obj"};
+  Model bunny{FileSystem::base, "stanford-bunny.obj"};
   bunny.position = {0, 15, 0};
   
   bool toggle_mouse_capture = true;
