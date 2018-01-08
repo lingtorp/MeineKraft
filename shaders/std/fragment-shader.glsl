@@ -8,6 +8,8 @@ uniform sampler2D diffuse_sampler;
 #endif
 
 uniform sampler2D normal_sampler;
+uniform sampler2D depth_sampler;
+uniform sampler2D noise_sampler;
 
 in vec2 fTexcoord; // passthrough shading for interpolated textures
 in vec4 fPosition; // Model position in world space
@@ -45,12 +47,13 @@ uniform sampler2D ssao_sampler;
 void main() {
     outColor = vec4(1.0); // Sets a default color of white to all objects
     vec4 default_light = vec4(1.0, 1.0, 1.0, 1.0);
-    vec3 normal = texture(normal_sampler, gl_FragCoord.xy).xyz;
+    vec2 frag_coord = vec2(gl_FragCoord.x / 1280.0, gl_FragCoord.y / 720.0);
+    vec3 normal = texture(normal_sampler, frag_coord).xyz;
 
     /// SSAO
     float ambient_occlusion = 0.0;
 #ifdef FLAG_SSAO
-    ambient_occlusion = texture(ssao_sampler, gl_FragCoord.xy).r;
+    ambient_occlusion = texture(ssao_sampler, frag_coord).r;
 #endif
 
 #ifdef FLAG_BLINN_PHONG_SHADING
@@ -83,4 +86,8 @@ void main() {
     outColor = texture(diffuse_sampler, vec4(normalize(fNonModelPos.xyz), fDiffuse_texture_idx)) * default_light;
 #endif
     outColor = vec4(vec3(ambient_occlusion), 1.0);
+    // outColor = vec4(normal, 1.0);
+    // outColor = vec4(vec3(texture(depth_sampler, frag_coord).r), 1.0);
+    const vec2 noise_scale = vec2(1280.0 / 8.0, 720.0 / 8.0);
+    // outColor = vec4(texture(noise_sampler, frag_coord * noise_scale).rgb, 1.0);
 }
