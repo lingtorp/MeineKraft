@@ -45,7 +45,8 @@ uniform sampler2D ssao_sampler;
 void main() {
     outColor = vec4(1.0); // Sets a default color of white to all objects
     vec4 default_light = vec4(1.0, 1.0, 1.0, 1.0);
-    vec3 normal = texture(normal_sampler, gl_FragCoord.xy).xyz;
+    vec2 frag_coord = vec2(gl_FragCoord.x / 1280.0, gl_FragCoord.y / 720.0);
+    vec3 normal = texture(normal_sampler, frag_coord).rgb;
 
     /// SSAO
     float ambient_occlusion = 0.0;
