@@ -24,7 +24,9 @@ float linearize_depth(vec2 uv) {
 }
 
 void main() {
-    vec3 normal = texture(normal_sampler, gl_FragCoord.xy).xyz;
+    vec2 frag_coord = vec2(gl_FragCoord.x / 1280.0, gl_FragCoord.y / 720.0);
+
+    vec3 normal = texture(normal_sampler, frag_coord.xy).xyz;
 
     // Orientate kernel sample hemisphere
     vec3 rvec = texture(noise_sampler, gl_FragCoord.xy * noise_scale).xyz;

@@ -35,13 +35,8 @@ int main() {
   renderer.window = window;
   renderer.update_projection_matrix(70);
   renderer.camera->position = {-0.62f, 17.0f, 2.6f};
-
-  // Init the world with seed
-  // World world{1};
-  Skybox skybox{};
   
   std::string directory = "/Users/AlexanderLingtorp/Desktop/";
-  
   Model bunny{directory, "stanford-bunny.obj"};
   bunny.position = {0, 15, 0};
   
