@@ -100,10 +100,10 @@ std::pair<bool, std::string> Shader::recompile() {
   fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
 
   auto raw_str = vertex_src.c_str();
-  glShaderSource(vertex_shader, 1, &raw_str, NULL);
+  glShaderSource(vertex_shader, 1, &raw_str, nullptr);
 
   raw_str = fragment_src.c_str();
-  glShaderSource(fragment_shader, 1, &raw_str, NULL);
+  glShaderSource(fragment_shader, 1, &raw_str, nullptr);
 
   glCompileShader(vertex_shader);
   glCompileShader(fragment_shader);
@@ -135,7 +135,7 @@ std::pair<bool, std::string> Shader::recompile() {
       GLint max_log_lng = 0;
       glGetProgramiv(gl_program, GL_INFO_LOG_LENGTH, &max_log_lng);
       err_log.reserve(max_log_lng);
-      glGetProgramInfoLog(gl_program, max_log_lng, NULL, (char *) err_log.c_str());
+      glGetProgramInfoLog(gl_program, max_log_lng, nullptr, (char *) err_log.c_str());
       SDL_Log("%s", err_log.c_str());
 
       return {true, ""};
@@ -146,8 +146,8 @@ std::pair<bool, std::string> Shader::recompile() {
   std::string vert_err_msg;
   frag_err_msg.reserve(err_size);
   vert_err_msg.reserve(err_size);
-  glGetShaderInfoLog(fragment_shader, err_size, NULL, (char *) frag_err_msg.c_str());
-  glGetShaderInfoLog(vertex_shader  , err_size, NULL, (char *) vert_err_msg.c_str());
+  glGetShaderInfoLog(fragment_shader, err_size, nullptr, (char *) frag_err_msg.c_str());
+  glGetShaderInfoLog(vertex_shader  , err_size, nullptr, (char *) vert_err_msg.c_str());
   return {false, frag_err_msg + vert_err_msg};
 };
 
