@@ -24,6 +24,10 @@ public:
   std::string vertex_filepath;
   std::string fragment_filepath;
   uint32_t gl_program;
+#ifdef DEBUG
+  std::string vertex_shader_src;
+  std::string fragment_shader_src;
+#endif
   
   uint32_t get_uniform_location(Texture::Type type);
 
