@@ -9,7 +9,6 @@ uniform sampler2D diffuse_sampler;
 
 uniform sampler2D normal_sampler;
 uniform sampler2D depth_sampler;
-uniform sampler2D noise_sampler;
 
 in vec2 fTexcoord; // passthrough shading for interpolated textures
 in vec4 fPosition; // Model position in world space
@@ -88,6 +87,4 @@ void main() {
     outColor = vec4(vec3(ambient_occlusion), 1.0);
     // outColor = vec4(normal, 1.0);
     // outColor = vec4(vec3(texture(depth_sampler, frag_coord).r), 1.0);
-    const vec2 noise_scale = vec2(1280.0 / 8.0, 720.0 / 8.0);
-    // outColor = vec4(texture(noise_sampler, frag_coord * noise_scale).rgb, 1.0);
 }
