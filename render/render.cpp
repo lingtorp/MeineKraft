@@ -133,7 +133,7 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
   glActiveTexture(GL_TEXTURE0 + gl_ssao_texture_unit);
   glGenTextures(1, &gl_ssao_texture);
   glBindTexture(GL_TEXTURE_2D, gl_ssao_texture);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, screen_width, screen_height, 0, GL_RGB, GL_UNSIGNED_INT, nullptr);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, screen_width, screen_height, 0, GL_RED, GL_FLOAT, nullptr);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_ssao_texture, 0);
   
   uint32_t ssao_attachments[1] = { GL_COLOR_ATTACHMENT0 };
