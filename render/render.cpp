@@ -289,7 +289,7 @@ void Renderer::render(uint32_t delta) {
       glUniform1i(glGetUniformLocation(program, "depth_sampler"), gl_depth_texture_unit);
       glUniform1i(glGetUniformLocation(program, "noise_sampler"), gl_ssao_noise_texture_unit);
       glUniform1i(glGetUniformLocation(program, "normal_sampler"), gl_normal_texture_unit);
-      glUniform3fv(glGetUniformLocation(program, "ssao_sampler"), ssao_samples.size(), &ssao_samples[0].x);
+      glUniform3fv(glGetUniformLocation(program, "ssao_samples"), ssao_samples.size(), &ssao_samples[0].x);
       glUniform1i(glGetUniformLocation(program, "num_ssao_samples"), ssao_num_samples);
       glUniform1f(glGetUniformLocation(program, "ssao_kernel_radius"), ssao_kernel_radius);
       glUniform1f(glGetUniformLocation(program, "ssao_power"), ssao_power);
