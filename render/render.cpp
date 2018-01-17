@@ -135,8 +135,6 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
   glBindTexture(GL_TEXTURE_2D, gl_ssao_texture);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, screen_width, screen_height, 0, GL_RED, GL_FLOAT, nullptr);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_ssao_texture, 0);
   
@@ -211,9 +209,6 @@ void Renderer::render(uint32_t delta) {
   // TODO: Move this kind of comp. into seperate thread or something
   for (auto &transform : transformations) { transform.update(delta); }
   lights[0].position = transformations[0].current_position; // FIXME: Transforms are not updating their Entities..
-
-  // TODO: Update number of lights in the scene
-  // TODO: Cull the lights
   
   /// Create SSAO sample sphere/kernel
   std::vector<Vec3<float>> ssao_samples;
@@ -232,7 +227,7 @@ void Renderer::render(uint32_t delta) {
       // Spread the samples inside the hemisphere to fall closer to the origin
       float scale = float(i) / float(ssao_num_samples);
       scale = lerp(0.1f, 1.0f, scale * scale);
-      sample_point *= random(gen);
+      sample_point *= scale;
       ssao_samples.push_back(sample_point);
     }
   }
@@ -301,50 +296,62 @@ void Renderer::render(uint32_t delta) {
     }
     
     /// Remainder pass
-    glBindFramebuffer(GL_FRAMEBUFFER, 0); // Reset framebuffer to default
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Always update the depth buffer with the new values
+    {
+      glBindFramebuffer(GL_FRAMEBUFFER, 0); // Reset framebuffer to default
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Always update the depth buffer with the new values
+    
+      glBindVertexArray(batch.gl_VAO);
+      glUseProgram(batch.shader.gl_program);
+      glUniformMatrix4fv(batch.gl_camera_view, 1, GL_FALSE, camera_view.data());
+      glUniform3fv(batch.gl_camera_position, 1, (const GLfloat *) &camera->position);
+    
+      glEnable(GL_CULL_FACE);
+      glCullFace(GL_BACK);
+      glFrontFace(GL_CCW);
+    
+      /// Update Light data for the batch
+      glBindBuffer(GL_UNIFORM_BUFFER, gl_light_uniform_buffer);
+      glBufferData(GL_UNIFORM_BUFFER, sizeof(Light) * lights.size(), lights.data(), GL_DYNAMIC_DRAW);
+    
+      // Normal texture
+      glUniform1i(glGetUniformLocation(batch.shader.gl_program, "normal_sampler"), gl_normal_texture_unit);
+      glUniform1i(glGetUniformLocation(batch.shader.gl_program, "depth_sampler"), gl_depth_texture_unit);
+      glUniform1i(glGetUniformLocation(batch.shader.gl_program, "ssao_sampler"), gl_ssao_texture_unit);
+      
+      if (true) {
+        glUniform1i(glGetUniformLocation(batch.shader.gl_program, "noise_sampler"), gl_ssao_noise_texture_unit);
+        glUniform3fv(glGetUniformLocation(batch.shader.gl_program, "ssao_samples"), ssao_samples.size(),
+                     &ssao_samples[0].x);
+        glUniform1i(glGetUniformLocation(batch.shader.gl_program, "num_ssao_samples"), ssao_num_samples);
+        glUniform1f(glGetUniformLocation(batch.shader.gl_program, "ssao_kernel_radius"), ssao_kernel_radius);
+        glUniform1f(glGetUniformLocation(batch.shader.gl_program, "ssao_power"), ssao_power);
+      }
+    
+      std::vector<Mat4<float>> buffer{};
+      std::vector<uint32_t> diffuse_texture_idxs{};
+      for (auto &component : batch.components) {
+        /// Add the diffuse texture layer index to the streaming buffer
+        diffuse_texture_idxs.push_back(component->graphics_state.diffuse_texture.layer_idx);
+      
+        Mat4<float> model{};
+        model = model.translate(component->graphics_state.position);
+        model = model.scale(component->graphics_state.scale);
+        buffer.push_back(model.transpose());
+      
+        log_gl_error();
+      }
+      glBindBuffer(GL_ARRAY_BUFFER, batch.gl_models_buffer_object);
+      glBufferData(GL_ARRAY_BUFFER, buffer.size() * sizeof(Mat4<float>), buffer.data(), GL_DYNAMIC_DRAW);
+    
+      glBindBuffer(GL_ARRAY_BUFFER, batch.gl_diffuse_texture_layer_idx);
+      glBufferData(GL_ARRAY_BUFFER, diffuse_texture_idxs.size() * sizeof(uint32_t), diffuse_texture_idxs.data(),
+                   GL_DYNAMIC_DRAW);
+    
+      glDrawElementsInstanced(GL_TRIANGLES, batch.mesh.indices.size(), GL_UNSIGNED_INT, nullptr, buffer.size());
   
-    glBindVertexArray(batch.gl_VAO);
-    glUseProgram(batch.shader.gl_program);
-    glUniformMatrix4fv(batch.gl_camera_view, 1, GL_FALSE, camera_view.data());
-    glUniform3fv(batch.gl_camera_position, 1, (const GLfloat *) &camera->position);
-    
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
-    glFrontFace(GL_CCW);
-
-    /// Update Light data for the batch
-    glBindBuffer(GL_UNIFORM_BUFFER, gl_light_uniform_buffer);
-    glBufferData(GL_UNIFORM_BUFFER, sizeof(Light) * lights.size(), lights.data(), GL_DYNAMIC_DRAW);
-    
-    // Normal texture
-    glUniform1i(glGetUniformLocation(batch.shader.gl_program, "normal_sampler"), gl_normal_texture_unit);
-    glUniform1i(glGetUniformLocation(batch.shader.gl_program, "depth_sampler"), gl_depth_texture_unit);
-    glUniform1i(glGetUniformLocation(batch.shader.gl_program, "ssao_sampler"), gl_ssao_texture_unit);
-    
-    std::vector<Mat4<float>> buffer{};
-    std::vector<uint32_t> diffuse_texture_idxs{};
-    for (auto& component : batch.components) {
-      /// Add the diffuse texture layer index to the streaming buffer
-      diffuse_texture_idxs.push_back(component->graphics_state.diffuse_texture.layer_idx);
-      
-      Mat4<float> model{};
-      model = model.translate(component->graphics_state.position);
-      model = model.scale(component->graphics_state.scale);
-      buffer.push_back(model.transpose());
-      
-      log_gl_error();
+      /// Update render stats
+      state.entities += buffer.size();
     }
-    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_models_buffer_object);
-    glBufferData(GL_ARRAY_BUFFER, buffer.size() * sizeof(Mat4<float>), buffer.data(), GL_DYNAMIC_DRAW);
-    
-    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_diffuse_texture_layer_idx);
-    glBufferData(GL_ARRAY_BUFFER, diffuse_texture_idxs.size() * sizeof(uint32_t), diffuse_texture_idxs.data(), GL_DYNAMIC_DRAW);
-    
-    glDrawElementsInstanced(GL_TRIANGLES, batch.mesh.indices.size(), GL_UNSIGNED_INT, nullptr, buffer.size());
-
-    /// Update render stats
-    state.entities += buffer.size();
   }
   state.graphic_batches = graphics_batches.size();
 }

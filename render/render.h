@@ -105,4 +105,4 @@ private:
   Mat4<float> FPSViewRH(Vec3<float> eye, float pitch, float yaw);
 };
 
-#endif //MEINEKRAFT_RENDER_H
+#endif // MEINEKRAFT_RENDER_H

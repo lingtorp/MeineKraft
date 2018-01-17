@@ -23,9 +23,14 @@ float linearize_depth(vec2 uv) {
   return (2.0 * n) / (f + n - z * (f - n));
 }
 
+float linearize_depth(float z) {
+  float n = 1.0;  // camera z near
+  float f = 10.0; // camera z far
+  return (2.0 * n) / (f + n - z * (f - n));
+}
+
 void main() {
     vec2 frag_coord = vec2(gl_FragCoord.x / 1280.0, gl_FragCoord.y / 720.0);
-
     vec3 normal = texture(normal_sampler, frag_coord.xy).xyz;
 
     // Orientate kernel sample hemisphere
@@ -42,7 +47,7 @@ void main() {
         point.xy /= point.w;
         point.xy = point.xy * 0.5 + 0.5;
         // 3. Lookup the sample's real depth
-        float point_depth = linearize_depth(point.xy);
+        float point_depth = texture(depth_sampler, point.xy).r;
         // 4. Range check cuts samples outside the kernel hemisphere
         if (abs(point_depth - point.z) > ssao_kernel_radius) { continue; }
         // 5. Compare depths
