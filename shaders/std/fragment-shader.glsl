@@ -7,9 +7,10 @@ flat in int fDiffuse_texture_idx;
 uniform sampler2D diffuse_sampler;
 #endif
 
-in vec4 fColor;    // This name must match the name in the vertex shader in order to work
+uniform sampler2D normal_sampler;
+uniform sampler2D depth_sampler;
+
 in vec2 fTexcoord; // passthrough shading for interpolated textures
-in vec3 fNormal;   // Normalized world space interpolated surface normal
 in vec4 fPosition; // Model position in world space
 in vec4 fNonModelPos; // Local space position, needed by cubeSampler
 
@@ -36,65 +37,69 @@ uniform mat4 camera_view;
 // Projection or a.k.a perspective matrix
 uniform mat4 projection;
 
-// Depth texture
-uniform sampler2D depth_sampler;
+#define FLAG_SSAO
+#define FORCED_SSAO
 
-// SSAO Kernel samples
-const int NUM_SSAO_SAMPLES = 16;
-uniform vec3 ssao_samples[16];
+#ifdef FLAG_SSAO
+uniform sampler2D ssao_sampler;
+#ifdef FORCED_SSAO
 uniform sampler2D noise_sampler;
-const vec2 noise_scale = vec2(1280.0 / 4.0, 720.0 / 4.0);
+uniform int num_ssao_samples;
+uniform vec3 ssao_samples[512];
+uniform float ssao_kernel_radius;
+uniform float ssao_power;
+const vec2 noise_scale = vec2(1280.0 / 8.0, 720.0 / 8.0);
+#endif // FORCED_SSAO
+#endif // FLAG_SSAO
 
-float linearize_depth(vec2 uv) {
+float linearize_depth(float z) {
   float n = 1.0;  // camera z near
   float f = 10.0; // camera z far
-  float z = texture(depth_sampler, uv).r;
   return (2.0 * n) / (f + n - z * (f - n));
 }
 
 void main() {
     outColor = vec4(1.0); // Sets a default color of white to all objects
     vec4 default_light = vec4(1.0, 1.0, 1.0, 1.0);
+    vec2 frag_coord = vec2(gl_FragCoord.x / 1280.0, gl_FragCoord.y / 720.0);
+    vec3 normal = texture(normal_sampler, frag_coord).xyz;
 
     /// SSAO
-    float occlusion = 0.0;
-// #ifdef FLAG_SSAO
-    vec3 origin = fPosition.xyz;
-    float origin_depth = linearize_depth(vec2(gl_FragCoord.x / 1280.0, gl_FragCoord.y / 720.0));
-    const float kernel_radius = 1.0;
+    float ambient_occlusion = 0.0;
+#ifdef FLAG_SSAO
+    #ifndef FORCED_SSAO
+    ambient_occlusion = texture(ssao_sampler, frag_coord.xy).r;
+    #endif
 
+    #ifdef FORCED_SSAO
     // Orientate kernel sample hemisphere
-    vec3 rvec = texture(noise_sampler, gl_FragCoord.xy * noise_scale).xyz * 2.0 - 1.0;
-    vec3 tangent = normalize(rvec - fNormal * dot(rvec, fNormal));
-    vec3 bitangent = cross(fNormal, tangent);
-    mat3 tbn = mat3(tangent, bitangent, fNormal);
-    outColor = vec4(rvec, 1.0);
+    vec3 rvec = texture(noise_sampler, gl_FragCoord.xy * noise_scale).xyz;
+    vec3 tangent = normalize(rvec - normal * dot(rvec, normal));
+    vec3 bitangent = cross(normal, tangent);
+    mat3 tbn = mat3(tangent, bitangent, normal); // World space to tangent space (tilted world space ... )
 
-    for (int i = 0; i < NUM_SSAO_SAMPLES; i++) {
-        // Get sample position
-        vec3 kernel_sample = tbn * ssao_samples[i];
-        kernel_sample = origin + kernel_sample * kernel_radius;
-        // Project sample position
-        vec4 proj_sample = vec4(kernel_sample, 1.0);
-        proj_sample = projection * camera_view * proj_sample;
-        proj_sample.xy /= proj_sample.w;
-        // proj_sample.xy = vec2(proj_sample.x / 1280.0, proj_sample.y / 720.0);
-        proj_sample.xy = proj_sample.xy * 0.5 + 0.5;
-        // Get samples depth
-        float sample_depth = linearize_depth(proj_sample.xy);
-        // Check for occlusion
-        float in_range = 1.0; // = abs(origin_depth - sample_depth) < kernel_radius ? 1.0 : 0.0;
-        occlusion += (sample_depth <= proj_sample.z ? 1.0 : 0.0) * in_range;
+    for (int i = 0; i < num_ssao_samples; i++) {
+        // 1. Get sample point
+        vec4 point = vec4(fPosition.xyz + tbn * ssao_samples[i] * ssao_kernel_radius, 1.0);
+        // 2. Project the sample
+        point = projection * camera_view * point;
+        point.xy /= point.w;
+        point.xy = point.xy * 0.5 + 0.5;
+        // 3. Lookup the sample's real depth
+        float point_depth = texture(depth_sampler, point.xy).r;
+        // 4. Range check cuts samples outside the kernel hemisphere
+        if (abs(point_depth - point.z) > ssao_kernel_radius) { continue; }
+        // 5. Compare depths
+        if (point_depth < point.z) { ambient_occlusion += 1.0; }
     }
-    occlusion = 1.0 - (occlusion / float(NUM_SSAO_SAMPLES));
-// #endif
-    return;
+    ambient_occlusion = 1.0 - (ambient_occlusion / float(num_ssao_samples));
+    ambient_occlusion = pow(ambient_occlusion, ssao_power);
+    #endif // FORCED_SSAO
+#endif
+
 #ifdef FLAG_BLINN_PHONG_SHADING
     vec3 total_light = vec3(0.0, 0.0, 0.0);
-    vec3 normal = fNormal; // already normalized
     vec3 eye = normalize(camera_position - fPosition.xyz);
-    float ambient_light;
-
     for (int i = 0; i < MAX_NUM_LIGHTS; i++) {
         Light light = lights[i];
         float ambient_intensity  = light.light_intensity.x;
@@ -111,7 +116,6 @@ void main() {
         total_light += specular_light;
         total_light += ambient_intensity;
     }
-
    default_light = vec4(clamp(total_light, 0.0, 1.0), 1.0);
    outColor = default_light;
 #endif
@@ -122,9 +126,7 @@ void main() {
 #ifdef FLAG_CUBE_MAP_TEXTURE
     outColor = texture(diffuse_sampler, vec4(normalize(fNonModelPos.xyz), fDiffuse_texture_idx)) * default_light;
 #endif
-
-    // TODO: Screen dimensions as uniforms
-    vec2 sample_pos = vec2(gl_FragCoord.x / 1280.0, gl_FragCoord.y / 720.0);
-    outColor = vec4(vec3(linearize_depth(sample_pos)), 1.0);
-    outColor = vec4(vec3(occlusion), 1.0);
+    outColor = vec4(vec3(ambient_occlusion), 1.0);
+    // outColor = vec4(normal, 1.0);
+    // outColor = vec4(vec3(texture(depth_sampler, frag_coord).r), 1.0);
 }

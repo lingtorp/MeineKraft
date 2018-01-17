@@ -6,6 +6,7 @@
 #include "world/world.h"
 #include "nodes/skybox.h"
 #include "nodes/model.h"
+#include "util/filesystem.h"
 
 struct Resolution {
   int width, height;
@@ -29,32 +30,17 @@ int main() {
   
   // Init ImGui
   ImGui_ImplSdlGL3_Init(window);
-
+  
   // Inits glew
   Renderer& renderer = Renderer::instance();
   renderer.window = window;
   renderer.update_projection_matrix(70);
-
-  // Init the world with seed
-  World world{1};
-  Skybox skybox{};
+  renderer.camera->position = {-0.62f, 17.0f, 2.6f};
   
-  std::string directory = "/Users/AlexanderLingtorp/Desktop/";
-  std::string model_file;
+  Model bunny{FileSystem::base, "stanford-bunny.obj"};
+  bunny.position = {0, 15, 0};
   
-  model_file = "stanford-bunny.obj";
-  Model bunny{directory, model_file};
-  bunny.position = {0, 5, 0};
-  bunny.scale = 100;
-  
-  /*
-  model_file = "stanford-dragon.obj";
-  Model dragon{directory, model_file};
-  dragon.position = {18, 5, 0};
-  dragon.scale = 2;
-   */
-  
-  bool toggle_mouse_capture = false;
+  bool toggle_mouse_capture = true;
   bool DONE = false;
   uint32_t last_tick = SDL_GetTicks(), current_tick, delta;
 
@@ -139,7 +125,7 @@ int main() {
     renderer.camera->position = renderer.camera->update(delta);
 
     /// Tick/update the world
-    world.world_tick(delta, renderer.camera);
+    // world.world_tick(delta, renderer.camera);
 
     /// Render the world
     renderer.render(delta);
@@ -152,17 +138,28 @@ int main() {
       static bool show_test_window;
 
       ImGui::Begin("Render state");
-      // ImGui::Text("Chunks: %lu", world.chunks.size());
       ImGui::Text("Graphics batches: %llu", renderer.state.graphic_batches);
       ImGui::Text("Entities: %llu", renderer.state.entities);
       ImGui::Text("Application average %u ms / frame (%.1f FPS)", delta, io.Framerate);
+  
+      if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::InputFloat3("Position", &renderer.camera->position.x);
+        ImGui::InputFloat3("Direction", &renderer.camera->direction.x);
+      }
+      
+      if (ImGui::CollapsingHeader("SSAO", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::InputInt("Samples", (int*) &renderer.ssao_num_samples, 8, 16);
+        ImGui::InputFloat("Kernel radius", &renderer.ssao_kernel_radius, 0.1f, 0.2f);
+        ImGui::InputFloat("Effect power", &renderer.ssao_power, 0.1f, 0.2f);
+      }
+  
       if (ImGui::Button("ImGui Palette")) show_test_window ^= 1;
-      ImGui::End();
-
       if (show_test_window) {
         ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiSetCond_FirstUseEver);
         ImGui::ShowTestWindow(&show_test_window);
       }
+      
+      ImGui::End();
     }
     ImGui::Render();
 

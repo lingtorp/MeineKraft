@@ -55,7 +55,10 @@ public:
   double DRAW_DISTANCE;
   Mat4<float> projection_matrix;
   
-  void log_gl_error();
+  /// SSAO
+  uint32_t ssao_num_samples = 64;
+  float ssao_kernel_radius = 1.0;
+  float ssao_power = 1.0;
 
 private:
   Renderer();
@@ -66,11 +69,20 @@ private:
   uint32_t gl_depth_texture;
   uint32_t gl_depth_texture_unit;
   
-  /// SSAO
+  /// SSAO pass related
+  Shader* ssao_shader;
+  uint32_t gl_ssao_fbo;
+  uint32_t gl_ssao_texture;
+  uint32_t gl_ssao_texture_unit;
+  
   uint32_t gl_ssao_noise_texture;
   uint32_t gl_ssao_noise_texture_unit;
   
-  uint16_t MAX_NUM_LIGHTS = 100;
+  /// Global buffers
+  // Normals
+  uint32_t gl_normal_texture;
+  uint32_t gl_normal_texture_unit;
+  
   uint32_t gl_light_uniform_buffer;
   std::vector<Light> lights;
 
@@ -87,10 +99,10 @@ private:
   std::array<Plane<float>, 6> extract_planes(Mat4<float> matrix);
 
   /// Setups the VAO and uniforms up between the batch and OpenGL
-  void link_batch(GraphicsBatch &batch, const Shader& shader);
+  void link_batch(GraphicsBatch &batch);
 
   /// Creates a camera view matrix based on the euler angles (x, y) and position of the eye
   Mat4<float> FPSViewRH(Vec3<float> eye, float pitch, float yaw);
 };
 
-#endif //MEINEKRAFT_RENDER_H
+#endif // MEINEKRAFT_RENDER_H
