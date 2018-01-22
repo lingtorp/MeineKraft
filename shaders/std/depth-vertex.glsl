@@ -10,6 +10,7 @@ out vec3 fPosition;
 
 void main() {
     gl_Position = projection * camera_view * model * vec4(position, 1.0);
-    fNormal = normal;
+    mat3 normal_matrix = mat3(camera_view * model);
+    fNormal = normal_matrix * normal;
     fPosition = vec3(camera_view * model * vec4(position, 1.0));
 }
