@@ -16,19 +16,6 @@ in vec4 fPosition; // Position in world space
 
 out float ambient_occlusion;
 
-float linearize_depth(vec2 uv) {
-  float n = 1.0;  // camera z near
-  float f = 10.0; // camera z far
-  float z = texture(depth_sampler, uv).r;
-  return (2.0 * n) / (f + n - z * (f - n));
-}
-
-float linearize_depth(float z) {
-  float n = 1.0;  // camera z near
-  float f = 10.0; // camera z far
-  return (2.0 * n) / (f + n - z * (f - n));
-}
-
 void main() {
     vec2 frag_coord = vec2(gl_FragCoord.x / 1280.0, gl_FragCoord.y / 720.0);
     vec3 normal = texture(normal_sampler, frag_coord.xy).xyz;
