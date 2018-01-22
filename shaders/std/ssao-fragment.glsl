@@ -10,6 +10,7 @@ uniform int num_ssao_samples;
 uniform vec3 ssao_samples[512];
 uniform float ssao_kernel_radius;
 uniform float ssao_power;
+uniform float ssao_bias;
 
 const vec2 noise_scale = vec2(1280.0 / 8.0, 720.0 / 8.0);
 
@@ -43,7 +44,7 @@ void main() {
         float point_depth = texture(position_sampler, point.xy).z;
 
         // 4. Compare
-        if (point_depth >= sampled.z) { ambient_occlusion += 1.0; }
+        if (point_depth >= sampled.z + ssao_bias) { ambient_occlusion += 1.0; }
     }
     ambient_occlusion = 1.0 - (ambient_occlusion / float(num_ssao_samples));
     ambient_occlusion = pow(ambient_occlusion, ssao_power);

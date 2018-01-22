@@ -298,6 +298,7 @@ void Renderer::render(uint32_t delta) {
       glUniform1i(glGetUniformLocation(program, "num_ssao_samples"), ssao_num_samples);
       glUniform1f(glGetUniformLocation(program, "ssao_kernel_radius"), ssao_kernel_radius);
       glUniform1f(glGetUniformLocation(program, "ssao_power"), ssao_power);
+      glUniform1f(glGetUniformLocation(program, "ssao_bias"), ssao_bias);
       glBindBuffer(GL_ARRAY_BUFFER, batch.gl_ssao_models_buffer_object);
       glBufferData(GL_ARRAY_BUFFER, model_buffer.size() * sizeof(Mat4<float>), model_buffer.data(), GL_DYNAMIC_DRAW);
       glBindFramebuffer(GL_FRAMEBUFFER, gl_ssao_fbo);
