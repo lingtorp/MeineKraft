@@ -328,15 +328,6 @@ void Renderer::render(uint32_t delta) {
       glUniform1i(glGetUniformLocation(batch.shader.gl_program, "normal_sampler"), gl_normal_texture_unit);
       glUniform1i(glGetUniformLocation(batch.shader.gl_program, "depth_sampler"), gl_depth_texture_unit);
       glUniform1i(glGetUniformLocation(batch.shader.gl_program, "ssao_sampler"), gl_ssao_texture_unit);
-      
-      if (true) {
-        glUniform1i(glGetUniformLocation(batch.shader.gl_program, "noise_sampler"), gl_ssao_noise_texture_unit);
-        glUniform3fv(glGetUniformLocation(batch.shader.gl_program, "ssao_samples"), ssao_samples.size(),
-                     &ssao_samples[0].x);
-        glUniform1i(glGetUniformLocation(batch.shader.gl_program, "num_ssao_samples"), ssao_num_samples);
-        glUniform1f(glGetUniformLocation(batch.shader.gl_program, "ssao_kernel_radius"), ssao_kernel_radius);
-        glUniform1f(glGetUniformLocation(batch.shader.gl_program, "ssao_power"), ssao_power);
-      }
     
       std::vector<Mat4<float>> buffer{};
       std::vector<uint32_t> diffuse_texture_idxs{};
