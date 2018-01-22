@@ -82,6 +82,9 @@ private:
   // Normals
   uint32_t gl_normal_texture;
   uint32_t gl_normal_texture_unit;
+  // Positions
+  uint32_t gl_position_texture;
+  uint32_t gl_position_texture_unit;
   
   uint32_t gl_light_uniform_buffer;
   std::vector<Light> lights;
