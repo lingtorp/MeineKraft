@@ -26,7 +26,7 @@ void main() {
     vec3 rvec = texture(noise_sampler, gl_FragCoord.xy * noise_scale).xyz;
     vec3 tangent = normalize(rvec - normal * dot(rvec, normal));
     vec3 bitangent = cross(normal, tangent);
-    mat3 tbn = mat3(tangent, bitangent, normal); // World space to tangent space (tilted world space ... )
+    mat3 tbn = mat3(tangent, bitangent, normal); // f: Tangent -> View space
 
     ambient_occlusion = 0.0;
     for (int i = 0; i < num_ssao_samples; i++) {
