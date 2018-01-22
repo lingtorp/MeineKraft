@@ -26,6 +26,7 @@ void main() {
     vec3 bitangent = cross(normal, tangent);
     mat3 tbn = mat3(tangent, bitangent, normal); // World space to tangent space (tilted world space ... )
 
+    ambient_occlusion = 0.0;
     for (int i = 0; i < num_ssao_samples; i++) {
         // 1. Get sample point
         vec4 point = vec4(vec3(fPosition.xyz + tbn * ssao_samples[i] * ssao_kernel_radius), 1.0);
