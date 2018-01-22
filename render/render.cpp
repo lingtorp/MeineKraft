@@ -86,7 +86,7 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
   glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max_texture_units);
   SDL_Log("Max texture units: %u", max_texture_units);
   
-  /// Global depth framebuffer
+  /// Global depth pass framebuffer
   glGenFramebuffers(1, &gl_depth_fbo);
   glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
   
@@ -104,13 +104,23 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
   glActiveTexture(GL_TEXTURE0 + gl_normal_texture_unit);
   glGenTextures(1, &gl_normal_texture);
   glBindTexture(GL_TEXTURE_2D, gl_normal_texture);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, screen_width, screen_height, 0, GL_RGB, GL_UNSIGNED_INT, nullptr);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, screen_width, screen_height, 0, GL_RGB, GL_FLOAT, nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_normal_texture, 0);
   
-  uint32_t depth_attachments[1] = { GL_COLOR_ATTACHMENT0 };
-  glDrawBuffers(1, depth_attachments);
+  // Global position buffer
+  gl_position_texture_unit = max_texture_units - 5;
+  glActiveTexture(GL_TEXTURE0 + gl_position_texture_unit);
+  glGenTextures(1, &gl_position_texture);
+  glBindTexture(GL_TEXTURE_2D, gl_position_texture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, screen_width, screen_height, 0, GL_RGB, GL_FLOAT, nullptr);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, gl_position_texture, 0);
+  
+  uint32_t depth_attachments[2] = { GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT0 };
+  glDrawBuffers(2, depth_attachments);
   
   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
     SDL_Log("Framebuffer status not complete.");
@@ -288,6 +298,7 @@ void Renderer::render(uint32_t delta) {
       glUniform1i(glGetUniformLocation(program, "num_ssao_samples"), ssao_num_samples);
       glUniform1f(glGetUniformLocation(program, "ssao_kernel_radius"), ssao_kernel_radius);
       glUniform1f(glGetUniformLocation(program, "ssao_power"), ssao_power);
+      glUniform1f(glGetUniformLocation(program, "ssao_bias"), ssao_bias);
       glBindBuffer(GL_ARRAY_BUFFER, batch.gl_ssao_models_buffer_object);
       glBufferData(GL_ARRAY_BUFFER, model_buffer.size() * sizeof(Mat4<float>), model_buffer.data(), GL_DYNAMIC_DRAW);
       glBindFramebuffer(GL_FRAMEBUFFER, gl_ssao_fbo);

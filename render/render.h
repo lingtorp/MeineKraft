@@ -59,6 +59,7 @@ public:
   uint32_t ssao_num_samples = 64;
   float ssao_kernel_radius = 1.0;
   float ssao_power = 1.0;
+  float ssao_bias = 0.0025;
 
 private:
   Renderer();
@@ -82,6 +83,9 @@ private:
   // Normals
   uint32_t gl_normal_texture;
   uint32_t gl_normal_texture_unit;
+  // Positions
+  uint32_t gl_position_texture;
+  uint32_t gl_position_texture_unit;
   
   uint32_t gl_light_uniform_buffer;
   std::vector<Light> lights;
