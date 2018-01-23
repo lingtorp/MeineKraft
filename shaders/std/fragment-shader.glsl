@@ -15,7 +15,6 @@ uniform sampler2D depth_sampler;
 uniform sampler2D position_sampler;
 
 in vec2 fTexcoord; // passthrough shading for interpolated textures
-in vec4 fPosition; // Model position in world space
 in vec4 fNonModelPos; // Local space position, needed by cubeSampler
 
 out vec4 outColor; // Defaults to zero when the frag shader only has 1 out variable
