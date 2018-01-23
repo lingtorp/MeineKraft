@@ -7,6 +7,9 @@ flat in int fDiffuse_texture_idx;
 uniform sampler2D diffuse_sampler;
 #endif
 
+uniform float screen_width;
+uniform float screen_height;
+
 uniform sampler2D normal_sampler;
 uniform sampler2D depth_sampler;
 uniform sampler2D position_sampler;
@@ -47,7 +50,7 @@ uniform sampler2D ssao_sampler;
 void main() {
     outColor = vec4(1.0); // Sets a default color of white to all objects
     vec4 default_light = vec4(1.0, 1.0, 1.0, 1.0);
-    vec2 frag_coord = vec2(gl_FragCoord.x / 1280.0, gl_FragCoord.y / 720.0);
+    vec2 frag_coord = vec2(gl_FragCoord.x / screen_width, gl_FragCoord.y / screen_height);
     vec3 normal = texture(normal_sampler, frag_coord).xyz;
     vec3 position = texture(position_sampler, frag_coord).xyz;
 

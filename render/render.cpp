@@ -79,7 +79,7 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
   glBindBuffer(GL_UNIFORM_BUFFER, gl_light_uniform_buffer);
   glBufferData(GL_UNIFORM_BUFFER, sizeof(Light) * lights.size(), &lights, GL_DYNAMIC_DRAW);
   
-  int screen_width = 1280;
+  int screen_width = 1280; // TODO: Move this into uniforms
   int screen_height = 720;
   
   int32_t max_texture_units;
@@ -329,6 +329,8 @@ void Renderer::render(uint32_t delta) {
       glUniform1i(glGetUniformLocation(batch.shader.gl_program, "depth_sampler"), gl_depth_texture_unit);
       glUniform1i(glGetUniformLocation(batch.shader.gl_program, "ssao_sampler"), gl_ssao_texture_unit);
       glUniform1i(glGetUniformLocation(batch.shader.gl_program, "position_sampler"), gl_position_texture_unit);
+      glUniform1f(glGetUniformLocation(batch.shader.gl_program, "screen_width"), screen_width);
+      glUniform1f(glGetUniformLocation(batch.shader.gl_program, "screen_height"), screen_height);
     
       std::vector<Mat4<float>> buffer{};
       std::vector<uint32_t> diffuse_texture_idxs{};

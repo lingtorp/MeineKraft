@@ -54,6 +54,8 @@ public:
   TextureManager texture_manager;
   double DRAW_DISTANCE;
   Mat4<float> projection_matrix;
+  float screen_width;
+  float screen_height;
   
   /// SSAO
   uint32_t ssao_num_samples = 64;
