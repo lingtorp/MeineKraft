@@ -324,10 +324,11 @@ void Renderer::render(uint32_t delta) {
       glBindBuffer(GL_UNIFORM_BUFFER, gl_light_uniform_buffer);
       glBufferData(GL_UNIFORM_BUFFER, sizeof(Light) * lights.size(), lights.data(), GL_DYNAMIC_DRAW);
     
-      // Normal texture
+      /// Update uniforms
       glUniform1i(glGetUniformLocation(batch.shader.gl_program, "normal_sampler"), gl_normal_texture_unit);
       glUniform1i(glGetUniformLocation(batch.shader.gl_program, "depth_sampler"), gl_depth_texture_unit);
       glUniform1i(glGetUniformLocation(batch.shader.gl_program, "ssao_sampler"), gl_ssao_texture_unit);
+      glUniform1i(glGetUniformLocation(batch.shader.gl_program, "position_sampler"), gl_position_texture_unit);
     
       std::vector<Mat4<float>> buffer{};
       std::vector<uint32_t> diffuse_texture_idxs{};
