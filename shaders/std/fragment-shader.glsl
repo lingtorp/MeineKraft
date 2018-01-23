@@ -88,7 +88,7 @@ void main() {
 #ifdef FLAG_CUBE_MAP_TEXTURE
     outColor = texture(diffuse_sampler, vec4(normalize(fNonModelPos.xyz), fDiffuse_texture_idx)) * default_light;
 #endif
-    outColor = vec4(vec3(ambient_occlusion), 1.0);
+    // outColor = vec4(vec3(ambient_occlusion), 1.0);
     // outColor = vec4(normal, 1.0);
     // outColor = vec4(vec3(texture(depth_sampler, frag_coord).r), 1.0);
 }

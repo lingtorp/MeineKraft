@@ -154,8 +154,13 @@ int main() {
         ImGui::InputFloat("Kernel radius", &renderer.ssao_kernel_radius, 0.1f, 0.2f);
         ImGui::InputFloat("Effect power", &renderer.ssao_power, 0.1f, 0.2f);
         ImGui::InputFloat("Bias", &renderer.ssao_bias, 0.0001f, 0.0005f);
-        ImGui::Checkbox("Blur Enabled: ", &renderer.ssao_blur_enabled);
+        ImGui::Checkbox("Blur Enabled", &renderer.ssao_blur_enabled);
         ImGui::InputFloat("Blur factor", &renderer.ssao_blur_factor, 0.5f, 1.0f);
+      }
+      
+      if (ImGui::CollapsingHeader("Lightning", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::InputFloat3("Color (RGB)", &renderer.lights[0].light_color.r);
+        ImGui::InputFloat3("Intensity (ambient, diffuse, specular)", &renderer.lights[0].light_itensity.x);
       }
   
       if (ImGui::Button("ImGui Palette")) show_test_window ^= 1;

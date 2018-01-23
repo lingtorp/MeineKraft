@@ -64,6 +64,8 @@ public:
   float ssao_bias = 0.0025;
   float ssao_blur_factor = 16.0;
   bool  ssao_blur_enabled = true;
+  
+  std::vector<Light> lights;
 
 private:
   Renderer();
@@ -98,7 +100,6 @@ private:
   uint32_t gl_position_texture_unit;
   
   uint32_t gl_light_uniform_buffer;
-  std::vector<Light> lights;
 
   std::vector<Transform> transformations;
 
