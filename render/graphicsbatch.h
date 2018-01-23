@@ -116,6 +116,10 @@ public:
   uint32_t gl_ssao_vao;
   uint32_t gl_ssao_models_buffer_object;
   
+  /// Blur pass variables
+  uint32_t gl_blur_vao;
+  uint32_t gl_blur_models_buffer_object;
+  
   /// Rendering pass variables
   uint32_t gl_VAO;
   uint32_t gl_models_buffer_object;

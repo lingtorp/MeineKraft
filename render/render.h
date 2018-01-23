@@ -54,12 +54,16 @@ public:
   TextureManager texture_manager;
   double DRAW_DISTANCE;
   Mat4<float> projection_matrix;
+  float screen_width;
+  float screen_height;
   
   /// SSAO
   uint32_t ssao_num_samples = 64;
   float ssao_kernel_radius = 1.0;
   float ssao_power = 1.0;
   float ssao_bias = 0.0025;
+  float ssao_blur_factor = 16.0;
+  bool  ssao_blur_enabled = true;
 
 private:
   Renderer();
@@ -78,6 +82,12 @@ private:
   
   uint32_t gl_ssao_noise_texture;
   uint32_t gl_ssao_noise_texture_unit;
+  
+  /// Blur pass related
+  Shader* blur_shader;
+  uint32_t gl_blur_fbo;
+  uint32_t gl_blur_texture;
+  uint32_t gl_blur_texture_unit;
   
   /// Global buffers
   // Normals

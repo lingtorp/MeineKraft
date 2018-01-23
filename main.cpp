@@ -36,6 +36,8 @@ int main() {
   renderer.window = window;
   renderer.update_projection_matrix(70);
   renderer.camera->position = {-0.62f, 17.0f, 2.6f};
+  renderer.screen_width = HD.width;
+  renderer.screen_height = HD.height;
   
   Model bunny{FileSystem::base, "stanford-bunny.obj"};
   bunny.position = {0, 15, 0};
@@ -152,6 +154,8 @@ int main() {
         ImGui::InputFloat("Kernel radius", &renderer.ssao_kernel_radius, 0.1f, 0.2f);
         ImGui::InputFloat("Effect power", &renderer.ssao_power, 0.1f, 0.2f);
         ImGui::InputFloat("Bias", &renderer.ssao_bias, 0.0001f, 0.0005f);
+        ImGui::Checkbox("Blur Enabled: ", &renderer.ssao_blur_enabled);
+        ImGui::InputFloat("Blur factor", &renderer.ssao_blur_factor, 0.5f, 1.0f);
       }
   
       if (ImGui::Button("ImGui Palette")) show_test_window ^= 1;

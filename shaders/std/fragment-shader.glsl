@@ -7,11 +7,14 @@ flat in int fDiffuse_texture_idx;
 uniform sampler2D diffuse_sampler;
 #endif
 
+uniform float screen_width;
+uniform float screen_height;
+
 uniform sampler2D normal_sampler;
 uniform sampler2D depth_sampler;
+uniform sampler2D position_sampler;
 
 in vec2 fTexcoord; // passthrough shading for interpolated textures
-in vec4 fPosition; // Model position in world space
 in vec4 fNonModelPos; // Local space position, needed by cubeSampler
 
 out vec4 outColor; // Defaults to zero when the frag shader only has 1 out variable
@@ -46,8 +49,9 @@ uniform sampler2D ssao_sampler;
 void main() {
     outColor = vec4(1.0); // Sets a default color of white to all objects
     vec4 default_light = vec4(1.0, 1.0, 1.0, 1.0);
-    vec2 frag_coord = vec2(gl_FragCoord.x / 1280.0, gl_FragCoord.y / 720.0);
+    vec2 frag_coord = vec2(gl_FragCoord.x / screen_width, gl_FragCoord.y / screen_height);
     vec3 normal = texture(normal_sampler, frag_coord).xyz;
+    vec3 position = texture(position_sampler, frag_coord).xyz;
 
     /// SSAO
     float ambient_occlusion = 0.0;
@@ -57,13 +61,13 @@ void main() {
 
 #ifdef FLAG_BLINN_PHONG_SHADING
     vec3 total_light = vec3(0.0, 0.0, 0.0);
-    vec3 eye = normalize(camera_position - fPosition.xyz);
+    vec3 eye = normalize(camera_position - position);
     for (int i = 0; i < MAX_NUM_LIGHTS; i++) {
         Light light = lights[i];
         float ambient_intensity  = light.light_intensity.x;
         float diffuse_intensity  = light.light_intensity.y;
         float specular_intensity = light.light_intensity.z;
-        vec3 direction = normalize(lights[i].position.xyz - fPosition.xyz);
+        vec3 direction = normalize(lights[i].position - position);
 
         vec3 diffuse_light = light.color.xyz * max(dot(normal, direction), 0.0) * diffuse_intensity;
 
