@@ -377,6 +377,7 @@ void Renderer::render(uint32_t delta) {
       glUniform1i(glGetUniformLocation(batch.shader.gl_program, "position_sampler"), gl_position_texture_unit);
       glUniform1f(glGetUniformLocation(batch.shader.gl_program, "screen_width"), screen_width);
       glUniform1f(glGetUniformLocation(batch.shader.gl_program, "screen_height"), screen_height);
+      glUniform1i(glGetUniformLocation(batch.shader.gl_program, "lightning_enabled"), lightning_enabled);
     
       std::vector<Mat4<float>> buffer{};
       std::vector<uint32_t> diffuse_texture_idxs{};

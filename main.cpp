@@ -158,15 +158,10 @@ int main() {
         ImGui::InputFloat("Blur factor", &renderer.ssao_blur_factor, 0.5f, 1.0f);
       }
       
-      if (ImGui::CollapsingHeader("Lightning", ImGuiTreeNodeFlags_DefaultOpen)) {
+      if (ImGui::CollapsingHeader("Lightning", 0)) {
+        ImGui::Checkbox("Enable lightning", &renderer.lightning_enabled);
         ImGui::InputFloat3("Color (RGB)", &renderer.lights[0].light_color.r);
         ImGui::InputFloat3("Intensity (ambient, diffuse, specular)", &renderer.lights[0].light_itensity.x);
-      }
-  
-      if (ImGui::Button("ImGui Palette")) show_test_window ^= 1;
-      if (show_test_window) {
-        ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiSetCond_FirstUseEver);
-        ImGui::ShowTestWindow(&show_test_window);
       }
       
       ImGui::End();
