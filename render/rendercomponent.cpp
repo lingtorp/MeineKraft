@@ -26,6 +26,8 @@ void RenderComponent::set_mesh(const std::string& directory, const std::string& 
         graphics_state.diffuse_texture.gl_texture_type = GL_TEXTURE_2D_ARRAY; // FIXME: Assumes texture format
         graphics_state.diffuse_texture.used = true;
         break;
+      default:
+        exit(1);
     }
   }
 };
