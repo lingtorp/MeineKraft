@@ -259,7 +259,6 @@ void Renderer::render(uint32_t delta) {
         random(gen)
       };
       sample_point.normalize();
-      sample_point *= random(gen);
       // Spread the samples inside the hemisphere to fall closer to the origin
       float scale = float(i) / float(ssao_num_samples);
       scale = lerp(0.1f, 1.0f, scale * scale);
