@@ -37,8 +37,8 @@ void main() {
         // 2. Generate sample depth
         vec4 point = vec4(sampled, 1.0);
         point = projection * point;
-        point.xyz /= point.w;
-        point.xyz = point.xyz * 0.5 + 0.5;
+        point.xy /= point.w;
+        point.xy = point.xy * 0.5 + 0.5;
 
         // 3. Lookup depth at sample's position
         float point_depth = texture(position_sampler, point.xy).z;
