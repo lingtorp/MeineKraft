@@ -123,11 +123,7 @@ int main() {
           break;
       }
     }
-
     renderer.camera->position = renderer.camera->update(delta);
-
-    /// Tick/update the world
-    // world.world_tick(delta, renderer.camera);
 
     /// Render the world
     renderer.render(delta);
