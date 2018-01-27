@@ -23,6 +23,7 @@ int main() {
   auto window_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_MOUSE_CAPTURE;
   SDL_Window* window = SDL_CreateWindow("MeineKraft", 0, 0, HD.width, HD.height, window_flags);
   SDL_GLContext context = SDL_GL_CreateContext(window);
+  SDL_GL_SetSwapInterval(0); // Disables vsync
 
   // Init sdl2_image
   atexit(IMG_Quit);
