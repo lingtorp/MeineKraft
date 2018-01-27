@@ -8,6 +8,8 @@
 #include "nodes/model.h"
 #include "util/filesystem.h"
 
+#define MK_ARRAYSIZE(_ARR) ((int) (sizeof(_ARR)/sizeof(*_ARR)))
+
 struct Resolution {
   int width, height;
 };
@@ -46,12 +48,14 @@ int main() {
   bool toggle_mouse_capture = true;
   bool DONE = false;
   uint32_t last_tick = SDL_GetTicks(), current_tick, delta;
-
+  
+  /// Delta values
+  float deltas[100];
+  
   while (!DONE) {
       current_tick = SDL_GetTicks();
       delta = current_tick - last_tick;
       last_tick = current_tick;
-      // SDL_Log("Delta: %u ms \n", delta);
 
       /// Process input
       SDL_Event event{};
@@ -134,13 +138,22 @@ int main() {
     {
       auto io = ImGui::GetIO();
 
-      static bool show_test_window;
-
       ImGui::Begin("Render state");
       ImGui::Text("Graphics batches: %llu", renderer.state.graphic_batches);
       ImGui::Text("Entities: %llu", renderer.state.entities);
       ImGui::Text("Application average %u ms / frame (%.1f FPS)", delta, io.Framerate);
   
+      static int i = -1; i = (i + 1) % MK_ARRAYSIZE(deltas);
+      deltas[i] = delta;
+      ImGui::PlotLines("", deltas, 100, 0, "ms / frame", 0.0f, 50.0f, ImVec2(ImGui::GetWindowWidth(), 100));
+      
+      static bool show_test_window = false;
+      if (ImGui::Button("ImGui Palette")) show_test_window ^= 1;
+      if (show_test_window) {
+        ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiSetCond_FirstUseEver);
+        ImGui::ShowTestWindow(&show_test_window);
+      }
+      
       if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::InputFloat3("Position", &renderer.camera->position.x);
         ImGui::InputFloat3("Direction", &renderer.camera->direction.x);
