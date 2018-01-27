@@ -85,6 +85,8 @@ private:
   uint32_t gl_ssao_noise_texture;
   uint32_t gl_ssao_noise_texture_unit;
   
+  std::vector<Vec3<float>> ssao_samples;
+  
   /// Blur pass related
   Shader* blur_shader;
   uint32_t gl_blur_fbo;

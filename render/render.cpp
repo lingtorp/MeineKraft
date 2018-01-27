@@ -208,6 +208,26 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
     SDL_Log("Blur framebuffer status not complete.");
   }
   
+  /// Create SSAO sample sphere/kernel
+  {
+    std::uniform_real_distribution<float> random(0.0f, 1.0f);
+    std::default_random_engine gen;
+    
+    for (size_t i = 0; i < ssao_num_samples; i++) {
+      Vec3<float> sample_point = {
+        random(gen) * 2.0f - 1.0f, // [-1.0, 1.0]
+        random(gen) * 2.0f - 1.0f,
+        random(gen)
+      };
+      sample_point.normalize();
+      // Spread the samples inside the hemisphere to fall closer to the origin
+      float scale = float(i) / float(ssao_num_samples);
+      scale = lerp(0.1f, 1.0f, scale * scale);
+      sample_point *= scale;
+      ssao_samples.push_back(sample_point);
+    }
+  }
+
   /// Camera
   const auto position  = Vec3<float>{0.0f, 20.0f, 0.0f};  // cam position
   const auto direction = Vec3<float>{0.0f, 0.0f, -1.0f};  // position of where the cam is looking
@@ -245,41 +265,6 @@ void Renderer::render(uint32_t delta) {
   // TODO: Move this kind of comp. into seperate thread or something
   for (auto &transform : transformations) { transform.update(delta); }
   lights[0].position = transformations[0].current_position; // FIXME: Transforms are not updating their Entities..
-  
-  /// Create SSAO sample sphere/kernel
-  std::vector<Vec3<float>> ssao_samples;
-  {
-    std::uniform_real_distribution<float> random(0.0f, 1.0f);
-    std::default_random_engine gen;
-    
-    for (size_t i = 0; i < ssao_num_samples; i++) {
-      Vec3<float> sample_point = {
-        random(gen) * 2.0f - 1.0f, // [-1.0, 1.0]
-        random(gen) * 2.0f - 1.0f,
-        random(gen)
-      };
-      sample_point.normalize();
-      // Spread the samples inside the hemisphere to fall closer to the origin
-      float scale = float(i) / float(ssao_num_samples);
-      scale = lerp(0.1f, 1.0f, scale * scale);
-      sample_point *= scale;
-      ssao_samples.push_back(sample_point);
-    }
-  }
-  
-  /// SSAO noise
-  {
-    std::uniform_real_distribution<float> random(-1.0f, 1.0f);
-    std::default_random_engine gen;
-    std::vector<Vec3<float>> ssao_noise;
-    for (int i = 0; i < 64; i++) {
-      auto noise = Vec3<float>{random(gen), random(gen), 0.0f};
-      noise.normalize();
-      ssao_noise.push_back(noise);
-    }
-    glBindTexture(GL_TEXTURE_2D, gl_ssao_noise_texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, 8, 8, 0, GL_RGB, GL_FLOAT, ssao_noise.data());
-  }
   
   for (auto& batch : graphics_batches) {
     std::vector<Mat4<float>> model_buffer{};
