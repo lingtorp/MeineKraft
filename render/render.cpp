@@ -299,7 +299,6 @@ void Renderer::render(uint32_t delta) {
       auto program = ssao_shader->gl_program;
       glBindVertexArray(batch.gl_ssao_vao);
       glUseProgram(program);
-      glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, camera_view.data());
       // Updates uniforms
       glUniform1i(glGetUniformLocation(program, "depth_sampler"), gl_depth_texture_unit);
       glUniform1i(glGetUniformLocation(program, "noise_sampler"), gl_ssao_noise_texture_unit);
@@ -309,15 +308,13 @@ void Renderer::render(uint32_t delta) {
       glUniform1f(glGetUniformLocation(program, "ssao_kernel_radius"), ssao_kernel_radius);
       glUniform1f(glGetUniformLocation(program, "ssao_power"), ssao_power);
       glUniform1f(glGetUniformLocation(program, "ssao_bias"), ssao_bias);
-      glBindBuffer(GL_ARRAY_BUFFER, batch.gl_ssao_models_buffer_object);
-      glBufferData(GL_ARRAY_BUFFER, model_buffer.size() * sizeof(Mat4<float>), model_buffer.data(), GL_DYNAMIC_DRAW);
       glBindFramebuffer(GL_FRAMEBUFFER, gl_ssao_fbo);
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-      glDrawElementsInstanced(GL_TRIANGLES, batch.mesh.indices.size(), GL_UNSIGNED_INT, nullptr, model_buffer.size());
+      glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     }
     
     /// Blur pass
-    if (ssao_blur_enabled) {
+    if (false) {
       auto program = blur_shader->gl_program;
       glBindVertexArray(batch.gl_blur_vao);
       glUseProgram(program);
@@ -353,7 +350,7 @@ void Renderer::render(uint32_t delta) {
       /// Update uniforms
       glUniform1i(glGetUniformLocation(batch.shader.gl_program, "normal_sampler"), gl_normal_texture_unit);
       glUniform1i(glGetUniformLocation(batch.shader.gl_program, "depth_sampler"), gl_depth_texture_unit);
-      if (ssao_blur_enabled) {
+      if (false) {
         glUniform1i(glGetUniformLocation(batch.shader.gl_program, "ssao_sampler"), gl_blur_texture_unit);
       } else {
         glUniform1i(glGetUniformLocation(batch.shader.gl_program, "ssao_sampler"), gl_ssao_texture_unit);
@@ -501,30 +498,16 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     GLuint ssao_vbo;
     glGenBuffers(1, &ssao_vbo);
     glBindBuffer(GL_ARRAY_BUFFER, ssao_vbo);
-    glBufferData(GL_ARRAY_BUFFER, batch.mesh.byte_size_of_vertices(), vertices.data(), GL_DYNAMIC_DRAW);
-  
-    auto position_attrib = glGetAttribLocation(program, "position");
-    glVertexAttribPointer(position_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, position));
-    glEnableVertexAttribArray(position_attrib);
-  
-    // Buffer for all the model matrices
-    glGenBuffers(1, &batch.gl_ssao_models_buffer_object);
-    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_ssao_models_buffer_object);
-  
-    auto model_attrib = glGetAttribLocation(program, "model");
-    for (int i = 0; i < 4; i++) {
-      glVertexAttribPointer(model_attrib + i, 4, GL_FLOAT, GL_FALSE, sizeof(Mat4<float>), (const void *) (sizeof(float) * i * 4));
-      glEnableVertexAttribArray(model_attrib + i);
-      glVertexAttribDivisor(model_attrib + i, 1);
-    }
-  
-    GLuint EBO;
-    glGenBuffers(1, &EBO);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, batch.mesh.byte_size_of_indices(), batch.mesh.indices.data(), GL_STATIC_DRAW);
-  
-    glUseProgram(program); // Must use the program object before accessing uniforms!
-    glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, projection_matrix.data());
+    float quad[] = {
+      // positions        // texture Coords
+      -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+      -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+       1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
+       1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+    };
+    glBufferData(GL_ARRAY_BUFFER, std::size(quad), &quad, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
+    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
   }
   
   {
