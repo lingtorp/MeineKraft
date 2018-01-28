@@ -2,13 +2,12 @@
 #include "render/render.h"
 #include "include/imgui/imgui_impl_sdl.h"
 #include <SDL2/SDL_image.h>
+#include <iterator>
 #include "render/camera.h"
 #include "world/world.h"
 #include "nodes/skybox.h"
 #include "nodes/model.h"
 #include "util/filesystem.h"
-
-#define MK_ARRAYSIZE(_ARR) ((int) (sizeof(_ARR)/sizeof(*_ARR)))
 
 struct Resolution {
   int width, height;
@@ -143,9 +142,9 @@ int main() {
       ImGui::Text("Entities: %llu", renderer.state.entities);
       ImGui::Text("Application average %u ms / frame (%.1f FPS)", delta, io.Framerate);
   
-      static int i = -1; i = (i + 1) % MK_ARRAYSIZE(deltas);
+      static int i = -1; i = (i + 1) % std::size(deltas);
       deltas[i] = delta;
-      ImGui::PlotLines("", deltas, 100, 0, "ms / frame", 0.0f, 50.0f, ImVec2(ImGui::GetWindowWidth(), 100));
+      ImGui::PlotLines("", deltas, std::size(deltas), 0, "ms / frame", 0.0f, 50.0f, ImVec2(ImGui::GetWindowWidth(), 100));
       
       static bool show_test_window = false;
       if (ImGui::Button("ImGui Palette")) show_test_window ^= 1;

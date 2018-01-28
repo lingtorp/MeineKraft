@@ -149,7 +149,7 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_ssao_texture, 0);
   
   uint32_t ssao_attachments[1] = { GL_COLOR_ATTACHMENT0 };
-  glDrawBuffers(1, ssao_attachments);
+  glDrawBuffers(std::size(ssao_attachments), ssao_attachments);
   
   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
     SDL_Log("SSAO framebuffer status not complete.");
@@ -202,7 +202,7 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_blur_texture, 0);
   
   uint32_t blur_attachments[1] = { GL_COLOR_ATTACHMENT0 };
-  glDrawBuffers(1, blur_attachments);
+  glDrawBuffers(std::size(blur_attachments), blur_attachments);
   
   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
     SDL_Log("Blur framebuffer status not complete.");
