@@ -14,8 +14,6 @@ uniform float ssao_bias;
 
 const vec2 noise_scale = vec2(1280.0 / 8.0, 720.0 / 8.0);
 
-in vec4 fPosition; // Position in world space
-
 out float ambient_occlusion;
 
 void main() {
