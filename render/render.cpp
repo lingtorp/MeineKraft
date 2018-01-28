@@ -120,10 +120,10 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, gl_position_texture, 0);
   
   uint32_t depth_attachments[2] = { GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT0 };
-  glDrawBuffers(2, depth_attachments);
+  glDrawBuffers(std::size(depth_attachments), depth_attachments);
   
   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-    SDL_Log("Framebuffer status not complete.");
+    SDL_Log("Lightning framebuffer status not complete.");
   }
   
   /// Depth shader
@@ -505,6 +505,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
        1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
        1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
     };
+    glUseProgram(program);
     glBufferData(GL_ARRAY_BUFFER, std::size(quad), &quad, GL_STATIC_DRAW);
     glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
     glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
