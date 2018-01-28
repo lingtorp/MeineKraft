@@ -34,12 +34,6 @@ layout (std140) uniform lights_block {
 
 uniform vec3 camera_position; // Position of the eye/camera
 
-// View or a.k.a camera matrix
-uniform mat4 camera_view;
-
-// Projection or a.k.a perspective matrix
-uniform mat4 projection;
-
 // Enabled/Disable Phong shading
 uniform bool lightning_enabled;
 
