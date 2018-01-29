@@ -299,7 +299,6 @@ void Renderer::render(uint32_t delta) {
       auto program = ssao_shader->gl_program;
       glBindVertexArray(batch.gl_ssao_vao);
       glUseProgram(program);
-      // Updates uniforms
       glUniform1i(glGetUniformLocation(program, "depth_sampler"), gl_depth_texture_unit);
       glUniform1i(glGetUniformLocation(program, "noise_sampler"), gl_ssao_noise_texture_unit);
       glUniform1i(glGetUniformLocation(program, "normal_sampler"), gl_normal_texture_unit);
@@ -377,8 +376,7 @@ void Renderer::render(uint32_t delta) {
       glBufferData(GL_ARRAY_BUFFER, buffer.size() * sizeof(Mat4<float>), buffer.data(), GL_DYNAMIC_DRAW);
     
       glBindBuffer(GL_ARRAY_BUFFER, batch.gl_diffuse_texture_layer_idx);
-      glBufferData(GL_ARRAY_BUFFER, diffuse_texture_idxs.size() * sizeof(uint32_t), diffuse_texture_idxs.data(),
-                   GL_DYNAMIC_DRAW);
+      glBufferData(GL_ARRAY_BUFFER, diffuse_texture_idxs.size() * sizeof(uint32_t), diffuse_texture_idxs.data(), GL_DYNAMIC_DRAW);
     
       glDrawElementsInstanced(GL_TRIANGLES, batch.mesh.indices.size(), GL_UNSIGNED_INT, nullptr, buffer.size());
   
@@ -508,7 +506,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glUseProgram(program);
     glBufferData(GL_ARRAY_BUFFER, std::size(quad), &quad, GL_STATIC_DRAW);
     glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
-    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
+    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), 0);
   }
   
   {
