@@ -320,11 +320,9 @@ void Renderer::render(uint32_t delta) {
       glUniform1i(glGetUniformLocation(program, "input_sampler"), gl_ssao_texture_unit);
       glUniform1i(glGetUniformLocation(program, "blur_size"), 2);
       glUniform1f(glGetUniformLocation(program, "blur_factor"), ssao_blur_factor);
-      glBindBuffer(GL_ARRAY_BUFFER, batch.gl_blur_models_buffer_object);
-      glBufferData(GL_ARRAY_BUFFER, model_buffer.size() * sizeof(Mat4<float>), model_buffer.data(), GL_DYNAMIC_DRAW);
       glBindFramebuffer(GL_FRAMEBUFFER, gl_blur_fbo);
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-      glDrawElementsInstanced(GL_TRIANGLES, batch.mesh.indices.size(), GL_UNSIGNED_INT, nullptr, model_buffer.size());
+      glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     }
     
     /// Remainder pass
@@ -518,30 +516,10 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     GLuint blur_vbo;
     glGenBuffers(1, &blur_vbo);
     glBindBuffer(GL_ARRAY_BUFFER, blur_vbo);
-    glBufferData(GL_ARRAY_BUFFER, batch.mesh.byte_size_of_vertices(), vertices.data(), GL_DYNAMIC_DRAW);
-  
-    auto position_attrib = glGetAttribLocation(program, "position");
-    glVertexAttribPointer(position_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, position));
-    glEnableVertexAttribArray(position_attrib);
-  
-    // Buffer for all the model matrices
-    glGenBuffers(1, &batch.gl_blur_models_buffer_object);
-    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_blur_models_buffer_object);
-  
-    auto model_attrib = glGetAttribLocation(program, "model");
-    for (int i = 0; i < 4; i++) {
-      glVertexAttribPointer(model_attrib + i, 4, GL_FLOAT, GL_FALSE, sizeof(Mat4<float>), (const void *) (sizeof(float) * i * 4));
-      glEnableVertexAttribArray(model_attrib + i);
-      glVertexAttribDivisor(model_attrib + i, 1);
-    }
-  
-    GLuint EBO;
-    glGenBuffers(1, &EBO);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, batch.mesh.byte_size_of_indices(), batch.mesh.indices.data(), GL_STATIC_DRAW);
-  
-    glUseProgram(program); // Must use the program object before accessing uniforms!
-    glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, projection_matrix.data());
+    glUseProgram(program);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quad), &quad, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
+    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
   }
   
   /// Rendering pass setup
