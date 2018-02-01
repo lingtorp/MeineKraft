@@ -1,21 +1,9 @@
-#ifdef FLAG_CUBE_MAP_TEXTURE
-flat in int fDiffuse_texture_idx;
-uniform samplerCubeArray diffuse_sampler;
-#endif
-#ifdef FLAG_2D_TEXTURE
-flat in int fDiffuse_texture_idx;
-uniform sampler2D diffuse_sampler;
-#endif
-
 uniform float screen_width;
 uniform float screen_height;
 
 uniform sampler2D normal_sampler;
 uniform sampler2D depth_sampler;
 uniform sampler2D position_sampler;
-
-in vec2 fTexcoord; // passthrough shading for interpolated textures
-in vec4 fNonModelPos; // Local space position, needed by cubeSampler
 
 out vec4 outColor; // Defaults to zero when the frag shader only has 1 out variable
 
@@ -79,12 +67,6 @@ void main() {
    outColor = default_light;
 #endif
 
-#ifdef FLAG_2D_TEXTURE
-    outColor = texture(diffuse_sampler, vec3(fTexcoord, fDiffuse_texture_idx)) * default_light;
-#endif
-#ifdef FLAG_CUBE_MAP_TEXTURE
-    outColor = texture(diffuse_sampler, vec4(normalize(fNonModelPos.xyz), fDiffuse_texture_idx)) * default_light;
-#endif
     if (!lightning_enabled) {
       outColor = vec4(vec3(ambient_occlusion), 1.0);
     }

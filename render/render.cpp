@@ -332,7 +332,6 @@ void Renderer::render(uint32_t delta) {
     
       glBindVertexArray(batch.gl_VAO);
       glUseProgram(batch.shader.gl_program);
-      glUniformMatrix4fv(batch.gl_camera_view, 1, GL_FALSE, camera_view.data());
       glUniform3fv(batch.gl_camera_position, 1, (const GLfloat *) &camera->position);
     
       glEnable(GL_CULL_FACE);
@@ -356,19 +355,7 @@ void Renderer::render(uint32_t delta) {
       glUniform1f(glGetUniformLocation(batch.shader.gl_program, "screen_height"), screen_height);
       glUniform1i(glGetUniformLocation(batch.shader.gl_program, "lightning_enabled"), lightning_enabled);
     
-      std::vector<uint32_t> diffuse_texture_idxs{};
-      for (auto &component : batch.components) {
-        /// Add the diffuse texture layer index to the streaming buffer
-        diffuse_texture_idxs.push_back(component->graphics_state.diffuse_texture.layer_idx);
-      }
-      glBindBuffer(GL_ARRAY_BUFFER, batch.gl_models_buffer_object);
-      glBufferData(GL_ARRAY_BUFFER, model_buffer.size() * sizeof(Mat4<float>), model_buffer.data(), GL_DYNAMIC_DRAW);
-    
-      glBindBuffer(GL_ARRAY_BUFFER, batch.gl_diffuse_texture_layer_idx);
-      glBufferData(GL_ARRAY_BUFFER, diffuse_texture_idxs.size() * sizeof(uint32_t), diffuse_texture_idxs.data(), GL_DYNAMIC_DRAW);
-    
-      glDrawElementsInstanced(GL_TRIANGLES, batch.mesh.indices.size(), GL_UNSIGNED_INT, nullptr, model_buffer.size());
-  
+      glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
       /// Update render stats
       state.entities += model_buffer.size();
     }
@@ -518,53 +505,19 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     auto program = batch.shader.gl_program;
     glGenVertexArrays(1, &batch.gl_VAO);
     glBindVertexArray(batch.gl_VAO);
-    batch.gl_camera_view = glGetUniformLocation(program, "camera_view");
     batch.gl_camera_position = glGetUniformLocation(program, "camera_position");
     
     GLuint gl_VBO;
     glGenBuffers(1, &gl_VBO);
     glBindBuffer(GL_ARRAY_BUFFER, gl_VBO);
-    glBufferData(GL_ARRAY_BUFFER, batch.mesh.byte_size_of_vertices(), vertices.data(), GL_DYNAMIC_DRAW);
-    
-    // Then set our vertex attributes pointers, only doable AFTER linking
-    auto position_attrib = glGetAttribLocation(program, "position");
-    glVertexAttribPointer(position_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, position));
-    glEnableVertexAttribArray(position_attrib);
-    
-    auto tex_attrib = glGetAttribLocation(program, "texcoord");
-    glVertexAttribPointer(tex_attrib, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, texCoord));
-    glEnableVertexAttribArray(tex_attrib);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quad), &quad, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
+    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
     
     // Lights UBO
     auto block_index = glGetUniformBlockIndex(program, "lights_block");
     glBindBuffer(GL_UNIFORM_BUFFER, gl_light_uniform_buffer);
     glBindBufferBase(GL_UNIFORM_BUFFER, block_index, gl_light_uniform_buffer);
-    
-    // Buffer for all the model matrices
-    glGenBuffers(1, &batch.gl_models_buffer_object);
-    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_models_buffer_object);
-    
-    auto model_attrib = glGetAttribLocation(program, "model");
-    for (int i = 0; i < 4; i++) {
-      glVertexAttribPointer(model_attrib + i, 4, GL_FLOAT, GL_FALSE, sizeof(Mat4<float>), (const void *) (sizeof(float) * i * 4));
-      glEnableVertexAttribArray(model_attrib + i);
-      glVertexAttribDivisor(model_attrib + i, 1);
-    }
-    
-    auto diffuse_texture_idx = glGetAttribLocation(program, "diffuse_texture_idx");
-    glGenBuffers(1, &batch.gl_diffuse_texture_layer_idx);
-    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_diffuse_texture_layer_idx);
-    glVertexAttribIPointer(diffuse_texture_idx, 1, GL_UNSIGNED_INT, sizeof(uint32_t), 0);
-    glEnableVertexAttribArray(diffuse_texture_idx);
-    glVertexAttribDivisor(diffuse_texture_idx, 1);
-    
-    GLuint EBO;
-    glGenBuffers(1, &EBO);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, batch.mesh.byte_size_of_indices(), batch.mesh.indices.data(), GL_STATIC_DRAW);
-    
-    glUseProgram(program); // Must use the program object before accessing uniforms!
-    glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, projection_matrix.data());
   }
 }
 
