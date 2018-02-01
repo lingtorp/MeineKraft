@@ -86,7 +86,7 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
   glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max_texture_units);
   SDL_Log("Max texture units: %u", max_texture_units);
   
-  /// Global depth pass framebuffer
+  /// Global geometry pass framebuffer
   glGenFramebuffers(1, &gl_depth_fbo);
   glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
   
@@ -269,7 +269,7 @@ void Renderer::render(uint32_t delta) {
   for (auto& batch : graphics_batches) {
     std::vector<Mat4<float>> model_buffer{};
   
-    /// Depth pass
+    /// Geometry pass
     {
       glBindVertexArray(batch.gl_depth_vao);
       glUseProgram(depth_shader->gl_program);
@@ -299,7 +299,6 @@ void Renderer::render(uint32_t delta) {
       auto program = ssao_shader->gl_program;
       glBindVertexArray(batch.gl_ssao_vao);
       glUseProgram(program);
-      glUniform1i(glGetUniformLocation(program, "depth_sampler"), gl_depth_texture_unit);
       glUniform1i(glGetUniformLocation(program, "noise_sampler"), gl_ssao_noise_texture_unit);
       glUniform1i(glGetUniformLocation(program, "normal_sampler"), gl_normal_texture_unit);
       glUniform3fv(glGetUniformLocation(program, "ssao_samples"), ssao_samples.size(), &ssao_samples[0].x);
@@ -313,7 +312,7 @@ void Renderer::render(uint32_t delta) {
     }
     
     /// Blur pass
-    if (false) {
+    {
       auto program = blur_shader->gl_program;
       glBindVertexArray(batch.gl_blur_vao);
       glUseProgram(program);
@@ -349,7 +348,7 @@ void Renderer::render(uint32_t delta) {
       /// Update uniforms
       glUniform1i(glGetUniformLocation(batch.shader.gl_program, "normal_sampler"), gl_normal_texture_unit);
       glUniform1i(glGetUniformLocation(batch.shader.gl_program, "depth_sampler"), gl_depth_texture_unit);
-      if (false) {
+      if (ssao_blur_enabled) {
         glUniform1i(glGetUniformLocation(batch.shader.gl_program, "ssao_sampler"), gl_blur_texture_unit);
       } else {
         glUniform1i(glGetUniformLocation(batch.shader.gl_program, "ssao_sampler"), gl_ssao_texture_unit);
@@ -447,7 +446,16 @@ void Renderer::update_projection_matrix(float fov) {
 void Renderer::link_batch(GraphicsBatch& batch) {
   auto vertices = batch.mesh.to_floats();
   
-  /// Depth pass setup
+  /// Fullscreen quad in NDC
+  float quad[] = {
+    // positions        // texture Coords
+    -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+    -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+    1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
+    1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+  };
+  
+  /// Geometry pass setup
   {
     auto program = depth_shader->gl_program;
     glGenVertexArrays(1, &batch.gl_depth_vao);
@@ -496,17 +504,10 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     GLuint ssao_vbo;
     glGenBuffers(1, &ssao_vbo);
     glBindBuffer(GL_ARRAY_BUFFER, ssao_vbo);
-    float quad[] = {
-      // positions        // texture Coords
-      -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
-      -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
-       1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
-       1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
-    };
     glUseProgram(program);
     glBufferData(GL_ARRAY_BUFFER, std::size(quad), &quad, GL_STATIC_DRAW);
     glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
-    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), 0);
+    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
   }
   
   {
