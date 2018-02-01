@@ -16,7 +16,6 @@ out float ambient_occlusion;
 
 void main() {
     vec2 frag_coord = vec2(gl_FragCoord.x / 1280.0, gl_FragCoord.y / 720.0);
-    // vec2 frag_coord = vec2(gl_FragCoord.x * 1280.0, gl_FragCoord.y * 720.0);
     vec3 normal = texture(normal_sampler, frag_coord.xy).xyz;
     vec3 position = texture(position_sampler, frag_coord.xy).xyz;
 
