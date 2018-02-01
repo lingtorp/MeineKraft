@@ -142,7 +142,7 @@ int main() {
       ImGui::Text("Entities: %llu", renderer.state.entities);
       ImGui::Text("Application average %u ms / frame (%.1f FPS)", delta, io.Framerate);
   
-      static int i = -1; i = (i + 1) % std::size(deltas);
+      static size_t i = -1; i = (i + 1) % std::size(deltas);
       deltas[i] = delta;
       ImGui::PlotLines("", deltas, std::size(deltas), 0, "ms / frame", 0.0f, 50.0f, ImVec2(ImGui::GetWindowWidth(), 100));
       
