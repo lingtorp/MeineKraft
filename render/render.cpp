@@ -257,11 +257,6 @@ void Renderer::render(uint32_t delta) {
   auto frustrum_view = camera_view * projection_matrix; // FIXME: Matrix multiplication is probably defined backwards
   std::array<Plane<float>, 6> planes = extract_planes(frustrum_view.transpose());
 
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  glEnable(GL_DEPTH_TEST);
-  glEnable(GL_MULTISAMPLE);
-  glClearColor(0.8f, 0.5f, 0.5f, 1.0f);
-
   // TODO: Move this kind of comp. into seperate thread or something
   for (auto &transform : transformations) { transform.update(delta); }
   lights[0].position = transformations[0].current_position; // FIXME: Transforms are not updating their Entities..
@@ -271,6 +266,11 @@ void Renderer::render(uint32_t delta) {
   
     /// Geometry pass
     {
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+      glEnable(GL_DEPTH_TEST); glDepthMask(GL_TRUE);
+      glEnable(GL_MULTISAMPLE);
+      glClearColor(0.8f, 0.5f, 0.5f, 1.0f);
+      
       glBindVertexArray(batch.gl_depth_vao);
       glUseProgram(depth_shader->gl_program);
       glUniformMatrix4fv(batch.gl_depth_camera_view, 1, GL_FALSE, camera_view.data());
@@ -292,6 +292,8 @@ void Renderer::render(uint32_t delta) {
       glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Always update the depth buffer with the new values
       glDrawElementsInstanced(GL_TRIANGLES, batch.mesh.indices.size(), GL_UNSIGNED_INT, nullptr, model_buffer.size());
+  
+      glDisable(GL_DEPTH_TEST); glDepthMask(GL_FALSE);
     }
     
     /// SSAO pass
