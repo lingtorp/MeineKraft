@@ -502,7 +502,6 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     GLuint ssao_vbo;
     glGenBuffers(1, &ssao_vbo);
     glBindBuffer(GL_ARRAY_BUFFER, ssao_vbo);
-    glUseProgram(program);
     glBufferData(GL_ARRAY_BUFFER, sizeof(quad), &quad, GL_STATIC_DRAW);
     glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
     glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
@@ -516,7 +515,6 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     GLuint blur_vbo;
     glGenBuffers(1, &blur_vbo);
     glBindBuffer(GL_ARRAY_BUFFER, blur_vbo);
-    glUseProgram(program);
     glBufferData(GL_ARRAY_BUFFER, sizeof(quad), &quad, GL_STATIC_DRAW);
     glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
     glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
