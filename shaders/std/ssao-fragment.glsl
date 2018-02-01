@@ -1,7 +1,5 @@
 uniform mat4 projection;
-uniform mat4 camera_view;
 
-uniform sampler2D depth_sampler;
 uniform sampler2D normal_sampler;
 uniform sampler2D noise_sampler;
 uniform sampler2D position_sampler;
@@ -13,8 +11,6 @@ uniform float ssao_power;
 uniform float ssao_bias;
 
 const vec2 noise_scale = vec2(1280.0 / 8.0, 720.0 / 8.0);
-
-in vec4 fPosition; // Position in world space
 
 out float ambient_occlusion;
 

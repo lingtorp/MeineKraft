@@ -2,6 +2,7 @@
 #include "render/render.h"
 #include "include/imgui/imgui_impl_sdl.h"
 #include <SDL2/SDL_image.h>
+#include <iterator>
 #include "render/camera.h"
 #include "world/world.h"
 #include "nodes/skybox.h"
@@ -23,6 +24,7 @@ int main() {
   auto window_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_MOUSE_CAPTURE;
   SDL_Window* window = SDL_CreateWindow("MeineKraft", 0, 0, HD.width, HD.height, window_flags);
   SDL_GLContext context = SDL_GL_CreateContext(window);
+  SDL_GL_SetSwapInterval(0); // Disables vsync
 
   // Init sdl2_image
   atexit(IMG_Quit);
@@ -45,12 +47,14 @@ int main() {
   bool toggle_mouse_capture = true;
   bool DONE = false;
   uint32_t last_tick = SDL_GetTicks(), current_tick, delta;
-
+  
+  /// Delta values
+  float deltas[100];
+  
   while (!DONE) {
       current_tick = SDL_GetTicks();
       delta = current_tick - last_tick;
       last_tick = current_tick;
-      // SDL_Log("Delta: %u ms \n", delta);
 
       /// Process input
       SDL_Event event{};
@@ -133,13 +137,22 @@ int main() {
     {
       auto io = ImGui::GetIO();
 
-      static bool show_test_window;
-
       ImGui::Begin("Render state");
       ImGui::Text("Graphics batches: %llu", renderer.state.graphic_batches);
       ImGui::Text("Entities: %llu", renderer.state.entities);
       ImGui::Text("Application average %u ms / frame (%.1f FPS)", delta, io.Framerate);
   
+      static int i = -1; i = (i + 1) % std::size(deltas);
+      deltas[i] = delta;
+      ImGui::PlotLines("", deltas, std::size(deltas), 0, "ms / frame", 0.0f, 50.0f, ImVec2(ImGui::GetWindowWidth(), 100));
+      
+      static bool show_test_window = false;
+      if (ImGui::Button("ImGui Palette")) show_test_window ^= 1;
+      if (show_test_window) {
+        ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiSetCond_FirstUseEver);
+        ImGui::ShowTestWindow(&show_test_window);
+      }
+      
       if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::InputFloat3("Position", &renderer.camera->position.x);
         ImGui::InputFloat3("Direction", &renderer.camera->direction.x);
