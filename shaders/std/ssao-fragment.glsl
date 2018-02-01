@@ -1,6 +1,5 @@
 uniform mat4 projection;
 
-uniform sampler2D depth_sampler;
 uniform sampler2D normal_sampler;
 uniform sampler2D noise_sampler;
 uniform sampler2D position_sampler;
