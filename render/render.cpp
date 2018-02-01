@@ -505,7 +505,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glGenBuffers(1, &ssao_vbo);
     glBindBuffer(GL_ARRAY_BUFFER, ssao_vbo);
     glUseProgram(program);
-    glBufferData(GL_ARRAY_BUFFER, std::size(quad), &quad, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quad), &quad, GL_STATIC_DRAW);
     glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
     glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
   }
