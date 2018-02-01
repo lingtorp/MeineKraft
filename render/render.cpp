@@ -356,31 +356,24 @@ void Renderer::render(uint32_t delta) {
       glUniform1f(glGetUniformLocation(batch.shader.gl_program, "screen_height"), screen_height);
       glUniform1i(glGetUniformLocation(batch.shader.gl_program, "lightning_enabled"), lightning_enabled);
     
-      std::vector<Mat4<float>> buffer{};
       std::vector<uint32_t> diffuse_texture_idxs{};
       for (auto &component : batch.components) {
         /// Add the diffuse texture layer index to the streaming buffer
         diffuse_texture_idxs.push_back(component->graphics_state.diffuse_texture.layer_idx);
-      
-        Mat4<float> model{};
-        model = model.translate(component->graphics_state.position);
-        model = model.scale(component->graphics_state.scale);
-        buffer.push_back(model.transpose());
-      
-        log_gl_error();
       }
       glBindBuffer(GL_ARRAY_BUFFER, batch.gl_models_buffer_object);
-      glBufferData(GL_ARRAY_BUFFER, buffer.size() * sizeof(Mat4<float>), buffer.data(), GL_DYNAMIC_DRAW);
+      glBufferData(GL_ARRAY_BUFFER, model_buffer.size() * sizeof(Mat4<float>), model_buffer.data(), GL_DYNAMIC_DRAW);
     
       glBindBuffer(GL_ARRAY_BUFFER, batch.gl_diffuse_texture_layer_idx);
       glBufferData(GL_ARRAY_BUFFER, diffuse_texture_idxs.size() * sizeof(uint32_t), diffuse_texture_idxs.data(), GL_DYNAMIC_DRAW);
     
-      glDrawElementsInstanced(GL_TRIANGLES, batch.mesh.indices.size(), GL_UNSIGNED_INT, nullptr, buffer.size());
+      glDrawElementsInstanced(GL_TRIANGLES, batch.mesh.indices.size(), GL_UNSIGNED_INT, nullptr, model_buffer.size());
   
       /// Update render stats
-      state.entities += buffer.size();
+      state.entities += model_buffer.size();
     }
   }
+  log_gl_error();
   state.graphic_batches = graphics_batches.size();
 }
 
