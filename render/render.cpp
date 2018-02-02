@@ -479,12 +479,9 @@ void Renderer::update_projection_matrix(float fov) {
   float aspect = (float) width / (float) height;
   this->projection_matrix = gen_projection_matrix(1.0, 10.0, fov, aspect);
   glViewport(0, 0, width, height); // Update OpenGL viewport
-  // TODO: Update all shader programs projection matrices to the new one
-  for (auto &batch : graphics_batches) {
-    glUseProgram(batch.shader.gl_program);
-    GLint projection = glGetUniformLocation(batch.shader.gl_program, "projection");
-    glUniformMatrix4fv(projection, 1, GL_FALSE, projection_matrix.data());
-  }
+  GLint projection = glGetUniformLocation(depth_shader->gl_program, "projection");
+  glUniformMatrix4fv(projection, 1, GL_FALSE, projection_matrix.data());
+  // TODO: Adjust all the pass textures sizes
 }
 
 void Renderer::link_batch(GraphicsBatch& batch) {
@@ -531,10 +528,11 @@ void Renderer::link_batch(GraphicsBatch& batch) {
 }
 
 uint64_t Renderer::add_to_batch(RenderComponent* comp, Shader shader) {
+  // FIXME: Shader unused
   auto mesh_id = comp->graphics_state.mesh_id;
   auto& g_state = comp->graphics_state;
   for (auto& batch : graphics_batches) {
-    if (batch.mesh_id == mesh_id && batch.shader == shader) {
+    if (batch.mesh_id == mesh_id) {
       batch.components.push_back(comp);
       // TODO: Check if batch buffer is in use and initialized
       for (const auto& id : batch.texture_ids) {
@@ -581,7 +579,6 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp, Shader shader) {
   }
   batch.gl_diffuse_texture_type = comp->graphics_state.diffuse_texture.gl_texture_type;
   batch.mesh = mesh_manager->mesh_from_id(mesh_id);
-  batch.shader = shader;
   link_batch(batch);
   
   /// Assign layer index to the latest the texture and increment

@@ -109,7 +109,6 @@ public:
   /// Depth pass variables
   uint32_t gl_depth_vao;
   uint32_t gl_depth_models_buffer_object;
-  Shader shader; // TODO: Remove
 };
 
 #endif // MEINEKRAFT_GRAPHICSBATCH_H
