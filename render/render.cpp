@@ -227,6 +227,71 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
       ssao_samples.push_back(sample_point);
     }
   }
+  
+  /// Lightning pass shader
+  const auto vertex_shader   = FileSystem::base + "shaders/std/vertex-shader.glsl";
+  const auto fragment_shader = FileSystem::base + "shaders/std/fragment-shader.glsl";
+  lightning_shader = new Shader{vertex_shader, fragment_shader};
+  lightning_shader->add("#define FLAG_BLINN_PHONG_SHADING \n");
+  std::tie(success, err_msg) = lightning_shader->compile();
+  if (!success) {
+    SDL_Log("Lightning shader compilation failed; %s", err_msg.c_str());
+  }
+  
+  /// Fullscreen quad in NDC
+  float quad[] = {
+    // positions        // texture Coords
+    -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+    -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+     1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
+     1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+  };
+  
+  /// SSAO setup
+  {
+    auto program = ssao_shader->gl_program;
+    glGenVertexArrays(1, &gl_ssao_vao);
+    glBindVertexArray(gl_ssao_vao);
+    
+    GLuint ssao_vbo;
+    glGenBuffers(1, &ssao_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, ssao_vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quad), &quad, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
+    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
+  }
+  
+  {
+    auto program = blur_shader->gl_program;
+    glGenVertexArrays(1, &gl_blur_vao);
+    glBindVertexArray(gl_blur_vao);
+    
+    GLuint blur_vbo;
+    glGenBuffers(1, &blur_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, blur_vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quad), &quad, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
+    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
+  }
+  
+  /// Rendering pass setup
+  {
+    auto program = lightning_shader->gl_program;
+    glGenVertexArrays(1, &gl_lightning_vao);
+    glBindVertexArray(gl_lightning_vao);
+    
+    GLuint gl_VBO;
+    glGenBuffers(1, &gl_VBO);
+    glBindBuffer(GL_ARRAY_BUFFER, gl_VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quad), &quad, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
+    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
+    
+    // Lights UBO
+    auto block_index = glGetUniformBlockIndex(program, "lights_block");
+    glBindBuffer(GL_UNIFORM_BUFFER, gl_light_uniform_buffer);
+    glBindBufferBase(GL_UNIFORM_BUFFER, block_index, gl_light_uniform_buffer);
+  }
 
   /// Camera
   const auto position  = Vec3<float>{0.0f, 20.0f, 0.0f};  // cam position
@@ -261,27 +326,30 @@ void Renderer::render(uint32_t delta) {
   for (auto &transform : transformations) { transform.update(delta); }
   lights[0].position = transformations[0].current_position; // FIXME: Transforms are not updating their Entities..
   
-  for (auto& batch : graphics_batches) {
-    std::vector<Mat4<float>> model_buffer{};
   
-    /// Geometry pass
-    {
-      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-      glEnable(GL_DEPTH_TEST); glDepthMask(GL_TRUE);
-      glEnable(GL_MULTISAMPLE);
-      glClearColor(0.8f, 0.5f, 0.5f, 1.0f);
+  /// Geometry pass
+  {
+    glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glEnable(GL_DEPTH_TEST);
+    glDepthMask(GL_TRUE);
+    glEnable(GL_MULTISAMPLE);
+    glClearColor(0.8f, 0.5f, 0.5f, 1.0f);
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    glFrontFace(GL_CCW);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Always update the depth buffer with the new values
+    for (auto &batch : graphics_batches) {
+      std::vector<Mat4<float>> model_buffer{};
       
+      auto program = depth_shader->gl_program;
       glBindVertexArray(batch.gl_depth_vao);
-      glUseProgram(depth_shader->gl_program);
-      glUniformMatrix4fv(batch.gl_depth_camera_view, 1, GL_FALSE, camera_view.data());
-
-      glEnable(GL_CULL_FACE);
-      glCullFace(GL_BACK);
-      glFrontFace(GL_CCW);
+      glUseProgram(program);
+      glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, camera_view.data());
       
       for (auto &component : batch.components) {
         component->update(); // Copy all graphics state
-      
+        
         Mat4<float> model{};
         model = model.translate(component->graphics_state.position);
         model = model.scale(component->graphics_state.scale);
@@ -289,78 +357,77 @@ void Renderer::render(uint32_t delta) {
       }
       glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_models_buffer_object);
       glBufferData(GL_ARRAY_BUFFER, model_buffer.size() * sizeof(Mat4<float>), model_buffer.data(), GL_DYNAMIC_DRAW);
-      glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
-      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Always update the depth buffer with the new values
       glDrawElementsInstanced(GL_TRIANGLES, batch.mesh.indices.size(), GL_UNSIGNED_INT, nullptr, model_buffer.size());
-  
-      glDisable(GL_DEPTH_TEST); glDepthMask(GL_FALSE);
-    }
-    
-    /// SSAO pass
-    {
-      auto program = ssao_shader->gl_program;
-      glBindVertexArray(batch.gl_ssao_vao);
-      glUseProgram(program);
-      glUniform1i(glGetUniformLocation(program, "noise_sampler"), gl_ssao_noise_texture_unit);
-      glUniform1i(glGetUniformLocation(program, "normal_sampler"), gl_normal_texture_unit);
-      glUniform3fv(glGetUniformLocation(program, "ssao_samples"), ssao_samples.size(), &ssao_samples[0].x);
-      glUniform1i(glGetUniformLocation(program, "num_ssao_samples"), ssao_num_samples);
-      glUniform1f(glGetUniformLocation(program, "ssao_kernel_radius"), ssao_kernel_radius);
-      glUniform1f(glGetUniformLocation(program, "ssao_power"), ssao_power);
-      glUniform1f(glGetUniformLocation(program, "ssao_bias"), ssao_bias);
-      glBindFramebuffer(GL_FRAMEBUFFER, gl_ssao_fbo);
-      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-      glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    }
-    
-    /// Blur pass
-    {
-      auto program = blur_shader->gl_program;
-      glBindVertexArray(batch.gl_blur_vao);
-      glUseProgram(program);
-      glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, camera_view.data());
-      glUniform1i(glGetUniformLocation(program, "input_sampler"), gl_ssao_texture_unit);
-      glUniform1i(glGetUniformLocation(program, "blur_size"), 2);
-      glUniform1f(glGetUniformLocation(program, "blur_factor"), ssao_blur_factor);
-      glBindFramebuffer(GL_FRAMEBUFFER, gl_blur_fbo);
-      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-      glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    }
-    
-    /// Remainder pass
-    {
-      glBindFramebuffer(GL_FRAMEBUFFER, 0); // Reset framebuffer to default
-      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Always update the depth buffer with the new values
-    
-      glBindVertexArray(batch.gl_VAO);
-      glUseProgram(batch.shader.gl_program);
-      glUniform3fv(batch.gl_camera_position, 1, (const GLfloat *) &camera->position);
-    
-      glEnable(GL_CULL_FACE);
-      glCullFace(GL_BACK);
-      glFrontFace(GL_CCW);
-    
-      /// Update Light data for the batch
-      glBindBuffer(GL_UNIFORM_BUFFER, gl_light_uniform_buffer);
-      glBufferData(GL_UNIFORM_BUFFER, sizeof(Light) * lights.size(), lights.data(), GL_DYNAMIC_DRAW);
-    
-      /// Update uniforms
-      glUniform1i(glGetUniformLocation(batch.shader.gl_program, "normal_sampler"), gl_normal_texture_unit);
-      glUniform1i(glGetUniformLocation(batch.shader.gl_program, "depth_sampler"), gl_depth_texture_unit);
-      if (ssao_blur_enabled) {
-        glUniform1i(glGetUniformLocation(batch.shader.gl_program, "ssao_sampler"), gl_blur_texture_unit);
-      } else {
-        glUniform1i(glGetUniformLocation(batch.shader.gl_program, "ssao_sampler"), gl_ssao_texture_unit);
-      }
-      glUniform1i(glGetUniformLocation(batch.shader.gl_program, "position_sampler"), gl_position_texture_unit);
-      glUniform1f(glGetUniformLocation(batch.shader.gl_program, "screen_width"), screen_width);
-      glUniform1f(glGetUniformLocation(batch.shader.gl_program, "screen_height"), screen_height);
-      glUniform1i(glGetUniformLocation(batch.shader.gl_program, "lightning_enabled"), lightning_enabled);
-    
-      glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
       /// Update render stats
       state.entities += model_buffer.size();
     }
+    glDisable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);
+  }
+  
+  /// SSAO pass
+  {
+    auto program = ssao_shader->gl_program;
+    glBindVertexArray(gl_ssao_vao);
+    glUseProgram(program);
+    glUniform1i(glGetUniformLocation(program, "noise_sampler"), gl_ssao_noise_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "normal_sampler"), gl_normal_texture_unit);
+    glUniform3fv(glGetUniformLocation(program, "ssao_samples"), ssao_samples.size(), &ssao_samples[0].x);
+    glUniform1i(glGetUniformLocation(program, "num_ssao_samples"), ssao_num_samples);
+    glUniform1f(glGetUniformLocation(program, "ssao_kernel_radius"), ssao_kernel_radius);
+    glUniform1f(glGetUniformLocation(program, "ssao_power"), ssao_power);
+    glUniform1f(glGetUniformLocation(program, "ssao_bias"), ssao_bias);
+    glBindFramebuffer(GL_FRAMEBUFFER, gl_ssao_fbo);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+  }
+
+  /// Blur pass
+  {
+    auto program = blur_shader->gl_program;
+    glBindVertexArray(gl_blur_vao);
+    glUseProgram(program);
+    glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, camera_view.data());
+    glUniform1i(glGetUniformLocation(program, "input_sampler"), gl_ssao_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "blur_size"), 2);
+    glUniform1f(glGetUniformLocation(program, "blur_factor"), ssao_blur_factor);
+    glBindFramebuffer(GL_FRAMEBUFFER, gl_blur_fbo);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+  }
+
+  /// Remainder pass
+  {
+    auto program = lightning_shader->gl_program;
+    glBindFramebuffer(GL_FRAMEBUFFER, 0); // Reset framebuffer to default
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Always update the depth buffer with the new values
+  
+    glBindVertexArray(gl_lightning_vao);
+    glUseProgram(program);
+    glUniform3fv(glGetUniformLocation(program, "camera_position"), 1, (const GLfloat *) &camera->position);
+  
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    glFrontFace(GL_CCW);
+  
+    /// Update Light data for the batch
+    glBindBuffer(GL_UNIFORM_BUFFER, gl_light_uniform_buffer);
+    glBufferData(GL_UNIFORM_BUFFER, sizeof(Light) * lights.size(), lights.data(), GL_DYNAMIC_DRAW);
+  
+    /// Update uniforms
+    glUniform1i(glGetUniformLocation(program, "normal_sampler"), gl_normal_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "depth_sampler"), gl_depth_texture_unit);
+    if (ssao_blur_enabled) {
+      glUniform1i(glGetUniformLocation(program, "ssao_sampler"), gl_blur_texture_unit);
+    } else {
+      glUniform1i(glGetUniformLocation(program, "ssao_sampler"), gl_ssao_texture_unit);
+    }
+    glUniform1i(glGetUniformLocation(program, "position_sampler"), gl_position_texture_unit);
+    glUniform1f(glGetUniformLocation(program, "screen_width"), screen_width);
+    glUniform1f(glGetUniformLocation(program, "screen_height"), screen_height);
+    glUniform1i(glGetUniformLocation(program, "lightning_enabled"), lightning_enabled);
+  
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
   }
   log_gl_error();
   state.graphic_batches = graphics_batches.size();
@@ -426,21 +493,11 @@ void Renderer::update_projection_matrix(float fov) {
 void Renderer::link_batch(GraphicsBatch& batch) {
   auto vertices = batch.mesh.to_floats();
   
-  /// Fullscreen quad in NDC
-  float quad[] = {
-    // positions        // texture Coords
-    -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
-    -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
-    1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
-    1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
-  };
-  
   /// Geometry pass setup
   {
     auto program = depth_shader->gl_program;
     glGenVertexArrays(1, &batch.gl_depth_vao);
     glBindVertexArray(batch.gl_depth_vao);
-    batch.gl_depth_camera_view = glGetUniformLocation(program, "camera_view");
     
     GLuint depth_vbo;
     glGenBuffers(1, &depth_vbo);
@@ -473,53 +530,6 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     
     glUseProgram(program); // Must use the program object before accessing uniforms!
     glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, projection_matrix.data());
-  }
-  
-  /// SSAO setup
-  {
-    auto program = ssao_shader->gl_program;
-    glGenVertexArrays(1, &batch.gl_ssao_vao);
-    glBindVertexArray(batch.gl_ssao_vao);
-    
-    GLuint ssao_vbo;
-    glGenBuffers(1, &ssao_vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, ssao_vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(quad), &quad, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
-    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
-  }
-  
-  {
-    auto program = blur_shader->gl_program;
-    glGenVertexArrays(1, &batch.gl_blur_vao);
-    glBindVertexArray(batch.gl_blur_vao);
-  
-    GLuint blur_vbo;
-    glGenBuffers(1, &blur_vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, blur_vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(quad), &quad, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
-    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
-  }
-  
-  /// Rendering pass setup
-  {
-    auto program = batch.shader.gl_program;
-    glGenVertexArrays(1, &batch.gl_VAO);
-    glBindVertexArray(batch.gl_VAO);
-    batch.gl_camera_position = glGetUniformLocation(program, "camera_position");
-    
-    GLuint gl_VBO;
-    glGenBuffers(1, &gl_VBO);
-    glBindBuffer(GL_ARRAY_BUFFER, gl_VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(quad), &quad, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
-    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
-    
-    // Lights UBO
-    auto block_index = glGetUniformBlockIndex(program, "lights_block");
-    glBindBuffer(GL_UNIFORM_BUFFER, gl_light_uniform_buffer);
-    glBindBufferBase(GL_UNIFORM_BUFFER, block_index, gl_light_uniform_buffer);
   }
 }
 

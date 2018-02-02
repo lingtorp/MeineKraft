@@ -70,7 +70,7 @@ public:
 private:
   Renderer();
   
-  /// Depth pass related
+  /// Geometry pass related
   Shader* depth_shader;
   uint32_t gl_depth_fbo;
   uint32_t gl_depth_texture;
@@ -93,6 +93,9 @@ private:
   uint32_t gl_blur_texture;
   uint32_t gl_blur_texture_unit;
   
+  /// Lightning pass related
+  Shader* lightning_shader;
+  
   /// Global buffers
   // Normals
   uint32_t gl_normal_texture;
@@ -101,8 +104,12 @@ private:
   uint32_t gl_position_texture;
   uint32_t gl_position_texture_unit;
   
+  uint32_t gl_lightning_vao;
+  uint32_t gl_blur_vao;
+  uint32_t gl_ssao_vao;
+  
   uint32_t gl_light_uniform_buffer;
-
+  
   std::vector<Transform> transformations;
 
   std::vector<GraphicsBatch> graphics_batches;

@@ -22,8 +22,7 @@ class RenderComponent;
 // TODO: Docs
 class GraphicsBatch {
 public:
-  explicit GraphicsBatch(ID mesh_id): mesh_id(mesh_id), components{}, mesh{},
-    gl_camera_view(0), gl_models_buffer_object(0), gl_VAO(0), id(0), diffuse_textures{}, layer_idxs{},
+  explicit GraphicsBatch(ID mesh_id): mesh_id(mesh_id), components{}, mesh{}, id(0), diffuse_textures{}, layer_idxs{},
     diffuse_textures_capacity(3) {};
   
   // FIXME: Handle size changes for texture buffer(s)
@@ -110,25 +109,7 @@ public:
   /// Depth pass variables
   uint32_t gl_depth_vao;
   uint32_t gl_depth_models_buffer_object;
-  uint32_t gl_depth_camera_view; // Shader dependable (depth_shader)
-  
-  /// SSAO pass variables
-  uint32_t gl_ssao_vao;
-  uint32_t gl_ssao_models_buffer_object;
-  
-  /// Blur pass variables
-  uint32_t gl_blur_vao;
-  uint32_t gl_blur_models_buffer_object;
-  
-  /// Rendering pass variables
-  uint32_t gl_VAO;
-  uint32_t gl_models_buffer_object;
-  
-  /// Shader dependables
-  uint32_t gl_camera_view;
-  uint32_t gl_camera_position;
-  uint32_t gl_diffuse_texture_layer_idx; // sampler layer index buffer
-  Shader shader;
+  Shader shader; // TODO: Remove
 };
 
 #endif // MEINEKRAFT_GRAPHICSBATCH_H
