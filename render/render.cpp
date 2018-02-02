@@ -479,8 +479,8 @@ void Renderer::update_projection_matrix(float fov) {
   float aspect = (float) width / (float) height;
   this->projection_matrix = gen_projection_matrix(1.0, 10.0, fov, aspect);
   glViewport(0, 0, width, height); // Update OpenGL viewport
-  GLint projection = glGetUniformLocation(depth_shader->gl_program, "projection");
-  glUniformMatrix4fv(projection, 1, GL_FALSE, projection_matrix.data());
+  glUseProgram(depth_shader->gl_program);
+  glUniformMatrix4fv(glGetUniformLocation(depth_shader->gl_program, "projection"), 1, GL_FALSE, projection_matrix.data());
   // TODO: Adjust all the pass textures sizes
 }
 
