@@ -326,15 +326,12 @@ void Renderer::render(uint32_t delta) {
   for (auto &transform : transformations) { transform.update(delta); }
   lights[0].position = transformations[0].current_position; // FIXME: Transforms are not updating their Entities..
   
-  
   /// Geometry pass
   {
     glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
     glDepthMask(GL_TRUE);
-    glEnable(GL_MULTISAMPLE);
-    glClearColor(0.8f, 0.5f, 0.5f, 1.0f);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
