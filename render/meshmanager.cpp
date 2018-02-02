@@ -88,8 +88,8 @@ MeshManager::load_mesh(std::string directory, std::string file) {
             }
         }
     }
-
-    meshes_loaded++;
+    
+    meshes_loaded++; // FIXME: Always returns the same mesh id; detroys the point of instanced rendering
     meshes[meshes_loaded] = mesh_info;
     return {meshes_loaded, texture_info};
 }
