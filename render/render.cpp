@@ -594,6 +594,7 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp, Shader shader) {
   /// Upload the texture to OpenGL
   glActiveTexture(batch.gl_diffuse_texture_unit);
   glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, batch.gl_diffuse_texture_array);
+  /* // GL_INVALID_OPERATION
   glTexSubImage3D(GL_TEXTURE_CUBE_MAP_ARRAY,
                   0,                     // Mipmap number
                   0, 0, g_state.diffuse_texture.layer_idx * 6, // xoffset, yoffset, zoffset = layer face
@@ -601,7 +602,7 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp, Shader shader) {
                   GL_RGB,                // format
                   GL_UNSIGNED_BYTE,      // type
                   texture.data);         // pointer to data
-
+  */
   batch.components.push_back(comp);
   graphics_batches.push_back(batch);
   batch.id = graphics_batches.size(); // TODO: Return real ID
