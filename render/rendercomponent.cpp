@@ -49,14 +49,10 @@ void RenderComponent::set_cube_map_texture(const std::vector<std::string>& faces
   graphics_state.diffuse_texture.resource = texture_resource;
   graphics_state.diffuse_texture.gl_texture_type = GL_TEXTURE_CUBE_MAP_ARRAY;
   graphics_state.diffuse_texture.used = true;
+  graphics_state.diffuse_texture.id = graphics_state.diffuse_texture.resource.to_hash();
 }
 
 /// RenderComponents are not supposed to be modified and only re-created
 void RenderComponent::did_attach_to_entity(Entity* entity) {
-  if (graphics_state.diffuse_texture.used) {
-    graphics_state.diffuse_texture.id = graphics_state.diffuse_texture.resource.to_hash();
-  }
-  
-  // Add to batch
-  graphics_state.batch_id = Renderer::instance().add_to_batch(this, Shader{"", ""});
+  Renderer::instance().add_to_batch(this);
 }
