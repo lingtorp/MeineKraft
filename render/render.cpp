@@ -548,45 +548,6 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp, Shader shader) {
   // FIXME: Shader unused
   auto mesh_id = comp->graphics_state.mesh_id;
   auto& g_state = comp->graphics_state;
-  for (auto& batch : graphics_batches) {
-    if (batch.mesh_id == mesh_id) {
-      batch.components.push_back(comp);
-      // TODO: Check if batch buffer is in use and initialized
-      for (const auto& id : batch.texture_ids) {
-        if (id == g_state.diffuse_texture.id) {
-          g_state.diffuse_texture.layer_idx = batch.layer_idxs[id];
-          return batch.id;
-        }
-      }
-      /// Expand texture buffer if needed
-      if (batch.diffuse_textures_count + 1 > batch.diffuse_textures_capacity) {
-        batch.expand_texture_buffer(&batch.gl_diffuse_texture_array, batch.gl_diffuse_texture_type);
-      }
-  
-      /// Load all the GState's textures
-      RawTexture texture = batch.load_textures(&comp->graphics_state);
-      texture_manager.insert(texture);
-      
-      /// Assign layer index to the latest the texture and increment
-      g_state.diffuse_texture.layer_idx = batch.diffuse_textures_count++;
-      /// Add to all the known texture ids in the batch
-      batch.texture_ids.push_back(g_state.diffuse_texture.id);
-      /// Update the mapping from texuture id to layer idx
-      batch.layer_idxs[g_state.diffuse_texture.id] = g_state.diffuse_texture.layer_idx;
-      
-      /// Upload the texture to OpenGL
-      glActiveTexture(batch.gl_diffuse_texture_unit);
-      glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, batch.gl_diffuse_texture_array);
-      glTexSubImage3D(GL_TEXTURE_CUBE_MAP_ARRAY,
-                      0,                     // Mipmap number
-                      0, 0, g_state.diffuse_texture.layer_idx * 6, // xoffset, yoffset, zoffset = layer face
-                      512, 512, 6,           // width, height, depth = faces
-                      GL_RGB,                // format
-                      GL_UNSIGNED_BYTE,      // type
-                      texture.data);         // pointer to data
-      return batch.id;
-    }
-  }
   
   GraphicsBatch batch{mesh_id};
   if (g_state.diffuse_texture.used) {
