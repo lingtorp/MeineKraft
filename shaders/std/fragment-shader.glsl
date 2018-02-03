@@ -4,6 +4,7 @@ uniform float screen_height;
 uniform sampler2D normal_sampler;
 uniform sampler2D depth_sampler;
 uniform sampler2D position_sampler;
+uniform sampler2D diffuse_sampler;
 
 out vec4 outColor; // Defaults to zero when the frag shader only has 1 out variable
 
@@ -70,4 +71,6 @@ void main() {
     if (!lightning_enabled) {
       outColor = vec4(vec3(ambient_occlusion), 1.0);
     }
+
+    outColor = texture(diffuse_sampler, frag_coord).rgba;
 }
