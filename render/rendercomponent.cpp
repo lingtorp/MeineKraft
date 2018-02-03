@@ -25,6 +25,9 @@ void RenderComponent::set_mesh(const std::string& directory, const std::string& 
         graphics_state.diffuse_texture.resource = TextureResource{texture_file};
         graphics_state.diffuse_texture.gl_texture_type = GL_TEXTURE_2D_ARRAY; // FIXME: Assumes texture format
         graphics_state.diffuse_texture.used = true;
+        graphics_state.diffuse_texture.id = graphics_state.diffuse_texture.resource.to_hash();
+        break;
+      case Texture::Type::Specular:
         break;
       default:
         exit(1);
