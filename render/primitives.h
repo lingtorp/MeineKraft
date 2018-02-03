@@ -215,14 +215,11 @@ typedef uint64_t ID;
 */
 struct GraphicsState {
   Vec3<float> position;
-  Vec3<float> rotation;
   float scale;
   Texture diffuse_texture;
   Vec3<float> center;
   double radius;
   ID mesh_id;
-  ID batch_id;
-  bool shading;
 };
 
 /// Represents the state of the Render, used for ImGUI debug panes

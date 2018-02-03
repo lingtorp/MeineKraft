@@ -8,10 +8,6 @@
 /// Opaque ID type used to reference resources throughout the engine
 typedef uint64_t ID;
 
-enum class FileExtension {
-  png, jpg, unknown
-};
-
 struct TextureResource {
   TextureResource() = default;
   std::vector<std::string> files;
@@ -34,15 +30,9 @@ struct Texture {
   
   /// Indicates that this should be loaded by the Renderer and is used by the GState
   bool used;
-  
-  /// OpenCL texture name from glGenTexture
-  uint32_t gl_texture;
 
   /// OpenGL texture type; CUBE_MAP, CUBE_MAP_ARRAY, TEXTURE_2D, etc
   uint32_t gl_texture_type;
-
-  /// OpenGL texture location in shader from glUniformLocation
-  uint32_t gl_texture_location;
   
   /// Layer index for the textures sampler type
   uint32_t layer_idx;
