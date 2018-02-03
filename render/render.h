@@ -103,9 +103,9 @@ private:
   // Positions
   uint32_t gl_position_texture;
   uint32_t gl_position_texture_unit;
-  // Diffuse
-  uint32_t gl_diffuse_texture;
-  uint32_t gl_diffuse_texture_unit;
+  // Albedo
+  uint32_t gl_albedo_texture;
+  uint32_t gl_albedo_texture_unit;
   
   uint32_t gl_lightning_vao;
   uint32_t gl_blur_vao;

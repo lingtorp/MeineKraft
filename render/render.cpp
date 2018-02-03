@@ -120,14 +120,14 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, gl_position_texture, 0);
   
   // Global diffuse + specular (albedo) buffer
-  gl_diffuse_texture_unit = max_texture_units - 8;
-  glActiveTexture(GL_TEXTURE0 + gl_diffuse_texture_unit);
-  glGenTextures(1, &gl_diffuse_texture);
-  glBindTexture(GL_TEXTURE_2D, gl_diffuse_texture);
+  gl_albedo_texture_unit = max_texture_units - 8;
+  glActiveTexture(GL_TEXTURE0 + gl_albedo_texture_unit);
+  glGenTextures(1, &gl_albedo_texture);
+  glBindTexture(GL_TEXTURE_2D, gl_albedo_texture);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, screen_width, screen_height, 0, GL_RGBA, GL_FLOAT, nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, gl_diffuse_texture, 0);
+  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, gl_albedo_texture, 0);
   
   uint32_t depth_attachments[3] = { GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT2 };
   glDrawBuffers(std::size(depth_attachments), depth_attachments);
@@ -436,7 +436,7 @@ void Renderer::render(uint32_t delta) {
     glUniform1f(glGetUniformLocation(program, "screen_width"), screen_width);
     glUniform1f(glGetUniformLocation(program, "screen_height"), screen_height);
     glUniform1i(glGetUniformLocation(program, "lightning_enabled"), lightning_enabled);
-    glUniform1i(glGetUniformLocation(program, "diffuse_sampler"), gl_diffuse_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "diffuse_sampler"), gl_albedo_texture_unit);
   
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
   }
