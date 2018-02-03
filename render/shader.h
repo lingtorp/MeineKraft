@@ -28,8 +28,6 @@ public:
   std::string vertex_shader_src;
   std::string fragment_shader_src;
 #endif
-  
-  uint32_t get_uniform_location(Texture::Type type);
 
 private:
   uint32_t vertex_shader;
