@@ -30,7 +30,7 @@ public:
   void init_buffer(uint32_t* gl_buffer, uint32_t gl_buffer_type, uint32_t buffer_size) {
     // FIXME: Assumes OpenGL texture type
     glGenTextures(1, gl_buffer); // FIXME: OpenGL error 1280 (0x500) here in this function
-    glActiveTexture(gl_diffuse_texture_unit);
+    glActiveTexture(GL_TEXTURE0 + gl_diffuse_texture_unit);
     glBindTexture(gl_buffer_type, *gl_buffer);
     // FIXME: Texture information is assumed here
     auto layers_faces = 1 * buffer_size;
@@ -44,7 +44,7 @@ public:
     /// Allocate new memory
     uint32_t gl_new_texture_array;
     glGenTextures(1, &gl_new_texture_array);
-    glActiveTexture(gl_diffuse_texture_unit);
+    glActiveTexture(GL_TEXTURE0 + gl_diffuse_texture_unit);
     glBindTexture(gl_buffer_type, gl_new_texture_array);
     // # of new textures to accommodate
     auto new_textures_capacity = (uint32_t) std::ceil(diffuse_textures_capacity * texture_array_growth_factor);
@@ -104,7 +104,7 @@ public:
   
   uint32_t gl_diffuse_texture_array;
   uint32_t gl_diffuse_texture_type; // CUBE_MAP_ARRAY, 2D_TEXTURE_ARRAY, etc
-  uint32_t gl_diffuse_texture_unit = GL_TEXTURE0 + 11;
+  uint32_t gl_diffuse_texture_unit = 11;
   
   float texture_array_growth_factor = 1.5; // new_buf_size = ceil(old_buf_size * growth_factor)
   

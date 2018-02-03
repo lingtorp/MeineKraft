@@ -353,9 +353,8 @@ void Renderer::render(uint32_t delta) {
       glBindVertexArray(batch.gl_depth_vao);
       glUseProgram(program);
       glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, camera_view.data());
-      // Setup diffuse texture
-      auto uni = glGetUniformLocation(program, "diffuse");
-      glUniform1i(uni, 11);
+      // Setup textures
+      glUniform1i(glGetUniformLocation(program, "diffuse"), batch.gl_diffuse_texture_unit);
       
       for (auto &component : batch.components) {
         component->update(); // Copy all graphics state
@@ -608,7 +607,7 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp, Shader shader) {
   /// Load all the GState's textures
   RawTexture texture = batch.load_textures(&comp->graphics_state);
   /// Upload the texture to OpenGL
-  glActiveTexture(batch.gl_diffuse_texture_unit);
+  glActiveTexture(GL_TEXTURE0 + batch.gl_diffuse_texture_unit);
   glBindTexture(GL_TEXTURE_2D_ARRAY, batch.gl_diffuse_texture_array);
   glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
                   0,                     // Mipmap number
