@@ -119,7 +119,17 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, gl_position_texture, 0);
   
-  uint32_t depth_attachments[2] = { GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT0 };
+  // Global diffuse + specular (albedo) buffer
+  gl_albedo_texture_unit = max_texture_units - 8;
+  glActiveTexture(GL_TEXTURE0 + gl_albedo_texture_unit);
+  glGenTextures(1, &gl_albedo_texture);
+  glBindTexture(GL_TEXTURE_2D, gl_albedo_texture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, screen_width, screen_height, 0, GL_RGBA, GL_FLOAT, nullptr);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, gl_albedo_texture, 0);
+  
+  uint32_t depth_attachments[3] = { GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT2 };
   glDrawBuffers(std::size(depth_attachments), depth_attachments);
   
   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
@@ -280,9 +290,9 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
     glGenVertexArrays(1, &gl_lightning_vao);
     glBindVertexArray(gl_lightning_vao);
     
-    GLuint gl_VBO;
-    glGenBuffers(1, &gl_VBO);
-    glBindBuffer(GL_ARRAY_BUFFER, gl_VBO);
+    GLuint gl_vbo;
+    glGenBuffers(1, &gl_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, gl_vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(quad), &quad, GL_STATIC_DRAW);
     glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
     glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
@@ -343,6 +353,8 @@ void Renderer::render(uint32_t delta) {
       glBindVertexArray(batch.gl_depth_vao);
       glUseProgram(program);
       glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, camera_view.data());
+      // Setup textures
+      glUniform1i(glGetUniformLocation(program, "diffuse"), batch.gl_diffuse_texture_unit);
       
       for (auto &component : batch.components) {
         component->update(); // Copy all graphics state
@@ -423,6 +435,7 @@ void Renderer::render(uint32_t delta) {
     glUniform1f(glGetUniformLocation(program, "screen_width"), screen_width);
     glUniform1f(glGetUniformLocation(program, "screen_height"), screen_height);
     glUniform1i(glGetUniformLocation(program, "lightning_enabled"), lightning_enabled);
+    glUniform1i(glGetUniformLocation(program, "diffuse_sampler"), gl_albedo_texture_unit);
   
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
   }
@@ -506,6 +519,10 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glVertexAttribPointer(normal_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, normal));
     glEnableVertexAttribArray(normal_attrib);
     
+    auto texcoord_attrib = glGetAttribLocation(program, "texcoord");
+    glVertexAttribPointer(texcoord_attrib, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, texCoord));
+    glEnableVertexAttribArray(texcoord_attrib);
+    
     // Buffer for all the model matrices
     glGenBuffers(1, &batch.gl_depth_models_buffer_object);
     glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_models_buffer_object);
@@ -531,53 +548,13 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp, Shader shader) {
   // FIXME: Shader unused
   auto mesh_id = comp->graphics_state.mesh_id;
   auto& g_state = comp->graphics_state;
-  for (auto& batch : graphics_batches) {
-    if (batch.mesh_id == mesh_id) {
-      batch.components.push_back(comp);
-      // TODO: Check if batch buffer is in use and initialized
-      for (const auto& id : batch.texture_ids) {
-        if (id == g_state.diffuse_texture.id) {
-          g_state.diffuse_texture.layer_idx = batch.layer_idxs[id];
-          return batch.id;
-        }
-      }
-      /// Expand texture buffer if needed
-      if (batch.diffuse_textures_count + 1 > batch.diffuse_textures_capacity) {
-        batch.expand_texture_buffer(&batch.gl_diffuse_texture_array, batch.gl_diffuse_texture_type);
-      }
-  
-      /// Load all the GState's textures
-      RawTexture texture = batch.load_textures(&comp->graphics_state);
-      texture_manager.insert(texture);
-      
-      /// Assign layer index to the latest the texture and increment
-      g_state.diffuse_texture.layer_idx = batch.diffuse_textures_count++;
-      /// Add to all the known texture ids in the batch
-      batch.texture_ids.push_back(g_state.diffuse_texture.id);
-      /// Update the mapping from texuture id to layer idx
-      batch.layer_idxs[g_state.diffuse_texture.id] = g_state.diffuse_texture.layer_idx;
-      
-      /// Upload the texture to OpenGL
-      glActiveTexture(batch.gl_diffuse_texture_unit);
-      glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, batch.gl_diffuse_texture_array);
-      glTexSubImage3D(GL_TEXTURE_CUBE_MAP_ARRAY,
-                      0,                     // Mipmap number
-                      0, 0, g_state.diffuse_texture.layer_idx * 6, // xoffset, yoffset, zoffset = layer face
-                      512, 512, 6,           // width, height, depth = faces
-                      GL_RGB,                // format
-                      GL_UNSIGNED_BYTE,      // type
-                      texture.data);         // pointer to data
-      return batch.id;
-    }
-  }
   
   GraphicsBatch batch{mesh_id};
-  if (comp->graphics_state.diffuse_texture.used) {
+  if (g_state.diffuse_texture.used) {
     auto buffer_size = 3; // # textures to hold
     batch.init_buffer(&batch.gl_diffuse_texture_array, g_state.diffuse_texture.gl_texture_type, buffer_size);
-    batch.diffuse_textures_used = true;
   }
-  batch.gl_diffuse_texture_type = comp->graphics_state.diffuse_texture.gl_texture_type;
+  batch.gl_diffuse_texture_type = g_state.diffuse_texture.gl_texture_type;
   batch.mesh = mesh_manager->mesh_from_id(mesh_id);
   link_batch(batch);
   
@@ -590,22 +567,20 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp, Shader shader) {
   
   /// Load all the GState's textures
   RawTexture texture = batch.load_textures(&comp->graphics_state);
-  texture_manager.insert(texture);
   /// Upload the texture to OpenGL
-  glActiveTexture(batch.gl_diffuse_texture_unit);
-  glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, batch.gl_diffuse_texture_array);
-  /* // GL_INVALID_OPERATION
-  glTexSubImage3D(GL_TEXTURE_CUBE_MAP_ARRAY,
+  glActiveTexture(GL_TEXTURE0 + batch.gl_diffuse_texture_unit);
+  glBindTexture(GL_TEXTURE_2D_ARRAY, batch.gl_diffuse_texture_array);
+  glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
                   0,                     // Mipmap number
-                  0, 0, g_state.diffuse_texture.layer_idx * 6, // xoffset, yoffset, zoffset = layer face
-                  512, 512, 6,           // width, height, depth = faces
+                  0, 0, g_state.diffuse_texture.layer_idx * 1, // xoffset, yoffset, zoffset = layer face
+                  texture.width, texture.height, 1,           // width, height, depth = faces
                   GL_RGB,                // format
                   GL_UNSIGNED_BYTE,      // type
                   texture.data);         // pointer to data
-  */
+  
   batch.components.push_back(comp);
   graphics_batches.push_back(batch);
-  batch.id = graphics_batches.size(); // TODO: Return real ID
   
+  batch.id = graphics_batches.size(); // TODO: Return real ID
   return batch.id;
 }

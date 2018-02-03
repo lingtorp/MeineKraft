@@ -26,7 +26,7 @@ MeshManager::load_mesh(std::string directory, std::string file) {
     Assimp::Importer importer;
     auto scene = importer.ReadFile(mesh_info.loaded_from_filepath.c_str(), aiProcess_Triangulate | aiProcess_JoinIdenticalVertices);
 
-    if (scene == nullptr) {
+    if (scene == nullptr || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) {
         SDL_Log("Error: %s", importer.GetErrorString());
         return {0, {}};
     }
@@ -38,7 +38,7 @@ MeshManager::load_mesh(std::string directory, std::string file) {
 
             aiString material_name;
             material->Get(AI_MATKEY_NAME, material_name);
-            SDL_Log("%s", material_name.C_Str());
+            SDL_Log("Material name: %s", material_name.C_Str());
 
             aiString tex_filepath;
             if (material->GetTexture(aiTextureType_DIFFUSE, 0, &tex_filepath) == AI_SUCCESS) {
@@ -47,6 +47,7 @@ MeshManager::load_mesh(std::string directory, std::string file) {
                 texture_filepath.insert(0, directory);
                 texture_info.push_back({Texture::Type::Diffuse, texture_filepath});
             }
+            // TODO: Load other texture types
         }
     }
 
@@ -55,34 +56,34 @@ MeshManager::load_mesh(std::string directory, std::string file) {
         for (size_t i = 0; i < scene->mNumMeshes; i++) {
             auto mesh = scene->mMeshes[i];
 
-            for (size_t i = 0; i < mesh->mNumVertices; i++) {
+            for (size_t j = 0; j < mesh->mNumVertices; j++) {
                 Vertex<float> vertex;
 
-                auto pos = mesh->mVertices[i];
+                auto pos = mesh->mVertices[j];
                 vertex.position = {pos.x, pos.y, pos.z};
 
                 if (mesh->HasTextureCoords(0)) {
-                    auto texCoord = mesh->mTextureCoords[0][i];
+                    auto texCoord = mesh->mTextureCoords[0][j];
                     // FIXME: Assumes the model file is a .obj file with an inverted y-axis
                     vertex.texCoord = {texCoord.x, -texCoord.y};
                 }
 
                 if (mesh->HasNormals()) {
-                    auto normal = mesh->mNormals[i];
+                    auto normal = mesh->mNormals[j];
                     vertex.normal = {normal.x, normal.y, normal.z};
                 }
 
                 mesh_info.mesh.vertices.push_back(vertex);
             }
 
-            for (size_t i = 0; i < mesh->mNumFaces; i++) {
-                auto face = &mesh->mFaces[i];
+            for (size_t j = 0; j < mesh->mNumFaces; j++) {
+                auto face = &mesh->mFaces[j];
                 if (face->mNumIndices != 3) {
                     SDL_Log("Not 3 vertices per face.");
                     return {0, {}};
                 }
-                for (size_t j = 0; j < 3; j++) {
-                    auto index = face->mIndices[j];
+                for (size_t k = 0; k < 3; k++) {
+                    auto index = face->mIndices[k];
                     mesh_info.mesh.indices.push_back(index);
                 }
             }

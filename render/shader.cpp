@@ -165,20 +165,6 @@ void Shader::add(std::string define) {
   defines.insert(define);
 }
 
-uint32_t Shader::get_uniform_location(Texture::Type type) {
-  std::string uniform_location;
-  switch (type) {
-    case Texture::Type::Diffuse:
-      uniform_location = "diffuse_sampler";
-    default:
-      break;
-  }
-  glUseProgram(gl_program);
-  auto res = glGetUniformLocation(gl_program, uniform_location.c_str());
-  if (res < 0) { SDL_Log("glGetUniformLocation failed"); log_gl_error(); return 0; }
-  return res;
-}
-
 bool Shader::operator==(const Shader &rhs) {
  return defines == rhs.defines;
 }

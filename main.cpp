@@ -37,11 +37,12 @@ int main() {
   Renderer& renderer = Renderer::instance();
   renderer.window = window;
   renderer.update_projection_matrix(70);
+  
   renderer.camera->position = {-0.62f, 17.0f, 2.6f};
   renderer.screen_width = HD.width;
   renderer.screen_height = HD.height;
   
-  Model bunny{FileSystem::base, "stanford-bunny.obj"};
+  Model bunny{FileSystem::base + "iron-man/", "Iron_Man.obj"};
   bunny.position = {0, 15, 0};
   
   bool toggle_mouse_capture = true;
