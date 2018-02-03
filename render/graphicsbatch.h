@@ -63,12 +63,12 @@ public:
     if (files.empty()) { return texture; }
     
     auto& file = files.front();
-    SDL_Surface* image = IMG_Load(file.c_str());
+    SDL_Surface* image = IMG_Load(file.c_str()); // FIXME: NULL? Handle error with IMG_GetError
     texture.width  = static_cast<uint32_t>(image->w);
     texture.height = static_cast<uint32_t>(image->h);
     auto bytes_per_pixel = image->format->BytesPerPixel;
     SDL_Log("Bytes per pixel: %i", bytes_per_pixel);
-    SDL_FreeSurface(image); // Wasteful
+    SDL_FreeSurface(image); // FIXME: Wasteful
   
     // Assumes that the files are the same size, in right order, same encoding, etc
     texture.size = bytes_per_pixel * texture.width * texture.height;
