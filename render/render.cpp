@@ -549,33 +549,35 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
   auto& g_state = comp->graphics_state;
   
   GraphicsBatch batch{mesh_id};
-  if (g_state.diffuse_texture.used) {
-    auto buffer_size = 3; // # textures to hold
-    batch.init_buffer(&batch.gl_diffuse_texture_array, g_state.diffuse_texture.gl_texture_type, buffer_size);
-  }
-  batch.gl_diffuse_texture_type = g_state.diffuse_texture.gl_texture_type;
   batch.mesh = mesh_manager->mesh_from_id(mesh_id);
   link_batch(batch);
   
-  /// Assign layer index to the latest the texture and increment
-  g_state.diffuse_texture.layer_idx = batch.diffuse_textures_count++;
-  /// Add to all the known texture ids in the batch
-  batch.texture_ids.push_back(g_state.diffuse_texture.id);
-  /// Update the mapping from texture id to layer idx
-  batch.layer_idxs[g_state.diffuse_texture.id] = g_state.diffuse_texture.layer_idx;
+  if (g_state.diffuse_texture.used) {
+    auto buffer_size = 3; // # textures to hold
+    batch.init_buffer(&batch.gl_diffuse_texture_array, g_state.diffuse_texture.gl_texture_type, buffer_size);
+    batch.gl_diffuse_texture_type = g_state.diffuse_texture.gl_texture_type;
+    batch.mesh = mesh_manager->mesh_from_id(mesh_id);
   
-  /// Load all the GState's textures
-  RawTexture texture = batch.load_textures(&comp->graphics_state);
-  /// Upload the texture to OpenGL
-  glActiveTexture(GL_TEXTURE0 + batch.gl_diffuse_texture_unit);
-  glBindTexture(GL_TEXTURE_2D_ARRAY, batch.gl_diffuse_texture_array);
-  glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
-                  0,                     // Mipmap number
-                  0, 0, g_state.diffuse_texture.layer_idx * 1, // xoffset, yoffset, zoffset = layer face
-                  texture.width, texture.height, 1,           // width, height, depth = faces
-                  GL_RGB,                // format
-                  GL_UNSIGNED_BYTE,      // type
-                  texture.data);         // pointer to data
+    /// Assign layer index to the latest the texture and increment
+    g_state.diffuse_texture.layer_idx = batch.diffuse_textures_count++;
+    /// Add to all the known texture ids in the batch
+    batch.texture_ids.push_back(g_state.diffuse_texture.id);
+    /// Update the mapping from texture id to layer idx
+    batch.layer_idxs[g_state.diffuse_texture.id] = g_state.diffuse_texture.layer_idx;
+  
+    /// Load all the GState's textures
+    RawTexture texture = batch.load_textures(&comp->graphics_state);
+    /// Upload the texture to OpenGL
+    glActiveTexture(GL_TEXTURE0 + batch.gl_diffuse_texture_unit);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, batch.gl_diffuse_texture_array);
+    glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
+                    0,                     // Mipmap number
+                    0, 0, g_state.diffuse_texture.layer_idx * 1, // xoffset, yoffset, zoffset = layer face
+                    texture.width, texture.height, 1,           // width, height, depth = faces
+                    GL_RGB,                // format
+                    GL_UNSIGNED_BYTE,      // type
+                    texture.data);         // pointer to data
+  }
   
   batch.components.push_back(comp);
   graphics_batches.push_back(batch);
