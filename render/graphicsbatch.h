@@ -28,17 +28,19 @@ public:
   // FIXME: Handle size changes for texture buffer(s)
   
   void init_buffer(uint32_t* gl_buffer, uint32_t gl_buffer_type, uint32_t buffer_size) {
+    // FIXME: Assumes OpenGL texture type
     glGenTextures(1, gl_buffer); // FIXME: OpenGL error 1280 (0x500) here in this function
     glActiveTexture(gl_diffuse_texture_unit);
     glBindTexture(gl_buffer_type, *gl_buffer);
     // FIXME: Texture information is assumed here
-    auto layers_faces = 6 * buffer_size; // FIXME: Assumes cube map ..
-    glTexStorage3D(gl_buffer_type, 1, GL_RGB8, 512, 512, layers_faces);
+    auto layers_faces = 1 * buffer_size;
+    glTexStorage3D(gl_buffer_type, 1, GL_RGB8, 2048, 2048, layers_faces);
     diffuse_textures_count = 0;
   }
 
   /// GL buffer type or in GL-speak target rather than type
   void expand_texture_buffer(uint32_t* gl_buffer, uint32_t gl_buffer_type) {
+    // TODO: Not texture aware
     /// Allocate new memory
     uint32_t gl_new_texture_array;
     glGenTextures(1, &gl_new_texture_array);
@@ -72,7 +74,7 @@ public:
   
     // Assumes that the files are the same size, in right order, same encoding, etc
     texture.size = bytes_per_pixel * texture.width * texture.height;
-    texture.data = static_cast<uint8_t *>(std::calloc(1, texture.size * files.size()));
+    texture.data = static_cast<uint8_t*>(std::calloc(1, texture.size * files.size()));
     // Load all the files into a linear memory region
     for (size_t i = 0; i < files.size(); i++) {
       image = IMG_Load(files[i].c_str());
@@ -94,13 +96,13 @@ public:
   std::vector<ID> texture_ids;
   std::map<ID, uint32_t> layer_idxs;
   // Diffuse texture buffer
-  bool diffuse_textures_used;
   std::vector<ID> diffuse_textures;
   uint32_t diffuse_textures_count;    // # texture currently in the GL buffer
   uint32_t diffuse_textures_capacity; // # textures the GL buffer can hold
+  
   uint32_t gl_diffuse_texture_array;
   uint32_t gl_diffuse_texture_type; // CUBE_MAP_ARRAY, 2D_TEXTURE_ARRAY, etc
-  uint32_t gl_diffuse_texture_unit = GL_TEXTURE0;
+  uint32_t gl_diffuse_texture_unit = GL_TEXTURE0 + 11;
   
   float texture_array_growth_factor = 1.5; // new_buf_size = ceil(old_buf_size * growth_factor)
   
