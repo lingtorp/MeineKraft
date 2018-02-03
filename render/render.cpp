@@ -544,8 +544,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
   }
 }
 
-uint64_t Renderer::add_to_batch(RenderComponent* comp, Shader shader) {
-  // FIXME: Shader unused
+uint64_t Renderer::add_to_batch(RenderComponent* comp) {
   auto mesh_id = comp->graphics_state.mesh_id;
   auto& g_state = comp->graphics_state;
   

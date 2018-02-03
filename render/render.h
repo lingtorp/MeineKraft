@@ -42,7 +42,7 @@ public:
   void render(uint32_t delta);
   
   /// Adds the RenderComponent to a internal batch
-  uint64_t add_to_batch(RenderComponent* comp, Shader shader);
+  uint64_t add_to_batch(RenderComponent* comp);
 
   /// Updates all the shaders projection matrices in order to support resizing of the window
   void update_projection_matrix(float fov);
