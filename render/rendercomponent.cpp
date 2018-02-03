@@ -7,9 +7,7 @@
 #include "meshmanager.h"
 #include "../util/filesystem.h"
 
-RenderComponent::RenderComponent(Entity* entity): entity(entity), graphics_state{} {
-  graphics_state.shading = true;
-}
+RenderComponent::RenderComponent(Entity* entity): entity(entity), graphics_state{} {}
 
 void RenderComponent::set_mesh(const std::string& directory, const std::string& file) {
   // TODO: Remove from previous batch - since we are changing mesh and thus geo. data
@@ -62,7 +60,3 @@ void RenderComponent::did_attach_to_entity(Entity* entity) {
   // Add to batch
   graphics_state.batch_id = Renderer::instance().add_to_batch(this, Shader{"", ""});
 }
-
-void RenderComponent::enable_shading() {
-  graphics_state.shading = true;
-};
