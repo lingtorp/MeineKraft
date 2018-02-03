@@ -104,7 +104,7 @@ public:
   
   uint32_t gl_diffuse_texture_array;
   uint32_t gl_diffuse_texture_type; // CUBE_MAP_ARRAY, 2D_TEXTURE_ARRAY, etc
-  uint32_t gl_diffuse_texture_unit = 11;
+  uint32_t gl_diffuse_texture_unit = 11; // FIXME: Hard coded
   
   float texture_array_growth_factor = 1.5; // new_buf_size = ceil(old_buf_size * growth_factor)
   
