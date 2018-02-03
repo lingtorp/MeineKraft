@@ -69,7 +69,6 @@ public:
     texture.width  = static_cast<uint32_t>(image->w);
     texture.height = static_cast<uint32_t>(image->h);
     auto bytes_per_pixel = image->format->BytesPerPixel;
-    SDL_Log("Bytes per pixel: %i", bytes_per_pixel);
     SDL_FreeSurface(image); // FIXME: Wasteful
   
     // Assumes that the files are the same size, in right order, same encoding, etc
@@ -78,7 +77,10 @@ public:
     // Load all the files into a linear memory region
     for (size_t i = 0; i < files.size(); i++) {
       image = IMG_Load(files[i].c_str());
-      std::memcpy(texture.data + texture.size * i, image->pixels, texture.size);
+      // Convert it to OpenGL friendly format
+      auto desired_img_format = bytes_per_pixel == 3 ? SDL_PIXELFORMAT_RGB24 : SDL_PIXELFORMAT_RGBA32;
+      SDL_Surface* conv = SDL_ConvertSurfaceFormat(image, desired_img_format, 0);
+      std::memcpy(texture.data + texture.size * i, conv->pixels, texture.size);
       SDL_FreeSurface(image);
     }
     
