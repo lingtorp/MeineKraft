@@ -52,10 +52,6 @@ void main() {
     vec3 eye = normalize(camera_position - position);
     for (int i = 0; i < MAX_NUM_LIGHTS; i++) {
         Light light = lights[i];
-        float ambient_intensity  = light.light_intensity.x;
-        float diffuse_intensity  = light.light_intensity.y;
-        float specular_intensity = light.light_intensity.z;
-        vec3 direction = normalize(lights[i].position - position);
         vec4 light_pos_view_space = camera_view * vec4(light.position, 1.0); // FIXME: Converts to view space ...
         vec3 light_pos = light_pos_view_space.xyz;
 
