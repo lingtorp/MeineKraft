@@ -49,23 +49,25 @@ void main() {
 
 #ifdef FLAG_BLINN_PHONG_SHADING
     vec3 total_light = vec3(0.0, 0.0, 0.0);
-    vec3 eye = normalize(camera_position - position);
+    float specular_power = 32; // FIXME: Uniform
     for (int i = 0; i < MAX_NUM_LIGHTS; i++) {
         Light light = lights[i];
         vec4 light_pos_view_space = camera_view * vec4(light.position, 1.0); // FIXME: Converts to view space ...
         vec3 light_pos = light_pos_view_space.xyz;
 
-        vec3 diffuse_light = light.color.xyz * max(dot(normal, direction), 0.0) * diffuse_intensity;
+        float ambient = 1.0 - ambient_occlusion;
 
-        vec3 reflection = 2 * dot(direction, normal) * normal - direction;
-        vec3 specular_light = vec3(dot(reflection, normalize(eye))) * specular_intensity;
+        vec3 direction = normalize(light_pos - position);
+        float diffuse = max(dot(normal, direction), 0.0);
 
-        total_light += diffuse_light;
-        total_light += specular_light;
-        total_light += ambient_intensity;
+        vec3 reflection = reflect(-direction, normal);
+        vec3 eye = normalize(-position); // View space eye = (0, 0, 0): A to B = 0 to B = -B
+        float specular = pow(max(dot(reflection, eye), 0.0), specular_power);
+
+        total_light = (ambient + diffuse + specular) * light.color.xyz;
     }
-   default_light = vec4(clamp(total_light, 0.0, 1.0), 1.0);
-   outColor = default_light;
+   default_light = vec4(total_light, 1.0);
+   outColor *= default_light;
 #endif
 
     if (!lightning_enabled) {
