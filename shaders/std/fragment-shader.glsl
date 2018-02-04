@@ -6,6 +6,8 @@ uniform sampler2D depth_sampler;
 uniform sampler2D position_sampler;
 uniform sampler2D diffuse_sampler;
 
+uniform mat4 camera_view;
+
 out vec4 outColor; // Defaults to zero when the frag shader only has 1 out variable
 
 /// Lights
@@ -54,6 +56,8 @@ void main() {
         float diffuse_intensity  = light.light_intensity.y;
         float specular_intensity = light.light_intensity.z;
         vec3 direction = normalize(lights[i].position - position);
+        vec4 light_pos_view_space = camera_view * vec4(light.position, 1.0); // FIXME: Converts to view space ...
+        vec3 light_pos = light_pos_view_space.xyz;
 
         vec3 diffuse_light = light.color.xyz * max(dot(normal, direction), 0.0) * diffuse_intensity;
 

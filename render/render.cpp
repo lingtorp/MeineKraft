@@ -414,7 +414,8 @@ void Renderer::render(uint32_t delta) {
   
     glBindVertexArray(gl_lightning_vao);
     glUseProgram(program);
-    glUniform3fv(glGetUniformLocation(program, "camera_position"), 1, (const GLfloat *) &camera->position);
+  
+    glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, camera_view.data());
   
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
