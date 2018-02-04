@@ -45,6 +45,8 @@ void main() {
     ambient_occlusion = texture(ssao_sampler, frag_coord.xy).r;
 #endif
 
+    outColor = texture(diffuse_sampler, frag_coord).rgba;
+
 #ifdef FLAG_BLINN_PHONG_SHADING
     vec3 total_light = vec3(0.0, 0.0, 0.0);
     vec3 eye = normalize(camera_position - position);
@@ -69,6 +71,4 @@ void main() {
     if (!lightning_enabled) {
       outColor = vec4(vec3(ambient_occlusion), 1.0);
     }
-
-    outColor = texture(diffuse_sampler, frag_coord).rgba;
 }
