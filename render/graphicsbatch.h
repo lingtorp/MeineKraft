@@ -64,8 +64,9 @@ public:
   ID id;
   
   /// Textures
-  std::vector<ID> texture_ids;
+  std::vector<ID> texture_ids; // FIXME: Used?
   std::map<ID, uint32_t> layer_idxs;
+  float texture_array_growth_factor = 1.5; // new_buf_size = ceil(old_buf_size * growth_factor)
   // Diffuse texture buffer
   std::vector<ID> diffuse_textures;
   uint32_t diffuse_textures_count;    // # texture currently in the GL buffer
