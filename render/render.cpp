@@ -552,10 +552,9 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
   link_batch(batch);
   
   if (g_state.diffuse_texture.used) {
-    auto buffer_size = 3; // # textures to hold
-    batch.init_buffer(&batch.gl_diffuse_texture_array, g_state.diffuse_texture.gl_texture_type, buffer_size);
+    uint32_t buffer_size = 3; // # textures to hold
+    batch.init_buffer(&batch.gl_diffuse_texture_array, g_state.diffuse_texture.gl_texture_type, batch.gl_diffuse_texture_unit, buffer_size);
     batch.gl_diffuse_texture_type = g_state.diffuse_texture.gl_texture_type;
-    batch.mesh = mesh_manager->mesh_from_id(mesh_id);
   
     /// Assign layer index to the latest the texture and increment
     g_state.diffuse_texture.layer_idx = batch.diffuse_textures_count++;
@@ -565,7 +564,7 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
     batch.layer_idxs[g_state.diffuse_texture.id] = g_state.diffuse_texture.layer_idx;
   
     /// Load all the GState's textures
-    RawTexture texture = batch.load_textures(&comp->graphics_state);
+    RawTexture& texture = g_state.diffuse_texture.data;
     /// Upload the texture to OpenGL
     glActiveTexture(GL_TEXTURE0 + batch.gl_diffuse_texture_unit);
     glBindTexture(GL_TEXTURE_2D_ARRAY, batch.gl_diffuse_texture_array);
