@@ -64,7 +64,7 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
   glewExperimental = (GLboolean) true;
   glewInit();
   
-  Light light{Vec3<float>{15.0, 15.0, 15.0}, Color4<float>{0.5, 0.4, 0.8, 1.0}};
+  Light light{Vec3<float>{15.0, 15.0, 15.0}, Color4<float>{1.0, 1.0, 1.0, 1.0}};
   lights.push_back(light);
 
   Transform transform;
