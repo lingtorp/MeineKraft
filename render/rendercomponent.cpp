@@ -26,6 +26,11 @@ void RenderComponent::set_mesh(const std::string& directory, const std::string& 
         graphics_state.diffuse_texture.id = graphics_state.diffuse_texture.resource.to_hash();
         break;
       case Texture::Type::Specular:
+        graphics_state.specular_texture.resource = TextureResource{texture_file};
+        graphics_state.specular_texture.gl_texture_type = GL_TEXTURE_2D_ARRAY; // FIXME: Assumes texture format
+        graphics_state.specular_texture.used = true;
+        graphics_state.specular_texture.id = graphics_state.specular_texture.resource.to_hash();
+        graphics_state.specular_texture.data = graphics_state.specular_texture.load_textures();
         break;
       default:
         exit(1);

@@ -217,6 +217,7 @@ struct GraphicsState {
   Vec3<float> position;
   float scale;
   Texture diffuse_texture;
+  Texture specular_texture;
   Vec3<float> center;
   double radius;
   ID mesh_id;

@@ -22,19 +22,18 @@ class RenderComponent;
 class GraphicsBatch {
 public:
   explicit GraphicsBatch(ID mesh_id): mesh_id(mesh_id), components{}, mesh{}, id(0), diffuse_textures{}, layer_idxs{},
-    diffuse_textures_capacity(3) {};
+    diffuse_textures_capacity(3), diffuse_textures_count(0), specular_textures_count(0), specular_textures_capacity(3) {};
   
   // FIXME: Handle size changes for texture buffer(s)
   
-  void init_buffer(uint32_t* gl_buffer, uint32_t gl_buffer_type, uint32_t buffer_size) {
+  void init_buffer(uint32_t* gl_buffer, uint32_t gl_buffer_type, uint32_t gl_texture_unit, uint32_t buffer_size) {
     // FIXME: Assumes OpenGL texture type
     glGenTextures(1, gl_buffer); // FIXME: OpenGL error 1280 (0x500) here in this function
-    glActiveTexture(GL_TEXTURE0 + gl_diffuse_texture_unit);
+    glActiveTexture(GL_TEXTURE0 + gl_texture_unit);
     glBindTexture(gl_buffer_type, *gl_buffer);
     // FIXME: Texture information is assumed here
     auto layers_faces = 1 * buffer_size;
     glTexStorage3D(gl_buffer_type, 1, GL_RGB8, 2048, 2048, layers_faces);
-    diffuse_textures_count = 0;
   }
 
   /// GL buffer type or in GL-speak target rather than type
@@ -76,7 +75,14 @@ public:
   uint32_t gl_diffuse_texture_type; // CUBE_MAP_ARRAY, 2D_TEXTURE_ARRAY, etc
   uint32_t gl_diffuse_texture_unit = 11; // FIXME: Hard coded
   
-  float texture_array_growth_factor = 1.5; // new_buf_size = ceil(old_buf_size * growth_factor)
+  // Specular texture buffer
+  std::vector<ID> specular_textures; // TODO: Interleave with diffuse?
+  uint32_t specular_textures_count;    // # texture currently in the GL buffer
+  uint32_t specular_textures_capacity; // # textures the GL buffer can hold
+  
+  uint32_t gl_specular_texture_array;
+  uint32_t gl_specular_texture_type; // CUBE_MAP_ARRAY, 2D_TEXTURE_ARRAY, etc
+  uint32_t gl_specular_texture_unit = 12; // FIXME: Hard coded
   
   std::vector<RenderComponent*> components;
   

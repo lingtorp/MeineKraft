@@ -353,6 +353,7 @@ void Renderer::render(uint32_t delta) {
       glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, camera_view.data());
       // Setup textures
       glUniform1i(glGetUniformLocation(program, "diffuse"), batch.gl_diffuse_texture_unit);
+      glUniform1i(glGetUniformLocation(program, "specular"), batch.gl_specular_texture_unit);
       
       for (auto &component : batch.components) {
         component->update(); // Copy all graphics state
@@ -574,7 +575,33 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
                     texture.width, texture.height, 1,           // width, height, depth = faces
                     GL_RGB,                // format
                     GL_UNSIGNED_BYTE,      // type
-                    texture.data);         // pointer to data
+                    texture.pixels);       // pointer to data
+  }
+  
+  if (g_state.specular_texture.used) {
+    uint32_t buffer_size = 3; // # textures to hold
+    batch.init_buffer(&batch.gl_specular_texture_array, g_state.specular_texture.gl_texture_type, batch.gl_specular_texture_unit, buffer_size);
+    batch.gl_specular_texture_type = g_state.specular_texture.gl_texture_type;
+  
+    /// Assign layer index to the latest the texture and increment
+    g_state.specular_texture.layer_idx = batch.specular_textures_count++;
+    /// Add to all the known texture ids in the batch
+    batch.texture_ids.push_back(g_state.specular_texture.id);
+    /// Update the mapping from texture id to layer idx
+    batch.layer_idxs[g_state.specular_texture.id] = g_state.specular_texture.layer_idx;
+  
+    /// Load all the GState's textures
+    RawTexture& texture = g_state.specular_texture.data;
+    /// Upload the texture to OpenGL
+    glActiveTexture(GL_TEXTURE0 + batch.gl_specular_texture_unit);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, batch.gl_specular_texture_array);
+    glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
+                    0,                     // Mipmap number
+                    0, 0, g_state.specular_texture.layer_idx * 1, // xoffset, yoffset, zoffset = layer face
+                    texture.width, texture.height, 1,           // width, height, depth = faces
+                    GL_RGB,                // format
+                    GL_UNSIGNED_BYTE,      // type
+                    texture.pixels);       // pointer to data
   }
   
   batch.components.push_back(comp);
