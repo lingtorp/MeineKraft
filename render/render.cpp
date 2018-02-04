@@ -546,6 +546,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
 uint64_t Renderer::add_to_batch(RenderComponent* comp) {
   auto mesh_id = comp->graphics_state.mesh_id;
   auto& g_state = comp->graphics_state;
+  // TODO: Add components to batches
   
   GraphicsBatch batch{mesh_id};
   batch.mesh = mesh_manager->mesh_from_id(mesh_id);
