@@ -64,7 +64,7 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
   glewExperimental = (GLboolean) true;
   glewInit();
   
-  Light light{Vec3<float>{15.0, 15.0, 15.0}, Color4<float>{0.5, 0.4, 0.8, 1.0}};
+  Light light{Vec3<float>{15.0, 15.0, 15.0}, Color4<float>{1.0, 1.0, 1.0, 1.0}};
   lights.push_back(light);
 
   Transform transform;
@@ -330,9 +330,11 @@ void Renderer::render(uint32_t delta) {
   auto frustrum_view = camera_view * projection_matrix; // FIXME: Matrix multiplication is probably defined backwards
   std::array<Plane<float>, 6> planes = extract_planes(frustrum_view.transpose());
 
-  // TODO: Move this kind of comp. into seperate thread or something
-  for (auto &transform : transformations) { transform.update(delta); }
-  lights[0].position = transformations[0].current_position; // FIXME: Transforms are not updating their Entities..
+  if (animate_light) {
+    // TODO: Move this kind of comp. into seperate thread or something
+    for (auto &transform : transformations) { transform.update(delta); }
+    lights[0].position = transformations[0].current_position; // FIXME: Transforms are not updating their Entities..
+  }
   
   /// Geometry pass
   {
@@ -412,7 +414,8 @@ void Renderer::render(uint32_t delta) {
   
     glBindVertexArray(gl_lightning_vao);
     glUseProgram(program);
-    glUniform3fv(glGetUniformLocation(program, "camera_position"), 1, (const GLfloat *) &camera->position);
+  
+    glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, camera_view.data());
   
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
@@ -435,6 +438,7 @@ void Renderer::render(uint32_t delta) {
     glUniform1f(glGetUniformLocation(program, "screen_height"), screen_height);
     glUniform1i(glGetUniformLocation(program, "lightning_enabled"), lightning_enabled);
     glUniform1i(glGetUniformLocation(program, "diffuse_sampler"), gl_albedo_texture_unit);
+    glUniform1f(glGetUniformLocation(program, "specular_power"), specular_power);
   
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
   }
