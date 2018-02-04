@@ -26,6 +26,7 @@ layout (std140) uniform lights_block {
 // Enabled/Disable Phong shading
 uniform bool lightning_enabled;
 uniform float specular_power;
+uniform bool blinn_phong;
 
 #define FLAG_SSAO
 
@@ -62,7 +63,13 @@ void main() {
 
         vec3 reflection = reflect(-direction, normal);
         vec3 eye = normalize(-position); // View space eye = (0, 0, 0): A to B = 0 to B = -B
-        float specular = pow(max(dot(reflection, eye), 0.0), specular_power);
+        float specular;
+        if (blinn_phong) {
+            vec3 half_way = normalize(direction + eye);
+            specular = pow(max(dot(normal, half_way), 0.0), specular_power);
+        } else {
+            specular = pow(max(dot(reflection, eye), 0.0), specular_power);
+        }
 
         total_light = (ambient + diffuse + specular) * light.color.xyz;
     }

@@ -66,6 +66,7 @@ public:
   bool lightning_enabled = true;
   bool animate_light = true;
   float specular_power = 32.0;
+  bool blinn_phong_shading = true;
 private:
   Renderer();
   

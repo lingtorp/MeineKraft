@@ -439,7 +439,8 @@ void Renderer::render(uint32_t delta) {
     glUniform1i(glGetUniformLocation(program, "lightning_enabled"), lightning_enabled);
     glUniform1i(glGetUniformLocation(program, "diffuse_sampler"), gl_albedo_texture_unit);
     glUniform1f(glGetUniformLocation(program, "specular_power"), specular_power);
-  
+    glUniform1i(glGetUniformLocation(program, "blinn_phong"), blinn_phong_shading);
+    
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
   }
   log_gl_error();
