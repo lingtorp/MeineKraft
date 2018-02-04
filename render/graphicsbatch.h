@@ -56,35 +56,6 @@ public:
     *gl_buffer = gl_new_texture_array;
     diffuse_textures_capacity = new_textures_capacity;
   }
-  
-  RawTexture load_textures(GraphicsState* g_state) {
-    RawTexture texture{0, nullptr};
-    auto& files = g_state->diffuse_texture.resource.files;
-    
-    if (files.empty()) { return texture; }
-    
-    auto& file = files.front();
-    SDL_Surface* image = IMG_Load(file.c_str()); // FIXME: NULL? Handle error with IMG_GetError
-    texture.width  = static_cast<uint32_t>(image->w);
-    texture.height = static_cast<uint32_t>(image->h);
-    auto bytes_per_pixel = image->format->BytesPerPixel;
-    SDL_FreeSurface(image); // FIXME: Wasteful
-  
-    // Assumes that the files are the same size, in right order, same encoding, etc
-    texture.size = bytes_per_pixel * texture.width * texture.height;
-    texture.data = static_cast<uint8_t*>(std::calloc(1, texture.size * files.size()));
-    // Load all the files into a linear memory region
-    for (size_t i = 0; i < files.size(); i++) {
-      image = IMG_Load(files[i].c_str());
-      // Convert it to OpenGL friendly format
-      auto desired_img_format = bytes_per_pixel == 3 ? SDL_PIXELFORMAT_RGB24 : SDL_PIXELFORMAT_RGBA32;
-      SDL_Surface* conv = SDL_ConvertSurfaceFormat(image, desired_img_format, 0);
-      std::memcpy(texture.data + texture.size * i, conv->pixels, texture.size);
-      SDL_FreeSurface(image);
-    }
-    
-    return texture;
-  }
 
   /// Id given to each unique mesh loaded by MeshManager
   ID mesh_id;
