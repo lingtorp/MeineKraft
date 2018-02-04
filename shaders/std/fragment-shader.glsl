@@ -71,6 +71,6 @@ void main() {
 #endif
 
     if (!lightning_enabled) {
-      outColor = vec4(vec3(ambient_occlusion), 1.0);
+       outColor = texture(diffuse_sampler, frag_coord).rgba;
     }
 }
