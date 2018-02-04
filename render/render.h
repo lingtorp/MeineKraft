@@ -63,7 +63,8 @@ public:
   bool  ssao_blur_enabled = true;
   
   std::vector<Light> lights;
-  bool lightning_enabled = false;
+  bool lightning_enabled = true;
+  bool animate_light = true;
 private:
   Renderer();
   

@@ -330,9 +330,11 @@ void Renderer::render(uint32_t delta) {
   auto frustrum_view = camera_view * projection_matrix; // FIXME: Matrix multiplication is probably defined backwards
   std::array<Plane<float>, 6> planes = extract_planes(frustrum_view.transpose());
 
-  // TODO: Move this kind of comp. into seperate thread or something
-  for (auto &transform : transformations) { transform.update(delta); }
-  lights[0].position = transformations[0].current_position; // FIXME: Transforms are not updating their Entities..
+  if (animate_light) {
+    // TODO: Move this kind of comp. into seperate thread or something
+    for (auto &transform : transformations) { transform.update(delta); }
+    lights[0].position = transformations[0].current_position; // FIXME: Transforms are not updating their Entities..
+  }
   
   /// Geometry pass
   {
