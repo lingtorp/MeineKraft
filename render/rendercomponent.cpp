@@ -7,9 +7,7 @@
 #include "meshmanager.h"
 #include "../util/filesystem.h"
 
-RenderComponent::RenderComponent(Entity* entity): entity(entity), graphics_state{} {
-  graphics_state.shading = true;
-}
+RenderComponent::RenderComponent(Entity* entity): entity(entity), graphics_state{} {}
 
 void RenderComponent::set_mesh(const std::string& directory, const std::string& file) {
   // TODO: Remove from previous batch - since we are changing mesh and thus geo. data
@@ -25,6 +23,15 @@ void RenderComponent::set_mesh(const std::string& directory, const std::string& 
         graphics_state.diffuse_texture.resource = TextureResource{texture_file};
         graphics_state.diffuse_texture.gl_texture_type = GL_TEXTURE_2D_ARRAY; // FIXME: Assumes texture format
         graphics_state.diffuse_texture.used = true;
+        graphics_state.diffuse_texture.id = graphics_state.diffuse_texture.resource.to_hash();
+        graphics_state.diffuse_texture.data = graphics_state.diffuse_texture.load_textures();
+        break;
+      case Texture::Type::Specular:
+        graphics_state.specular_texture.resource = TextureResource{texture_file};
+        graphics_state.specular_texture.gl_texture_type = GL_TEXTURE_2D_ARRAY; // FIXME: Assumes texture format
+        graphics_state.specular_texture.used = true;
+        graphics_state.specular_texture.id = graphics_state.specular_texture.resource.to_hash();
+        graphics_state.specular_texture.data = graphics_state.specular_texture.load_textures();
         break;
       default:
         exit(1);
@@ -33,6 +40,7 @@ void RenderComponent::set_mesh(const std::string& directory, const std::string& 
 };
 
 void RenderComponent::update() {
+  // FIXME: Virtual function in order to copy?
   graphics_state.scale = entity->scale;
   graphics_state.position = entity->position;
 }
@@ -43,23 +51,15 @@ void RenderComponent::set_mesh(MeshPrimitive primitive) {
 }
 
 void RenderComponent::set_cube_map_texture(const std::vector<std::string>& faces) {
-  TextureResource texture_resource;
-  texture_resource.files = faces;
-  graphics_state.diffuse_texture.resource = texture_resource;
+  // FIXME: Assumes the diffuse texture?
+  graphics_state.diffuse_texture.resource = TextureResource{faces};
   graphics_state.diffuse_texture.gl_texture_type = GL_TEXTURE_CUBE_MAP_ARRAY;
   graphics_state.diffuse_texture.used = true;
+  graphics_state.diffuse_texture.id = graphics_state.diffuse_texture.resource.to_hash();
+  graphics_state.diffuse_texture.data = graphics_state.diffuse_texture.load_textures();
 }
 
 /// RenderComponents are not supposed to be modified and only re-created
 void RenderComponent::did_attach_to_entity(Entity* entity) {
-  if (graphics_state.diffuse_texture.used) {
-    graphics_state.diffuse_texture.id = graphics_state.diffuse_texture.resource.to_hash();
-  }
-  
-  // Add to batch
-  graphics_state.batch_id = Renderer::instance().add_to_batch(this, Shader{"", ""});
+  Renderer::instance().add_to_batch(this);
 }
-
-void RenderComponent::enable_shading() {
-  graphics_state.shading = true;
-};

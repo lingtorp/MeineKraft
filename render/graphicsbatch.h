@@ -9,7 +9,6 @@
 #include <cstring>
 #include "primitives.h"
 #include "shader.h"
-#include "texturemanager.h"
 #include "SDL2/SDL_opengl.h"
 #include "debug_opengl.h"
 
@@ -23,19 +22,18 @@ class RenderComponent;
 class GraphicsBatch {
 public:
   explicit GraphicsBatch(ID mesh_id): mesh_id(mesh_id), components{}, mesh{}, id(0), diffuse_textures{}, layer_idxs{},
-    diffuse_textures_capacity(3) {};
+    diffuse_textures_capacity(3), diffuse_textures_count(0), specular_textures_count(0), specular_textures_capacity(3) {};
   
   // FIXME: Handle size changes for texture buffer(s)
   
-  void init_buffer(uint32_t* gl_buffer, uint32_t gl_buffer_type, uint32_t buffer_size) {
+  void init_buffer(uint32_t* gl_buffer, uint32_t gl_buffer_type, uint32_t gl_texture_unit, uint32_t buffer_size) {
     // FIXME: Assumes OpenGL texture type
     glGenTextures(1, gl_buffer); // FIXME: OpenGL error 1280 (0x500) here in this function
-    glActiveTexture(GL_TEXTURE0 + gl_diffuse_texture_unit);
+    glActiveTexture(GL_TEXTURE0 + gl_texture_unit);
     glBindTexture(gl_buffer_type, *gl_buffer);
     // FIXME: Texture information is assumed here
     auto layers_faces = 1 * buffer_size;
     glTexStorage3D(gl_buffer_type, 1, GL_RGB8, 2048, 2048, layers_faces);
-    diffuse_textures_count = 0;
   }
 
   /// GL buffer type or in GL-speak target rather than type
@@ -57,35 +55,6 @@ public:
     *gl_buffer = gl_new_texture_array;
     diffuse_textures_capacity = new_textures_capacity;
   }
-  
-  RawTexture load_textures(GraphicsState* g_state) {
-    RawTexture texture{0, nullptr};
-    auto& files = g_state->diffuse_texture.resource.files;
-    
-    if (files.empty()) { return texture; }
-    
-    auto& file = files.front();
-    SDL_Surface* image = IMG_Load(file.c_str()); // FIXME: NULL? Handle error with IMG_GetError
-    texture.width  = static_cast<uint32_t>(image->w);
-    texture.height = static_cast<uint32_t>(image->h);
-    auto bytes_per_pixel = image->format->BytesPerPixel;
-    SDL_FreeSurface(image); // FIXME: Wasteful
-  
-    // Assumes that the files are the same size, in right order, same encoding, etc
-    texture.size = bytes_per_pixel * texture.width * texture.height;
-    texture.data = static_cast<uint8_t*>(std::calloc(1, texture.size * files.size()));
-    // Load all the files into a linear memory region
-    for (size_t i = 0; i < files.size(); i++) {
-      image = IMG_Load(files[i].c_str());
-      // Convert it to OpenGL friendly format
-      auto desired_img_format = bytes_per_pixel == 3 ? SDL_PIXELFORMAT_RGB24 : SDL_PIXELFORMAT_RGBA32;
-      SDL_Surface* conv = SDL_ConvertSurfaceFormat(image, desired_img_format, 0);
-      std::memcpy(texture.data + texture.size * i, conv->pixels, texture.size);
-      SDL_FreeSurface(image);
-    }
-    
-    return texture;
-  }
 
   /// Id given to each unique mesh loaded by MeshManager
   ID mesh_id;
@@ -95,8 +64,9 @@ public:
   ID id;
   
   /// Textures
-  std::vector<ID> texture_ids;
+  std::vector<ID> texture_ids; // FIXME: Used?
   std::map<ID, uint32_t> layer_idxs;
+  float texture_array_growth_factor = 1.5; // new_buf_size = ceil(old_buf_size * growth_factor)
   // Diffuse texture buffer
   std::vector<ID> diffuse_textures;
   uint32_t diffuse_textures_count;    // # texture currently in the GL buffer
@@ -104,9 +74,16 @@ public:
   
   uint32_t gl_diffuse_texture_array;
   uint32_t gl_diffuse_texture_type; // CUBE_MAP_ARRAY, 2D_TEXTURE_ARRAY, etc
-  uint32_t gl_diffuse_texture_unit = 11;
+  uint32_t gl_diffuse_texture_unit = 11; // FIXME: Hard coded
   
-  float texture_array_growth_factor = 1.5; // new_buf_size = ceil(old_buf_size * growth_factor)
+  // Specular texture buffer
+  std::vector<ID> specular_textures; // TODO: Interleave with diffuse?
+  uint32_t specular_textures_count;    // # texture currently in the GL buffer
+  uint32_t specular_textures_capacity; // # textures the GL buffer can hold
+  
+  uint32_t gl_specular_texture_array;
+  uint32_t gl_specular_texture_type; // CUBE_MAP_ARRAY, 2D_TEXTURE_ARRAY, etc
+  uint32_t gl_specular_texture_unit = 12; // FIXME: Hard coded
   
   std::vector<RenderComponent*> components;
   

@@ -10,7 +10,6 @@
 #include "../util/filemonitor.h"
 #include "transform.h"
 #include "meshmanager.h"
-#include "texturemanager.h"
 #include "../util/filesystem.h"
 #include "debug_opengl.h"
 
@@ -61,8 +60,7 @@ Mat4<float> gen_projection_matrix(float z_near, float z_far, float fov, float as
 }
 
 Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), state{}, graphics_batches{},
-                    shader_file_monitor(std::make_unique<FileMonitor>()), lights{}, mesh_manager{new MeshManager()},
-                    texture_manager{TextureManager{}} {
+                    shader_file_monitor(std::make_unique<FileMonitor>()), lights{}, mesh_manager{new MeshManager()} {
   glewExperimental = (GLboolean) true;
   glewInit();
   
@@ -355,6 +353,7 @@ void Renderer::render(uint32_t delta) {
       glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, camera_view.data());
       // Setup textures
       glUniform1i(glGetUniformLocation(program, "diffuse"), batch.gl_diffuse_texture_unit);
+      glUniform1i(glGetUniformLocation(program, "specular"), batch.gl_specular_texture_unit);
       
       for (auto &component : batch.components) {
         component->update(); // Copy all graphics state
@@ -544,39 +543,66 @@ void Renderer::link_batch(GraphicsBatch& batch) {
   }
 }
 
-uint64_t Renderer::add_to_batch(RenderComponent* comp, Shader shader) {
-  // FIXME: Shader unused
+uint64_t Renderer::add_to_batch(RenderComponent* comp) {
   auto mesh_id = comp->graphics_state.mesh_id;
   auto& g_state = comp->graphics_state;
+  // TODO: Add components to batches
   
   GraphicsBatch batch{mesh_id};
-  if (g_state.diffuse_texture.used) {
-    auto buffer_size = 3; // # textures to hold
-    batch.init_buffer(&batch.gl_diffuse_texture_array, g_state.diffuse_texture.gl_texture_type, buffer_size);
-  }
-  batch.gl_diffuse_texture_type = g_state.diffuse_texture.gl_texture_type;
   batch.mesh = mesh_manager->mesh_from_id(mesh_id);
   link_batch(batch);
   
-  /// Assign layer index to the latest the texture and increment
-  g_state.diffuse_texture.layer_idx = batch.diffuse_textures_count++;
-  /// Add to all the known texture ids in the batch
-  batch.texture_ids.push_back(g_state.diffuse_texture.id);
-  /// Update the mapping from texture id to layer idx
-  batch.layer_idxs[g_state.diffuse_texture.id] = g_state.diffuse_texture.layer_idx;
+  if (g_state.diffuse_texture.used) {
+    uint32_t buffer_size = 3; // # textures to hold
+    batch.init_buffer(&batch.gl_diffuse_texture_array, g_state.diffuse_texture.gl_texture_type, batch.gl_diffuse_texture_unit, buffer_size);
+    batch.gl_diffuse_texture_type = g_state.diffuse_texture.gl_texture_type;
   
-  /// Load all the GState's textures
-  RawTexture texture = batch.load_textures(&comp->graphics_state);
-  /// Upload the texture to OpenGL
-  glActiveTexture(GL_TEXTURE0 + batch.gl_diffuse_texture_unit);
-  glBindTexture(GL_TEXTURE_2D_ARRAY, batch.gl_diffuse_texture_array);
-  glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
-                  0,                     // Mipmap number
-                  0, 0, g_state.diffuse_texture.layer_idx * 1, // xoffset, yoffset, zoffset = layer face
-                  texture.width, texture.height, 1,           // width, height, depth = faces
-                  GL_RGB,                // format
-                  GL_UNSIGNED_BYTE,      // type
-                  texture.data);         // pointer to data
+    /// Assign layer index to the latest the texture and increment
+    g_state.diffuse_texture.layer_idx = batch.diffuse_textures_count++;
+    /// Add to all the known texture ids in the batch
+    batch.texture_ids.push_back(g_state.diffuse_texture.id);
+    /// Update the mapping from texture id to layer idx
+    batch.layer_idxs[g_state.diffuse_texture.id] = g_state.diffuse_texture.layer_idx;
+  
+    /// Load all the GState's textures
+    RawTexture& texture = g_state.diffuse_texture.data;
+    /// Upload the texture to OpenGL
+    glActiveTexture(GL_TEXTURE0 + batch.gl_diffuse_texture_unit);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, batch.gl_diffuse_texture_array);
+    glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
+                    0,                     // Mipmap number
+                    0, 0, g_state.diffuse_texture.layer_idx * 1, // xoffset, yoffset, zoffset = layer face
+                    texture.width, texture.height, 1,           // width, height, depth = faces
+                    GL_RGB,                // format
+                    GL_UNSIGNED_BYTE,      // type
+                    texture.pixels);       // pointer to data
+  }
+  
+  if (g_state.specular_texture.used) {
+    uint32_t buffer_size = 3; // # textures to hold
+    batch.init_buffer(&batch.gl_specular_texture_array, g_state.specular_texture.gl_texture_type, batch.gl_specular_texture_unit, buffer_size);
+    batch.gl_specular_texture_type = g_state.specular_texture.gl_texture_type;
+  
+    /// Assign layer index to the latest the texture and increment
+    g_state.specular_texture.layer_idx = batch.specular_textures_count++;
+    /// Add to all the known texture ids in the batch
+    batch.texture_ids.push_back(g_state.specular_texture.id);
+    /// Update the mapping from texture id to layer idx
+    batch.layer_idxs[g_state.specular_texture.id] = g_state.specular_texture.layer_idx;
+  
+    /// Load all the GState's textures
+    RawTexture& texture = g_state.specular_texture.data;
+    /// Upload the texture to OpenGL
+    glActiveTexture(GL_TEXTURE0 + batch.gl_specular_texture_unit);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, batch.gl_specular_texture_array);
+    glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
+                    0,                     // Mipmap number
+                    0, 0, g_state.specular_texture.layer_idx * 1, // xoffset, yoffset, zoffset = layer face
+                    texture.width, texture.height, 1,           // width, height, depth = faces
+                    GL_RGB,                // format
+                    GL_UNSIGNED_BYTE,      // type
+                    texture.pixels);       // pointer to data
+  }
   
   batch.components.push_back(comp);
   graphics_batches.push_back(batch);

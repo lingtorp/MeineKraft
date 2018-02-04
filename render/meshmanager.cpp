@@ -42,11 +42,23 @@ MeshManager::load_mesh(std::string directory, std::string file) {
 
             aiString tex_filepath;
             if (material->GetTexture(aiTextureType_DIFFUSE, 0, &tex_filepath) == AI_SUCCESS) {
-                SDL_Log("%s%s, %i", directory.c_str(), tex_filepath.data, material->GetTextureCount(aiTextureType_DIFFUSE));
+                SDL_Log("Diffuse texture name: %s%s", directory.c_str(), tex_filepath.data);
                 std::string texture_filepath(tex_filepath.data);
                 texture_filepath.insert(0, directory);
                 texture_info.push_back({Texture::Type::Diffuse, texture_filepath});
             }
+          
+            float shininess;
+            material->Get(AI_MATKEY_SHININESS, shininess);
+            SDL_Log("Material shininess: %f", shininess);
+          
+            if (material->GetTexture(aiTextureType_SPECULAR, 0, &tex_filepath) == AI_SUCCESS) {
+              SDL_Log("Specular texture name: %s%s", directory.c_str(), tex_filepath.data);
+              std::string texture_filepath(tex_filepath.data);
+              texture_filepath.insert(0, directory);
+              texture_info.push_back({Texture::Type::Specular, texture_filepath});
+            }
+          
             // TODO: Load other texture types
         }
     }
