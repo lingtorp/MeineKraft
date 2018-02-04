@@ -23,8 +23,6 @@ layout (std140) uniform lights_block {
     Light lights[MAX_NUM_LIGHTS];
 };
 
-uniform vec3 camera_position; // Position of the eye/camera
-
 // Enabled/Disable Phong shading
 uniform bool lightning_enabled;
 
