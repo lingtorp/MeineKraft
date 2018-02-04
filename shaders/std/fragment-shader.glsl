@@ -25,6 +25,7 @@ layout (std140) uniform lights_block {
 
 // Enabled/Disable Phong shading
 uniform bool lightning_enabled;
+uniform float specular_power;
 
 #define FLAG_SSAO
 
@@ -49,7 +50,6 @@ void main() {
 
 #ifdef FLAG_BLINN_PHONG_SHADING
     vec3 total_light = vec3(0.0, 0.0, 0.0);
-    float specular_power = 32; // FIXME: Uniform
     for (int i = 0; i < MAX_NUM_LIGHTS; i++) {
         Light light = lights[i];
         vec4 light_pos_view_space = camera_view * vec4(light.position, 1.0); // FIXME: Converts to view space ...

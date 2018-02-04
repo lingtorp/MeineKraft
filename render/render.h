@@ -65,6 +65,7 @@ public:
   std::vector<Light> lights;
   bool lightning_enabled = true;
   bool animate_light = true;
+  float specular_power = 32.0;
 private:
   Renderer();
   
