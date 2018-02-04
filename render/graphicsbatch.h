@@ -9,7 +9,6 @@
 #include <cstring>
 #include "primitives.h"
 #include "shader.h"
-#include "texturemanager.h"
 #include "SDL2/SDL_opengl.h"
 #include "debug_opengl.h"
 

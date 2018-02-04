@@ -12,7 +12,6 @@
 #include "texture.h"
 #include "light.h"
 #include "transform.h"
-#include "texturemanager.h"
 #include "shader.h"
 
 class World;
@@ -22,7 +21,6 @@ class GraphicsBatch;
 class Shader;
 class FileMonitor;
 class MeshManager;
-class TextureManager;
 
 // TODO: Implement sparse id hash table array thingy
 // TODO: Replace all the uint64_t with the new ID type in order to clarify the usage
@@ -51,7 +49,6 @@ public:
   RenderState state;
   SDL_Window *window;
   MeshManager* mesh_manager;
-  TextureManager texture_manager;
   double DRAW_DISTANCE;
   Mat4<float> projection_matrix;
   float screen_width;

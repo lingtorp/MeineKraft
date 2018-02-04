@@ -10,7 +10,6 @@
 #include "../util/filemonitor.h"
 #include "transform.h"
 #include "meshmanager.h"
-#include "texturemanager.h"
 #include "../util/filesystem.h"
 #include "debug_opengl.h"
 
@@ -61,8 +60,7 @@ Mat4<float> gen_projection_matrix(float z_near, float z_far, float fov, float as
 }
 
 Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), state{}, graphics_batches{},
-                    shader_file_monitor(std::make_unique<FileMonitor>()), lights{}, mesh_manager{new MeshManager()},
-                    texture_manager{TextureManager{}} {
+                    shader_file_monitor(std::make_unique<FileMonitor>()), lights{}, mesh_manager{new MeshManager()} {
   glewExperimental = (GLboolean) true;
   glewInit();
   
