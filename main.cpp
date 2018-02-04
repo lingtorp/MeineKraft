@@ -168,7 +168,7 @@ int main() {
         ImGui::InputFloat("Blur factor", &renderer.ssao_blur_factor, 0.5f, 1.0f);
       }
       
-      if (ImGui::CollapsingHeader("Lightning", 0)) {
+      if (ImGui::CollapsingHeader("Lightning", ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::Checkbox("Enable lightning", &renderer.lightning_enabled);
         ImGui::Checkbox("Animate lightning", &renderer.animate_light);
         ImGui::InputFloat3("Color (RGB)", &renderer.lights[0].light_color.r);
