@@ -3,13 +3,16 @@
 
 #include "../math/vector.h"
 
+// FIXME: Should be independent on shader Light struct layout (Vec4 --> Vec3)
 struct Light {
     Color4<float> light_color;
-    Vec4<float> light_itensity; // (ambient, diffuse, specular, padding) itensity
-    Vec3<float> position;
-
-    Light(Vec3<float> position): position(position), light_color(Color4<float>::BLUE()), light_itensity{0.5, 0.5, 0.5} {};
-    Light(Vec3<float> position, Color4<float> rgb_color): position(position), light_color(rgb_color), light_itensity{0.5, 0.5, 0.5} {};
+    // Intensities over RGB
+    Vec4<float> ambient_intensity;
+    Vec4<float> diffuse_intensity;
+    Vec4<float> specular_intensity;
+    Vec4<float> position;
+  
+    explicit Light(Vec3<float> position): position(position), light_color{1.0}, ambient_intensity{1.0}, diffuse_intensity{1.0}, specular_intensity{1.0} {};
 
     friend std::ostream &operator<<(std::ostream &os, const Light &light) {
         return os << light.position;
