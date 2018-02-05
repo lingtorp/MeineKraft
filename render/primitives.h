@@ -16,13 +16,23 @@ template<typename T>
 class Color4 {
 public:
   T r, g, b, a = 0;
+  constexpr explicit Color4(T val): r(val), g(val), b(val), a(val) {};
   constexpr Color4() = default;
   constexpr Color4(T r, T g, T b, T a): r(r), g(g), b(b), a(a) {};
-  static constexpr Color4<float> BLUE() { return Color4{0.5f, 0.5f, 1.0f, 1.0f}; }
 
   bool operator==(const Color4<T> &rhs) const {
       return r == rhs.r && g == rhs.g && b == rhs.b && a == rhs.a;
   }
+};
+
+// TODO: Template metaprogram these?
+template<typename T>
+class Color3 {
+public:
+  T r, g, b;
+  constexpr explicit Color3(T val): r(val), g(val), b(val) {};
+  constexpr Color3() = default;
+  constexpr Color3(T r, T g, T b): r(r), g(g), b(b) {};
 };
 
 template<typename T>
@@ -202,6 +212,22 @@ struct Plane {
   /// distance > 0, then point lies in the positive halfspace
   inline double distance_to_point(const Vec3<T> &point) const {
       return a*point.x + b*point.y + c*point.z + d;
+  }
+};
+
+/// Material properties from (http://devernay.free.fr/cours/opengl/materials.html)
+struct Material {
+  // Intensities over RGB
+  Vec3<float> ambient;
+  Vec3<float> diffuse;
+  Vec3<float> specular;
+  float shininess; // A.k.a specular power
+  /// Default material
+  Material(): ambient{0.5}, diffuse{0.5}, specular{0.5}, shininess(32.0) {};
+  Material(Vec3<float> a, Vec3<float> d, Vec3<float> s): ambient{a}, diffuse{d}, specular{s}, shininess(32.0) {};
+  
+  static Material Bronze() {
+    return Material{{0.2125, 0.1275, 0.054}, {0.714, 0.4284, 0.18144}, {0.393548, 0.271906, 0.166721}};
   }
 };
 

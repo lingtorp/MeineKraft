@@ -173,7 +173,9 @@ int main() {
         ImGui::Checkbox("Blinn-Phong/Phong shading", &renderer.blinn_phong_shading);
         ImGui::Checkbox("Animate lightning", &renderer.animate_light);
         ImGui::InputFloat3("Color (RGB)", &renderer.lights[0].light_color.r);
-        ImGui::InputFloat3("Intensity (ambient, diffuse, specular)", &renderer.lights[0].light_itensity.x);
+        ImGui::InputFloat3("Ambient intensity", &renderer.lights[0].ambient_intensity.x);
+        ImGui::InputFloat3("Diffuse intensity", &renderer.lights[0].diffuse_intensity.x);
+        ImGui::InputFloat3("Specular intensity", &renderer.lights[0].specular_intensity.x);
         ImGui::InputFloat("Specular power", &renderer.specular_power, 16.0f);
       }
       

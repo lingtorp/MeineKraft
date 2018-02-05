@@ -59,7 +59,7 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
   glewExperimental = (GLboolean) true;
   glewInit();
   
-  Light light{Vec3<float>{15.0, 15.0, 15.0}, Color4<float>{1.0, 1.0, 1.0, 1.0}};
+  Light light{Vec3<float>{15.0, 15.0, 15.0}};
   lights.push_back(light);
 
   Transform transform;
