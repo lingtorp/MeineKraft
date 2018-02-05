@@ -61,6 +61,7 @@ void main() {
         vec3 direction = normalize(light_pos - position);
         float diffuse = max(dot(normal, direction), 0.0);
 
+        // FIXME: Specular light too much when angles is 90*
         vec3 reflection = reflect(-direction, normal);
         vec3 eye = normalize(-position); // View space eye = (0, 0, 0): A to B = 0 to B = -B
         float specular;
