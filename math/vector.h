@@ -56,6 +56,7 @@ struct Vec3 {
     T x, y, z;
 
     Vec3(T x, T y, T z): x(x), y(y), z(z) {};
+    explicit Vec3(const Vec4<T>& v): x(v.x), y(v.y), z(v.z) {};
     Vec3(): x(0), y(0), z(0) {};
 
     /// Zeroed vector

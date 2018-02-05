@@ -58,6 +58,7 @@ void main() {
         float diffuse = max(dot(normal, direction), 0.0);
 
         // FIXME: Specular light too much when angles is 90*
+        // FIXME: Remove conditionals with clever math functions
         vec3 reflection = reflect(-direction, normal);
         vec3 eye = normalize(-position); // View space eye = (0, 0, 0): A to B = 0 to B = -B
         float specular;
@@ -67,7 +68,7 @@ void main() {
         } else {
             specular = pow(max(dot(reflection, eye), 0.0), specular_power);
         }
-
+        // TODO: Toggle individual light contributions
         total_light = (ambient + diffuse + specular) * light.color.xyz;
     }
    default_light = vec4(total_light, 1.0);
