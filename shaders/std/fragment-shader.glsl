@@ -8,10 +8,14 @@ uniform sampler2D diffuse_sampler;
 
 out vec4 outColor; // Defaults to zero when the frag shader only has 1 out variable
 
+// FIXME: Should be independent on engine Light struct layout
 /// Lights
 struct Light {
-    vec4 color;
-    vec4 light_intensity; // (ambient, diffuse, specular, padding) - itensities
+    vec3 color;
+    // Intensities over RGB
+    vec3 ambient_intensity;
+    vec3 diffuse_intensity;
+    vec3 specular_intensity;
     vec3 position;
 };
 
@@ -45,34 +49,36 @@ void main() {
     ambient_occlusion = texture(ssao_sampler, frag_coord.xy).r;
 #endif
 
-    outColor = texture(diffuse_sampler, frag_coord).rgba;
+    outColor = texture(diffuse_sampler, frag_coord).rgba; // FIXME: Use specular map?
 
 #ifdef FLAG_BLINN_PHONG_SHADING
     vec3 total_light = vec3(0.0, 0.0, 0.0);
     for (int i = 0; i < MAX_NUM_LIGHTS; i++) {
         Light light = lights[i];
 
-        float ambient = 1.0 - ambient_occlusion;
+        vec3 ambient = vec3(1.0 - ambient_occlusion) * light.ambient_intensity;
 
         vec3 direction = normalize(light.position - position);
-        float diffuse = max(dot(normal, direction), 0.0);
+        vec3 diffuse = max(dot(normal, direction), 0.0) * light.diffuse_intensity;
 
         // FIXME: Specular light too much when angles is 90*
         // FIXME: Remove conditionals with clever math functions
         vec3 reflection = reflect(-direction, normal);
         vec3 eye = normalize(-position); // View space eye = (0, 0, 0): A to B = 0 to B = -B
-        float specular;
+        vec3 specular;
         if (blinn_phong) {
             vec3 half_way = normalize(direction + eye);
-            specular = pow(max(dot(normal, half_way), 0.0), specular_power);
+            specular = vec3(pow(max(dot(normal, half_way), 0.0), specular_power)) * light.specular_intensity;
         } else {
-            specular = pow(max(dot(reflection, eye), 0.0), specular_power);
+            specular = vec3(pow(max(dot(reflection, eye), 0.0), specular_power)) * light.specular_intensity;
         }
         // TODO: Toggle individual light contributions
-        total_light = (ambient + diffuse + specular) * light.color.xyz;
+        total_light += ambient;
+        total_light += diffuse;
+        total_light += specular;
+        total_light *= light.color.xyz;
     }
-   default_light = vec4(total_light, 1.0);
-   outColor *= default_light;
+   outColor *= vec4(total_light, 1.0);
 #endif
 
     if (!lightning_enabled) {
