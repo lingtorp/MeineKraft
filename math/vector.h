@@ -23,7 +23,8 @@ struct Vec4 {
     Vec4(T x, T y, T z, T w): x(x), y(y), z(z), w(w) { };
     Vec4(T x, T y, T z): x(x), y(y), z(z), w(0.0f) { };
     Vec4(): x(0), y(0), z(0), w(0) { };
-    Vec4(Vec3<T> vec): x(vec.x), y(vec.y), z(vec.z), w(0.0) { };
+    explicit Vec4(T val): x(val), y(val), z(val), w(val) {};
+    explicit Vec4(Vec3<T> vec): x(vec.x), y(vec.y), z(vec.z), w(0.0) { };
 
     /************ Operators ************/
     /// Returns the members x, y, z, w in index order (invalid indexes returns w)
@@ -41,6 +42,10 @@ struct Vec4 {
                 return x;
         }
     }
+  
+    void operator=(const Vec3<T>& rhs) {
+      x = rhs.x; y = rhs.y; z = rhs.z; w = 0.0f;
+    }
 
     bool operator==(const Vec4 &rhs) {
         return x == rhs.x && y == rhs.y && z == rhs.z && w == rhs.w;
@@ -54,22 +59,20 @@ struct Vec4 {
 template<typename T>
 struct Vec3 {
     T x, y, z;
-
+  
     Vec3(T x, T y, T z): x(x), y(y), z(z) {};
     explicit Vec3(const Vec4<T>& v): x(v.x), y(v.y), z(v.z) {};
+    explicit Vec3(T val): x(val), y(val), z(val) {};
     Vec3(): x(0), y(0), z(0) {};
 
-    /// Zeroed vector
-    inline static Vec3 ZERO() { return Vec3(0.0, 0.0, 0.0); }
-
     /// Unit vector along x-axis
-    inline static Vec3 X()    { return Vec3(1.0, 1.0, 0.0); }
+    inline static Vec3 X() { return Vec3(1.0, 0.0, 0.0); }
 
     /// Unit vector along y-axis
-    inline static Vec3 Y()    { return Vec3(0.0, 1.0, 0.0); }
+    inline static Vec3 Y() { return Vec3(0.0, 1.0, 0.0); }
 
     /// Unit vector along z-axis
-    inline static Vec3 Z()    { return Vec3(0.0, 0.0, 1.0); }
+    inline static Vec3 Z() { return Vec3(0.0, 0.0, 1.0); }
 
     /// Length of the vector
     inline double length() const { return std::sqrt(std::pow(x, 2) + std::pow(y, 2) + std::pow(z, 2)); }

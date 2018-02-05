@@ -59,7 +59,7 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
   glewExperimental = (GLboolean) true;
   glewInit();
   
-  Light light{Vec3<float>{15.0, 15.0, 15.0}, Color4<float>{1.0, 1.0, 1.0, 1.0}};
+  Light light{Vec3<float>{15.0, 15.0, 15.0}};
   lights.push_back(light);
 
   Transform transform;
@@ -408,8 +408,10 @@ void Renderer::render(uint32_t delta) {
     /// Update Light data for the batch
     Light& light = lights[0];
     glUniform3fv(glGetUniformLocation(program, "light.color"), 1, &light.light_color.r);
-    glUniform3fv(glGetUniformLocation(program, "light.color"), 1, &light.light_itensity.x);
-    glUniform3fv(glGetUniformLocation(program, "light.color"), 1, &light.position.x);
+    glUniform3fv(glGetUniformLocation(program, "light.ambient_intensity"), 1, &light.ambient_intensity.x);
+    glUniform3fv(glGetUniformLocation(program, "light.diffuse_intensity"), 1, &light.diffuse_intensity.x);
+    glUniform3fv(glGetUniformLocation(program, "light.specular_intensity"), 1, &light.specular_intensity.x);
+    glUniform3fv(glGetUniformLocation(program, "light.position"), 1, &light.position.x);
   
     /// Update uniforms
     glUniform1i(glGetUniformLocation(program, "normal_sampler"), gl_normal_texture_unit);
