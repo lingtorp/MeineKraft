@@ -265,7 +265,7 @@ public:
     inline Vec4<T> operator*(Vec4<T> rhs) const {
         Vec4<T> result;
         for (int i = 0; i < 4; i++) {
-            result.values[i] = rows[i].values[0] * rhs.values[0] + rows[i].values[1] * rhs.values[1] + rows[i].values[2] * rhs.values[2] + rows[i].values[3] * rhs.values[3];
+            result[i] = rows[i].x * rhs.x + rows[i].y * rhs.y + rows[i].z * rhs.z + rows[i].w * rhs.w;
         }
         return result;
     }
