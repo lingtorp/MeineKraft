@@ -66,11 +66,6 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
   transform.current_position = light.position;
   transform.repeat = true;
   transformations.push_back(transform);
-
-  /// Light uniform buffer
-  glGenBuffers(1, &gl_light_uniform_buffer);
-  glBindBuffer(GL_UNIFORM_BUFFER, gl_light_uniform_buffer);
-  glBufferData(GL_UNIFORM_BUFFER, sizeof(Light) * lights.size(), &lights, GL_DYNAMIC_DRAW);
   
   int screen_width = 1280; // TODO: Move this into uniforms
   int screen_height = 720;
@@ -289,11 +284,6 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
     glBufferData(GL_ARRAY_BUFFER, sizeof(quad), &quad, GL_STATIC_DRAW);
     glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
     glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
-    
-    // Lights UBO
-    auto block_index = glGetUniformBlockIndex(program, "lights_block");
-    glBindBuffer(GL_UNIFORM_BUFFER, gl_light_uniform_buffer);
-    glBindBufferBase(GL_UNIFORM_BUFFER, block_index, gl_light_uniform_buffer);
   }
 
   /// Camera
@@ -416,8 +406,10 @@ void Renderer::render(uint32_t delta) {
     glFrontFace(GL_CCW);
   
     /// Update Light data for the batch
-    glBindBuffer(GL_UNIFORM_BUFFER, gl_light_uniform_buffer);
-    glBufferData(GL_UNIFORM_BUFFER, sizeof(Light) * lights.size(), lights.data(), GL_DYNAMIC_DRAW);
+    Light& light = lights[0];
+    glUniform3fv(glGetUniformLocation(program, "light.color"), 1, &light.light_color.r);
+    glUniform3fv(glGetUniformLocation(program, "light.color"), 1, &light.light_itensity.x);
+    glUniform3fv(glGetUniformLocation(program, "light.color"), 1, &light.position.x);
   
     /// Update uniforms
     glUniform1i(glGetUniformLocation(program, "normal_sampler"), gl_normal_texture_unit);

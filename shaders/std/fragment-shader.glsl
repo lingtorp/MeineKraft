@@ -10,16 +10,12 @@ out vec4 outColor; // Defaults to zero when the frag shader only has 1 out varia
 
 /// Lights
 struct Light {
-    vec4 color;
-    vec4 light_intensity; // (ambient, diffuse, specular, padding) - itensities
+    vec3 color;
+    vec3 light_intensity; // (ambient, diffuse, specular, padding) - itensities
     vec3 position;
 };
 
-const int MAX_NUM_LIGHTS = 1;
-
-layout (std140) uniform lights_block {
-    Light lights[MAX_NUM_LIGHTS];
-};
+uniform Light light;
 
 // Enabled/Disable Phong shading
 uniform bool lightning_enabled;
@@ -49,28 +45,26 @@ void main() {
 
 #ifdef FLAG_BLINN_PHONG_SHADING
     vec3 total_light = vec3(0.0, 0.0, 0.0);
-    for (int i = 0; i < MAX_NUM_LIGHTS; i++) {
-        Light light = lights[i];
 
-        float ambient = 1.0 - ambient_occlusion;
+    float ambient = 1.0 - ambient_occlusion;
 
-        vec3 direction = normalize(light.position - position);
-        float diffuse = max(dot(normal, direction), 0.0);
+    vec3 direction = normalize(light.position - position);
+    float diffuse = max(dot(normal, direction), 0.0);
 
-        // FIXME: Specular light too much when angles is 90*
-        // FIXME: Remove conditionals with clever math functions
-        vec3 reflection = reflect(-direction, normal);
-        vec3 eye = normalize(-position); // View space eye = (0, 0, 0): A to B = 0 to B = -B
-        float specular;
-        if (blinn_phong) {
-            vec3 half_way = normalize(direction + eye);
-            specular = pow(max(dot(normal, half_way), 0.0), specular_power);
-        } else {
-            specular = pow(max(dot(reflection, eye), 0.0), specular_power);
-        }
-        // TODO: Toggle individual light contributions
-        total_light = (ambient + diffuse + specular) * light.color.xyz;
+    // FIXME: Specular light too much when angles is 90*
+    // FIXME: Remove conditionals with clever math functions
+    vec3 reflection = reflect(-direction, normal);
+    vec3 eye = normalize(-position); // View space eye = (0, 0, 0): A to B = 0 to B = -B
+    float specular;
+    if (blinn_phong) {
+        vec3 half_way = normalize(direction + eye);
+        specular = pow(max(dot(normal, half_way), 0.0), specular_power);
+    } else {
+        specular = pow(max(dot(reflection, eye), 0.0), specular_power);
     }
+    // TODO: Toggle individual light contributions
+    total_light = (ambient + diffuse + specular) * light.color.xyz;
+
    default_light = vec4(total_light, 1.0);
    outColor *= default_light;
 #endif
