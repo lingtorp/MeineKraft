@@ -8,9 +8,9 @@ struct Transform {
     bool finished;
     bool repeat;
 
-    const Vec3<float> from_position;
-    Vec3<float> current_position;
-    const Vec3<float> to_position;
+    const Vec4<float> from_position;
+    Vec4<float> current_position;
+    const Vec4<float> to_position;
 
     /// Time in milliseconds
     uint64_t time_elapsed;
