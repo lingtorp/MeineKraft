@@ -32,7 +32,7 @@ struct Vertex {
   Vec2<T>   texCoord = {};
   Vec3<T>   normal   = {};
   Vertex() = default;
-  Vertex(Vec3<T> position): position(position), texCoord{}, color{}, normal{} {};
+  explicit Vertex(Vec3<T> position): position(position), texCoord{}, color{}, normal{} {};
   Vertex(Vec3<T> position, Vec2<T> texCoord): position(position), texCoord(texCoord), color{}, normal{} {};
 
   bool operator==(const Vertex<T> &rhs) const {
@@ -102,8 +102,8 @@ enum class MeshPrimitive {
 };
 
 struct Mesh {
-  std::vector<Vertex<float>> vertices;
-  std::vector<uint32_t> indices;
+  std::vector<Vertex<float>> vertices{};
+  std::vector<uint32_t> indices{};
 
   Mesh() = default;
   Mesh(std::vector<Vertex<float>> vertices, std::vector<uint32_t> indices): vertices(vertices), indices(indices) {};

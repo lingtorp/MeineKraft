@@ -1,14 +1,9 @@
 #include "render.h"
 #include <GL/glew.h>
-#include <SDL2/SDL_image.h>
-#include <array>
 #include "../world/world.h"
 #include "camera.h"
 #include "graphicsbatch.h"
-#include "rendercomponent.h"
-#include "shader.h"
 #include "../util/filemonitor.h"
-#include "transform.h"
 #include "meshmanager.h"
 #include "../util/filesystem.h"
 #include "debug_opengl.h"
@@ -59,8 +54,8 @@ Mat4<float> gen_projection_matrix(float z_near, float z_far, float fov, float as
   return matrix;
 }
 
-Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), state{}, graphics_batches{},
-                    shader_file_monitor(std::make_unique<FileMonitor>()), lights{}, mesh_manager{new MeshManager()} {
+Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batches{},
+                    shader_file_monitor(new FileMonitor{}), lights{}, mesh_manager{new MeshManager()} {
   glewExperimental = (GLboolean) true;
   glewInit();
   
@@ -305,7 +300,7 @@ Renderer::Renderer(): DRAW_DISTANCE(200), projection_matrix(Mat4<float>()), stat
   const auto position  = Vec3<float>{0.0f, 20.0f, 0.0f};  // cam position
   const auto direction = Vec3<float>{0.0f, 0.0f, -1.0f};  // position of where the cam is looking
   const auto world_up  = Vec3<float>{0.0f, 1.0f, 0.0f};   // world up
-  this->camera = std::make_shared<Camera>(position, direction, world_up);
+  camera = new Camera(position, direction, world_up);
 }
 
 bool Renderer::point_inside_frustrum(Vec3<float> point, std::array<Plane<float>, 6> planes) {
@@ -333,7 +328,8 @@ void Renderer::render(uint32_t delta) {
   if (animate_light) {
     // TODO: Move this kind of comp. into seperate thread or something
     for (auto &transform : transformations) { transform.update(delta); }
-    lights[0].position = transformations[0].current_position; // FIXME: Transforms are not updating their Entities..
+    auto temp = camera_view * transformations[0].current_position; // FIXME: Transforms are not updating their Entities..
+    lights[0].position = Vec3<float>{temp};
   }
   
   /// Geometry pass
@@ -414,9 +410,7 @@ void Renderer::render(uint32_t delta) {
   
     glBindVertexArray(gl_lightning_vao);
     glUseProgram(program);
-  
-    glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, camera_view.data());
-  
+    
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW);

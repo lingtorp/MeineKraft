@@ -45,11 +45,11 @@ public:
   /// Updates all the shaders projection matrices in order to support resizing of the window
   void update_projection_matrix(float fov);
   
-  std::shared_ptr<Camera> camera;
+  Camera* camera;
   RenderState state;
   SDL_Window *window;
   MeshManager* mesh_manager;
-  double DRAW_DISTANCE;
+  float draw_distance = 200;
   Mat4<float> projection_matrix;
   float screen_width;
   float screen_height;
@@ -117,7 +117,7 @@ private:
 
   std::vector<GraphicsBatch> graphics_batches;
 
-  std::unique_ptr<FileMonitor> shader_file_monitor;
+  FileMonitor* shader_file_monitor;
 
   // TODO Docs
   bool point_inside_frustrum(Vec3<float> point, std::array<Plane<float>, 6> planes);

@@ -2,10 +2,8 @@
 #include <SDL_opengl.h> // TODO: Remove.
 #include "rendercomponent.h"
 #include "render.h"
-#include "shader.h"
 #include "../nodes/entity.h"
 #include "meshmanager.h"
-#include "../util/filesystem.h"
 
 RenderComponent::RenderComponent(Entity* entity): entity(entity), graphics_state{} {}
 
