@@ -62,7 +62,7 @@ public:
   float ssao_blur_factor = 16.0;
   bool  ssao_blur_enabled = true;
   
-  std::vector<Light> lights;
+  std::vector<PointLight> lights;
   bool lightning_enabled = true;
   bool animate_light = true;
   float specular_power = 32.0;
