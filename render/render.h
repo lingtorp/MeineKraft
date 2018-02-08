@@ -111,8 +111,6 @@ private:
   uint32_t gl_blur_vao;
   uint32_t gl_ssao_vao;
   
-  uint32_t gl_light_uniform_buffer;
-  
   std::vector<Transform> transformations;
 
   std::vector<GraphicsBatch> graphics_batches;
