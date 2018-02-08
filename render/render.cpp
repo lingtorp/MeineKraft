@@ -1,12 +1,13 @@
 #include "render.h"
 #include <GL/glew.h>
-#include "../world/world.h"
+#include <random>
 #include "camera.h"
 #include "graphicsbatch.h"
 #include "../util/filemonitor.h"
-#include "meshmanager.h"
 #include "../util/filesystem.h"
 #include "debug_opengl.h"
+#include "rendercomponent.h"
+#include "meshmanager.h"
 
 /// Column major - Camera combined rotation matrix (y, x) & translation matrix
 Mat4<float> Renderer::FPSViewRH(Vec3<float> eye, float pitch, float yaw) {
@@ -55,11 +56,11 @@ Mat4<float> gen_projection_matrix(float z_near, float z_far, float fov, float as
 }
 
 Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batches{},
-                    shader_file_monitor(new FileMonitor{}), lights{}, mesh_manager{new MeshManager()} {
+                    shader_file_monitor(new FileMonitor{}), lights{}, mesh_manager{new MeshManager{}} {
   glewExperimental = (GLboolean) true;
   glewInit();
   
-  PointLight light{Vec3<float>{15.0, 15.0, 15.0}};
+  PointLight light{Vec3<float>{0.0, 15.0, 0.0}};
   lights.push_back(light);
 
   Transform transform;
@@ -125,7 +126,7 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
   }
   
   /// Depth shader
-  depth_shader = new Shader{FileSystem::base + "shaders/std/depth-vertex.glsl", FileSystem::base + "shaders/std/depth-fragment.glsl"};
+  depth_shader = new Shader{Filesystem::base + "shaders/std/depth-vertex.glsl", Filesystem::base + "shaders/std/depth-fragment.glsl"};
   std::string err_msg;
   bool success;
   std::tie(success, err_msg) = depth_shader->compile();
@@ -154,7 +155,7 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
   }
   
   /// SSAO Shader
-  ssao_shader = new Shader{FileSystem::base + "shaders/std/ssao-vertex.glsl", FileSystem::base + "shaders/std/ssao-fragment.glsl"};
+  ssao_shader = new Shader{Filesystem::base + "shaders/std/ssao-vertex.glsl", Filesystem::base + "shaders/std/ssao-fragment.glsl"};
   std::tie(success, err_msg) = ssao_shader->compile();
   if (!success) {
     SDL_Log("Shader compilation failed; %s", err_msg.c_str());
@@ -184,7 +185,7 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
   glGenFramebuffers(1, &gl_blur_fbo);
   glBindFramebuffer(GL_FRAMEBUFFER, gl_blur_fbo);
   
-  blur_shader = new Shader{FileSystem::base + "shaders/std/blur.vs", FileSystem::base + "shaders/std/blur.fs"};
+  blur_shader = new Shader{Filesystem::base + "shaders/std/blur.vs", Filesystem::base + "shaders/std/blur.fs"};
   std::tie(success, err_msg) = blur_shader->compile();
   if (!success) {
     SDL_Log("Blur shader compilation failed; %s", err_msg.c_str());
@@ -227,8 +228,8 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
   }
   
   /// Lightning pass shader
-  const auto vertex_shader   = FileSystem::base + "shaders/std/vertex-shader.glsl";
-  const auto fragment_shader = FileSystem::base + "shaders/std/fragment-shader.glsl";
+  const auto vertex_shader   = Filesystem::base + "shaders/std/vertex-shader.glsl";
+  const auto fragment_shader = Filesystem::base + "shaders/std/fragment-shader.glsl";
   lightning_shader = new Shader{vertex_shader, fragment_shader};
   lightning_shader->add("#define FLAG_BLINN_PHONG_SHADING \n");
   std::tie(success, err_msg) = lightning_shader->compile();
@@ -272,7 +273,7 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
     glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
   }
   
-  /// Rendering pass setup
+  /// Point light pass setup
   {
     auto program = lightning_shader->gl_program;
     glGenVertexArrays(1, &gl_lightning_vao);
@@ -281,9 +282,25 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
     GLuint gl_vbo;
     glGenBuffers(1, &gl_vbo);
     glBindBuffer(GL_ARRAY_BUFFER, gl_vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(quad), &quad, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sphere.byte_size_of_vertices(), sphere.vertices.data(), GL_STATIC_DRAW);
     glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
-    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
+    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, position));
+  
+    // Buffer for all the model matrices
+    glGenBuffers(1, &gl_pointlight_models_buffer_object);
+    glBindBuffer(GL_ARRAY_BUFFER, gl_pointlight_models_buffer_object);
+  
+    auto model_attrib = glGetAttribLocation(program, "model");
+    for (int i = 0; i < 4; i++) {
+      glVertexAttribPointer(model_attrib + i, 4, GL_FLOAT, GL_FALSE, sizeof(Mat4<float>), (const void *) (sizeof(float) * i * 4));
+      glEnableVertexAttribArray(model_attrib + i);
+      glVertexAttribDivisor(model_attrib + i, 1);
+    }
+  
+    GLuint EBO;
+    glGenBuffers(1, &EBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sphere.byte_size_of_indices(), sphere.indices.data(), GL_STATIC_DRAW);
   }
 
   /// Camera
@@ -392,19 +409,22 @@ void Renderer::render(uint32_t delta) {
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
   }
 
-  /// Remainder pass
+  /// Point lighting pass
   {
     auto program = lightning_shader->gl_program;
     glBindFramebuffer(GL_FRAMEBUFFER, 0); // Reset framebuffer to default
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Always update the depth buffer with the new values
-  
+    
     glBindVertexArray(gl_lightning_vao);
     glUseProgram(program);
-    
+    glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, camera_view.data());
+    glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, projection_matrix.data());
+  /*
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
-  
+    */
+    
     /// Update Light data for the batch
     PointLight& light = lights[0];
     glUniform3fv(glGetUniformLocation(program, "light.color"), 1, &light.color.r);
@@ -412,6 +432,16 @@ void Renderer::render(uint32_t delta) {
     glUniform3fv(glGetUniformLocation(program, "light.diffuse_intensity"), 1, &light.diffuse_intensity.x);
     glUniform3fv(glGetUniformLocation(program, "light.specular_intensity"), 1, &light.specular_intensity.x);
     glUniform3fv(glGetUniformLocation(program, "light.position"), 1, &light.position.x);
+    glUniform1f(glGetUniformLocation(program, "light.constant"), light.constant);
+    glUniform1f(glGetUniformLocation(program, "light.linear"), light.linear);
+    glUniform1f(glGetUniformLocation(program, "light.quadratic"), light.quadratic);
+  
+    float c = light.constant;
+    float l = light.linear;
+    float q = light.quadratic;
+    float max  = 1.0; // std::fmaxf(std::fmaxf(light.color.r, light.color.g), light.color.b);
+    light.radius = (-l + std::sqrtf(l * l - 4 * q * (c - (256.0f / 1.0f) * max))) / (2 * q);
+    glUniform1f(glGetUniformLocation(program, "light.radius"), light.radius);
   
     /// Update uniforms
     glUniform1i(glGetUniformLocation(program, "normal_sampler"), gl_normal_texture_unit);
@@ -429,7 +459,16 @@ void Renderer::render(uint32_t delta) {
     glUniform1f(glGetUniformLocation(program, "specular_power"), specular_power);
     glUniform1i(glGetUniformLocation(program, "blinn_phong"), blinn_phong_shading);
     
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    std::vector<Mat4<float>> model_buffer;
+    for (auto& light : lights) {
+      Mat4<float> model{};
+      model = model.translate(light.position);
+      model = model.scale(light.radius);
+      model_buffer.push_back(model.transpose());
+    }
+    glBindBuffer(GL_ARRAY_BUFFER, gl_pointlight_models_buffer_object);
+    glBufferData(GL_ARRAY_BUFFER, model_buffer.size() * sizeof(Mat4<float>), model_buffer.data(), GL_DYNAMIC_DRAW);
+    glDrawElementsInstanced(GL_TRIANGLES, sphere.indices.size(), GL_UNSIGNED_INT, nullptr, model_buffer.size());
   }
   log_gl_error();
   state.graphic_batches = graphics_batches.size();
@@ -501,7 +540,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     GLuint depth_vbo;
     glGenBuffers(1, &depth_vbo);
     glBindBuffer(GL_ARRAY_BUFFER, depth_vbo);
-    glBufferData(GL_ARRAY_BUFFER, batch.mesh.byte_size_of_vertices(), vertices.data(), GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, batch.mesh.byte_size_of_vertices(), vertices.data(), GL_DYNAMIC_DRAW); // FIXME: Should be static draw since mesh is not changing?
     
     auto position_attrib = glGetAttribLocation(program, "position");
     glVertexAttribPointer(position_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, position));

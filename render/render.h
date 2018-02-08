@@ -95,6 +95,8 @@ private:
   
   /// Lightning pass related
   Shader* lightning_shader;
+  // Point light
+  uint32_t gl_pointlight_models_buffer_object;
   
   /// Global buffers
   // Normals

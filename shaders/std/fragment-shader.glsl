@@ -8,10 +8,13 @@ uniform sampler2D diffuse_sampler;
 
 out vec4 outColor; // Defaults to zero when the frag shader only has 1 out variable
 
-// FIXME: Should be independent on engine Light struct layout
-/// Lights
 struct Light {
     vec3 color;
+    float radius;
+    // Attenuation values
+    float constant;
+    float linear;
+    float quadratic;
     // Intensities over RGB
     vec3 ambient_intensity;
     vec3 diffuse_intensity;
@@ -72,10 +75,17 @@ void main() {
     total_light += specular;
     total_light *= light.color.xyz;
 
-   outColor *= vec4(total_light, 1.0);
+    float distance = length(light.position - position);
+    float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
+    // total_light *= attenuation;
+
+    outColor *= vec4(total_light, 1.0);
 #endif
 
     if (!lightning_enabled) {
        outColor = texture(diffuse_sampler, frag_coord).rgba;
     }
+
+    // outColor = vec4(1.0);
+    // outColor = vec4(vec3(attenuation) * 100, 1.0);
 }
