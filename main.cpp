@@ -4,8 +4,6 @@
 #include <SDL2/SDL_image.h>
 #include <iterator>
 #include "render/camera.h"
-#include "world/world.h"
-#include "nodes/skybox.h"
 #include "nodes/model.h"
 #include "util/filesystem.h"
 
