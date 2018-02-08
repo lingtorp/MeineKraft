@@ -1,7 +1,7 @@
 #ifndef MEINEKRAFT_FILESYSTEM_H
 #define MEINEKRAFT_FILESYSTEM_H
 
-namespace FileSystem {
+namespace Filesystem {
   // TODO: Make these dynamic rather than static
   /// Base filepath to the executeable
   #ifdef __linux__

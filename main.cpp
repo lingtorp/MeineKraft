@@ -40,8 +40,9 @@ int main() {
   renderer.screen_width = HD.width;
   renderer.screen_height = HD.height;
   
-  Model bunny{FileSystem::base + "iron-man/", "Iron_Man.obj"};
-  bunny.position = {0, 15, 0};
+  Model bunny{Filesystem::base + "iron-man/", "Iron_Man.obj"};
+  bunny.position = {0, 16, 0};
+  bunny.scale = 0.5;
   
   bool toggle_mouse_capture = true;
   bool DONE = false;
