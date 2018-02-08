@@ -1,8 +1,6 @@
 #include <memory>
 #include "render/render.h"
 #include "include/imgui/imgui_impl_sdl.h"
-#include <SDL2/SDL_image.h>
-#include <iterator>
 #include "render/camera.h"
 #include "nodes/model.h"
 #include "util/filesystem.h"
