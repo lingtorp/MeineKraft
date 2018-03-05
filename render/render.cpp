@@ -402,18 +402,17 @@ void Renderer::render(uint32_t delta) {
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Always update the depth buffer with the new values
-    for (auto &batch : graphics_batches) {
+    for (const auto& batch : graphics_batches) {
       std::vector<Mat4<float>> model_buffer{};
       
       auto program = depth_shader->gl_program;
       glBindVertexArray(batch.gl_depth_vao);
       glUseProgram(program);
       glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, camera_view.data());
-      // Setup textures
       glUniform1i(glGetUniformLocation(program, "diffuse"), batch.gl_diffuse_texture_unit);
       glUniform1i(glGetUniformLocation(program, "specular"), batch.gl_specular_texture_unit);
       
-      for (auto &component : batch.components) {
+      for (const auto& component : batch.components) {
         component->update(); // Copy all graphics state
         
         Mat4<float> model{};
@@ -491,8 +490,8 @@ void Renderer::render(uint32_t delta) {
     glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, camera_view.data());
     glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, projection_matrix.data());
     std::vector<Mat4<float>> model_buffer;
-    for (auto& light : lights) {
-      Mat4<float> model{};
+    Mat4<float> model{};
+    for (const auto& light : lights) {
       model = model.translate(light.position);
       model = model.scale(light.radius);
       model_buffer.push_back(model.transpose());
@@ -565,7 +564,7 @@ void Renderer::render(uint32_t delta) {
     glUniform1i(glGetUniformLocation(program, "blinn_phong"), blinn_phong_shading);
     
     std::vector<Mat4<float>> model_buffer;
-    for (auto& light : lights) {
+    for (const auto& light : lights) {
       Mat4<float> model{};
       model = model.translate(light.position);
       model = model.scale(light.radius);
