@@ -28,6 +28,7 @@ uniform Light light;
 uniform bool lightning_enabled;
 uniform float specular_power;
 uniform bool blinn_phong;
+uniform mat4 camera_view; // For stupid light
 
 #define FLAG_SSAO
 
@@ -75,8 +76,9 @@ void main() {
     total_light += specular;
     total_light *= light.color.xyz;
 
-    float distance = length(light.position - position);
-    float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
+    vec4 light_position = camera_view * vec4(light.position, 1.0);
+    float distance = length(light_position.xyz - position);
+    float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * distance * distance);
     // total_light *= attenuation;
 
     outColor *= vec4(total_light, 1.0);
