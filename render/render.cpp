@@ -144,8 +144,9 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
   glGenRenderbuffers(1, &gl_stencil_rbo);
   glBindRenderbuffer(GL_RENDERBUFFER, gl_stencil_rbo);
   glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, screen_width, screen_height);
-  
   glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, gl_stencil_rbo);
+  
+  glDrawBuffer(GL_NONE);
   
   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
     SDL_Log("Stencil framebuffer status not complete.");
@@ -381,10 +382,7 @@ void Renderer::render(uint32_t delta) {
   /// Reset render stats
   state = RenderState();
 
-  /// Frustrum planes
   auto camera_view = FPSViewRH(camera->position, camera->pitch, camera->yaw);
-  auto frustrum_view = camera_view * projection_matrix; // FIXME: Matrix multiplication is probably defined backwards
-  std::array<Plane<float>, 6> planes = extract_planes(frustrum_view.transpose());
 
   if (animate_light) {
     // TODO: Move this kind of comp. into seperate thread or something
@@ -401,21 +399,20 @@ void Renderer::render(uint32_t delta) {
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Always update the depth buffer with the new values
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); // Always update the depth buffer with the new values
     for (const auto& batch : graphics_batches) {
-      std::vector<Mat4<float>> model_buffer{};
-      
       auto program = depth_shader->gl_program;
       glBindVertexArray(batch.gl_depth_vao);
       glUseProgram(program);
       glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, camera_view.data());
       glUniform1i(glGetUniformLocation(program, "diffuse"), batch.gl_diffuse_texture_unit);
       glUniform1i(glGetUniformLocation(program, "specular"), batch.gl_specular_texture_unit);
-      
+  
+      std::vector<Mat4<float>> model_buffer{};
+      Mat4<float> model{};
       for (const auto& component : batch.components) {
         component->update(); // Copy all graphics state
         
-        Mat4<float> model{};
         model = model.translate(component->graphics_state.position);
         model = model.scale(component->graphics_state.scale);
         model_buffer.push_back(model.transpose());
@@ -473,15 +470,14 @@ void Renderer::render(uint32_t delta) {
     auto program = stencil_shader->gl_program;
     glBindFramebuffer(GL_FRAMEBUFFER, gl_stencil_fbo);
     glEnable(GL_STENCIL_TEST);
-    glDrawBuffer(GL_NONE);
-    glClear(GL_STENCIL_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   
     // Setup depth + stencil operations
     glEnable(GL_DEPTH_TEST);
-    glDepthMask(GL_FALSE);
+    glDepthMask(GL_FALSE); // Disable depth writes
     glDisable(GL_CULL_FACE);
     
-    glStencilFunc(GL_ALWAYS, 0, 0);
+    glStencilFunc(GL_ALWAYS, 0, 1);
     glStencilOpSeparate(GL_BACK, GL_KEEP, GL_INCR_WRAP, GL_KEEP);
     glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_DECR_WRAP, GL_KEEP);
     
@@ -500,7 +496,7 @@ void Renderer::render(uint32_t delta) {
     glBufferData(GL_ARRAY_BUFFER, model_buffer.size() * sizeof(Mat4<float>), model_buffer.data(), GL_DYNAMIC_DRAW);
     glDrawElementsInstanced(GL_TRIANGLES, sphere.indices.size(), GL_UNSIGNED_INT, nullptr, model_buffer.size());
   }
-
+  
   /// Point lighting pass
   {
     // Copy depth + stencil from stencil pass
@@ -509,11 +505,11 @@ void Renderer::render(uint32_t delta) {
     auto mask = GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT;
     auto filter = GL_NEAREST;
     glBlitFramebuffer(0, 0, screen_width, screen_height, 0, 0, screen_width, screen_height, mask, filter);
-    
+
     auto program = lightning_shader->gl_program;
     glBindFramebuffer(GL_FRAMEBUFFER, 0); // Reset framebuffer to default
     glEnable(GL_STENCIL_TEST);
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     
     glBindVertexArray(gl_lightning_vao);
     glUseProgram(program);
@@ -527,6 +523,7 @@ void Renderer::render(uint32_t delta) {
     glFrontFace(GL_CCW);
     
     glDisable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);
     glEnable(GL_BLEND);
     glBlendEquation(GL_FUNC_ADD);
     glBlendFunc(GL_ONE, GL_ONE);
