@@ -88,6 +88,6 @@ void main() {
        outColor = texture(diffuse_sampler, frag_coord).rgba;
     }
 
-    // outColor = vec4(1.0);
+    outColor = vec4(1.0);
     // outColor = vec4(vec3(attenuation) * 100, 1.0);
 }

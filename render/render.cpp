@@ -353,7 +353,7 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
     }
   
     GLuint EBO;
-    glGenBuffers(1, &EBO);
+    glGenBuffers(1, &EBO);     glDrawBuffer(GL_NONE);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sphere.byte_size_of_indices(), sphere.indices.data(), GL_STATIC_DRAW);
   }
@@ -469,15 +469,16 @@ void Renderer::render(uint32_t delta) {
     
     auto program = stencil_shader->gl_program;
     glBindFramebuffer(GL_FRAMEBUFFER, gl_stencil_fbo);
+    glDrawBuffer(GL_NONE); // Do not draw into color buffer
     glEnable(GL_STENCIL_TEST);
-    glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClear(GL_STENCIL_BUFFER_BIT);
   
     // Setup depth + stencil operations
     glEnable(GL_DEPTH_TEST);
     glDepthMask(GL_FALSE); // Disable depth writes
     glDisable(GL_CULL_FACE);
     
-    glStencilFunc(GL_ALWAYS, 0, 1);
+    glStencilFunc(GL_ALWAYS, 0, 0);
     glStencilOpSeparate(GL_BACK, GL_KEEP, GL_INCR_WRAP, GL_KEEP);
     glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_DECR_WRAP, GL_KEEP);
     
@@ -516,13 +517,13 @@ void Renderer::render(uint32_t delta) {
     glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, camera_view.data());
     glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, projection_matrix.data());
   
-    glStencilFunc(GL_NOTEQUAL, 0, 0xFF);
+    glStencilFunc(GL_EQUAL, 0, 0xFF);
     
     glEnable(GL_CULL_FACE);
     glCullFace(GL_FRONT);
     glFrontFace(GL_CCW);
     
-    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_DEPTH_TEST);
     glDepthMask(GL_FALSE);
     glEnable(GL_BLEND);
     glBlendEquation(GL_FUNC_ADD);
