@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <SDL2/SDL_image.h>
+#include <cstring>
 
 /// Opaque ID type used to reference resources throughout the engine
 typedef uint64_t ID;
