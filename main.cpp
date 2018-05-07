@@ -22,7 +22,7 @@ int main() {
   auto window_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_MOUSE_CAPTURE;
   SDL_Window* window = SDL_CreateWindow("MeineKraft", 0, 0, HD.width, HD.height, window_flags);
   SDL_GLContext context = SDL_GL_CreateContext(window);
-  SDL_GL_SetSwapInterval(0); // Disables vsync
+  // SDL_GL_SetSwapInterval(0); // Disables vsync
 
   // Init sdl2_image
   atexit(IMG_Quit);
@@ -46,19 +46,22 @@ int main() {
   
   bool toggle_mouse_capture = true;
   bool DONE = false;
-  uint32_t last_tick = SDL_GetTicks(), current_tick, delta;
+  auto last_tick = std::chrono::high_resolution_clock::now();
+  auto current_tick = last_tick;
+  int64_t delta = 0;
   
   /// Delta values
   float deltas[100];
   
   while (!DONE) {
-      current_tick = SDL_GetTicks();
-      delta = current_tick - last_tick;
+      current_tick = std::chrono::high_resolution_clock::now();
+      delta = std::chrono::duration_cast<std::chrono::milliseconds>(current_tick - last_tick).count();
+      std::cout << "Delta: " << delta << std::endl;
       last_tick = current_tick;
 
       /// Process input
       SDL_Event event{};
-      while (SDL_PollEvent(&event)) {
+      while (SDL_PollEvent(&event) != 0) {
         ImGui_ImplSdlGL3_ProcessEvent(&event);
       switch (event.type) {
         case SDL_MOUSEMOTION:

@@ -158,6 +158,32 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
     SDL_Log("Stencil shader compilation failed; %s", err_msg.c_str());
   }
   
+  /// Point lightning framebuffer
+  glGenFramebuffers(1, &gl_lightning_fbo);
+  glBindFramebuffer(GL_FRAMEBUFFER, gl_lightning_fbo);
+  
+  GLuint gl_lightning_rbo;
+  glGenRenderbuffers(1, &gl_lightning_rbo);
+  glBindRenderbuffer(GL_RENDERBUFFER, gl_lightning_rbo);
+  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, screen_width, screen_height);
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, gl_lightning_rbo);
+  
+  gl_lightning_texture_unit = max_texture_units - 9;
+  glActiveTexture(GL_TEXTURE0 + gl_lightning_texture_unit);
+  glGenTextures(1, &gl_lightning_texture);
+  glBindTexture(GL_TEXTURE_2D, gl_lightning_texture);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, screen_width, screen_height, 0, GL_RGBA, GL_FLOAT, nullptr);
+  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_lightning_texture, 0);
+  
+  uint32_t lightning_attachments[1] = { GL_COLOR_ATTACHMENT0 };
+  glDrawBuffers(std::size(lightning_attachments), lightning_attachments);
+  
+  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+    SDL_Log("Point lightning framebuffer status not complete.");
+  }
+  
   /// Global SSAO framebuffer
   glGenFramebuffers(1, &gl_ssao_fbo);
   glBindFramebuffer(GL_FRAMEBUFFER, gl_ssao_fbo);
@@ -470,17 +496,17 @@ void Renderer::render(uint32_t delta) {
     auto program = stencil_shader->gl_program;
     glBindFramebuffer(GL_FRAMEBUFFER, gl_stencil_fbo);
     glDrawBuffer(GL_NONE); // Do not draw into color buffer
+    
     glEnable(GL_STENCIL_TEST);
+    glStencilFunc(GL_ALWAYS, 0, 0);
+    glStencilOpSeparate(GL_BACK, GL_KEEP, GL_INCR_WRAP, GL_KEEP);
+    glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_DECR_WRAP, GL_KEEP);
     glClear(GL_STENCIL_BUFFER_BIT);
   
     // Setup depth + stencil operations
     glEnable(GL_DEPTH_TEST);
     glDepthMask(GL_FALSE); // Disable depth writes
     glDisable(GL_CULL_FACE);
-    
-    glStencilFunc(GL_ALWAYS, 0, 0);
-    glStencilOpSeparate(GL_BACK, GL_KEEP, GL_INCR_WRAP, GL_KEEP);
-    glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_DECR_WRAP, GL_KEEP);
     
     glBindVertexArray(gl_stencil_vao);
     glUseProgram(program);
@@ -502,7 +528,7 @@ void Renderer::render(uint32_t delta) {
   {
     // Copy depth + stencil from stencil pass
     glBindFramebuffer(GL_READ_FRAMEBUFFER, gl_stencil_fbo);
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, gl_lightning_fbo);
     auto mask = GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT;
     auto filter = GL_NEAREST;
     glBlitFramebuffer(0, 0, screen_width, screen_height, 0, 0, screen_width, screen_height, mask, filter);
@@ -510,24 +536,21 @@ void Renderer::render(uint32_t delta) {
     auto program = lightning_shader->gl_program;
     glBindFramebuffer(GL_FRAMEBUFFER, 0); // Reset framebuffer to default
     glEnable(GL_STENCIL_TEST);
-    glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    glStencilFunc(GL_NOTEQUAL, 0, 0xFF);
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendEquation(GL_FUNC_ADD);
+    glBlendFunc(GL_ONE, GL_ONE);
+  
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_FRONT);
+
+    glClear(GL_COLOR_BUFFER_BIT);
     
     glBindVertexArray(gl_lightning_vao);
     glUseProgram(program);
     glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, camera_view.data());
     glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, projection_matrix.data());
-  
-    glStencilFunc(GL_EQUAL, 0, 0xFF);
-    
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_FRONT);
-    glFrontFace(GL_CCW);
-    
-    glEnable(GL_DEPTH_TEST);
-    glDepthMask(GL_FALSE);
-    glEnable(GL_BLEND);
-    glBlendEquation(GL_FUNC_ADD);
-    glBlendFunc(GL_ONE, GL_ONE);
     
     /// Update Light data for the batch
     PointLight& light = lights[0];
@@ -575,6 +598,16 @@ void Renderer::render(uint32_t delta) {
     glDisable(GL_BLEND);
     glDisable(GL_STENCIL_TEST);
   }
+  
+  /// Copy final pass into default FBO
+  {
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, gl_lightning_fbo);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+    auto mask = GL_COLOR_BUFFER_BIT;
+    auto filter = GL_NEAREST;
+    glBlitFramebuffer(0, 0, screen_width, screen_height, 0, 0, screen_width, screen_height, mask, filter);
+  }
+  
   log_gl_error();
   state.graphic_batches = graphics_batches.size();
 }

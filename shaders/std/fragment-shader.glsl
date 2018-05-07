@@ -84,10 +84,6 @@ void main() {
     outColor *= vec4(total_light, 1.0);
 #endif
 
-    if (!lightning_enabled) {
-       outColor = texture(diffuse_sampler, frag_coord).rgba;
-    }
-
-    outColor = vec4(1.0);
+    // outColor = texture(diffuse_sampler, frag_coord).rgba;
     // outColor = vec4(vec3(attenuation) * 100, 1.0);
 }
