@@ -56,7 +56,8 @@ void main() {
 
     vec3 ambient = vec3(1.0 - ambient_occlusion) * light.ambient_intensity;
 
-    vec3 direction = normalize(light.position - position);
+    vec4 light_position = camera_view * vec4(light.position, 1.0);
+    vec3 direction = normalize(light_position.xyz - position);
     vec3 diffuse = max(dot(normal, direction), 0.0) * light.diffuse_intensity;
 
     // FIXME: Specular light too much when angles is 90*
@@ -76,7 +77,6 @@ void main() {
     total_light += specular;
     total_light *= light.color.xyz;
 
-    vec4 light_position = camera_view * vec4(light.position, 1.0);
     float distance = length(light_position.xyz - position);
     float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * distance * distance);
     // total_light *= attenuation;
@@ -84,6 +84,7 @@ void main() {
     outColor *= vec4(total_light, 1.0);
 #endif
 
+    // outColor = vec4(0.5, 0.5, 0.5, 1.0);
     // outColor = texture(diffuse_sampler, frag_coord).rgba;
     // outColor = vec4(vec3(attenuation) * 100, 1.0);
 }
