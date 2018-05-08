@@ -9,6 +9,19 @@
 #include "rendercomponent.h"
 #include "meshmanager.h"
 
+/// Pass handling code - used for debuggging at this moment
+void pass_started(const std::string& msg) {
+#ifdef __LINUX__
+  glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, msg.c_str());
+#endif
+}
+
+void pass_ended() {
+#ifdef __LINUX__
+  glPopDebugGroup();
+#endif
+}
+
 /// Column major - Camera combined rotation matrix (y, x) & translation matrix
 Mat4<float> Renderer::FPSViewRH(Vec3<float> eye, float pitch, float yaw) {
   static constexpr float rad = M_PI / 180;
@@ -418,6 +431,7 @@ void Renderer::render(uint32_t delta) {
   }
   
   /// Geometry pass
+  pass_started("Geometry pass");
   {
     glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
     glEnable(GL_DEPTH_TEST);
@@ -452,8 +466,10 @@ void Renderer::render(uint32_t delta) {
     glDisable(GL_DEPTH_TEST);
     glDepthMask(GL_FALSE);
   }
+  pass_ended();
   
   /// SSAO pass
+  pass_started("SSAO pass");
   {
     auto program = ssao_shader->gl_program;
     glBindVertexArray(gl_ssao_vao);
@@ -469,8 +485,10 @@ void Renderer::render(uint32_t delta) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
   }
+  pass_ended();
 
   /// Blur pass
+  pass_started("Blur pass");
   {
     auto program = blur_shader->gl_program;
     glBindVertexArray(gl_blur_vao);
@@ -483,8 +501,10 @@ void Renderer::render(uint32_t delta) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
   }
+  pass_ended();
   
   /// Stencil pass
+  pass_started("Stencil pass");
   {
     // Copy depth + stencil from geometry pass
     glBindFramebuffer(GL_READ_FRAMEBUFFER, gl_depth_fbo);
@@ -523,8 +543,10 @@ void Renderer::render(uint32_t delta) {
     glBufferData(GL_ARRAY_BUFFER, model_buffer.size() * sizeof(Mat4<float>), model_buffer.data(), GL_DYNAMIC_DRAW);
     glDrawElementsInstanced(GL_TRIANGLES, sphere.indices.size(), GL_UNSIGNED_INT, nullptr, model_buffer.size());
   }
+  pass_ended();
   
   /// Point lighting pass
+  pass_started("Point lightning pass");
   {
     // Copy depth + stencil from stencil pass
     glBindFramebuffer(GL_READ_FRAMEBUFFER, gl_stencil_fbo);
@@ -534,14 +556,14 @@ void Renderer::render(uint32_t delta) {
     glBlitFramebuffer(0, 0, screen_width, screen_height, 0, 0, screen_width, screen_height, mask, filter);
 
     auto program = lightning_shader->gl_program;
-    glBindFramebuffer(GL_FRAMEBUFFER, 0); // Reset framebuffer to default
+    glBindFramebuffer(GL_FRAMEBUFFER, gl_lightning_fbo);
     glEnable(GL_STENCIL_TEST);
     glStencilFunc(GL_NOTEQUAL, 0, 0xFF);
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendEquation(GL_FUNC_ADD);
     glBlendFunc(GL_ONE, GL_ONE);
-  
+
     glEnable(GL_CULL_FACE);
     glCullFace(GL_FRONT);
 
@@ -565,7 +587,7 @@ void Renderer::render(uint32_t delta) {
   
     float c = light.constant; float l = light.linear; float q = light.quadratic;
     float max_brightness = std::fmaxf(std::fmaxf(light.color.r, light.color.g), light.color.b);
-    light.radius = (-l + std::sqrt(l * l - 4 * q * (c - (256.0f / 5.0f) * max_brightness))) / (2.0f * q);
+    light.radius = 100.0; // (-l + std::sqrt(l * l - 4 * q * (c - (256.0f / 5.0f) * max_brightness))) / (2.0f * q);
     glUniform1f(glGetUniformLocation(program, "light.radius"), light.radius);
   
     /// Update uniforms
@@ -598,8 +620,10 @@ void Renderer::render(uint32_t delta) {
     glDisable(GL_BLEND);
     glDisable(GL_STENCIL_TEST);
   }
+  pass_ended();
   
   /// Copy final pass into default FBO
+  pass_started("Final blit pass");
   {
     glBindFramebuffer(GL_READ_FRAMEBUFFER, gl_lightning_fbo);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
@@ -607,6 +631,7 @@ void Renderer::render(uint32_t delta) {
     auto filter = GL_NEAREST;
     glBlitFramebuffer(0, 0, screen_width, screen_height, 0, 0, screen_width, screen_height, mask, filter);
   }
+  pass_ended();
   
   log_gl_error();
   state.graphic_batches = graphics_batches.size();
