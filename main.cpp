@@ -141,8 +141,8 @@ int main() {
       auto io = ImGui::GetIO();
 
       ImGui::Begin("Render state");
-      ImGui::Text("Graphics batches: %llu", renderer.state.graphic_batches);
-      ImGui::Text("Entities: %llu", renderer.state.entities);
+      ImGui::Text("Graphics batches: %lu", renderer.state.graphic_batches);
+      ImGui::Text("Entities: %lu", renderer.state.entities);
       ImGui::Text("Application average %u ms / frame (%.1f FPS)", delta, io.Framerate);
   
       static size_t i = -1; i = (i + 1) % std::size(deltas);
