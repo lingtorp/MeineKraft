@@ -1,4 +1,5 @@
 #include <memory>
+#include <chrono>
 #include "render/render.h"
 #include "include/imgui/imgui_impl_sdl.h"
 #include "render/camera.h"
