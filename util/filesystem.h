@@ -7,7 +7,7 @@ namespace Filesystem {
   #ifdef __linux__
   const std::string base = "/home/lingtorp/repos/MeineKraft/";
   #elif __APPLE__
-  const std::string base = "/Users/AlexanderLingtorp/Repositories/MeineKraft/";
+  const std::string base = "/Users/lingtorp/repos/MeineKraft/";
   #endif
 }
 
