@@ -1,12 +1,26 @@
 #include "render.h"
 #include <GL/glew.h>
-#include "../world/world.h"
+#include <random>
 #include "camera.h"
 #include "graphicsbatch.h"
 #include "../util/filemonitor.h"
-#include "meshmanager.h"
 #include "../util/filesystem.h"
 #include "debug_opengl.h"
+#include "rendercomponent.h"
+#include "meshmanager.h"
+
+/// Pass handling code - used for debuggging at this moment
+void pass_started(const std::string& msg) {
+#ifdef __LINUX__
+  glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, msg.c_str());
+#endif
+}
+
+void pass_ended() {
+#ifdef __LINUX__
+  glPopDebugGroup();
+#endif
+}
 
 /// Column major - Camera combined rotation matrix (y, x) & translation matrix
 Mat4<float> Renderer::FPSViewRH(Vec3<float> eye, float pitch, float yaw) {
@@ -55,22 +69,19 @@ Mat4<float> gen_projection_matrix(float z_near, float z_far, float fov, float as
 }
 
 Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batches{},
-                    shader_file_monitor(new FileMonitor{}), lights{}, mesh_manager{new MeshManager()} {
+                    shader_file_monitor(new FileMonitor{}), lights{}, mesh_manager{new MeshManager{}} {
   glewExperimental = (GLboolean) true;
   glewInit();
   
-  Light light{Vec3<float>{15.0, 15.0, 15.0}};
+  PointLight light{Vec3<float>{0.0, 15.0, 0.0}};
+  lights.push_back(light);
+  light = PointLight{Vec3<float>{0.0, 18.0, 0.0}};
   lights.push_back(light);
 
   Transform transform;
   transform.current_position = light.position;
   transform.repeat = true;
   transformations.push_back(transform);
-
-  /// Light uniform buffer
-  glGenBuffers(1, &gl_light_uniform_buffer);
-  glBindBuffer(GL_UNIFORM_BUFFER, gl_light_uniform_buffer);
-  glBufferData(GL_UNIFORM_BUFFER, sizeof(Light) * lights.size(), &lights, GL_DYNAMIC_DRAW);
   
   int screen_width = 1280; // TODO: Move this into uniforms
   int screen_height = 720;
@@ -89,8 +100,9 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
   glBindTexture(GL_TEXTURE_2D, gl_depth_texture);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, screen_width, screen_height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, nullptr);
-  glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, gl_depth_texture, 0);
+  // glTexParameteri(GL_TEXTURE_2D, GL_DEPTH_STENCIL_TEXTURE_MODE, GL_DEPTH_COMPONENT); // Default value (intention only to read depth values from texture)
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, screen_width, screen_height, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, nullptr);
+  glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, gl_depth_texture, 0);
   
   // Global normal buffer
   gl_normal_texture_unit = max_texture_units - 3;
@@ -130,12 +142,59 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
   }
   
   /// Depth shader
-  depth_shader = new Shader{FileSystem::base + "shaders/std/depth-vertex.glsl", FileSystem::base + "shaders/std/depth-fragment.glsl"};
+  depth_shader = new Shader{Filesystem::base + "shaders/std/depth-vertex.glsl", Filesystem::base + "shaders/std/depth-fragment.glsl"};
   std::string err_msg;
   bool success;
   std::tie(success, err_msg) = depth_shader->compile();
   if (!success) {
     SDL_Log("Shader compilation failed; %s", err_msg.c_str());
+  }
+  
+  /// Stencil framebuffer
+  glGenFramebuffers(1, &gl_stencil_fbo);
+  glBindFramebuffer(GL_FRAMEBUFFER, gl_stencil_fbo);
+  
+  glGenRenderbuffers(1, &gl_stencil_rbo);
+  glBindRenderbuffer(GL_RENDERBUFFER, gl_stencil_rbo);
+  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, screen_width, screen_height);
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, gl_stencil_rbo);
+  
+  glDrawBuffer(GL_NONE);
+  
+  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+    SDL_Log("Stencil framebuffer status not complete.");
+  }
+  
+  stencil_shader = new Shader{Filesystem::base + "shaders/std/stencil.vs", Filesystem::base + "shaders/std/stencil.fs"};
+  std::tie(success, err_msg) = stencil_shader->compile();
+  if (!success) {
+    SDL_Log("Stencil shader compilation failed; %s", err_msg.c_str());
+  }
+  
+  /// Point lightning framebuffer
+  glGenFramebuffers(1, &gl_lightning_fbo);
+  glBindFramebuffer(GL_FRAMEBUFFER, gl_lightning_fbo);
+  
+  GLuint gl_lightning_rbo;
+  glGenRenderbuffers(1, &gl_lightning_rbo);
+  glBindRenderbuffer(GL_RENDERBUFFER, gl_lightning_rbo);
+  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, screen_width, screen_height);
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, gl_lightning_rbo);
+  
+  gl_lightning_texture_unit = max_texture_units - 9;
+  glActiveTexture(GL_TEXTURE0 + gl_lightning_texture_unit);
+  glGenTextures(1, &gl_lightning_texture);
+  glBindTexture(GL_TEXTURE_2D, gl_lightning_texture);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, screen_width, screen_height, 0, GL_RGBA, GL_FLOAT, nullptr);
+  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_lightning_texture, 0);
+  
+  uint32_t lightning_attachments[1] = { GL_COLOR_ATTACHMENT0 };
+  glDrawBuffers(std::size(lightning_attachments), lightning_attachments);
+  
+  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+    SDL_Log("Point lightning framebuffer status not complete.");
   }
   
   /// Global SSAO framebuffer
@@ -159,7 +218,7 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
   }
   
   /// SSAO Shader
-  ssao_shader = new Shader{FileSystem::base + "shaders/std/ssao-vertex.glsl", FileSystem::base + "shaders/std/ssao-fragment.glsl"};
+  ssao_shader = new Shader{Filesystem::base + "shaders/std/ssao-vertex.glsl", Filesystem::base + "shaders/std/ssao-fragment.glsl"};
   std::tie(success, err_msg) = ssao_shader->compile();
   if (!success) {
     SDL_Log("Shader compilation failed; %s", err_msg.c_str());
@@ -189,7 +248,7 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
   glGenFramebuffers(1, &gl_blur_fbo);
   glBindFramebuffer(GL_FRAMEBUFFER, gl_blur_fbo);
   
-  blur_shader = new Shader{FileSystem::base + "shaders/std/blur.vs", FileSystem::base + "shaders/std/blur.fs"};
+  blur_shader = new Shader{Filesystem::base + "shaders/std/blur.vs", Filesystem::base + "shaders/std/blur.fs"};
   std::tie(success, err_msg) = blur_shader->compile();
   if (!success) {
     SDL_Log("Blur shader compilation failed; %s", err_msg.c_str());
@@ -232,8 +291,8 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
   }
   
   /// Lightning pass shader
-  const auto vertex_shader   = FileSystem::base + "shaders/std/vertex-shader.glsl";
-  const auto fragment_shader = FileSystem::base + "shaders/std/fragment-shader.glsl";
+  const auto vertex_shader   = Filesystem::base + "shaders/std/vertex-shader.glsl";
+  const auto fragment_shader = Filesystem::base + "shaders/std/fragment-shader.glsl";
   lightning_shader = new Shader{vertex_shader, fragment_shader};
   lightning_shader->add("#define FLAG_BLINN_PHONG_SHADING \n");
   std::tie(success, err_msg) = lightning_shader->compile();
@@ -264,6 +323,7 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
     glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
   }
   
+  // Blur pass setup
   {
     auto program = blur_shader->gl_program;
     glGenVertexArrays(1, &gl_blur_vao);
@@ -277,7 +337,37 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
     glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
   }
   
-  /// Rendering pass setup
+  /// Stencil pass setup
+  {
+    auto program = stencil_shader->gl_program;
+    glGenVertexArrays(1, &gl_stencil_vao);
+    glBindVertexArray(gl_stencil_vao);
+  
+    GLuint gl_vbo;
+    glGenBuffers(1, &gl_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, gl_vbo);
+    glBufferData(GL_ARRAY_BUFFER, sphere.byte_size_of_vertices(), sphere.vertices.data(), GL_STATIC_DRAW);
+    glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
+    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, position));
+  
+    // Buffer for all the model matrices
+    glGenBuffers(1, &gl_stencil_pointlight_models_buffer_object);
+    glBindBuffer(GL_ARRAY_BUFFER, gl_stencil_pointlight_models_buffer_object);
+  
+    auto model_attrib = glGetAttribLocation(program, "model");
+    for (int i = 0; i < 4; i++) {
+      glVertexAttribPointer(model_attrib + i, 4, GL_FLOAT, GL_FALSE, sizeof(Mat4<float>), (const void *) (sizeof(float) * i * 4));
+      glEnableVertexAttribArray(model_attrib + i);
+      glVertexAttribDivisor(model_attrib + i, 1);
+    }
+  
+    GLuint EBO;
+    glGenBuffers(1, &EBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sphere.byte_size_of_indices(), sphere.indices.data(), GL_STATIC_DRAW);
+  }
+  
+  /// Point light pass setup
   {
     auto program = lightning_shader->gl_program;
     glGenVertexArrays(1, &gl_lightning_vao);
@@ -286,14 +376,25 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
     GLuint gl_vbo;
     glGenBuffers(1, &gl_vbo);
     glBindBuffer(GL_ARRAY_BUFFER, gl_vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(quad), &quad, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sphere.byte_size_of_vertices(), sphere.vertices.data(), GL_STATIC_DRAW);
     glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
-    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
-    
-    // Lights UBO
-    auto block_index = glGetUniformBlockIndex(program, "lights_block");
-    glBindBuffer(GL_UNIFORM_BUFFER, gl_light_uniform_buffer);
-    glBindBufferBase(GL_UNIFORM_BUFFER, block_index, gl_light_uniform_buffer);
+    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, position));
+  
+    // Buffer for all the model matrices
+    glGenBuffers(1, &gl_pointlight_models_buffer_object);
+    glBindBuffer(GL_ARRAY_BUFFER, gl_pointlight_models_buffer_object);
+  
+    auto model_attrib = glGetAttribLocation(program, "model");
+    for (int i = 0; i < 4; i++) {
+      glVertexAttribPointer(model_attrib + i, 4, GL_FLOAT, GL_FALSE, sizeof(Mat4<float>), (const void *) (sizeof(float) * i * 4));
+      glEnableVertexAttribArray(model_attrib + i);
+      glVertexAttribDivisor(model_attrib + i, 1);
+    }
+  
+    GLuint EBO;
+    glGenBuffers(1, &EBO);     glDrawBuffer(GL_NONE);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sphere.byte_size_of_indices(), sphere.indices.data(), GL_STATIC_DRAW);
   }
 
   /// Camera
@@ -320,10 +421,7 @@ void Renderer::render(uint32_t delta) {
   /// Reset render stats
   state = RenderState();
 
-  /// Frustrum planes
   auto camera_view = FPSViewRH(camera->position, camera->pitch, camera->yaw);
-  auto frustrum_view = camera_view * projection_matrix; // FIXME: Matrix multiplication is probably defined backwards
-  std::array<Plane<float>, 6> planes = extract_planes(frustrum_view.transpose());
 
   if (animate_light) {
     // TODO: Move this kind of comp. into seperate thread or something
@@ -333,30 +431,28 @@ void Renderer::render(uint32_t delta) {
   }
   
   /// Geometry pass
+  pass_started("Geometry pass");
   {
     glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
     glDepthMask(GL_TRUE);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Always update the depth buffer with the new values
-    for (auto &batch : graphics_batches) {
-      std::vector<Mat4<float>> model_buffer{};
-      
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); // Always update the depth buffer with the new values
+    for (const auto& batch : graphics_batches) {
       auto program = depth_shader->gl_program;
       glBindVertexArray(batch.gl_depth_vao);
       glUseProgram(program);
       glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, camera_view.data());
-      // Setup textures
       glUniform1i(glGetUniformLocation(program, "diffuse"), batch.gl_diffuse_texture_unit);
       glUniform1i(glGetUniformLocation(program, "specular"), batch.gl_specular_texture_unit);
-      
-      for (auto &component : batch.components) {
+  
+      std::vector<Mat4<float>> model_buffer{};
+      Mat4<float> model{};
+      for (const auto& component : batch.components) {
         component->update(); // Copy all graphics state
         
-        Mat4<float> model{};
         model = model.translate(component->graphics_state.position);
         model = model.scale(component->graphics_state.scale);
         model_buffer.push_back(model.transpose());
@@ -370,8 +466,10 @@ void Renderer::render(uint32_t delta) {
     glDisable(GL_DEPTH_TEST);
     glDepthMask(GL_FALSE);
   }
+  pass_ended();
   
   /// SSAO pass
+  pass_started("SSAO pass");
   {
     auto program = ssao_shader->gl_program;
     glBindVertexArray(gl_ssao_vao);
@@ -387,8 +485,10 @@ void Renderer::render(uint32_t delta) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
   }
+  pass_ended();
 
   /// Blur pass
+  pass_started("Blur pass");
   {
     auto program = blur_shader->gl_program;
     glBindVertexArray(gl_blur_vao);
@@ -401,23 +501,94 @@ void Renderer::render(uint32_t delta) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
   }
-
-  /// Remainder pass
-  {
-    auto program = lightning_shader->gl_program;
-    glBindFramebuffer(GL_FRAMEBUFFER, 0); // Reset framebuffer to default
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Always update the depth buffer with the new values
+  pass_ended();
   
+  /// Stencil pass
+  pass_started("Stencil pass");
+  {
+    // Copy depth + stencil from geometry pass
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, gl_depth_fbo);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, gl_stencil_fbo);
+    auto mask = GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT;
+    auto filter = GL_NEAREST;
+    glBlitFramebuffer(0, 0, screen_width, screen_height, 0, 0, screen_width, screen_height, mask, filter);
+    
+    auto program = stencil_shader->gl_program;
+    glBindFramebuffer(GL_FRAMEBUFFER, gl_stencil_fbo);
+    glDrawBuffer(GL_NONE); // Do not draw into color buffer
+    
+    glEnable(GL_STENCIL_TEST);
+    glStencilFunc(GL_ALWAYS, 0, 0);
+    glStencilOpSeparate(GL_BACK, GL_KEEP, GL_INCR_WRAP, GL_KEEP);
+    glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_DECR_WRAP, GL_KEEP);
+    glClear(GL_STENCIL_BUFFER_BIT);
+  
+    // Setup depth + stencil operations
+    glEnable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE); // Disable depth writes
+    glDisable(GL_CULL_FACE);
+    
+    glBindVertexArray(gl_stencil_vao);
+    glUseProgram(program);
+    glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, camera_view.data());
+    glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, projection_matrix.data());
+    std::vector<Mat4<float>> model_buffer;
+    Mat4<float> model{};
+    for (const auto& light : lights) {
+      model = model.translate(light.position);
+      model = model.scale(light.radius);
+      model_buffer.push_back(model.transpose());
+    }
+    glBindBuffer(GL_ARRAY_BUFFER, gl_stencil_pointlight_models_buffer_object);
+    glBufferData(GL_ARRAY_BUFFER, model_buffer.size() * sizeof(Mat4<float>), model_buffer.data(), GL_DYNAMIC_DRAW);
+    glDrawElementsInstanced(GL_TRIANGLES, sphere.indices.size(), GL_UNSIGNED_INT, nullptr, model_buffer.size());
+  }
+  pass_ended();
+  
+  /// Point lighting pass
+  pass_started("Point lightning pass");
+  {
+    // Copy depth + stencil from stencil pass
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, gl_stencil_fbo);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, gl_lightning_fbo);
+    auto mask = GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT;
+    auto filter = GL_NEAREST;
+    glBlitFramebuffer(0, 0, screen_width, screen_height, 0, 0, screen_width, screen_height, mask, filter);
+
+    auto program = lightning_shader->gl_program;
+    glBindFramebuffer(GL_FRAMEBUFFER, gl_lightning_fbo);
+    glEnable(GL_STENCIL_TEST);
+    glStencilFunc(GL_NOTEQUAL, 0, 0xFF);
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendEquation(GL_FUNC_ADD);
+    glBlendFunc(GL_ONE, GL_ONE);
+
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_FRONT);
+
+    glClear(GL_COLOR_BUFFER_BIT);
+    
     glBindVertexArray(gl_lightning_vao);
     glUseProgram(program);
+    glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, camera_view.data());
+    glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, projection_matrix.data());
     
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
-    glFrontFace(GL_CCW);
-  
     /// Update Light data for the batch
-    glBindBuffer(GL_UNIFORM_BUFFER, gl_light_uniform_buffer);
-    glBufferData(GL_UNIFORM_BUFFER, sizeof(Light) * lights.size(), lights.data(), GL_DYNAMIC_DRAW);
+    PointLight& light = lights[0];
+    glUniform3fv(glGetUniformLocation(program, "light.color"), 1, &light.color.r);
+    glUniform3fv(glGetUniformLocation(program, "light.ambient_intensity"), 1, &light.ambient_intensity.x);
+    glUniform3fv(glGetUniformLocation(program, "light.diffuse_intensity"), 1, &light.diffuse_intensity.x);
+    glUniform3fv(glGetUniformLocation(program, "light.specular_intensity"), 1, &light.specular_intensity.x);
+    glUniform3fv(glGetUniformLocation(program, "light.position"), 1, &light.position.x);
+    glUniform1f(glGetUniformLocation(program, "light.constant"), light.constant);
+    glUniform1f(glGetUniformLocation(program, "light.linear"), light.linear);
+    glUniform1f(glGetUniformLocation(program, "light.quadratic"), light.quadratic);
+  
+    float c = light.constant; float l = light.linear; float q = light.quadratic;
+    float max_brightness = std::fmaxf(std::fmaxf(light.color.r, light.color.g), light.color.b);
+    light.radius = 100.0; // (-l + std::sqrt(l * l - 4 * q * (c - (256.0f / 5.0f) * max_brightness))) / (2.0f * q);
+    glUniform1f(glGetUniformLocation(program, "light.radius"), light.radius);
   
     /// Update uniforms
     glUniform1i(glGetUniformLocation(program, "normal_sampler"), gl_normal_texture_unit);
@@ -435,8 +606,33 @@ void Renderer::render(uint32_t delta) {
     glUniform1f(glGetUniformLocation(program, "specular_power"), specular_power);
     glUniform1i(glGetUniformLocation(program, "blinn_phong"), blinn_phong_shading);
     
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    std::vector<Mat4<float>> model_buffer;
+    for (const auto& light : lights) {
+      Mat4<float> model{};
+      model = model.translate(light.position);
+      model = model.scale(light.radius);
+      model_buffer.push_back(model.transpose());
+    }
+    glBindBuffer(GL_ARRAY_BUFFER, gl_pointlight_models_buffer_object);
+    glBufferData(GL_ARRAY_BUFFER, model_buffer.size() * sizeof(Mat4<float>), model_buffer.data(), GL_DYNAMIC_DRAW);
+    glDrawElementsInstanced(GL_TRIANGLES, sphere.indices.size(), GL_UNSIGNED_INT, nullptr, model_buffer.size());
+    
+    glDisable(GL_BLEND);
+    glDisable(GL_STENCIL_TEST);
   }
+  pass_ended();
+  
+  /// Copy final pass into default FBO
+  pass_started("Final blit pass");
+  {
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, gl_lightning_fbo);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+    auto mask = GL_COLOR_BUFFER_BIT;
+    auto filter = GL_NEAREST;
+    glBlitFramebuffer(0, 0, screen_width, screen_height, 0, 0, screen_width, screen_height, mask, filter);
+  }
+  pass_ended();
+  
   log_gl_error();
   state.graphic_batches = graphics_batches.size();
 }
@@ -507,7 +703,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     GLuint depth_vbo;
     glGenBuffers(1, &depth_vbo);
     glBindBuffer(GL_ARRAY_BUFFER, depth_vbo);
-    glBufferData(GL_ARRAY_BUFFER, batch.mesh.byte_size_of_vertices(), vertices.data(), GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, batch.mesh.byte_size_of_vertices(), vertices.data(), GL_DYNAMIC_DRAW); // FIXME: Should be static draw since mesh is not changing?
     
     auto position_attrib = glGetAttribLocation(program, "position");
     glVertexAttribPointer(position_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, position));

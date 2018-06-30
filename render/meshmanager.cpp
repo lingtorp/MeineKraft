@@ -1,24 +1,11 @@
 #include "meshmanager.h"
-#include <SDL2/SDL_log.h>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 #include <assimp/Importer.hpp>
 #include <iostream>
+#include "../util/filesystem.h"
 
-MeshManager::MeshManager(): meshes{}, meshes_loaded(0) {
-    meshes[meshes_loaded++] = {Cube(), ""};
-}
-
-std::pair<uint64_t, bool> MeshManager::is_mesh_loaded(std::string filepath, std::string directory) {
-    for (auto &entry : meshes) {
-        if (entry.second.loaded_from_filepath == filepath + directory) {
-            return {entry.first, true};
-        }
-    }
-    return {0, false};
-}
-
-std::pair<uint64_t, std::vector<std::pair<Texture::Type, std::string>>>
+std::pair<ID, std::vector<std::pair<Texture::Type, std::string>>>
 MeshManager::load_mesh(std::string directory, std::string file) {
     MeshInformation mesh_info;
     mesh_info.loaded_from_filepath = directory + file;
@@ -101,19 +88,6 @@ MeshManager::load_mesh(std::string directory, std::string file) {
             }
         }
     }
-    
-    meshes_loaded++; // FIXME: Always returns the same mesh id; detroys the point of instanced rendering
-    meshes[meshes_loaded] = mesh_info;
-    return {meshes_loaded, texture_info};
-}
-
-Mesh MeshManager::mesh_from_id(uint64_t mesh_id) {
-    return meshes[mesh_id].mesh;
-}
-
-uint64_t MeshManager::mesh_id_from_primitive(MeshPrimitive primitive) {
-    switch (primitive) {
-        case MeshPrimitive::Cube:
-            return 0;
-    }
+    loaded_meshes.push_back(mesh_info.mesh); // FIXME: Always returns the same mesh id; detroys the point of instanced rendering
+    return {loaded_meshes.size() - 1, texture_info};
 }

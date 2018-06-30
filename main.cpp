@@ -1,11 +1,8 @@
 #include <memory>
+#include <chrono>
 #include "render/render.h"
 #include "include/imgui/imgui_impl_sdl.h"
-#include <SDL2/SDL_image.h>
-#include <iterator>
 #include "render/camera.h"
-#include "world/world.h"
-#include "nodes/skybox.h"
 #include "nodes/model.h"
 #include "util/filesystem.h"
 
@@ -21,10 +18,12 @@ int main() {
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+  SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+  SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
   auto window_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_MOUSE_CAPTURE;
   SDL_Window* window = SDL_CreateWindow("MeineKraft", 0, 0, HD.width, HD.height, window_flags);
   SDL_GLContext context = SDL_GL_CreateContext(window);
-  SDL_GL_SetSwapInterval(0); // Disables vsync
+  // SDL_GL_SetSwapInterval(0); // Disables vsync
 
   // Init sdl2_image
   atexit(IMG_Quit);
@@ -42,24 +41,28 @@ int main() {
   renderer.screen_width = HD.width;
   renderer.screen_height = HD.height;
   
-  Model bunny{FileSystem::base + "iron-man/", "Iron_Man.obj"};
-  bunny.position = {0, 15, 0};
+  Model bunny{Filesystem::base + "iron-man/", "Iron_Man.obj"};
+  bunny.position = {0, 16, 0};
+  bunny.scale = 0.5;
   
   bool toggle_mouse_capture = true;
   bool DONE = false;
-  uint32_t last_tick = SDL_GetTicks(), current_tick, delta;
+  auto last_tick = std::chrono::high_resolution_clock::now();
+  auto current_tick = last_tick;
+  int64_t delta = 0;
   
   /// Delta values
   float deltas[100];
   
   while (!DONE) {
-      current_tick = SDL_GetTicks();
-      delta = current_tick - last_tick;
+      current_tick = std::chrono::high_resolution_clock::now();
+      delta = std::chrono::duration_cast<std::chrono::milliseconds>(current_tick - last_tick).count();
+      std::cout << "Delta: " << delta << std::endl;
       last_tick = current_tick;
 
       /// Process input
       SDL_Event event{};
-      while (SDL_PollEvent(&event)) {
+      while (SDL_PollEvent(&event) != 0) {
         ImGui_ImplSdlGL3_ProcessEvent(&event);
       switch (event.type) {
         case SDL_MOUSEMOTION:
@@ -172,7 +175,7 @@ int main() {
         ImGui::Checkbox("Enable lightning", &renderer.lightning_enabled);
         ImGui::Checkbox("Blinn-Phong/Phong shading", &renderer.blinn_phong_shading);
         ImGui::Checkbox("Animate lightning", &renderer.animate_light);
-        ImGui::InputFloat3("Color (RGB)", &renderer.lights[0].light_color.r);
+        ImGui::InputFloat3("Color (RGB)", &renderer.lights[0].color.r);
         ImGui::InputFloat3("Ambient intensity", &renderer.lights[0].ambient_intensity.x);
         ImGui::InputFloat3("Diffuse intensity", &renderer.lights[0].diffuse_intensity.x);
         ImGui::InputFloat3("Specular intensity", &renderer.lights[0].specular_intensity.x);

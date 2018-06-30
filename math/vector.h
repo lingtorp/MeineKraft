@@ -155,17 +155,11 @@ struct Vec2 {
     inline T dot(Vec2<T> u) const { return x * u.x + y * u.y; }
 
     /************ Operators ************/
-    Vec2<T> operator+(const Vec2 &rhs) const {
-        return {x + rhs.x, y + rhs.y};
-    }
+    Vec2<T> operator+(const Vec2 &rhs) const { return {x + rhs.x, y + rhs.y}; }
 
-    Vec2<T> operator-(const Vec2 &rhs) const {
-        return {x - rhs.x, y - rhs.y};
-    }
+    Vec2<T> operator-(const Vec2 &rhs) const { return {x - rhs.x, y - rhs.y}; }
 
-    bool operator==(const Vec2 &rhs) const {
-        return x == rhs.x && y == rhs.y;
-    }
+    bool operator==(const Vec2 &rhs) const { return x == rhs.x && y == rhs.y; }
 
     /// Returns a copy of this vector normalized
     inline Vec2<T> normalize() const {
@@ -186,9 +180,7 @@ private:
     Vec4<T> rows[4];
 
 public:
-    inline T *data() {
-        return &rows[0][0];
-    }
+    inline T *data() { return &rows[0][0]; }
 
     /// Identity matrix by default
     Mat4<T>() {
@@ -275,9 +267,7 @@ public:
     }
 
     /// matrix[row_i][colum_j]
-    inline Vec4<T> &operator[](const int index) {
-        return rows[index];
-    }
+    inline Vec4<T> &operator[](const int index) { return rows[index]; }
 
     friend std::ostream &operator<<(std::ostream& os, const Mat4 &mat) {
         return os << "\n { \n" << mat.rows[0] << "), \n" << mat.rows[1] << "), \n" << mat.rows[2] << "), \n" << mat.rows[3] << ")\n }";

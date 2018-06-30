@@ -116,6 +116,7 @@ struct Mesh {
   std::vector<uint32_t> indices{};
 
   Mesh() = default;
+  Mesh(const Mesh& mesh): vertices(mesh.vertices), indices(mesh.indices) {};
   Mesh(std::vector<Vertex<float>> vertices, std::vector<uint32_t> indices): vertices(vertices), indices(indices) {};
 
   /// Return a vector of all the vertices data laid out as the Vertex struct
@@ -149,6 +150,57 @@ struct Mesh {
   }
 };
 
+// FIXME: Please fixme, I need help.
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+#include <assimp/Importer.hpp>
+#include <iostream>
+#include "../util/filesystem.h"
+static Mesh load_sphere() {
+  Assimp::Importer importer;
+  auto scene = importer.ReadFile(Filesystem::base + "sphere/sphere.obj", 0);
+  
+  if (scene == nullptr || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
+    SDL_Log("Error: %s", importer.GetErrorString());
+    return Mesh{};
+  }
+  
+  Mesh sphere{};
+  if (scene->HasMeshes()) {
+    // FIXME: Assumes the mesh is a single mesh and not a hierarchy
+    for (size_t i = 0; i < scene->mNumMeshes; i++) {
+      auto mesh = scene->mMeshes[i];
+      
+      for (size_t j = 0; j < mesh->mNumVertices; j++) {
+        Vertex<float> vertex;
+        
+        auto pos = mesh->mVertices[j];
+        vertex.position = {pos.x, pos.y, pos.z};
+        
+        sphere.vertices.push_back(vertex);
+      }
+      
+      for (size_t j = 0; j < mesh->mNumFaces; j++) {
+        auto face = &mesh->mFaces[j];
+        if (face->mNumIndices != 3) {
+          SDL_Log("Not 3 vertices per face.");
+          return Mesh{};
+        }
+        for (size_t k = 0; k < 3; k++) {
+          auto index = face->mIndices[k];
+          sphere.indices.push_back(index);
+        }
+      }
+    }
+  }
+  return sphere;
+}
+
+struct Sphere: Mesh {
+  Sphere(): Mesh(load_sphere()) {}
+};
+
+/// Unit cube
 struct Cube: Mesh {
   Cube(): Mesh() {
       auto a = Vec3<float>(-0.5f, -0.5f, 0.5f);

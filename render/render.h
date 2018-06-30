@@ -62,7 +62,7 @@ public:
   float ssao_blur_factor = 16.0;
   bool  ssao_blur_enabled = true;
   
-  std::vector<Light> lights;
+  std::vector<PointLight> lights;
   bool lightning_enabled = true;
   bool animate_light = true;
   float specular_power = 32.0;
@@ -95,6 +95,18 @@ private:
   
   /// Lightning pass related
   Shader* lightning_shader;
+  // Point light
+  uint32_t gl_pointlight_models_buffer_object;
+  // Stencil pass related
+  Shader* stencil_shader;
+  uint32_t gl_stencil_fbo;
+  uint32_t gl_stencil_vao;
+  uint32_t gl_stencil_rbo;
+  uint32_t gl_stencil_pointlight_models_buffer_object;
+  // Used since default fbo is not to be trusted
+  uint32_t gl_lightning_texture;
+  uint32_t gl_lightning_fbo;
+  uint32_t gl_lightning_texture_unit;
   
   /// Global buffers
   // Normals
@@ -110,8 +122,6 @@ private:
   uint32_t gl_lightning_vao;
   uint32_t gl_blur_vao;
   uint32_t gl_ssao_vao;
-  
-  uint32_t gl_light_uniform_buffer;
   
   std::vector<Transform> transformations;
 
