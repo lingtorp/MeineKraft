@@ -106,6 +106,19 @@ struct Vec3 {
     inline T dot(Vec3<T> u) const { return x * u.x + y * u.y + z * u.z; }
 
     /************ Operators ************/
+    // Hashing operator
+    inline size_t operator()() {
+      size_t seed = 0;
+      hash_combine(seed, x);
+      hash_combine(seed, y);
+      hash_combine(seed, z);
+      return seed;
+    }
+    
+    inline bool operator<(const Vec3& rhs) const {
+        return (x < rhs.x) && (y < rhs.y) && (z < rhs.z);
+    }
+    
     inline Vec3<T> operator+(const Vec3 &rhs) const {
         return Vec3<T>{x + rhs.x, y + rhs.y, z + rhs.z};
     }
@@ -137,6 +150,11 @@ struct Vec3 {
     inline Vec3 operator-(const Vec3 &rhs) const {
         return Vec3{x - rhs.x, y - rhs.y, z - rhs.z};
     }
+
+private:
+  void hash_combine(size_t &seed, const size_t hash) const {
+    seed ^= hash + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+  }
 };
 
 template<typename T>

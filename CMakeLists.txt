@@ -15,7 +15,7 @@ set(SOURCE_FILES main.cpp render/render.cpp render/render.h math/vector.h render
         render/shader.cpp render/shader.h ${IMGUI_SRC} nodes/skybox.cpp nodes/skybox.h
         nodes/skybox.cpp nodes/skybox.h nodes/model.cpp nodes/model.h util/filemonitor.cpp util/filemonitor.h
         render/texture.cpp render/texture.h render/transform.h render/light.h render/meshmanager.cpp render/meshmanager.h
-        math/noise.h util/filesystem.h render/debug_opengl.h)
+        math/noise.h util/filesystem.h render/debug_opengl.h scene/world.cpp scene/world.hpp)
 add_executable(MeineKraft ${SOURCE_FILES})
 
 find_package(ASSIMP REQUIRED)

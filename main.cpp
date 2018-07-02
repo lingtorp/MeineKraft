@@ -5,6 +5,7 @@
 #include "render/camera.h"
 #include "nodes/model.h"
 #include "util/filesystem.h"
+#include "scene/world.hpp"
 
 struct Resolution {
   int width, height;
@@ -23,7 +24,7 @@ int main() {
   auto window_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_MOUSE_CAPTURE;
   SDL_Window* window = SDL_CreateWindow("MeineKraft", 0, 0, HD.width, HD.height, window_flags);
   SDL_GLContext context = SDL_GL_CreateContext(window);
-  // SDL_GL_SetSwapInterval(0); // Disables vsync
+  SDL_GL_SetSwapInterval(0); // Disables vsync
 
   // Init sdl2_image
   atexit(IMG_Quit);
@@ -45,6 +46,8 @@ int main() {
   bunny.position = {0, 16, 0};
   bunny.scale = 0.5;
   
+  World world{renderer.camera};
+  
   bool toggle_mouse_capture = true;
   bool DONE = false;
   auto last_tick = std::chrono::high_resolution_clock::now();
@@ -57,7 +60,6 @@ int main() {
   while (!DONE) {
       current_tick = std::chrono::high_resolution_clock::now();
       delta = std::chrono::duration_cast<std::chrono::milliseconds>(current_tick - last_tick).count();
-      std::cout << "Delta: " << delta << std::endl;
       last_tick = current_tick;
 
       /// Process input
@@ -142,9 +144,9 @@ int main() {
       auto io = ImGui::GetIO();
 
       ImGui::Begin("Render state");
-      ImGui::Text("Graphics batches: %lu", renderer.state.graphic_batches);
-      ImGui::Text("Entities: %lu", renderer.state.entities);
-      ImGui::Text("Application average %u ms / frame (%.1f FPS)", delta, io.Framerate);
+      ImGui::Text("Graphics batches: %llu", renderer.state.graphic_batches);
+      ImGui::Text("Entities: %llu", renderer.state.entities);
+      ImGui::Text("Application average %lld ms / frame (%.1f FPS)", delta, io.Framerate);
   
       static size_t i = -1; i = (i + 1) % std::size(deltas);
       deltas[i] = delta;

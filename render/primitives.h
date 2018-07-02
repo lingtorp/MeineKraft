@@ -107,6 +107,7 @@ namespace std {
 }
 
 /// Represents primitive types of meshes supported
+// TODO: Quad/sphere
 enum class MeshPrimitive {
   Cube
 };

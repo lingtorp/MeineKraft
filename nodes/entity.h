@@ -21,7 +21,6 @@ private:
 
 public:
     uint64_t entity_id;
-
     Vec3<float> position;
     Vec3<float> rotation;
     float scale;

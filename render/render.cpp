@@ -587,7 +587,7 @@ void Renderer::render(uint32_t delta) {
   
     float c = light.constant; float l = light.linear; float q = light.quadratic;
     float max_brightness = std::fmaxf(std::fmaxf(light.color.r, light.color.g), light.color.b);
-    light.radius = 100.0; // (-l + std::sqrt(l * l - 4 * q * (c - (256.0f / 5.0f) * max_brightness))) / (2.0f * q);
+    light.radius = 10.0; // (-l + std::sqrt(l * l - 4 * q * (c - (256.0f / 5.0f) * max_brightness))) / (2.0f * q);
     glUniform1f(glGetUniformLocation(program, "light.radius"), light.radius);
   
     /// Update uniforms
