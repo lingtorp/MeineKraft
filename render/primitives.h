@@ -151,56 +151,6 @@ struct Mesh {
   }
 };
 
-// FIXME: Please fixme, I need help.
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
-#include <assimp/Importer.hpp>
-#include <iostream>
-#include "../util/filesystem.h"
-static Mesh load_sphere() {
-  Assimp::Importer importer;
-  auto scene = importer.ReadFile(Filesystem::base + "sphere/sphere.obj", 0);
-  
-  if (scene == nullptr || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
-    SDL_Log("Error: %s", importer.GetErrorString());
-    return Mesh{};
-  }
-  
-  Mesh sphere{};
-  if (scene->HasMeshes()) {
-    // FIXME: Assumes the mesh is a single mesh and not a hierarchy
-    for (size_t i = 0; i < scene->mNumMeshes; i++) {
-      auto mesh = scene->mMeshes[i];
-      
-      for (size_t j = 0; j < mesh->mNumVertices; j++) {
-        Vertex<float> vertex;
-        
-        auto pos = mesh->mVertices[j];
-        vertex.position = {pos.x, pos.y, pos.z};
-        
-        sphere.vertices.push_back(vertex);
-      }
-      
-      for (size_t j = 0; j < mesh->mNumFaces; j++) {
-        auto face = &mesh->mFaces[j];
-        if (face->mNumIndices != 3) {
-          SDL_Log("Not 3 vertices per face.");
-          return Mesh{};
-        }
-        for (size_t k = 0; k < 3; k++) {
-          auto index = face->mIndices[k];
-          sphere.indices.push_back(index);
-        }
-      }
-    }
-  }
-  return sphere;
-}
-
-struct Sphere: Mesh {
-  Sphere(): Mesh(load_sphere()) {}
-};
-
 /// Unit cube
 struct Cube: Mesh {
   Cube(): Mesh() {
@@ -212,10 +162,10 @@ struct Cube: Mesh {
       auto tex_b = Vec2<float>(1.0f, 0.0f);
       auto tex_c = Vec2<float>(1.0f, 1.0f);
       auto tex_d = Vec2<float>(0.0f, 1.0f);
-      vertices.push_back(Vertex<float>(a, tex_a));
-      vertices.push_back(Vertex<float>(b, tex_b));
-      vertices.push_back(Vertex<float>(c, tex_c));
-      vertices.push_back(Vertex<float>(d, tex_d));
+      vertices.emplace_back(Vertex<float>(a, tex_a));
+      vertices.emplace_back(Vertex<float>(b, tex_b));
+      vertices.emplace_back(Vertex<float>(c, tex_c));
+      vertices.emplace_back(Vertex<float>(d, tex_d));
 
       auto e = Vec3<float>(-0.5f, -0.5f, -0.5f);
       auto f = Vec3<float>(0.5f, -0.5f, -0.5f);
@@ -225,10 +175,10 @@ struct Cube: Mesh {
       auto tex_f = Vec2<float>(0.0f, 0.0f);
       auto tex_g = Vec2<float>(0.0f, 1.0f);
       auto tex_h = Vec2<float>(1.0f, 1.0f);
-      vertices.push_back(Vertex<float>(e, tex_e));
-      vertices.push_back(Vertex<float>(f, tex_f));
-      vertices.push_back(Vertex<float>(g, tex_g));
-      vertices.push_back(Vertex<float>(h, tex_h));
+      vertices.emplace_back(Vertex<float>(e, tex_e));
+      vertices.emplace_back(Vertex<float>(f, tex_f));
+      vertices.emplace_back(Vertex<float>(g, tex_g));
+      vertices.emplace_back(Vertex<float>(h, tex_h));
 
       indices =  { // front
                   0, 1, 2, 2, 3, 0,

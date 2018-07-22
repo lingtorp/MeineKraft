@@ -97,12 +97,6 @@ private:
   Shader* lightning_shader;
   // Point light
   uint32_t gl_pointlight_models_buffer_object;
-  // Stencil pass related
-  Shader* stencil_shader;
-  uint32_t gl_stencil_fbo;
-  uint32_t gl_stencil_vao;
-  uint32_t gl_stencil_rbo;
-  uint32_t gl_stencil_pointlight_models_buffer_object;
   // Used since default fbo is not to be trusted
   uint32_t gl_lightning_texture;
   uint32_t gl_lightning_fbo;

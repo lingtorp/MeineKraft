@@ -3,8 +3,6 @@
 
 #include "../math/vector.h"
 
-static const Mesh sphere = Sphere{};
-
 struct PointLight {
   float radius = 1.0;
   

@@ -3,6 +3,7 @@
 
 #include "../nodes/entity.h"
 #include "../render/camera.h"
+#include "../util/filesystem.h"
 
 #include <array>
 #include <set>
@@ -27,13 +28,12 @@ class Block: public Entity {
   }
   
   static std::vector<std::string> textures_for_block(BlockType type) {
-    const auto base = "/Users/lingtorp/repos/MeineKraft/";
-    std::vector<std::string> faces = {base + std::string("res/blocks/grass/side.jpg"),
-                                      base + std::string("res/blocks/grass/side.jpg"),
-                                      base + std::string("res/blocks/grass/top.jpg"),
-                                      base + std::string("res/blocks/grass/bottom.jpg"),
-                                      base + std::string("res/blocks/grass/side.jpg"),
-                                      base + std::string("res/blocks/grass/side.jpg")};
+    std::vector<std::string> faces = {Filesystem::base + std::string("resources/blocks/grass/side.jpg"),
+                                      Filesystem::base + std::string("resources/blocks/grass/side.jpg"),
+                                      Filesystem::base + std::string("resources/blocks/grass/top.jpg"),
+                                      Filesystem::base + std::string("resources/blocks/grass/bottom.jpg"),
+                                      Filesystem::base + std::string("resources/blocks/grass/side.jpg"),
+                                      Filesystem::base + std::string("resources/blocks/grass/side.jpg")};
     return faces;
   }
 };

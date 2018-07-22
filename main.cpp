@@ -42,9 +42,9 @@ int main() {
   renderer.screen_width = HD.width;
   renderer.screen_height = HD.height;
   
-  Model bunny{Filesystem::base + "iron-man/", "Iron_Man.obj"};
-  bunny.position = {0, 16, 0};
-  bunny.scale = 0.5;
+  Model model{Filesystem::base + "resources/models/iron-man/", "Iron_Man.obj"};
+  model.position = {0, 16, 0};
+  model.scale = 0.5;
   
   World world{renderer.camera};
   
