@@ -7,6 +7,9 @@ if (UNIX)
 endif(UNIX)
 set(CMAKE_CXX_STANDARD 17)
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions")
+
 file(GLOB IMGUI_SRC "include/imgui/*.cpp" "include/imgui/*.h") # Adds all imgui related files into the application
 
 set(SOURCE_FILES main.cpp render/render.cpp render/render.h math/vector.h render/primitives.h
