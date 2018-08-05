@@ -28,7 +28,7 @@ class MeshManager;
 class Renderer {
 public:
   Renderer(Renderer &render) = delete;
-  ~Renderer(); // FIXME: Render does not dealloc properly atm
+  ~Renderer();
 
   /// Singleton instance of core Render, use with caution.
   static Renderer &instance() {
@@ -60,7 +60,7 @@ public:
   float ssao_power = 1.0;
   float ssao_bias = 0.0025;
   float ssao_blur_factor = 16.0;
-  bool  ssao_blur_enabled = true;
+  bool  ssao_blur_enabled = false;
   
   std::vector<PointLight> lights;
   bool lightning_enabled = true;

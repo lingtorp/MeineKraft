@@ -1,0 +1,3 @@
+/Users/lingtorp/repos/MeineKraft/CMakeFiles/rebuild_cache.dir
+/Users/lingtorp/repos/MeineKraft/CMakeFiles/edit_cache.dir
+/Users/lingtorp/repos/MeineKraft/CMakeFiles/MeineKraft.dir

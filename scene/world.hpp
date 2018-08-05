@@ -7,9 +7,9 @@
 
 #include <array>
 #include <set>
-#include <optional>
 #include <unordered_map>
 #include <cstdint>
+#include <iostream>
 
 class Block: public Entity {
   public:
@@ -21,9 +21,10 @@ class Block: public Entity {
   
   explicit Block(BlockType type = BlockType::AIR): type(type) {
     if (type == BlockType::AIR) { return; }
+    std::cerr << position << std::endl;
     auto render_comp = new RenderComponent(this);
     render_comp->set_mesh(MeshPrimitive::Cube);
-    render_comp->set_cube_map_texture(textures_for_block(type));
+    // render_comp->set_cube_map_texture(textures_for_block(type));
     attach_component(render_comp);
   }
   
@@ -66,6 +67,10 @@ struct World {
     std::vector<float> x{camera_world_pos.x - Chunk::dimension, camera_world_pos.x, camera_world_pos.x + Chunk::dimension};
     std::vector<float> y{-Chunk::dimension};
     std::vector<float> z{camera_world_pos.z - Chunk::dimension, camera_world_pos.z, camera_world_pos.z + Chunk::dimension};
+
+    Block block(Block::BlockType::GRASS);
+
+    return;
     for (auto x : x) {
       for (auto y : y) {
         for (auto z : z) {

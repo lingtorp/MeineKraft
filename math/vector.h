@@ -59,11 +59,13 @@ struct Vec4 {
 template<typename T>
 struct Vec3 {
     T x, y, z;
-  
+
     Vec3(T x, T y, T z): x(x), y(y), z(z) {};
     explicit Vec3(const Vec4<T>& v): x(v.x), y(v.y), z(v.z) {};
     explicit Vec3(T val): x(val), y(val), z(val) {};
-    Vec3(): x(0), y(0), z(0) {};
+    Vec3(): x{}, y{}, z{} {};
+
+    inline static Vec3 zero() { return Vec3(0.0, 0.0, 0.0); }
 
     /// Unit vector along x-axis
     inline static Vec3 X() { return Vec3(1.0, 0.0, 0.0); }

@@ -1,6 +1,8 @@
 #include "render.h"
 #include <GL/glew.h>
 #include <random>
+#include <iostream>
+#include <fstream>
 #include "camera.h"
 #include "graphicsbatch.h"
 #include "../util/filemonitor.h"
@@ -72,7 +74,7 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
                     shader_file_monitor(new FileMonitor{}), lights{}, mesh_manager{new MeshManager{}} {
   glewExperimental = (GLboolean) true;
   glewInit();
-  
+
   PointLight light{Vec3<float>{0.0, 15.0, 0.0}};
   lights.push_back(light);
   light = PointLight{Vec3<float>{0.0, 18.0, 0.0}};
@@ -82,18 +84,18 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
   transform.current_position = light.position;
   transform.repeat = true;
   transformations.push_back(transform);
-  
+
   int screen_width = 1280; // TODO: Move this into uniforms
   int screen_height = 720;
-  
+
   int32_t max_texture_units;
   glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max_texture_units);
   SDL_Log("Max texture units: %u", max_texture_units);
-  
+
   /// Global geometry pass framebuffer
   glGenFramebuffers(1, &gl_depth_fbo);
   glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
-  
+
   gl_depth_texture_unit = max_texture_units - 1;
   glActiveTexture(GL_TEXTURE0 + gl_depth_texture_unit);
   glGenTextures(1, &gl_depth_texture);
@@ -103,7 +105,7 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
   // glTexParameteri(GL_TEXTURE_2D, GL_DEPTH_STENCIL_TEXTURE_MODE, GL_DEPTH_COMPONENT); // Default value (intention only to read depth values from texture)
   glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, screen_width, screen_height, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, nullptr);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, gl_depth_texture, 0);
-  
+
   // Global normal buffer
   gl_normal_texture_unit = max_texture_units - 3;
   glActiveTexture(GL_TEXTURE0 + gl_normal_texture_unit);
@@ -113,7 +115,7 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_normal_texture, 0);
-  
+
   // Global position buffer
   gl_position_texture_unit = max_texture_units - 5;
   glActiveTexture(GL_TEXTURE0 + gl_position_texture_unit);
@@ -123,8 +125,8 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, gl_position_texture, 0);
-  
-  // Global diffuse + specular (albedo) buffer
+
+  // Global diffuse buffer
   gl_albedo_texture_unit = max_texture_units - 8;
   glActiveTexture(GL_TEXTURE0 + gl_albedo_texture_unit);
   glGenTextures(1, &gl_albedo_texture);
@@ -133,33 +135,33 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, gl_albedo_texture, 0);
-  
+
   uint32_t depth_attachments[3] = { GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT2 };
   glDrawBuffers(std::size(depth_attachments), depth_attachments);
-  
+
   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
     SDL_Log("Lightning framebuffer status not complete.");
   }
-  
+
   /// Depth shader
-  depth_shader = new Shader{Filesystem::base + "shaders/depth-vertex.glsl", Filesystem::base + "shaders/depth-fragment.glsl"};
+  depth_shader = new Shader{Filesystem::base + "shaders/geometry-vertex.glsl", Filesystem::base + "shaders/geometry-fragment.glsl"};
   std::string err_msg;
   bool success;
   std::tie(success, err_msg) = depth_shader->compile();
   if (!success) {
     SDL_Log("Shader compilation failed; %s", err_msg.c_str());
   }
-  
+
   /// Point lightning framebuffer
   glGenFramebuffers(1, &gl_lightning_fbo);
   glBindFramebuffer(GL_FRAMEBUFFER, gl_lightning_fbo);
-  
+
   GLuint gl_lightning_rbo;
   glGenRenderbuffers(1, &gl_lightning_rbo);
   glBindRenderbuffer(GL_RENDERBUFFER, gl_lightning_rbo);
   glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, screen_width, screen_height);
   glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, gl_lightning_rbo);
-  
+
   gl_lightning_texture_unit = max_texture_units - 9;
   glActiveTexture(GL_TEXTURE0 + gl_lightning_texture_unit);
   glGenTextures(1, &gl_lightning_texture);
@@ -168,18 +170,18 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, screen_width, screen_height, 0, GL_RGBA, GL_FLOAT, nullptr);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_lightning_texture, 0);
-  
+
   uint32_t lightning_attachments[1] = { GL_COLOR_ATTACHMENT0 };
   glDrawBuffers(std::size(lightning_attachments), lightning_attachments);
-  
+
   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
     SDL_Log("Point lightning framebuffer status not complete.");
   }
-  
+
   /// Global SSAO framebuffer
   glGenFramebuffers(1, &gl_ssao_fbo);
   glBindFramebuffer(GL_FRAMEBUFFER, gl_ssao_fbo);
-  
+
   gl_ssao_texture_unit = max_texture_units - 4;
   glActiveTexture(GL_TEXTURE0 + gl_ssao_texture_unit);
   glGenTextures(1, &gl_ssao_texture);
@@ -188,21 +190,21 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, screen_width, screen_height, 0, GL_RED, GL_FLOAT, nullptr);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_ssao_texture, 0);
-  
+
   uint32_t ssao_attachments[1] = { GL_COLOR_ATTACHMENT0 };
   glDrawBuffers(std::size(ssao_attachments), ssao_attachments);
-  
+
   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
     SDL_Log("SSAO framebuffer status not complete.");
   }
-  
+
   /// SSAO Shader
   ssao_shader = new Shader{Filesystem::base + "shaders/ssao-vertex.glsl", Filesystem::base + "shaders/ssao-fragment.glsl"};
   std::tie(success, err_msg) = ssao_shader->compile();
   if (!success) {
     SDL_Log("Shader compilation failed; %s", err_msg.c_str());
   }
-  
+
   /// SSAO noise
   std::uniform_real_distribution<float> random(-1.0f, 1.0f);
   std::default_random_engine gen;
@@ -212,7 +214,7 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
     noise.normalize();
     ssao_noise.push_back(noise);
   }
-  
+
   glGenTextures(1, &gl_ssao_noise_texture);
   gl_ssao_noise_texture_unit = max_texture_units - 2;
   glActiveTexture(GL_TEXTURE0 + gl_ssao_noise_texture_unit);
@@ -222,17 +224,17 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-  
+
   /// Blur pass
   glGenFramebuffers(1, &gl_blur_fbo);
   glBindFramebuffer(GL_FRAMEBUFFER, gl_blur_fbo);
-  
-  blur_shader = new Shader{Filesystem::base + "shaders/blur.vs", Filesystem::base + "shaders/blur.fs"};
+
+  blur_shader = new Shader{Filesystem::base + "shaders/blur-vertex.glsl", Filesystem::base + "shaders/blur-fragment.glsl"};
   std::tie(success, err_msg) = blur_shader->compile();
   if (!success) {
     SDL_Log("Blur shader compilation failed; %s", err_msg.c_str());
   }
-  
+
   gl_blur_texture_unit = max_texture_units - 7;
   glActiveTexture(GL_TEXTURE0 + gl_blur_texture_unit);
   glGenTextures(1, &gl_blur_texture);
@@ -241,19 +243,19 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, screen_width, screen_height, 0, GL_RED, GL_FLOAT, nullptr);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_blur_texture, 0);
-  
+
   uint32_t blur_attachments[1] = { GL_COLOR_ATTACHMENT0 };
   glDrawBuffers(std::size(blur_attachments), blur_attachments);
-  
+
   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
     SDL_Log("Blur framebuffer status not complete.");
   }
-  
+
   /// Create SSAO sample sphere/kernel
   {
     std::uniform_real_distribution<float> random(0.0f, 1.0f);
     std::default_random_engine gen;
-    
+
     for (size_t i = 0; i < ssao_num_samples; i++) {
       Vec3<float> sample_point = {
         random(gen) * 2.0f - 1.0f, // [-1.0, 1.0]
@@ -268,17 +270,17 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
       ssao_samples.push_back(sample_point);
     }
   }
-  
+
   /// Lightning pass shader
-  const auto vertex_shader   = Filesystem::base + "shaders/vertex-shader.glsl";
-  const auto fragment_shader = Filesystem::base + "shaders/fragment-shader.glsl";
+  const auto vertex_shader   = Filesystem::base + "shaders/lightning-vertex.glsl";
+  const auto fragment_shader = Filesystem::base + "shaders/lightning-fragment.glsl";
   lightning_shader = new Shader{vertex_shader, fragment_shader};
   lightning_shader->add("#define FLAG_BLINN_PHONG_SHADING \n");
   std::tie(success, err_msg) = lightning_shader->compile();
   if (!success) {
     SDL_Log("Lightning shader compilation failed; %s", err_msg.c_str());
   }
-  
+
   /// Fullscreen quad in NDC
   float quad[] = {
     // positions        // texture Coords
@@ -287,13 +289,13 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
      1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
      1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
   };
-  
+
   /// SSAO setup
   {
     auto program = ssao_shader->gl_program;
     glGenVertexArrays(1, &gl_ssao_vao);
     glBindVertexArray(gl_ssao_vao);
-    
+
     GLuint ssao_vbo;
     glGenBuffers(1, &ssao_vbo);
     glBindBuffer(GL_ARRAY_BUFFER, ssao_vbo);
@@ -301,13 +303,13 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
     glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
     glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
   }
-  
+
   /// Blur pass setup
   {
     auto program = blur_shader->gl_program;
     glGenVertexArrays(1, &gl_blur_vao);
     glBindVertexArray(gl_blur_vao);
-    
+
     GLuint blur_vbo;
     glGenBuffers(1, &blur_vbo);
     glBindBuffer(GL_ARRAY_BUFFER, blur_vbo);
@@ -315,24 +317,24 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
     glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
     glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
   }
-  
+
   /// Point light pass setup
   {
     auto program = lightning_shader->gl_program;
     glGenVertexArrays(1, &gl_lightning_vao);
     glBindVertexArray(gl_lightning_vao);
-    
+
     GLuint gl_vbo;
     glGenBuffers(1, &gl_vbo);
     glBindBuffer(GL_ARRAY_BUFFER, gl_vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(quad), &quad, GL_STATIC_DRAW);
     glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
     glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, position));
-  
+
     // Buffer for all the model matrices
     glGenBuffers(1, &gl_pointlight_models_buffer_object);
     glBindBuffer(GL_ARRAY_BUFFER, gl_pointlight_models_buffer_object);
-  
+
     auto model_attrib = glGetAttribLocation(program, "model");
     for (int i = 0; i < 4; i++) {
       glVertexAttribPointer(model_attrib + i, 4, GL_FLOAT, GL_FALSE, sizeof(Mat4<float>), (const void *) (sizeof(float) * i * 4));
@@ -367,13 +369,6 @@ void Renderer::render(uint32_t delta) {
 
   auto camera_view = FPSViewRH(camera->position, camera->pitch, camera->yaw);
 
-  if (animate_light) {
-    // TODO: Move this kind of comp. into seperate thread or something
-    for (auto &transform : transformations) { transform.update(delta); }
-    auto temp = camera_view * transformations[0].current_position; // FIXME: Transforms are not updating their Entities..
-    lights[0].position = Vec3<float>{temp};
-  }
-  
   /// Geometry pass
   pass_started("Geometry pass");
   {
@@ -390,13 +385,11 @@ void Renderer::render(uint32_t delta) {
       glUseProgram(program);
       glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, camera_view.data());
       glUniform1i(glGetUniformLocation(program, "diffuse"), batch.gl_diffuse_texture_unit);
-      glUniform1i(glGetUniformLocation(program, "specular"), batch.gl_specular_texture_unit);
-  
+
       std::vector<Mat4<float>> model_buffer{};
       Mat4<float> model{};
       for (const auto& component : batch.components) {
         component->update(); // Copy all graphics state
-        
         model = model.translate(component->graphics_state.position);
         model = model.scale(component->graphics_state.scale);
         model_buffer.push_back(model.transpose());
@@ -404,92 +397,45 @@ void Renderer::render(uint32_t delta) {
       glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_models_buffer_object);
       glBufferData(GL_ARRAY_BUFFER, model_buffer.size() * sizeof(Mat4<float>), model_buffer.data(), GL_DYNAMIC_DRAW);
       glDrawElementsInstanced(GL_TRIANGLES, batch.mesh.indices.size(), GL_UNSIGNED_INT, nullptr, model_buffer.size());
-      /// Update render stats
+
       state.entities += model_buffer.size();
     }
-    glDisable(GL_DEPTH_TEST);
-    glDepthMask(GL_FALSE);
-  }
-  pass_ended();
-  
-  /// SSAO pass
-  pass_started("SSAO pass");
-  {
-    auto program = ssao_shader->gl_program;
-    glBindVertexArray(gl_ssao_vao);
-    glUseProgram(program);
-    glUniform1i(glGetUniformLocation(program, "noise_sampler"), gl_ssao_noise_texture_unit);
-    glUniform1i(glGetUniformLocation(program, "normal_sampler"), gl_normal_texture_unit);
-    glUniform3fv(glGetUniformLocation(program, "ssao_samples"), ssao_samples.size(), &ssao_samples[0].x);
-    glUniform1i(glGetUniformLocation(program, "num_ssao_samples"), ssao_num_samples);
-    glUniform1f(glGetUniformLocation(program, "ssao_kernel_radius"), ssao_kernel_radius);
-    glUniform1f(glGetUniformLocation(program, "ssao_power"), ssao_power);
-    glUniform1f(glGetUniformLocation(program, "ssao_bias"), ssao_bias);
-    glBindFramebuffer(GL_FRAMEBUFFER, gl_ssao_fbo);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
   }
   pass_ended();
 
-  /// Blur pass
-  pass_started("Blur pass");
-  {
-    auto program = blur_shader->gl_program;
-    glBindVertexArray(gl_blur_vao);
-    glUseProgram(program);
-    glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, camera_view.data());
-    glUniform1i(glGetUniformLocation(program, "input_sampler"), gl_ssao_texture_unit);
-    glUniform1i(glGetUniformLocation(program, "blur_size"), 2);
-    glUniform1f(glGetUniformLocation(program, "blur_factor"), ssao_blur_factor);
-    glBindFramebuffer(GL_FRAMEBUFFER, gl_blur_fbo);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+  // GLfloat pixels[int(screen_height)][int(screen_width)][4];
+  GLvoid pixels = calloc(screen_height * screen_width * 40000, 1);
+  glReadBuffer(GL_COLOR_ATTACHMENT2);
+  glReadPixels(0, 0, screen_width, screen_height, GL_RGBA, GL_HALF_FLOAT, (GLvoid*) &pixels);
+  // glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, screen_width, screen_height, 0, GL_RGBA, GL_FLOAT, nullptr);
+
+  std::ofstream file;
+  file.open("diffuse.ppm");
+  file << "P3" << std::endl;
+  file << screen_width << " " << screen_height << std::endl;
+  file << 255 << std::endl;
+  for (size_t y = 0; y < screen_height; y++) {
+    for (size_t x = 0; x < screen_width; x++) {
+        file << int(pixels[x][y][0]) << " ";
+        file << int(pixels[x][y][1]) << " ";
+        file << int(pixels[x][y][2]) << " ";
+    }  
+    file << std::endl;
   }
-  pass_ended();
-  
-  /// Point lighting pass
+  file.close();
+
+  while(true) {}
+
   pass_started("Point lightning pass");
   {
     auto program = lightning_shader->gl_program;
     glBindFramebuffer(GL_FRAMEBUFFER, gl_lightning_fbo);
-    
+
     glBindVertexArray(gl_lightning_vao);
     glUseProgram(program);
     glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, camera_view.data());
     glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, projection_matrix.data());
-    
-    /// Update Light data for the batch
-    PointLight& light = lights[0];
-    glUniform3fv(glGetUniformLocation(program, "light.color"), 1, &light.color.r);
-    glUniform3fv(glGetUniformLocation(program, "light.ambient_intensity"), 1, &light.ambient_intensity.x);
-    glUniform3fv(glGetUniformLocation(program, "light.diffuse_intensity"), 1, &light.diffuse_intensity.x);
-    glUniform3fv(glGetUniformLocation(program, "light.specular_intensity"), 1, &light.specular_intensity.x);
-    glUniform3fv(glGetUniformLocation(program, "light.position"), 1, &light.position.x);
-    glUniform1f(glGetUniformLocation(program, "light.constant"), light.constant);
-    glUniform1f(glGetUniformLocation(program, "light.linear"), light.linear);
-    glUniform1f(glGetUniformLocation(program, "light.quadratic"), light.quadratic);
-  
-    float c = light.constant; float l = light.linear; float q = light.quadratic;
-    float max_brightness = std::fmaxf(std::fmaxf(light.color.r, light.color.g), light.color.b);
-    light.radius = 10.0; // (-l + std::sqrt(l * l - 4 * q * (c - (256.0f / 5.0f) * max_brightness))) / (2.0f * q);
-    glUniform1f(glGetUniformLocation(program, "light.radius"), light.radius);
-  
-    /// Update uniforms
-    glUniform1i(glGetUniformLocation(program, "normal_sampler"), gl_normal_texture_unit);
-    glUniform1i(glGetUniformLocation(program, "depth_sampler"), gl_depth_texture_unit);
-    if (ssao_blur_enabled) {
-      glUniform1i(glGetUniformLocation(program, "ssao_sampler"), gl_blur_texture_unit);
-    } else {
-      glUniform1i(glGetUniformLocation(program, "ssao_sampler"), gl_ssao_texture_unit);
-    }
-    glUniform1i(glGetUniformLocation(program, "position_sampler"), gl_position_texture_unit);
-    glUniform1f(glGetUniformLocation(program, "screen_width"), screen_width);
-    glUniform1f(glGetUniformLocation(program, "screen_height"), screen_height);
-    glUniform1i(glGetUniformLocation(program, "lightning_enabled"), lightning_enabled);
-    glUniform1i(glGetUniformLocation(program, "diffuse_sampler"), gl_albedo_texture_unit);
-    glUniform1f(glGetUniformLocation(program, "specular_power"), specular_power);
-    glUniform1i(glGetUniformLocation(program, "blinn_phong"), blinn_phong_shading);
-    
+
     std::vector<Mat4<float>> model_buffer;
     for (const auto& light : lights) {
       Mat4<float> model{};
@@ -503,7 +449,7 @@ void Renderer::render(uint32_t delta) {
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
   }
   pass_ended();
-  
+
   /// Copy final pass into default FBO
   pass_started("Final blit pass");
   {
@@ -514,14 +460,9 @@ void Renderer::render(uint32_t delta) {
     glBlitFramebuffer(0, 0, screen_width, screen_height, 0, 0, screen_width, screen_height, mask, filter);
   }
   pass_ended();
-  
+
   log_gl_error();
   state.graphic_batches = graphics_batches.size();
-}
-
-Renderer::~Renderer() {
-  // TODO: Clear up all the GraphicsObjects
-  shader_file_monitor->end_monitor();
 }
 
 /// Returns the planes from the frustrum matrix in order; {left, right, bottom, top, near, far}
@@ -570,120 +511,69 @@ void Renderer::update_projection_matrix(float fov) {
   glViewport(0, 0, width, height); // Update OpenGL viewport
   glUseProgram(depth_shader->gl_program);
   glUniformMatrix4fv(glGetUniformLocation(depth_shader->gl_program, "projection"), 1, GL_FALSE, projection_matrix.data());
-  // TODO: Adjust all the pass textures sizes
+  // TODO: Adjust all the passes textures sizes
 }
 
 void Renderer::link_batch(GraphicsBatch& batch) {
   auto vertices = batch.mesh.to_floats();
-  
+
   /// Geometry pass setup
   {
     auto program = depth_shader->gl_program;
     glGenVertexArrays(1, &batch.gl_depth_vao);
     glBindVertexArray(batch.gl_depth_vao);
-    
+
     GLuint depth_vbo;
     glGenBuffers(1, &depth_vbo);
     glBindBuffer(GL_ARRAY_BUFFER, depth_vbo);
     glBufferData(GL_ARRAY_BUFFER, batch.mesh.byte_size_of_vertices(), vertices.data(), GL_DYNAMIC_DRAW); // FIXME: Should be static draw since mesh is not changing?
-    
+
     auto position_attrib = glGetAttribLocation(program, "position");
     glVertexAttribPointer(position_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, position));
     glEnableVertexAttribArray(position_attrib);
-    
+
     auto normal_attrib = glGetAttribLocation(program, "normal");
     glVertexAttribPointer(normal_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, normal));
     glEnableVertexAttribArray(normal_attrib);
-    
+
     auto texcoord_attrib = glGetAttribLocation(program, "texcoord");
     glVertexAttribPointer(texcoord_attrib, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, texCoord));
     glEnableVertexAttribArray(texcoord_attrib);
-    
+
     // Buffer for all the model matrices
     glGenBuffers(1, &batch.gl_depth_models_buffer_object);
     glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_models_buffer_object);
-    
+
     auto model_attrib = glGetAttribLocation(program, "model");
     for (int i = 0; i < 4; i++) {
       glVertexAttribPointer(model_attrib + i, 4, GL_FLOAT, GL_FALSE, sizeof(Mat4<float>), (const void *) (sizeof(float) * i * 4));
       glEnableVertexAttribArray(model_attrib + i);
       glVertexAttribDivisor(model_attrib + i, 1);
     }
-    
+
     GLuint EBO;
     glGenBuffers(1, &EBO);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, batch.mesh.byte_size_of_indices(), batch.mesh.indices.data(), GL_STATIC_DRAW);
-    
+
     glUseProgram(program); // Must use the program object before accessing uniforms!
     glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, projection_matrix.data());
   }
 }
 
+Renderer::~Renderer() {};
+
 uint64_t Renderer::add_to_batch(RenderComponent* comp) {
   auto mesh_id = comp->graphics_state.mesh_id;
   auto& g_state = comp->graphics_state;
-  // TODO: Add components to batches
-  
+
   GraphicsBatch batch{mesh_id};
   batch.mesh = mesh_manager->mesh_from_id(mesh_id);
   link_batch(batch);
-  
-  if (g_state.diffuse_texture.used) {
-    uint32_t buffer_size = 3; // # textures to hold
-    batch.init_buffer(&batch.gl_diffuse_texture_array, g_state.diffuse_texture.gl_texture_type, batch.gl_diffuse_texture_unit, buffer_size);
-    batch.gl_diffuse_texture_type = g_state.diffuse_texture.gl_texture_type;
-  
-    /// Assign layer index to the latest the texture and increment
-    g_state.diffuse_texture.layer_idx = batch.diffuse_textures_count++;
-    /// Add to all the known texture ids in the batch
-    batch.texture_ids.push_back(g_state.diffuse_texture.id);
-    /// Update the mapping from texture id to layer idx
-    batch.layer_idxs[g_state.diffuse_texture.id] = g_state.diffuse_texture.layer_idx;
-  
-    /// Load all the GState's textures
-    RawTexture& texture = g_state.diffuse_texture.data;
-    /// Upload the texture to OpenGL
-    glActiveTexture(GL_TEXTURE0 + batch.gl_diffuse_texture_unit);
-    glBindTexture(GL_TEXTURE_2D_ARRAY, batch.gl_diffuse_texture_array);
-    glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
-                    0,                     // Mipmap number
-                    0, 0, g_state.diffuse_texture.layer_idx * 1, // xoffset, yoffset, zoffset = layer face
-                    texture.width, texture.height, 1,           // width, height, depth = faces
-                    GL_RGB,                // format
-                    GL_UNSIGNED_BYTE,      // type
-                    texture.pixels);       // pointer to data
-  }
-  
-  if (g_state.specular_texture.used) {
-    uint32_t buffer_size = 3; // # textures to hold
-    batch.init_buffer(&batch.gl_specular_texture_array, g_state.specular_texture.gl_texture_type, batch.gl_specular_texture_unit, buffer_size);
-    batch.gl_specular_texture_type = g_state.specular_texture.gl_texture_type;
-  
-    /// Assign layer index to the latest the texture and increment
-    g_state.specular_texture.layer_idx = batch.specular_textures_count++;
-    /// Add to all the known texture ids in the batch
-    batch.texture_ids.push_back(g_state.specular_texture.id);
-    /// Update the mapping from texture id to layer idx
-    batch.layer_idxs[g_state.specular_texture.id] = g_state.specular_texture.layer_idx;
-  
-    /// Load all the GState's textures
-    RawTexture& texture = g_state.specular_texture.data;
-    /// Upload the texture to OpenGL
-    glActiveTexture(GL_TEXTURE0 + batch.gl_specular_texture_unit);
-    glBindTexture(GL_TEXTURE_2D_ARRAY, batch.gl_specular_texture_array);
-    glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
-                    0,                     // Mipmap number
-                    0, 0, g_state.specular_texture.layer_idx * 1, // xoffset, yoffset, zoffset = layer face
-                    texture.width, texture.height, 1,           // width, height, depth = faces
-                    GL_RGB,                // format
-                    GL_UNSIGNED_BYTE,      // type
-                    texture.pixels);       // pointer to data
-  }
-  
+
   batch.components.push_back(comp);
   graphics_batches.push_back(batch);
-  
+
   batch.id = graphics_batches.size(); // TODO: Return real ID
   return batch.id;
 }

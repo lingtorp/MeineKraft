@@ -42,9 +42,9 @@ int main() {
   renderer.screen_width = HD.width;
   renderer.screen_height = HD.height;
   
-  Model model{Filesystem::base + "resources/models/iron-man/", "Iron_Man.obj"};
-  model.position = {0, 16, 0};
-  model.scale = 0.5;
+  // Model model{Filesystem::base + "resources/models/iron-man/", "Iron_Man.obj"};
+  // model.position = {0, 16, 0};
+  // model.scale = 0.5;
   
   World world{renderer.camera};
   
@@ -139,8 +139,8 @@ int main() {
     renderer.render(delta);
 
     /// ImGui - Debug instruments
-    ImGui_ImplSdlGL3_NewFrame(window);
-    {
+    if (false) {
+      ImGui_ImplSdlGL3_NewFrame(window);
       auto io = ImGui::GetIO();
 
       ImGui::Begin("Render state");
@@ -185,8 +185,8 @@ int main() {
       }
       
       ImGui::End();
+      ImGui::Render();
     }
-    ImGui::Render();
 
     SDL_GL_SwapWindow(window);
   }

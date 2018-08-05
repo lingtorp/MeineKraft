@@ -46,6 +46,17 @@ void RenderComponent::update() {
 void RenderComponent::set_mesh(MeshPrimitive primitive) {
   // TODO: Remove from previous batch - since we are changing mesh and thus geo. data
   // FIXME: How to get mesh ids for primitive meshes?
+  switch (primitive) {
+    case MeshPrimitive::Cube:
+      graphics_state.mesh_id = 0;
+      graphics_state.position = Vec3<float>();
+      Renderer::instance().add_to_batch(this);
+      std::cerr << "Loading cube primitve";
+      break;
+    default:
+      std::cerr << "Loading unknown primitve";
+      break;
+  }
 }
 
 void RenderComponent::set_cube_map_texture(const std::vector<std::string>& faces) {

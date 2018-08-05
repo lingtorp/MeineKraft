@@ -12,6 +12,6 @@ uniform sampler2DArray specular;
 void main() {
     gNormal = normalize(fNormal);
     gPosition = fPosition;
-    gDiffuse.rgb = texture(diffuse, vec3(fTexcoord, 0)).rgb;
+    gDiffuse.rgb = vec3(1.0); //texture(diffuse, vec3(fTexcoord, 0)).rgb;
     gDiffuse.a = texture(specular, vec3(fTexcoord, 0)).r;
 }

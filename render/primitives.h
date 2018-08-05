@@ -244,7 +244,7 @@ typedef uint64_t ID;
 */
 struct GraphicsState {
   Vec3<float> position;
-  float scale;
+  float scale = 1.0;
   Texture diffuse_texture;
   Texture specular_texture;
   Vec3<float> center;
