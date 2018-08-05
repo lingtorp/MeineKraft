@@ -13,5 +13,5 @@ void main() {
     gNormal = normalize(fNormal);
     gPosition = fPosition;
     gDiffuse.rgb = vec3(1.0); //texture(diffuse, vec3(fTexcoord, 0)).rgb;
-    gDiffuse.a = texture(specular, vec3(fTexcoord, 0)).r;
+    gDiffuse.a = 1.0; // texture(specular, vec3(fTexcoord, 0)).r;
 }

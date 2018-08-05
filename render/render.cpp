@@ -403,31 +403,8 @@ void Renderer::render(uint32_t delta) {
   }
   pass_ended();
 
-  // GLfloat pixels[int(screen_height)][int(screen_width)][4];
-  GLvoid pixels = calloc(screen_height * screen_width * 40000, 1);
-  glReadBuffer(GL_COLOR_ATTACHMENT2);
-  glReadPixels(0, 0, screen_width, screen_height, GL_RGBA, GL_HALF_FLOAT, (GLvoid*) &pixels);
-  // glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, screen_width, screen_height, 0, GL_RGBA, GL_FLOAT, nullptr);
-
-  std::ofstream file;
-  file.open("diffuse.ppm");
-  file << "P3" << std::endl;
-  file << screen_width << " " << screen_height << std::endl;
-  file << 255 << std::endl;
-  for (size_t y = 0; y < screen_height; y++) {
-    for (size_t x = 0; x < screen_width; x++) {
-        file << int(pixels[x][y][0]) << " ";
-        file << int(pixels[x][y][1]) << " ";
-        file << int(pixels[x][y][2]) << " ";
-    }  
-    file << std::endl;
-  }
-  file.close();
-
-  while(true) {}
-
   pass_started("Point lightning pass");
-  {
+  if (false) {
     auto program = lightning_shader->gl_program;
     glBindFramebuffer(GL_FRAMEBUFFER, gl_lightning_fbo);
 
@@ -453,7 +430,7 @@ void Renderer::render(uint32_t delta) {
   /// Copy final pass into default FBO
   pass_started("Final blit pass");
   {
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, gl_lightning_fbo);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, gl_depth_fbo);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     auto mask = GL_COLOR_BUFFER_BIT;
     auto filter = GL_NEAREST;
