@@ -50,7 +50,6 @@ void RenderComponent::set_mesh(MeshPrimitive primitive) {
     case MeshPrimitive::Cube:
       graphics_state.mesh_id = 0;
       graphics_state.position = Vec3<float>();
-      Renderer::instance().add_to_batch(this);
       std::cerr << "Loading cube primitve";
       break;
     default:

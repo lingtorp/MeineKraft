@@ -19,6 +19,7 @@
         "utility": "cpp",
         "vector": "cpp",
         "__config": "cpp",
-        "__nullptr": "cpp"
+        "__nullptr": "cpp",
+        "algorithm": "cpp"
     }
 }

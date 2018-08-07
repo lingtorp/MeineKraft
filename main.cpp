@@ -55,7 +55,8 @@ int main() {
   int64_t delta = 0;
   
   /// Delta values
-  float deltas[100];
+  const int num_deltas = 100;
+  float deltas[num_deltas];
   
   while (!DONE) {
       current_tick = std::chrono::high_resolution_clock::now();
@@ -148,9 +149,9 @@ int main() {
       ImGui::Text("Entities: %llu", renderer.state.entities);
       ImGui::Text("Application average %lld ms / frame (%.1f FPS)", delta, io.Framerate);
   
-      static size_t i = -1; i = (i + 1) % std::size(deltas);
+      static size_t i = -1; i = (i + 1) % num_deltas;
       deltas[i] = delta;
-      ImGui::PlotLines("", deltas, std::size(deltas), 0, "ms / frame", 0.0f, 50.0f, ImVec2(ImGui::GetWindowWidth(), 100));
+      ImGui::PlotLines("", deltas, num_deltas, 0, "ms / frame", 0.0f, 50.0f, ImVec2(ImGui::GetWindowWidth(), 100));
       
       static bool show_test_window = false;
       if (ImGui::Button("ImGui Palette")) show_test_window ^= 1;

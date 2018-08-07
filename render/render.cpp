@@ -80,11 +80,6 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
   light = PointLight{Vec3<float>{0.0, 18.0, 0.0}};
   lights.push_back(light);
 
-  Transform transform;
-  transform.current_position = light.position;
-  transform.repeat = true;
-  transformations.push_back(transform);
-
   int screen_width = 1280; // TODO: Move this into uniforms
   int screen_height = 720;
 
@@ -136,8 +131,8 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, gl_albedo_texture, 0);
 
-  uint32_t depth_attachments[3] = { GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT2 };
-  glDrawBuffers(std::size(depth_attachments), depth_attachments);
+  uint32_t depth_attachments[3] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
+  glDrawBuffers(3, depth_attachments);
 
   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
     SDL_Log("Lightning framebuffer status not complete.");
@@ -172,7 +167,7 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_lightning_texture, 0);
 
   uint32_t lightning_attachments[1] = { GL_COLOR_ATTACHMENT0 };
-  glDrawBuffers(std::size(lightning_attachments), lightning_attachments);
+  glDrawBuffers(1, lightning_attachments);
 
   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
     SDL_Log("Point lightning framebuffer status not complete.");
@@ -192,7 +187,7 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_ssao_texture, 0);
 
   uint32_t ssao_attachments[1] = { GL_COLOR_ATTACHMENT0 };
-  glDrawBuffers(std::size(ssao_attachments), ssao_attachments);
+  glDrawBuffers(1, ssao_attachments);
 
   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
     SDL_Log("SSAO framebuffer status not complete.");
@@ -245,7 +240,7 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_blur_texture, 0);
 
   uint32_t blur_attachments[1] = { GL_COLOR_ATTACHMENT0 };
-  glDrawBuffers(std::size(blur_attachments), blur_attachments);
+  glDrawBuffers(1, blur_attachments);
 
   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
     SDL_Log("Blur framebuffer status not complete.");
@@ -329,22 +324,11 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
     glBindBuffer(GL_ARRAY_BUFFER, gl_vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(quad), &quad, GL_STATIC_DRAW);
     glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
-    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, position));
-
-    // Buffer for all the model matrices
-    glGenBuffers(1, &gl_pointlight_models_buffer_object);
-    glBindBuffer(GL_ARRAY_BUFFER, gl_pointlight_models_buffer_object);
-
-    auto model_attrib = glGetAttribLocation(program, "model");
-    for (int i = 0; i < 4; i++) {
-      glVertexAttribPointer(model_attrib + i, 4, GL_FLOAT, GL_FALSE, sizeof(Mat4<float>), (const void *) (sizeof(float) * i * 4));
-      glEnableVertexAttribArray(model_attrib + i);
-      glVertexAttribDivisor(model_attrib + i, 1);
-    }
+    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
   }
 
   /// Camera
-  const auto position  = Vec3<float>{0.0f, 20.0f, 0.0f};  // cam position
+  const auto position  = Vec3<float>{0.0f, 0.0f, 2.5f};  // cam position
   const auto direction = Vec3<float>{0.0f, 0.0f, -1.0f};  // position of where the cam is looking
   const auto world_up  = Vec3<float>{0.0f, 1.0f, 0.0f};   // world up
   camera = new Camera(position, direction, world_up);
@@ -374,54 +358,44 @@ void Renderer::render(uint32_t delta) {
   {
     glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
     glEnable(GL_DEPTH_TEST);
-    glDepthMask(GL_TRUE);
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
-    glFrontFace(GL_CCW);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); // Always update the depth buffer with the new values
     for (const auto& batch : graphics_batches) {
       auto program = depth_shader->gl_program;
       glBindVertexArray(batch.gl_depth_vao);
       glUseProgram(program);
       glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, camera_view.data());
-      glUniform1i(glGetUniformLocation(program, "diffuse"), batch.gl_diffuse_texture_unit);
 
       std::vector<Mat4<float>> model_buffer{};
       Mat4<float> model{};
       for (const auto& component : batch.components) {
         component->update(); // Copy all graphics state
-        model = model.translate(component->graphics_state.position);
-        model = model.scale(component->graphics_state.scale);
+        // model = model.translate(component->graphics_state.position);
+        // model = model.scale(component->graphics_state.scale);
         model_buffer.push_back(model.transpose());
       }
       glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_models_buffer_object);
       glBufferData(GL_ARRAY_BUFFER, model_buffer.size() * sizeof(Mat4<float>), model_buffer.data(), GL_DYNAMIC_DRAW);
       glDrawElementsInstanced(GL_TRIANGLES, batch.mesh.indices.size(), GL_UNSIGNED_INT, nullptr, model_buffer.size());
-
+      
       state.entities += model_buffer.size();
     }
   }
   pass_ended();
 
   pass_started("Point lightning pass");
-  if (false) {
+  {
     auto program = lightning_shader->gl_program;
     glBindFramebuffer(GL_FRAMEBUFFER, gl_lightning_fbo);
 
     glBindVertexArray(gl_lightning_vao);
     glUseProgram(program);
-    glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, camera_view.data());
-    glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, projection_matrix.data());
 
-    std::vector<Mat4<float>> model_buffer;
-    for (const auto& light : lights) {
-      Mat4<float> model{};
-      model = model.translate(light.position);
-      model = model.scale(light.radius);
-      model_buffer.push_back(model.transpose());
-    }
-    glBindBuffer(GL_ARRAY_BUFFER, gl_pointlight_models_buffer_object);
-    glBufferData(GL_ARRAY_BUFFER, model_buffer.size() * sizeof(Mat4<float>), model_buffer.data(), GL_DYNAMIC_DRAW);
+    glUniform1i(glGetUniformLocation(program, "diffuse_sampler"), gl_albedo_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "normal_sampler"), gl_normal_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "position_sampler"), gl_position_texture_unit);
+    glUniform1f(glGetUniformLocation(program, "screen_width"), screen_width);
+    glUniform1f(glGetUniformLocation(program, "screen_height"), screen_height);
+
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
   }
@@ -430,7 +404,7 @@ void Renderer::render(uint32_t delta) {
   /// Copy final pass into default FBO
   pass_started("Final blit pass");
   {
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, gl_depth_fbo);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, gl_lightning_fbo);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     auto mask = GL_COLOR_BUFFER_BIT;
     auto filter = GL_NEAREST;
