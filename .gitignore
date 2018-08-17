@@ -28,3 +28,8 @@ cmake-build-release/
 imgui.ini
 
 *.user
+
+*.o
+CMakeFiles/
+Makefile
+MeineKraft
