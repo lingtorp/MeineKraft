@@ -67,7 +67,7 @@ int main() {
       SDL_Event event{};
       while (SDL_PollEvent(&event) != 0) {
         ImGui_ImplSdlGL3_ProcessEvent(&event);
-      switch (event.type) {
+        switch (event.type) {
         case SDL_MOUSEMOTION:
           if (toggle_mouse_capture) { break; }
           renderer.camera->pitch += event.motion.yrel;
@@ -140,7 +140,7 @@ int main() {
     renderer.render(delta);
 
     /// ImGui - Debug instruments
-    if (false) {
+    if (true) {
       ImGui_ImplSdlGL3_NewFrame(window);
       auto io = ImGui::GetIO();
 

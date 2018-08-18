@@ -270,7 +270,7 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
   const auto vertex_shader   = Filesystem::base + "shaders/lightning-vertex.glsl";
   const auto fragment_shader = Filesystem::base + "shaders/lightning-fragment.glsl";
   lightning_shader = new Shader{vertex_shader, fragment_shader};
-  lightning_shader->add("#define FLAG_BLINN_PHONG_SHADING \n");
+  // lightning_shader->add("#define FLAG_BLINN_PHONG_SHADING \n");
   std::tie(success, err_msg) = lightning_shader->compile();
   if (!success) {
     SDL_Log("Lightning shader compilation failed; %s", err_msg.c_str());
@@ -328,7 +328,7 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
   }
 
   /// Camera
-  const auto position  = Vec3<float>{0.0f, 0.0f, 2.5f};  // cam position
+  const auto position  = Vec3<float>{5.0f, 0.0f, 5.0f};  // cam position
   const auto direction = Vec3<float>{0.0f, 0.0f, -1.0f};  // position of where the cam is looking
   const auto world_up  = Vec3<float>{0.0f, 1.0f, 0.0f};   // world up
   camera = new Camera(position, direction, world_up);
@@ -360,8 +360,7 @@ void Renderer::render(uint32_t delta) {
     glEnable(GL_DEPTH_TEST);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); // Always update the depth buffer with the new values
     for (const auto& batch : graphics_batches) {
-      auto program = depth_shader->gl_program;
-      glBindVertexArray(batch.gl_depth_vao);
+      const auto program = depth_shader->gl_program;
       glUseProgram(program);
       glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, camera_view.data());
 
@@ -369,12 +368,13 @@ void Renderer::render(uint32_t delta) {
       Mat4<float> model{};
       for (const auto& component : batch.components) {
         component->update(); // Copy all graphics state
-        // model = model.translate(component->graphics_state.position);
-        // model = model.scale(component->graphics_state.scale);
+        model = model.translate(component->graphics_state.position);
+        model = model.scale(component->graphics_state.scale);
         model_buffer.push_back(model.transpose());
       }
       glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_models_buffer_object);
       glBufferData(GL_ARRAY_BUFFER, model_buffer.size() * sizeof(Mat4<float>), model_buffer.data(), GL_DYNAMIC_DRAW);
+      glBindVertexArray(batch.gl_depth_vao);
       glDrawElementsInstanced(GL_TRIANGLES, batch.mesh.indices.size(), GL_UNSIGNED_INT, nullptr, model_buffer.size());
       
       state.entities += model_buffer.size();
@@ -384,7 +384,7 @@ void Renderer::render(uint32_t delta) {
 
   pass_started("Point lightning pass");
   {
-    auto program = lightning_shader->gl_program;
+    const auto program = lightning_shader->gl_program;
     glBindFramebuffer(GL_FRAMEBUFFER, gl_lightning_fbo);
 
     glBindVertexArray(gl_lightning_vao);
@@ -477,7 +477,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     GLuint depth_vbo;
     glGenBuffers(1, &depth_vbo);
     glBindBuffer(GL_ARRAY_BUFFER, depth_vbo);
-    glBufferData(GL_ARRAY_BUFFER, batch.mesh.byte_size_of_vertices(), vertices.data(), GL_DYNAMIC_DRAW); // FIXME: Should be static draw since mesh is not changing?
+    glBufferData(GL_ARRAY_BUFFER, batch.mesh.byte_size_of_vertices(), vertices.data(), GL_STATIC_DRAW);
 
     auto position_attrib = glGetAttribLocation(program, "position");
     glVertexAttribPointer(position_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, position));
@@ -512,19 +512,28 @@ void Renderer::link_batch(GraphicsBatch& batch) {
   }
 }
 
-Renderer::~Renderer() {};
+Renderer::~Renderer() = default;
 
 uint64_t Renderer::add_to_batch(RenderComponent* comp) {
   auto mesh_id = comp->graphics_state.mesh_id;
   auto& g_state = comp->graphics_state;
 
+  for (auto& batch : graphics_batches) {
+      if (batch.mesh_id == mesh_id) {
+          batch.components.push_back(comp);
+          return batch.id;
+      }
+  }
+
   GraphicsBatch batch{mesh_id};
+  batch.id = graphics_batches.size(); // TODO: Return real ID
   batch.mesh = mesh_manager->mesh_from_id(mesh_id);
   link_batch(batch);
 
   batch.components.push_back(comp);
   graphics_batches.push_back(batch);
 
-  batch.id = graphics_batches.size(); // TODO: Return real ID
   return batch.id;
 }
+
+#pragma clang diagnostic pop

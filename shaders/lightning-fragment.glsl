@@ -85,6 +85,6 @@ void main() {
 #endif
 
     // outColor = vec4(position, 1.0);
-    // outColor = texture(diffuse_sampler, frag_coord).rgba;  
-    outColor = vec4(1.0);
+    outColor = texture(diffuse_sampler, frag_coord).rgba;
+    // outColor = vec4(frag_coord, 0.0, 1.0);
 }

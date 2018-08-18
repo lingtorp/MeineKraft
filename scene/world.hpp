@@ -21,7 +21,6 @@ class Block: public Entity {
   
   explicit Block(BlockType type = BlockType::AIR): type(type) {
     if (type == BlockType::AIR) { return; }
-    std::cerr << position << std::endl;
     auto render_comp = new RenderComponent(this);
     render_comp->set_mesh(MeshPrimitive::Cube);
     // render_comp->set_cube_map_texture(textures_for_block(type));
@@ -41,10 +40,11 @@ class Block: public Entity {
 
 class Chunk {
   public:
-  static const int dimension = 8;
+  static const int dimension = 2;
   const Vec3<int> world_position;
-  explicit Chunk(Vec3<int> world_position):
-          blocks{std::array<std::array<std::array<Block, dimension>, dimension>, dimension>()}, world_position{world_position} {}
+  explicit Chunk(Vec3<int> world_position): blocks{std::array<std::array<std::array<Block, dimension>, dimension>, dimension>()}, world_position{world_position} {
+
+  }
   
   const Block* block_at(Vec3<int> position) {
     if (position < Vec3<int>{dimension}) {
@@ -62,24 +62,13 @@ struct World {
   std::unordered_map<Vec3<int>, Chunk> chunks;
   
   explicit World(const Camera* camera): chunks{} {
-    /// Snap Camera/Player to the world coordinate grid
     auto camera_world_pos = world_position(camera->position);
-    std::vector<float> x{camera_world_pos.x - Chunk::dimension, camera_world_pos.x, camera_world_pos.x + Chunk::dimension};
-    std::vector<float> y{-Chunk::dimension};
-    std::vector<float> z{camera_world_pos.z - Chunk::dimension, camera_world_pos.z, camera_world_pos.z + Chunk::dimension};
-
-    Block block(Block::BlockType::GRASS);
-
-    return;
-    for (auto x : x) {
-      for (auto y : y) {
-        for (auto z : z) {
-          auto position = Vec3<int>{(int)x, (int)y, (int)z};
-          if (chunks.count(position) == 0) {
-            chunks.emplace(position, Chunk{position});
-          }
-        }
-      }
+    std::vector<float> X{0};
+    for (const auto x : X) {
+      auto position = Vec3<float>{x, 0, 0};
+      Block* block = new Block(Block::BlockType::GRASS);
+      block->position = Vec3<float>(x, 0, 0);
+      std::cerr << block->position << std::endl;
     }
   }
   
