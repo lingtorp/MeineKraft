@@ -66,6 +66,8 @@ uint64_t FileMonitor::get_time_modified(struct stat &stats) {
     return (uint64_t) stats.st_mtimespec.tv_sec;
 #elif __linux__
     return (uint64_t) stats.st_mtim.tv_sec;
+#elif defined(WIN32) 
+	return 0; // TODO
 #else
 #error Unknown platform.
 #endif

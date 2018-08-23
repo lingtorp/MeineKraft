@@ -1,9 +1,16 @@
 #include "shader.h"
-#include <GL/glew.h>
+
 #include <iostream>
 #include <fstream>
 #include <SDL_log.h>
+
 #include "debug_opengl.h"
+
+#ifdef _WIN32
+#include <glew.h>
+#else
+#include <GL/glew.h>
+#endif 
 
 Shader::Shader(std::string vertex_filepath, std::string fragment_filepath): vertex_filepath(vertex_filepath),
                                                                           fragment_filepath(fragment_filepath),

@@ -1,6 +1,12 @@
-#include <SDL2/SDL_log.h>
-#include <algorithm>
 #include "camera.h"
+
+#include <algorithm>
+
+#ifdef _WIN32
+#include <SDL_log.h>
+#else
+#include <SDL2/SDL_log.h>
+#endif 
 
 /// Clamps a number to between lo and hi, in other words: [lo, hi]
 static double clamp(double x, double lo, double hi) {

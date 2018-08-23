@@ -227,10 +227,10 @@ struct Material {
   float shininess; // A.k.a specular power
   /// Default material
   Material(): ambient{0.5}, diffuse{0.5}, specular{0.5}, shininess(32.0) {};
-  Material(Vec3<float> a, Vec3<float> d, Vec3<float> s): ambient{a}, diffuse{d}, specular{s}, shininess(32.0) {};
+  Material(Vec3<float> a, Vec3<float> d, Vec3<float> s): ambient{a}, diffuse{d}, specular{s}, shininess(32.0f) {};
   
   static Material Bronze() {
-    return Material{{0.2125, 0.1275, 0.054}, {0.714, 0.4284, 0.18144}, {0.393548, 0.271906, 0.166721}};
+    return Material{{0.2125f, 0.1275f, 0.054f}, {0.714f, 0.4284f, 0.18144f}, {0.393548f, 0.271906f, 0.166721f}};
   }
 };
 

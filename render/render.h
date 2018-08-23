@@ -2,17 +2,23 @@
 #define MEINEKRAFT_RENDER_H
 
 #include <cstdint>
-#include <SDL2/SDL_video.h>
 #include <string>
 #include <vector>
 #include <unordered_map>
 #include <array>
 #include <memory>
+
 #include "primitives.h"
 #include "texture.h"
 #include "light.h"
 #include "transform.h"
 #include "shader.h"
+
+#ifdef _WIN32
+#include <SDL_video.h>
+#else
+#include <SDL2/SDL_video.h>
+#endif 
 
 class World;
 class Camera;
@@ -20,7 +26,7 @@ class RenderComponent;
 class GraphicsBatch;
 class Shader;
 class FileMonitor;
-class MeshManager;
+struct MeshManager;
 
 // TODO: Implement sparse id hash table array thingy
 // TODO: Replace all the uint64_t with the new ID type in order to clarify the usage

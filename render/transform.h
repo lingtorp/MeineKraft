@@ -29,8 +29,8 @@ struct Transform {
             return;
         }
         time_elapsed += delta;
-        current_position.x = 30 * sinf(time_elapsed * M_PI_2 / 1000);
-        current_position.z = 30 * cosf(time_elapsed * M_PI_2 / 1000);
+        current_position.x = 30.0f * sinf(time_elapsed * M_PI / 1000.0f);
+        current_position.z = 30.0f * cosf(time_elapsed * M_PI / 1000.0f);
     }
 };
 

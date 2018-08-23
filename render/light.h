@@ -4,12 +4,12 @@
 #include "../math/vector.h"
 
 struct PointLight {
-  float radius = 1.0;
+  float radius = 1.0f;
   
   // Attenuation values (http://www.ogre3d.org/tikiwiki/tiki-index.php?page=-Point+Light+Attenuation)
-  float constant = 1.0;
-  float linear = 0.7;
-  float quadratic = 1.8;
+  float constant = 1.0f;
+  float linear = 0.7f;
+  float quadratic = 1.8f;
   
   Color3<float> color;
   // Intensities over RGB

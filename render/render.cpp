@@ -1,8 +1,15 @@
 #include "render.h"
-#include <GL/glew.h>
+
 #include <random>
 #include <iostream>
 #include <fstream>
+
+#ifdef WIN32
+#include <glew.h>
+#else
+#include <GL/glew.h>
+#endif 
+
 #include "camera.h"
 #include "graphicsbatch.h"
 #include "../util/filemonitor.h"
@@ -56,10 +63,10 @@ Mat4<float> Renderer::FPSViewRH(Vec3<float> eye, float pitch, float yaw) {
 
 /// A.k.a perspective matrix
 Mat4<float> gen_projection_matrix(float z_near, float z_far, float fov, float aspect) {
-  const float rad = M_PI / 180;
+  const float rad = M_PI / 180.0f;
   float tanHalf = tanf(fov * rad / 2);
-  float a = 1 / (tanHalf * aspect);
-  float b = 1 / tanHalf;
+  float a = 1.0f / (tanHalf * aspect);
+  float b = 1.0f / tanHalf;
   float c = -(z_far + z_near) / (z_far - z_near);
   float d = -(2 * z_far * z_near) / (z_far - z_near);
   Mat4<float> matrix;

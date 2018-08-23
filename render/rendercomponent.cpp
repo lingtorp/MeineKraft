@@ -1,9 +1,15 @@
-#include <SDL2/SDL_log.h>
 #include <SDL_opengl.h> // TODO: Remove.
+
 #include "rendercomponent.h"
 #include "render.h"
 #include "../nodes/entity.h"
 #include "meshmanager.h"
+
+#ifdef _WIN32
+#include <SDL_log.h>
+#else
+#include <SDL2/SDL_log.h>
+#endif 
 
 RenderComponent::RenderComponent(Entity* entity): entity(entity), graphics_state{} {}
 

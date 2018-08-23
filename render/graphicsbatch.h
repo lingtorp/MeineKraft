@@ -2,15 +2,23 @@
 #define MEINEKRAFT_GRAPHICSBATCH_H
 
 #include <map>
-#include <GL/glew.h>
 #include <SDL_log.h>
 #include <iostream>
-#include <SDL2/SDL_image.h>
 #include <cstring>
+
 #include "primitives.h"
 #include "shader.h"
-#include "SDL2/SDL_opengl.h"
 #include "debug_opengl.h"
+
+#ifdef _WIN32
+#include <glew.h>
+#include <SDL_image.h>
+#include <SDL_opengl.h>
+#else
+#include <GL/glew.h>
+#include <SDL2/SDL_image.h>
+#include "SDL2/SDL_opengl.h"
+#endif 
 
 class RenderComponent;
 

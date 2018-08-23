@@ -82,7 +82,7 @@ struct Vec3 {
     /// Normalizes a copy of this vector and returns it
     inline Vec3<T> normalize() const {
         double length = this->length();
-        Vec3 result;
+        Vec3<T> result;
         result.x = x / length;
         result.y = y / length;
         result.z = z / length;

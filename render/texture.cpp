@@ -1,10 +1,18 @@
 #include "texture.h"
-#include <GL/glew.h>
+
 #include <iostream>
 #include <fstream>
 #include <SDL_log.h>
+
+#ifdef _WIN32
+#include <glew.h>
+#include <SDL_surface.h>
+#include <SDL_image.h>
+#else
+#include <GL/glew.h>
 #include <SDL2/SDL_surface.h>
 #include <SDL2/SDL_image.h>
+#endif 
 
 /*
 FileExtension Texture::file_format_from(std::string filepath) {

@@ -14,7 +14,11 @@ struct Resolution {
 static auto HD      = Resolution{1280, 720};
 static auto FULL_HD = Resolution{1920, 1080};
 
+#ifdef WIN32
+int wmain() {
+#else
 int main() {
+#endif
   SDL_Init(SDL_INIT_EVERYTHING);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);

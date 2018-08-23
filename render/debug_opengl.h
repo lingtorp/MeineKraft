@@ -1,6 +1,11 @@
 #ifndef MEINEKRAFT_DEBUG_OPENGL_H
 #define MEINEKRAFT_DEBUG_OPENGL_H
 
+#ifdef WIN32 
+#include <glew.h>
+#include <SDL_opengl.h>
+#endif
+
 static void log_gl_error() {
   GLenum err = glGetError();
   std::string err_str;
