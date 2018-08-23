@@ -19,7 +19,12 @@
 // SDL,GL3W
 #include <SDL.h>
 #include <SDL_syswm.h>
+
+#ifdef _WIN32
+#include <glew.h>
+#else
 #include <GL/glew.h>
+#endif 
 
 // Data
     static double g_Time = 0.0f;
