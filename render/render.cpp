@@ -22,11 +22,13 @@
 void pass_started(const std::string& msg) {
 #ifdef __LINUX__
   glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, msg.c_str());
+#elif WIN32
+  glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, msg.c_str());
 #endif
 }
 
 void pass_ended() {
-#ifdef __LINUX__
+#ifdef __LINUX__ || defined(WIN32)
   glPopDebugGroup();
 #endif
 }
