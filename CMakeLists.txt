@@ -11,7 +11,7 @@ endif(UNIX)
 set(CMAKE_CXX_STANDARD 11)
 
 if(WIN32)
-        # TODO
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
 else(WIN32)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions")
