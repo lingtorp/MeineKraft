@@ -2,6 +2,7 @@
 #define MEINEKRAFT_LIGHT_H
 
 #include "../math/vector.h"
+#include "../render/primitives.h"
 
 struct PointLight {
   float radius = 1.0f;

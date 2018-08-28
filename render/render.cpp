@@ -28,7 +28,7 @@ void pass_started(const std::string& msg) {
 }
 
 void pass_ended() {
-#ifdef defined(__LINUX__) || defined(WIN32)
+#if defined(__LINUX__) || defined(WIN32)
   glPopDebugGroup();
 #endif
 }

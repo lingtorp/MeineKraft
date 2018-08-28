@@ -4,6 +4,9 @@
 #ifdef WIN32 
 #include <glew.h>
 #include <SDL_opengl.h>
+#else
+#include <glew.h>
+#include <SDL_opengl.h>
 #endif
 
 static void log_gl_error() {

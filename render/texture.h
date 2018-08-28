@@ -77,9 +77,9 @@ struct Texture {
         std::memcpy(texture.pixels + texture.size * i, conv->pixels, texture.size);
         SDL_FreeSurface(image);
       }
-
-      return texture;
     }
+
+    return texture;
   }
   
   /// Texture id
