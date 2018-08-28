@@ -1,3 +1,5 @@
+#version 410 core 
+
 uniform sampler2D input_sampler;
 
 uniform int blur_size; // Size of noise texture

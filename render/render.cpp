@@ -148,7 +148,7 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
   }
 
   /// Depth shader
-  depth_shader = new Shader{Filesystem::base + "shaders/geometry-vertex.glsl", Filesystem::base + "shaders/geometry-fragment.glsl"};
+  depth_shader = new Shader{Filesystem::base + "shaders/geometry.vert", Filesystem::base + "shaders/geometry.frag"};
   std::string err_msg;
   bool success;
   std::tie(success, err_msg) = depth_shader->compile();
@@ -203,7 +203,7 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
   }
 
   /// SSAO Shader
-  ssao_shader = new Shader{Filesystem::base + "shaders/ssao-vertex.glsl", Filesystem::base + "shaders/ssao-fragment.glsl"};
+  ssao_shader = new Shader{Filesystem::base + "shaders/ssao.vert", Filesystem::base + "shaders/ssao.frag"};
   std::tie(success, err_msg) = ssao_shader->compile();
   if (!success) {
     SDL_Log("Shader compilation failed; %s", err_msg.c_str());
@@ -233,7 +233,7 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
   glGenFramebuffers(1, &gl_blur_fbo);
   glBindFramebuffer(GL_FRAMEBUFFER, gl_blur_fbo);
 
-  blur_shader = new Shader{Filesystem::base + "shaders/blur-vertex.glsl", Filesystem::base + "shaders/blur-fragment.glsl"};
+  blur_shader = new Shader{Filesystem::base + "shaders/blur.vert", Filesystem::base + "shaders/blur.frag"};
   std::tie(success, err_msg) = blur_shader->compile();
   if (!success) {
     SDL_Log("Blur shader compilation failed; %s", err_msg.c_str());
@@ -276,8 +276,8 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
   }
 
   /// Lightning pass shader
-  const auto vertex_shader   = Filesystem::base + "shaders/lightning-vertex.glsl";
-  const auto fragment_shader = Filesystem::base + "shaders/lightning-fragment.glsl";
+  const auto vertex_shader   = Filesystem::base + "shaders/lightning.vert";
+  const auto fragment_shader = Filesystem::base + "shaders/lightning.frag";
   lightning_shader = new Shader{vertex_shader, fragment_shader};
   // lightning_shader->add("#define FLAG_BLINN_PHONG_SHADING \n");
   std::tie(success, err_msg) = lightning_shader->compile();

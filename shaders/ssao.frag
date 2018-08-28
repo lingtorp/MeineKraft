@@ -1,3 +1,5 @@
+#version 410 core 
+
 uniform mat4 projection;
 
 uniform sampler2D normal_sampler;
