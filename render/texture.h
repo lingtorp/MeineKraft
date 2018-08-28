@@ -47,38 +47,39 @@ struct Texture {
   Texture() = default;
   
   static RawTexture load_textures(const TextureResource resource) {
-    RawTexture texture{0, nullptr};
-    
+    RawTexture texture{ 0, nullptr };
+
     if (resource.files.empty()) { return texture; }
-    
+
     const auto& file = resource.files.front();
-    SDL_Surface* image = IMG_Load(file.c_str()); 
-    
-    if (!image) { 
+    SDL_Surface* image = IMG_Load(file.c_str());
+
+    if (!image) {
       std::cerr << "Could not load textures: " << IMG_GetError() << std::endl;
       return texture;
-    
-    
-    texture.width  = static_cast<uint32_t>(image->w);
-    texture.height = static_cast<uint32_t>(image->h);
-    const auto bytes_per_pixel = image->format->BytesPerPixel;
-    SDL_FreeSurface(image); // FIXME: Wasteful
-    
-    // Assumes that the files are the same size, in right order, same encoding, etc
-    texture.size = bytes_per_pixel * texture.width * texture.height;
-    texture.pixels = static_cast<uint8_t*>(std::calloc(1, texture.size * resource.files.size()));
-    
-    // Load all the files into a linear memory region
-    for (size_t i = 0; i < resource.files.size(); i++) {
-      image = IMG_Load(resource.files[i].c_str());
-      // Convert it to OpenGL friendly format
-      const auto desired_img_format = bytes_per_pixel == 3 ? SDL_PIXELFORMAT_RGB24 : SDL_PIXELFORMAT_RGBA32;
-      SDL_Surface* conv = SDL_ConvertSurfaceFormat(image, desired_img_format, 0);
-      std::memcpy(texture.pixels + texture.size * i, conv->pixels, texture.size);
-      SDL_FreeSurface(image);
+
+
+      texture.width = static_cast<uint32_t>(image->w);
+      texture.height = static_cast<uint32_t>(image->h);
+      const auto bytes_per_pixel = image->format->BytesPerPixel;
+      SDL_FreeSurface(image); // FIXME: Wasteful
+
+      // Assumes that the files are the same size, in right order, same encoding, etc
+      texture.size = bytes_per_pixel * texture.width * texture.height;
+      texture.pixels = static_cast<uint8_t*>(std::calloc(1, texture.size * resource.files.size()));
+
+      // Load all the files into a linear memory region
+      for (size_t i = 0; i < resource.files.size(); i++) {
+        image = IMG_Load(resource.files[i].c_str());
+        // Convert it to OpenGL friendly format
+        const auto desired_img_format = bytes_per_pixel == 3 ? SDL_PIXELFORMAT_RGB24 : SDL_PIXELFORMAT_RGBA32;
+        SDL_Surface* conv = SDL_ConvertSurfaceFormat(image, desired_img_format, 0);
+        std::memcpy(texture.pixels + texture.size * i, conv->pixels, texture.size);
+        SDL_FreeSurface(image);
+      }
+
+      return texture;
     }
-    
-    return texture;
   }
   
   /// Texture id
