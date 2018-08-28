@@ -16,8 +16,8 @@
 #include <SDL_opengl.h>
 #else
 #include <GL/glew.h>
-#include <SDL2/SDL_image.h>
-#include "SDL2/SDL_opengl.h"
+#include <sdl2/SDL_image.h>
+#include "sdl2/SDL_opengl.h"
 #endif 
 
 class RenderComponent;

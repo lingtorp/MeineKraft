@@ -8,7 +8,7 @@
 #ifdef _WIN32
 #include <SDL_log.h>
 #else
-#include <SDL2/SDL_log.h>
+#include <sdl2/SDL_log.h>
 #endif 
 
 RenderComponent::RenderComponent(Entity* entity): entity(entity), graphics_state{} {}

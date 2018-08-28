@@ -16,7 +16,7 @@
 #ifdef _WIN32
 #include <SDL_video.h>
 #else
-#include <SDL2/SDL_video.h>
+#include <sdl2/SDL_video.h>
 #endif 
 
 struct World;
