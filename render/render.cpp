@@ -28,14 +28,14 @@ void pass_started(const std::string& msg) {
 }
 
 void pass_ended() {
-#ifdef __LINUX__ || defined(WIN32)
+#ifdef defined(__LINUX__) || defined(WIN32)
   glPopDebugGroup();
 #endif
 }
 
 /// Column major - Camera combined rotation matrix (y, x) & translation matrix
 Mat4<float> Renderer::FPSViewRH(Vec3<float> eye, float pitch, float yaw) {
-  static constexpr float rad = M_PI / 180;
+  static constexpr float rad = M_PI / 180.0f;
   float cosPitch = cosf(pitch * rad);
   float sinPitch = sinf(pitch * rad);
   float cosYaw = cosf(yaw * rad);
@@ -375,14 +375,23 @@ void Renderer::render(uint32_t delta) {
 
       std::vector<Mat4<float>> model_buffer{};
       Mat4<float> model{};
+      std::vector<uint32_t> diffuse_textures_idx{};
       for (const auto& component : batch.components) {
         component->update(); // Copy all graphics state
+        
         model = model.translate(component->graphics_state.position);
         model = model.scale(component->graphics_state.scale);
         model_buffer.push_back(model.transpose());
+        
+        diffuse_textures_idx.push_back(component->graphics_state.diffuse_texture.layer_idx);
       }
+      
       glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_models_buffer_object);
       glBufferData(GL_ARRAY_BUFFER, model_buffer.size() * sizeof(Mat4<float>), model_buffer.data(), GL_DYNAMIC_DRAW);
+      
+      glBindBuffer(GL_ARRAY_BUFFER, batch.gl_diffuse_textures_layer_idx);
+      glBufferData(GL_ARRAY_BUFFER, diffuse_textures_idx.size() * sizeof(uint32_t), diffuse_textures_idx.data(), GL_DYNAMIC_DRAW);
+
       glBindVertexArray(batch.gl_depth_vao);
       glDrawElementsInstanced(GL_TRIANGLES, batch.mesh.indices.size(), GL_UNSIGNED_INT, nullptr, model_buffer.size());
       
@@ -475,17 +484,15 @@ void Renderer::update_projection_matrix(float fov) {
 }
 
 void Renderer::link_batch(GraphicsBatch& batch) {
-  auto vertices = batch.mesh.to_floats();
-
   /// Geometry pass setup
   {
     auto program = depth_shader->gl_program;
     glGenVertexArrays(1, &batch.gl_depth_vao);
     glBindVertexArray(batch.gl_depth_vao);
 
-    GLuint depth_vbo;
-    glGenBuffers(1, &depth_vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, depth_vbo);
+    glGenBuffers(1, &batch.gl_depth_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_vbo);
+    const auto vertices = batch.mesh.to_floats(); 
     glBufferData(GL_ARRAY_BUFFER, batch.mesh.byte_size_of_vertices(), vertices.data(), GL_STATIC_DRAW);
 
     auto position_attrib = glGetAttribLocation(program, "position");
@@ -511,6 +518,13 @@ void Renderer::link_batch(GraphicsBatch& batch) {
       glVertexAttribDivisor(model_attrib + i, 1);
     }
 
+    // Buffer for all the diffuse texture indices
+    glGenBuffers(1, &batch.gl_diffuse_textures_layer_idx);
+    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_diffuse_textures_layer_idx);
+    glVertexAttribIPointer(glGetAttribLocation(program, "diffuse_layer_idx"), 1, GL_UNSIGNED_INT, sizeof(GLint), nullptr);
+    glEnableVertexAttribArray(glGetAttribLocation(program, "diffuse_layer_idx"));
+    glVertexAttribDivisor(batch.gl_diffuse_textures_layer_idx, 0);
+
     GLuint EBO;
     glGenBuffers(1, &EBO);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
@@ -518,6 +532,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
 
     glUseProgram(program); // Must use the program object before accessing uniforms!
     glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, projection_matrix.data());
+    glUniform1i(glGetUniformLocation(program, "diffuse"), batch.gl_diffuse_texture_unit);
   }
 }
 
@@ -531,6 +546,30 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
       if (batch.mesh_id == mesh_id) {
           batch.components.push_back(comp);
           return batch.id;
+
+          for (const auto& item : batch.layer_idxs) {
+            const auto id = item.first; // Texture id
+            if (id == g_state.diffuse_texture.id) {
+              g_state.diffuse_texture.layer_idx = batch.layer_idxs[id];
+              return batch.id;
+            }
+          }
+
+          /// Expand texture buffer if needed
+          if (batch.diffuse_textures_count + 1 > batch.diffuse_textures_capacity) {
+            batch.expand_texture_buffer(&batch.gl_diffuse_texture_array, batch.gl_diffuse_texture_type);
+          }
+
+          /// Assign layer index to the latest the texture and increment
+          g_state.diffuse_texture.layer_idx = batch.diffuse_textures_count++;
+          
+          /// Update the mapping from texuture id to layer idx
+          batch.layer_idxs[g_state.diffuse_texture.id] = g_state.diffuse_texture.layer_idx;
+
+          /// Upload the texture to OpenGL
+          batch.upload(g_state.diffuse_texture);
+
+          return batch.id;
       }
   }
 
@@ -539,10 +578,21 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
   batch.mesh = mesh_manager->mesh_from_id(mesh_id);
   link_batch(batch);
 
+  if (g_state.diffuse_texture.used) {
+    batch.init_buffer(&batch.gl_diffuse_texture_array, batch.gl_diffuse_texture_unit, g_state.diffuse_texture);
+
+    /// Assign layer index to the latest the texture and increment
+    g_state.diffuse_texture.layer_idx = batch.diffuse_textures_count++;
+
+    /// Update the mapping from texuture id to layer idx
+    batch.layer_idxs[g_state.diffuse_texture.id] = g_state.diffuse_texture.layer_idx;
+
+    /// Upload the texture to OpenGL
+    batch.upload(g_state.diffuse_texture);
+  }
+
   batch.components.push_back(comp);
   graphics_batches.push_back(batch);
 
   return batch.id;
 }
-
-#pragma clang diagnostic pop

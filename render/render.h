@@ -8,7 +8,6 @@
 #include <array>
 #include <memory>
 
-#include "primitives.h"
 #include "texture.h"
 #include "light.h"
 #include "transform.h"
@@ -20,16 +19,13 @@
 #include <SDL2/SDL_video.h>
 #endif 
 
-class World;
+struct World;
 class Camera;
 class RenderComponent;
 class GraphicsBatch;
 class Shader;
 class FileMonitor;
 struct MeshManager;
-
-// TODO: Implement sparse id hash table array thingy
-// TODO: Replace all the uint64_t with the new ID type in order to clarify the usage
 
 class Renderer {
 public:
@@ -62,10 +58,10 @@ public:
   
   /// SSAO
   uint32_t ssao_num_samples = 64;
-  float ssao_kernel_radius = 1.0;
-  float ssao_power = 1.0;
+  float ssao_kernel_radius = 1.0f;
+  float ssao_power = 1.0f;
   float ssao_bias = 0.0025;
-  float ssao_blur_factor = 16.0;
+  float ssao_blur_factor = 16.0f;
   bool  ssao_blur_enabled = false;
   
   std::vector<PointLight> lights;

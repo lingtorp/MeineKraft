@@ -32,9 +32,6 @@ std::pair<bool, std::string> Shader::compile() {
       fragment_src.insert(0, define);
   }
 
-  vertex_src.insert(0, "#version 410 core \n");
-  fragment_src.insert(0, "#version 410 core \n");
-
 #ifdef DEBUG
   vertex_shader_src = vertex_src;
   fragment_shader_src = fragment_src;

@@ -42,3 +42,5 @@ CTestTestfile.cmake
 Makefile
 MeineKraft
 build/
+*.json
+.vscode/c_cpp_properties.json

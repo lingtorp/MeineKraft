@@ -1,5 +1,6 @@
 #include <memory>
 #include <chrono>
+
 #include "render/render.h"
 #include "include/imgui/imgui_impl_sdl.h"
 #include "render/camera.h"
@@ -26,13 +27,9 @@ int main() {
   SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
   SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
   auto window_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_MOUSE_CAPTURE;
-  SDL_Window* window = SDL_CreateWindow("MeineKraft", 0, 0, HD.width, HD.height, window_flags);
+  SDL_Window* window = SDL_CreateWindow("MeineKraft", 100, 100, HD.width, HD.height, window_flags);
   SDL_GLContext context = SDL_GL_CreateContext(window);
   SDL_GL_SetSwapInterval(0); // Disables vsync
-
-  // Init sdl2_image
-  atexit(IMG_Quit);
-  IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG);
   
   // Init ImGui
   ImGui_ImplSdlGL3_Init(window);
@@ -154,7 +151,7 @@ int main() {
       ImGui::Text("Application average %lld ms / frame (%.1f FPS)", delta, io.Framerate);
   
       static size_t i = -1; i = (i + 1) % num_deltas;
-      deltas[i] = delta;
+      deltas[i] = float(delta);
       ImGui::PlotLines("", deltas, num_deltas, 0, "ms / frame", 0.0f, 50.0f, ImVec2(ImGui::GetWindowWidth(), 100));
       
       static bool show_test_window = false;

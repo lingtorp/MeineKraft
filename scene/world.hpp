@@ -10,6 +10,7 @@
 #include <unordered_map>
 #include <cstdint>
 #include <iostream>
+#include <numeric>
 
 class Block: public Entity {
   public:
@@ -23,7 +24,7 @@ class Block: public Entity {
     if (type == BlockType::AIR) { return; }
     auto render_comp = new RenderComponent(this);
     render_comp->set_mesh(MeshPrimitive::Cube);
-    // render_comp->set_cube_map_texture(textures_for_block(type));
+    render_comp->set_cube_map_texture(textures_for_block(type));
     attach_component(render_comp);
   }
   
@@ -62,12 +63,11 @@ struct World {
   std::unordered_map<Vec3<int>, Chunk> chunks;
   
   explicit World(const Camera* camera): chunks{} {
-    auto camera_world_pos = world_position(camera->position);
-    std::vector<float> X{0};
+    std::vector<int> X(10);
+    std::iota(X.begin(), X.end(), -10);
     for (const auto x : X) {
-      auto position = Vec3<float>{x, 0, 0};
       Block* block = new Block(Block::BlockType::GRASS);
-      block->position = Vec3<float>(x, 0, 0);
+      block->position = Vec3<float>(0, 0, x);
       std::cerr << block->position << std::endl;
     }
   }

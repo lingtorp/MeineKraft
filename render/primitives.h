@@ -123,7 +123,7 @@ struct Mesh {
   /// Return a vector of all the vertices data laid out as the Vertex struct
   std::vector<float> to_floats() const {
       std::vector<float> floats;
-      for (auto vertex : vertices) {
+      for (const auto vertex : vertices) {
           floats.push_back(vertex.position.x);
           floats.push_back(vertex.position.y);
           floats.push_back(vertex.position.z);

@@ -22,20 +22,18 @@ void RenderComponent::set_mesh(const std::string& directory, const std::string& 
   for (const auto& pair : texture_info) {
     auto texture_type = pair.first;
     auto texture_file = pair.second;
+    const auto resource = TextureResource{texture_file};
     switch (texture_type) {
       case Texture::Type::Diffuse:
-        graphics_state.diffuse_texture.resource = TextureResource{texture_file};
-        graphics_state.diffuse_texture.gl_texture_type = GL_TEXTURE_2D_ARRAY; // FIXME: Assumes texture format
-        graphics_state.diffuse_texture.used = true;
-        graphics_state.diffuse_texture.id = graphics_state.diffuse_texture.resource.to_hash();
-        graphics_state.diffuse_texture.data = graphics_state.diffuse_texture.load_textures();
+        graphics_state.diffuse_texture.data = Texture::load_textures(resource);
+        if (graphics_state.diffuse_texture.data.pixels) {
+          graphics_state.diffuse_texture.gl_texture_type = GL_TEXTURE_2D_ARRAY; // FIXME: Assumes texture format
+          graphics_state.diffuse_texture.used = true;
+          graphics_state.diffuse_texture.id = resource.to_hash();
+        }
         break;
       case Texture::Type::Specular:
-        graphics_state.specular_texture.resource = TextureResource{texture_file};
-        graphics_state.specular_texture.gl_texture_type = GL_TEXTURE_2D_ARRAY; // FIXME: Assumes texture format
-        graphics_state.specular_texture.used = true;
-        graphics_state.specular_texture.id = graphics_state.specular_texture.resource.to_hash();
-        graphics_state.specular_texture.data = graphics_state.specular_texture.load_textures();
+        exit(1);
         break;
       default:
         exit(1);
@@ -66,11 +64,13 @@ void RenderComponent::set_mesh(MeshPrimitive primitive) {
 
 void RenderComponent::set_cube_map_texture(const std::vector<std::string>& faces) {
   // FIXME: Assumes the diffuse texture?
-  graphics_state.diffuse_texture.resource = TextureResource{faces};
-  graphics_state.diffuse_texture.gl_texture_type = GL_TEXTURE_CUBE_MAP_ARRAY;
-  graphics_state.diffuse_texture.used = true;
-  graphics_state.diffuse_texture.id = graphics_state.diffuse_texture.resource.to_hash();
-  graphics_state.diffuse_texture.data = graphics_state.diffuse_texture.load_textures();
+  auto resource = TextureResource{faces};
+  graphics_state.diffuse_texture.data = Texture::load_textures(resource);
+  if (graphics_state.diffuse_texture.data.pixels) {
+    graphics_state.diffuse_texture.gl_texture_type = GL_TEXTURE_CUBE_MAP_ARRAY;
+    graphics_state.diffuse_texture.used = true;
+    graphics_state.diffuse_texture.id = resource.to_hash();
+  }
 }
 
 /// RenderComponents are not supposed to be modified and only re-created

@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <set>
+
 #include "texture.h"
 
 class Shader {

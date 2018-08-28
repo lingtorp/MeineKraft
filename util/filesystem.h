@@ -9,7 +9,7 @@ namespace Filesystem {
   #elif __APPLE__
   const std::string base = "/Users/lingtorp/repos/MeineKraft/";
   #elif defined(_WIN32) || defined(_WIN64)
-  const std::string base = "/Users/Alexander/repos/MeineKraft/";
+  const std::string base = "C:/Users/Alexander/repos/MeineKraft/";
   #endif
 }
 

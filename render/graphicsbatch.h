@@ -22,46 +22,50 @@
 
 class RenderComponent;
 
-/**
-* Contains the rendering context for a given set of geometry data
-* RenderComponents are batched in to a GraphicsBatch based on this geometry data & shader config.
-*/
-// TODO: Docs
 class GraphicsBatch {
 public:
   explicit GraphicsBatch(ID mesh_id): mesh_id(mesh_id), components{}, mesh{}, id(0), diffuse_textures{}, layer_idxs{},
-    diffuse_textures_capacity(3), diffuse_textures_count(0), specular_textures_count(0), specular_textures_capacity(3) {};
+    diffuse_textures_capacity(3), diffuse_textures_count(0) {};
   
-  // FIXME: Handle size changes for texture buffer(s)
-  
-  void init_buffer(uint32_t* gl_buffer, uint32_t gl_buffer_type, uint32_t gl_texture_unit, uint32_t buffer_size) {
-    // FIXME: Assumes OpenGL texture type
-    glGenTextures(1, gl_buffer); // FIXME: OpenGL error 1280 (0x500) here in this function
+  void init_buffer(uint32_t* gl_buffer, uint32_t gl_texture_unit, const Texture& texture) {
+    glGenTextures(1, gl_buffer); 
     glActiveTexture(GL_TEXTURE0 + gl_texture_unit);
-    glBindTexture(gl_buffer_type, *gl_buffer);
-    // FIXME: Texture information is assumed here
-    auto layers_faces = 1 * buffer_size;
-    glTexStorage3D(gl_buffer_type, 1, GL_RGB8, 2048, 2048, layers_faces);
+    glBindTexture(texture.gl_texture_type, *gl_buffer);
+    const int buffer_size = 3;
+    glTexStorage3D(texture.gl_texture_type, buffer_size, GL_RGB8, texture.data.width, texture.data.height, 1);
   }
 
   /// GL buffer type or in GL-speak target rather than type
   void expand_texture_buffer(uint32_t* gl_buffer, uint32_t gl_buffer_type) {
     // TODO: Not texture aware
+    
     /// Allocate new memory
     uint32_t gl_new_texture_array;
     glGenTextures(1, &gl_new_texture_array);
     glActiveTexture(GL_TEXTURE0 + gl_diffuse_texture_unit);
     glBindTexture(gl_buffer_type, gl_new_texture_array);
+    
     // # of new textures to accommodate
     auto new_textures_capacity = (uint32_t) std::ceil(diffuse_textures_capacity * texture_array_growth_factor);
     auto layers_faces = 6 * new_textures_capacity;
     glTexStorage3D(gl_buffer_type, 1, GL_RGB8, 512, 512, layers_faces);
-    /// Copy
-    auto size = 512 * 512 * diffuse_textures_count; // 1 pixel = 1B given GL_RGB8
     
     /// Update state
     *gl_buffer = gl_new_texture_array;
     diffuse_textures_capacity = new_textures_capacity;
+  }
+  
+  /// Upload a texture to the diffuse array
+  void upload(Texture texture) {
+    glActiveTexture(gl_diffuse_texture_unit);
+    glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, gl_diffuse_texture_array);
+    glTexSubImage3D(GL_TEXTURE_CUBE_MAP_ARRAY,
+      0,                     // Mipmap number
+      0, 0, texture.layer_idx * 6, // xoffset, yoffset, zoffset = layer face
+      512, 512, 6,           // width, height, depth = faces
+      GL_RGB,                // format
+      GL_UNSIGNED_BYTE,      // type
+      texture.data.pixels);  // pointer to data
   }
 
   /// Id given to each unique mesh loaded by MeshManager
@@ -72,31 +76,26 @@ public:
   ID id;
   
   /// Textures
-  std::vector<ID> texture_ids; // FIXME: Used?
-  std::map<ID, uint32_t> layer_idxs;
-  float texture_array_growth_factor = 1.5; // new_buf_size = ceil(old_buf_size * growth_factor)
+  std::map<ID, uint32_t> layer_idxs; // Texture ID to layer index mapping
+
+  const float texture_array_growth_factor = 1.5f; // new_buf_size = ceil(old_buf_size * growth_factor)
+
   // Diffuse texture buffer
   std::vector<ID> diffuse_textures;
   uint32_t diffuse_textures_count;    // # texture currently in the GL buffer
   uint32_t diffuse_textures_capacity; // # textures the GL buffer can hold
   
-  uint32_t gl_diffuse_texture_array;
-  uint32_t gl_diffuse_texture_type; // CUBE_MAP_ARRAY, 2D_TEXTURE_ARRAY, etc
+  uint32_t gl_diffuse_texture_array;  // OpenGL handle to the texture array buffer
+  uint32_t gl_diffuse_texture_type;   // CUBE_MAP_ARRAY, 2D_TEXTURE_ARRAY, etc
   uint32_t gl_diffuse_texture_unit = 11; // FIXME: Hard coded
   
-  // Specular texture buffer
-  std::vector<ID> specular_textures; // TODO: Interleave with diffuse?
-  uint32_t specular_textures_count;    // # texture currently in the GL buffer
-  uint32_t specular_textures_capacity; // # textures the GL buffer can hold
-  
-  uint32_t gl_specular_texture_array;
-  uint32_t gl_specular_texture_type; // CUBE_MAP_ARRAY, 2D_TEXTURE_ARRAY, etc
-  uint32_t gl_specular_texture_unit = 12; // FIXME: Hard coded
+  uint32_t gl_diffuse_textures_layer_idx;
   
   std::vector<RenderComponent*> components;
   
   /// Depth pass variables
   uint32_t gl_depth_vao;
+  uint32_t gl_depth_vbo;
   uint32_t gl_depth_models_buffer_object;
 };
 

@@ -3,7 +3,6 @@
 
 #include <algorithm>
 #include <memory>
-#include "../render/primitives.h"
 #include "../render/rendercomponent.h"
 
 class Camera;
