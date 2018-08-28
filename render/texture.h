@@ -13,8 +13,6 @@
 #include <SDL2/SDL_image.h>
 #endif 
 
-// #include "include/stbimage/stbimage.h"
-
 /// Opaque ID type used to reference resources throughout the engine
 typedef uint64_t ID;
 
@@ -57,7 +55,6 @@ struct Texture {
     if (!image) {
       std::cerr << "Could not load textures: " << IMG_GetError() << std::endl;
       return texture;
-
 
       texture.width = static_cast<uint32_t>(image->w);
       texture.height = static_cast<uint32_t>(image->h);

@@ -8,6 +8,8 @@
 #include "util/filesystem.h"
 #include "scene/world.hpp"
 
+#define STB_IMAGE_IMPLEMENTATION
+
 struct Resolution {
   int width, height;
 };
@@ -31,6 +33,10 @@ int main() {
   SDL_GLContext context = SDL_GL_CreateContext(window);
   SDL_GL_SetSwapInterval(0); // Disables vsync
   
+  // Init sdl2_image
+  atexit(IMG_Quit);
+  IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG);
+
   // Init ImGui
   ImGui_ImplSdlGL3_Init(window);
   

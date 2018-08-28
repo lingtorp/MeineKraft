@@ -24,7 +24,6 @@ include_directories(include/assimp)
 include_directories(include/glew)
 include_directories(include/sdl2)
 include_directories(include/sdl2-image)
-include_directories(include/stbimage)
 
 set(NODES_SRC_FILES "math/noise.h" "math/vector.h")
 source_group("math" FILES ${MATH_SRC_FILES})
@@ -50,10 +49,8 @@ set(SHADER_SRC_FILES "shaders/blur-fragment.glsl" "shaders/blur-vertex.glsl" "sh
         "shaders/ssao-fragment.glsl" "shaders/ssao-vertex.glsl")
 source_group("shaders" FILES ${SHADER_SRC_FILES})
 
-set(STB_IMAGE_SRC "include/stbimage/stbimage.h")
-
 set(SOURCE_FILES main.cpp ${MATH_SRC_FILES} ${NODES_SRC_FILES} ${RENDER_SRC_FILES} ${UTIL_SRC_FILES} ${SCENE_SRC_FILES})
-add_executable(MeineKraft ${SOURCE_FILES} ${IMGUI_SRC} ${STB_IMAGE_SRC})
+add_executable(MeineKraft ${SOURCE_FILES} ${IMGUI_SRC})
 
 if(WIN32)
         # Turn on using solution folders for VS
