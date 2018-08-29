@@ -32,7 +32,7 @@ public:
     glActiveTexture(GL_TEXTURE0 + gl_texture_unit);
     glBindTexture(texture.gl_texture_type, *gl_buffer);
     const int buffer_size = 3;
-    glTexStorage3D(texture.gl_texture_type, buffer_size, GL_RGB8, texture.data.width, texture.data.height, 1);
+    glTexStorage3D(texture.gl_texture_type, buffer_size, GL_RGB8, texture.data.width, texture.data.height, 6); // depth = layer faces
   }
 
   /// GL buffer type or in GL-speak target rather than type
@@ -57,7 +57,7 @@ public:
   
   /// Upload a texture to the diffuse array
   void upload(Texture texture) {
-    glActiveTexture(gl_diffuse_texture_unit);
+    glActiveTexture(GL_TEXTURE0 + gl_diffuse_texture_unit);
     glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, gl_diffuse_texture_array);
     glTexSubImage3D(GL_TEXTURE_CUBE_MAP_ARRAY,
       0,                     // Mipmap number

@@ -523,7 +523,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glBindBuffer(GL_ARRAY_BUFFER, batch.gl_diffuse_textures_layer_idx);
     glVertexAttribIPointer(glGetAttribLocation(program, "diffuse_layer_idx"), 1, GL_UNSIGNED_INT, sizeof(GLint), nullptr);
     glEnableVertexAttribArray(glGetAttribLocation(program, "diffuse_layer_idx"));
-    glVertexAttribDivisor(batch.gl_diffuse_textures_layer_idx, 0);
+    glVertexAttribDivisor(batch.gl_diffuse_textures_layer_idx, 1);
 
     GLuint EBO;
     glGenBuffers(1, &EBO);
@@ -545,7 +545,6 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
   for (auto& batch : graphics_batches) {
       if (batch.mesh_id == mesh_id) {
           batch.components.push_back(comp);
-          return batch.id;
 
           for (const auto& item : batch.layer_idxs) {
             const auto id = item.first; // Texture id
@@ -563,7 +562,7 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
           /// Assign layer index to the latest the texture and increment
           g_state.diffuse_texture.layer_idx = batch.diffuse_textures_count++;
           
-          /// Update the mapping from texuture id to layer idx
+          /// Update the mapping from texture id to layer idx
           batch.layer_idxs[g_state.diffuse_texture.id] = g_state.diffuse_texture.layer_idx;
 
           /// Upload the texture to OpenGL
@@ -584,7 +583,7 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
     /// Assign layer index to the latest the texture and increment
     g_state.diffuse_texture.layer_idx = batch.diffuse_textures_count++;
 
-    /// Update the mapping from texuture id to layer idx
+    /// Update the mapping from texture id to layer idx
     batch.layer_idxs[g_state.diffuse_texture.id] = g_state.diffuse_texture.layer_idx;
 
     /// Upload the texture to OpenGL
