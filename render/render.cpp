@@ -523,7 +523,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glBindBuffer(GL_ARRAY_BUFFER, batch.gl_diffuse_textures_layer_idx);
     glVertexAttribIPointer(glGetAttribLocation(program, "diffuse_layer_idx"), 1, GL_UNSIGNED_INT, sizeof(GLint), nullptr);
     glEnableVertexAttribArray(glGetAttribLocation(program, "diffuse_layer_idx"));
-    glVertexAttribDivisor(batch.gl_diffuse_textures_layer_idx, 1);
+    glVertexAttribDivisor(glGetAttribLocation(program, "diffuse_layer_idx"), 1);
 
     GLuint EBO;
     glGenBuffers(1, &EBO);
