@@ -33,6 +33,11 @@ public:
     glBindTexture(texture.gl_texture_type, *gl_buffer);
     const int buffer_size = 3;
     glTexStorage3D(texture.gl_texture_type, buffer_size, GL_RGB8, texture.data.width, texture.data.height, 6); // depth = layer faces
+    glTexParameteri(texture.gl_texture_type, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(texture.gl_texture_type, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(texture.gl_texture_type, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(texture.gl_texture_type, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(texture.gl_texture_type, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
   }
 
   /// GL buffer type or in GL-speak target rather than type
