@@ -9,6 +9,20 @@
 #include <SDL_opengl.h>
 #endif
 
+static void GLAPIENTRY gl_debug_callback(
+  GLenum source,
+  GLenum type,
+  GLuint id,
+  GLenum severity,
+  GLsizei length,
+  const GLchar* message,
+  const void* user_param)
+{
+  fprintf(stderr, "GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n",
+    (type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : ""),
+    type, severity, message);
+}
+
 static void log_gl_error() {
   GLenum err = glGetError();
   std::string err_str;

@@ -7,8 +7,7 @@
 #include "nodes/model.h"
 #include "util/filesystem.h"
 #include "scene/world.hpp"
-
-#define STB_IMAGE_IMPLEMENTATION
+#include "render/debug_opengl.h"
 
 struct Resolution {
   int width, height;
@@ -25,13 +24,22 @@ int main() {
   SDL_Init(SDL_INIT_EVERYTHING);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
   SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
   SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
   auto window_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_MOUSE_CAPTURE;
   SDL_Window* window = SDL_CreateWindow("MeineKraft", 100, 100, HD.width, HD.height, window_flags);
   SDL_GLContext context = SDL_GL_CreateContext(window);
   SDL_GL_SetSwapInterval(0); // Disables vsync
+
+  // OpenGL debug output
+  glEnable(GL_DEBUG_OUTPUT);
+  glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+  if (glDebugMessageCallback) {
+    glDebugMessageCallback(gl_debug_callback, 0);
+    std::cerr << ":D" << std::endl;
+  }
   
   // Init sdl2_image
   atexit(IMG_Quit);
