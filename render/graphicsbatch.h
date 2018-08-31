@@ -32,7 +32,7 @@ public:
     glActiveTexture(GL_TEXTURE0 + gl_texture_unit);
     glBindTexture(texture.gl_texture_type, *gl_buffer);
     const int buffer_size = 3;
-    glTexStorage3D(texture.gl_texture_type, buffer_size, GL_RGB8, texture.data.width, texture.data.height, 6); // depth = layer faces
+    glTexStorage3D(texture.gl_texture_type, 1, GL_RGB8, texture.data.width, texture.data.height, 6 * buffer_size); // depth = layer faces
     glTexParameteri(texture.gl_texture_type, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(texture.gl_texture_type, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(texture.gl_texture_type, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -65,8 +65,8 @@ public:
     glActiveTexture(GL_TEXTURE0 + gl_diffuse_texture_unit);
     glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, gl_diffuse_texture_array);
     glTexSubImage3D(GL_TEXTURE_CUBE_MAP_ARRAY,
-      0,                     // Mipmap number
-      0, 0, texture.layer_idx * 6, // xoffset, yoffset, zoffset = layer face
+      0,                     // Mipmap number (a.k.a level)
+      0, 0, texture.layer_idx *  6, // xoffset, yoffset, zoffset = layer face
       512, 512, 6,           // width, height, depth = faces
       GL_RGB,                // format
       GL_UNSIGNED_BYTE,      // type
