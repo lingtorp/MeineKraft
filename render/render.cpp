@@ -378,11 +378,11 @@ void Renderer::render(uint32_t delta) {
       glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, camera_view.data());
 
       std::vector<Mat4<float>> model_buffer{};
-      Mat4<float> model{};
       std::vector<uint32_t> diffuse_textures_idx{};
       for (const auto& component : batch.components) {
         component->update(); // Copy all graphics state
         
+        Mat4<float> model{};
         model = model.translate(component->graphics_state.position);
         model = model.scale(component->graphics_state.scale);
         model_buffer.push_back(model.transpose());
