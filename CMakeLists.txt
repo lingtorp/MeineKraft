@@ -49,8 +49,8 @@ set(SHADER_SRC_FILES "shaders/blur-fragment.glsl" "shaders/blur-vertex.glsl" "sh
         "shaders/ssao-fragment.glsl" "shaders/ssao-vertex.glsl")
 source_group("shaders" FILES ${SHADER_SRC_FILES})
 
-set(SOURCE_FILES main.cpp ${MATH_SRC_FILES} ${NODES_SRC_FILES} ${RENDER_SRC_FILES} ${UTIL_SRC_FILES} ${SCENE_SRC_FILES})
-add_executable(MeineKraft ${SOURCE_FILES} ${IMGUI_SRC})
+set(SOURCE_FILES main.cpp ${MATH_SRC_FILES} ${NODES_SRC_FILES} ${RENDER_SRC_FILES} ${UTIL_SRC_FILES} ${SCENE_SRC_FILES} ${IMGUI_SRC})
+add_executable(MeineKraft ${SOURCE_FILES})
 
 if(WIN32)
         # Turn on using solution folders for VS
