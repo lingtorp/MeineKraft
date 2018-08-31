@@ -33,14 +33,6 @@ int main() {
   SDL_GLContext context = SDL_GL_CreateContext(window);
   SDL_GL_SetSwapInterval(0); // Disables vsync
 
-  // OpenGL debug output
-  glEnable(GL_DEBUG_OUTPUT);
-  glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-  if (glDebugMessageCallback) {
-    glDebugMessageCallback(gl_debug_callback, 0);
-    std::cerr << ":D" << std::endl;
-  }
-  
   // Init sdl2_image
   atexit(IMG_Quit);
   IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG);

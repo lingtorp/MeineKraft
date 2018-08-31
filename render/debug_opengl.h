@@ -18,9 +18,53 @@ static void GLAPIENTRY gl_debug_callback(
   const GLchar* message,
   const void* user_param)
 {
-  fprintf(stderr, "GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n",
-    (type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : ""),
-    type, severity, message);
+  std::cerr << " ----- GL ERROR CALLBACK ----- " << std::endl;
+  
+  std::cerr << "Type: ";
+  switch (type) {
+  case GL_DEBUG_TYPE_ERROR:
+    std::cerr << "GL ERROR";
+    break;
+  case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
+    std::cerr << "DEPRECATED_BEHAVIOR";
+    break;
+  case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
+    std::cerr << "UNDEFINED_BEHAVIOR";
+    break;
+  case GL_DEBUG_TYPE_PORTABILITY:
+    std::cerr << "PORTABILITY";
+    break;
+  case GL_DEBUG_TYPE_PERFORMANCE:
+    std::cerr << "PERFORMANCE";
+    break;
+  case GL_DEBUG_TYPE_OTHER:
+    std::cerr << "OTHER";
+    break;
+  default:
+    std::cerr << "?";
+  }
+  std::cerr << std::endl;
+
+  std::cerr << "Severity: ";
+  switch (severity) {
+  case GL_DEBUG_SEVERITY_LOW:
+    std::cerr << "LOW";
+    break;
+  case GL_DEBUG_SEVERITY_MEDIUM:
+    std::cerr << "MEDIUM";
+    break;
+  case GL_DEBUG_SEVERITY_HIGH:
+    std::cerr << "HIGH";
+    break;
+  default: 
+    std::cerr << "?";
+  }
+  std::cerr << std::endl;
+
+  std::cerr << "Type: " << glewGetErrorString(type) << std::endl;
+  std::cerr << "Message: " << message << std::endl;
+  std::cerr << " ----- ----- ----- ----- ----- " << std::endl;
+  std::cerr << std::endl;
 }
 
 static void log_gl_error() {

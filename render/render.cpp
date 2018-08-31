@@ -20,9 +20,7 @@
 
 /// Pass handling code - used for debuggging at this moment
 void pass_started(const std::string& msg) {
-#ifdef __LINUX__
-  glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, msg.c_str());
-#elif WIN32
+#if defined(__LINUX__) || defined(WIN32)
   glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, msg.c_str());
 #endif
 }
@@ -83,6 +81,12 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
                     shader_file_monitor(new FileMonitor{}), lights{}, mesh_manager{new MeshManager{}} {
   glewExperimental = (GLboolean) true;
   glewInit();
+
+  // OpenGL debug output
+  glEnable(GL_DEBUG_OUTPUT);
+  glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+  glDebugMessageCallback(gl_debug_callback, 0);
+  glDebugMessageControl(GL_DEBUG_SOURCE_APPLICATION, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_FALSE);
 
   PointLight light{Vec3<float>{0.0, 15.0, 0.0}};
   lights.push_back(light);
