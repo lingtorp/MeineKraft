@@ -25,7 +25,7 @@ include_directories(include/glew)
 include_directories(include/sdl2)
 include_directories(include/sdl2-image)
 
-set(NODES_SRC_FILES "math/noise.h" "math/vector.h")
+set(MATH_SRC_FILES "math/noise.h" "math/vector.h" "math/quaternion.h")
 source_group("math" FILES ${MATH_SRC_FILES})
 
 set(NODES_SRC_FILES "nodes/skybox.cpp" "nodes/skybox.h" "nodes/model.cpp" "nodes/model.h" "nodes/entity.cpp" "nodes/entity.h")
