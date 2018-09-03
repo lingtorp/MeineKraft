@@ -11,11 +11,13 @@
 #include <cstdint>
 #include <iostream>
 #include <numeric>
+#include <random>
+#include <algorithm>
 
 class Block: public Entity {
   public:
-  enum class BlockType {
-    AIR, GRASS
+    enum class BlockType {
+    AIR, GRASS, DIRT
   };
   
   BlockType type;
@@ -29,12 +31,25 @@ class Block: public Entity {
   }
   
   static std::vector<std::string> textures_for_block(BlockType type) {
-    std::vector<std::string> faces = {Filesystem::base + std::string("resources/blocks/grass/side.jpg"),
-                                      Filesystem::base + std::string("resources/blocks/grass/side.jpg"),
-                                      Filesystem::base + std::string("resources/blocks/grass/top.jpg"),
-                                      Filesystem::base + std::string("resources/blocks/grass/bottom.jpg"),
-                                      Filesystem::base + std::string("resources/blocks/grass/side.jpg"),
-                                      Filesystem::base + std::string("resources/blocks/grass/side.jpg")};
+    std::vector<std::string> faces;
+    switch (type) {
+    case BlockType::GRASS:
+      faces = { Filesystem::base + std::string("resources/blocks/grass/side.jpg"),
+                Filesystem::base + std::string("resources/blocks/grass/side.jpg"),
+                Filesystem::base + std::string("resources/blocks/grass/top.jpg"),
+                Filesystem::base + std::string("resources/blocks/grass/bottom.jpg"),
+                Filesystem::base + std::string("resources/blocks/grass/side.jpg"),
+                Filesystem::base + std::string("resources/blocks/grass/side.jpg") };
+      break;
+    case BlockType::DIRT:
+      faces = { Filesystem::base + std::string("resources/blocks/dirt/bottom.jpg"),
+                Filesystem::base + std::string("resources/blocks/dirt/bottom.jpg"),
+                Filesystem::base + std::string("resources/blocks/dirt/bottom.jpg"),
+                Filesystem::base + std::string("resources/blocks/dirt/bottom.jpg"),
+                Filesystem::base + std::string("resources/blocks/dirt/bottom.jpg"),
+                Filesystem::base + std::string("resources/blocks/dirt/bottom.jpg") };
+      break;
+    }
     return faces;
   }
 };
@@ -63,10 +78,14 @@ struct World {
   std::unordered_map<Vec3<int>, Chunk> chunks;
   
   explicit World(const Camera* camera): chunks{} {
+    std::mt19937 engine(1337);
+    std::uniform_real_distribution<> distr(0.0, 1.0);
+
     std::vector<int> X(10);
     std::iota(X.begin(), X.end(), -10);
     for (const auto x : X) {
-      Block* block = new Block(Block::BlockType::GRASS);
+      Block::BlockType block_type = distr(engine) < 0.5 ? Block::BlockType::GRASS : Block::BlockType::DIRT;
+      Block* block = new Block(block_type);
       block->position = Vec3<float>(0, 0, x);
       std::cerr << block->position << std::endl;
     }

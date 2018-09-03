@@ -9,6 +9,64 @@
 #include <SDL_opengl.h>
 #endif
 
+static void GLAPIENTRY gl_debug_callback(
+  GLenum source,
+  GLenum type,
+  GLuint id,
+  GLenum severity,
+  GLsizei length,
+  const GLchar* message,
+  const void* user_param)
+{
+  std::cerr << " ----- GL ERROR CALLBACK ----- " << std::endl;
+  
+  std::cerr << "Type: ";
+  switch (type) {
+  case GL_DEBUG_TYPE_ERROR:
+    std::cerr << "GL ERROR";
+    break;
+  case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
+    std::cerr << "DEPRECATED_BEHAVIOR";
+    break;
+  case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
+    std::cerr << "UNDEFINED_BEHAVIOR";
+    break;
+  case GL_DEBUG_TYPE_PORTABILITY:
+    std::cerr << "PORTABILITY";
+    break;
+  case GL_DEBUG_TYPE_PERFORMANCE:
+    std::cerr << "PERFORMANCE";
+    break;
+  case GL_DEBUG_TYPE_OTHER:
+    std::cerr << "OTHER";
+    break;
+  default:
+    std::cerr << "?";
+  }
+  std::cerr << std::endl;
+
+  std::cerr << "Severity: ";
+  switch (severity) {
+  case GL_DEBUG_SEVERITY_LOW:
+    std::cerr << "LOW";
+    break;
+  case GL_DEBUG_SEVERITY_MEDIUM:
+    std::cerr << "MEDIUM";
+    break;
+  case GL_DEBUG_SEVERITY_HIGH:
+    std::cerr << "HIGH";
+    break;
+  default: 
+    std::cerr << "?";
+  }
+  std::cerr << std::endl;
+
+  std::cerr << "Type: " << glewGetErrorString(type) << std::endl;
+  std::cerr << "Message: " << message << std::endl;
+  std::cerr << " ----- ----- ----- ----- ----- " << std::endl;
+  std::cerr << std::endl;
+}
+
 static void log_gl_error() {
   GLenum err = glGetError();
   std::string err_str;

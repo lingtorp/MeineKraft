@@ -7,6 +7,7 @@
 #include "nodes/model.h"
 #include "util/filesystem.h"
 #include "scene/world.hpp"
+#include "render/debug_opengl.h"
 
 struct Resolution {
   int width, height;
@@ -23,14 +24,19 @@ int main() {
   SDL_Init(SDL_INIT_EVERYTHING);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
   SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
   SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
   auto window_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_MOUSE_CAPTURE;
   SDL_Window* window = SDL_CreateWindow("MeineKraft", 100, 100, HD.width, HD.height, window_flags);
   SDL_GLContext context = SDL_GL_CreateContext(window);
   SDL_GL_SetSwapInterval(0); // Disables vsync
-  
+
+  // Init sdl2_image
+  atexit(IMG_Quit);
+  IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG);
+
   // Init ImGui
   ImGui_ImplSdlGL3_Init(window);
   
@@ -39,7 +45,7 @@ int main() {
   renderer.window = window;
   renderer.update_projection_matrix(70);
   
-  renderer.camera->position = {-0.62f, 17.0f, 2.6f};
+  // renderer.camera->position = {-0.62f, 17.0f, 2.6f};
   renderer.screen_width = HD.width;
   renderer.screen_height = HD.height;
   
@@ -66,34 +72,27 @@ int main() {
 
       /// Process input
       SDL_Event event{};
+      renderer.camera->diff_vector = Vec2<float>(0.0, 0.0);
       while (SDL_PollEvent(&event) != 0) {
         ImGui_ImplSdlGL3_ProcessEvent(&event);
         switch (event.type) {
         case SDL_MOUSEMOTION:
           if (toggle_mouse_capture) { break; }
-          renderer.camera->pitch += event.motion.yrel;
-          renderer.camera->yaw   += event.motion.xrel;
-          renderer.camera->direction = renderer.camera->recalculate_direction();
+          renderer.camera->diff_vector = Vec2<float>(event.motion.xrel, event.motion.yrel);
           break;
         case SDL_KEYDOWN:
           switch (event.key.keysym.sym) {
-            case SDLK_w:
-              renderer.camera->move_forward(true);
-              break;
             case SDLK_a:
-              renderer.camera->move_left(true);
-              break;
-            case SDLK_s:
-              renderer.camera->move_backward(true);
+              renderer.camera->diff_vector.x -= 20.0f;
               break;
             case SDLK_d:
-              renderer.camera->move_right(true);
+              renderer.camera->diff_vector.x += 20.0f;
+              break;       
+            case SDLK_w:
+              renderer.camera->diff_vector.y += 20.0f;
               break;
-            case SDLK_q:
-              renderer.camera->move_down(true);
-              break;
-            case SDLK_e:
-              renderer.camera->move_up(true);
+            case SDLK_s:
+              renderer.camera->diff_vector.y -= 20.0f;
               break;
             case SDLK_TAB:
               toggle_mouse_capture = !toggle_mouse_capture;
@@ -102,26 +101,11 @@ int main() {
               DONE = true;
               break;
           }
+          renderer.camera->update();
           break;
         case SDL_KEYUP:
           switch (event.key.keysym.sym) {
-            case SDLK_w:
-              renderer.camera->move_forward(false);
-              break;
-            case SDLK_a:
-              renderer.camera->move_left(false);
-              break;
-            case SDLK_s:
-              renderer.camera->move_backward(false);
-              break;
-            case SDLK_d:
-              renderer.camera->move_right(false);
-              break;
-            case SDLK_q:
-              renderer.camera->move_down(false);
-              break;
-            case SDLK_e:
-              renderer.camera->move_up(false);
+           // TODO
           }
         case SDL_WINDOWEVENT:
           switch (event.window.event) {
@@ -135,7 +119,6 @@ int main() {
           break;
       }
     }
-    renderer.camera->position = renderer.camera->update(delta);
 
     /// Render the world
     renderer.render(delta);

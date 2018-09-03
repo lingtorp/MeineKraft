@@ -14,8 +14,6 @@ uniform samplerCubeArray diffuse;
 void main() {
     gNormal = normalize(fNormal);
     gPosition = fPosition;
-    gDiffuse.rgb = texture(diffuse, vec4(normalize(fPosition), fDiffuse_layer_idx)).rgb; 
-    // gDiffuse.rgb = vec3(fTexcoord, float(fDiffuse_layer_idx)).rgb; 
-    // gDiffuse.rgb = texture(diffuse, vec3(fTexcoord, fDiffuse_layer_idx)).rgb;
+    gDiffuse.rgb = texture(diffuse, vec4(fPosition, fDiffuse_layer_idx)).rgb; 
     gDiffuse.a = 1.0; 
 }

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.10)
 project(MeineKraft)
 
 set(CMAKE_BUILD_TYPE DEBUG)
@@ -11,7 +11,7 @@ endif(UNIX)
 set(CMAKE_CXX_STANDARD 11)
 
 if(WIN32)
-        # TODO
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
 else(WIN32)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions")
@@ -24,9 +24,8 @@ include_directories(include/assimp)
 include_directories(include/glew)
 include_directories(include/sdl2)
 include_directories(include/sdl2-image)
-include_directories(include/stbimage)
 
-set(NODES_SRC_FILES "math/noise.h" "math/vector.h")
+set(MATH_SRC_FILES "math/noise.h" "math/vector.h" "math/quaternion.h")
 source_group("math" FILES ${MATH_SRC_FILES})
 
 set(NODES_SRC_FILES "nodes/skybox.cpp" "nodes/skybox.h" "nodes/model.cpp" "nodes/model.h" "nodes/entity.cpp" "nodes/entity.h")
@@ -50,10 +49,8 @@ set(SHADER_SRC_FILES "shaders/blur-fragment.glsl" "shaders/blur-vertex.glsl" "sh
         "shaders/ssao-fragment.glsl" "shaders/ssao-vertex.glsl")
 source_group("shaders" FILES ${SHADER_SRC_FILES})
 
-set(STB_IMAGE_SRC "include/stbimage/stbimage.h")
-
-set(SOURCE_FILES main.cpp ${MATH_SRC_FILES} ${NODES_SRC_FILES} ${RENDER_SRC_FILES} ${UTIL_SRC_FILES} ${SCENE_SRC_FILES})
-add_executable(MeineKraft ${SOURCE_FILES} ${IMGUI_SRC} ${STB_IMAGE_SRC})
+set(SOURCE_FILES main.cpp ${MATH_SRC_FILES} ${NODES_SRC_FILES} ${RENDER_SRC_FILES} ${UTIL_SRC_FILES} ${SCENE_SRC_FILES} ${IMGUI_SRC})
+add_executable(MeineKraft ${SOURCE_FILES})
 
 if(WIN32)
         # Turn on using solution folders for VS

@@ -27,6 +27,33 @@ class Shader;
 class FileMonitor;
 struct MeshManager;
 
+struct ShaderBinding {
+  std::string gl_name;
+  int value_type;
+};
+
+class RenderPass {
+  ShaderBinding* bindings;
+  virtual bool setup() const = 0;
+  virtual bool start() const = 0;
+  virtual bool end() const = 0;
+  virtual bool teardown() const = 0;
+};
+
+class SSAOPass : RenderPass {
+  /// SSAO
+  uint32_t ssao_num_samples = 64;
+  float ssao_kernel_radius = 1.0f;
+  float ssao_power = 1.0f;
+  float ssao_bias = 0.0025;
+  float ssao_blur_factor = 16.0f;
+  bool  ssao_blur_enabled = false;
+};
+
+class RenderPipeline {
+  RenderPass* passes;
+};
+
 class Renderer {
 public:
   Renderer(Renderer &render) = delete;

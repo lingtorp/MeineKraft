@@ -13,8 +13,6 @@
 #include <SDL2/SDL_image.h>
 #endif 
 
-// #include "include/stbimage/stbimage.h"
-
 /// Opaque ID type used to reference resources throughout the engine
 typedef uint64_t ID;
 
@@ -54,11 +52,7 @@ struct Texture {
     const auto& file = resource.files.front();
     SDL_Surface* image = IMG_Load(file.c_str());
 
-    if (!image) {
-      std::cerr << "Could not load textures: " << IMG_GetError() << std::endl;
-      return texture;
-
-
+    if (image) {
       texture.width = static_cast<uint32_t>(image->w);
       texture.height = static_cast<uint32_t>(image->h);
       const auto bytes_per_pixel = image->format->BytesPerPixel;
@@ -71,12 +65,18 @@ struct Texture {
       // Load all the files into a linear memory region
       for (size_t i = 0; i < resource.files.size(); i++) {
         image = IMG_Load(resource.files[i].c_str());
+        if (!image) {
+          std::cerr << "Could not load texture: " << IMG_GetError() << std::endl;
+          continue;
+        }
         // Convert it to OpenGL friendly format
         const auto desired_img_format = bytes_per_pixel == 3 ? SDL_PIXELFORMAT_RGB24 : SDL_PIXELFORMAT_RGBA32;
         SDL_Surface* conv = SDL_ConvertSurfaceFormat(image, desired_img_format, 0);
         std::memcpy(texture.pixels + texture.size * i, conv->pixels, texture.size);
         SDL_FreeSurface(image);
       }
+    } else {
+      std::cerr << "Could not load textures: " << IMG_GetError() << std::endl;
     }
 
     return texture;

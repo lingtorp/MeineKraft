@@ -18,11 +18,12 @@
 #include "rendercomponent.h"
 #include "meshmanager.h"
 
+#include <glm/common.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 /// Pass handling code - used for debuggging at this moment
 void pass_started(const std::string& msg) {
-#ifdef __LINUX__
-  glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, msg.c_str());
-#elif WIN32
+#if defined(__LINUX__) || defined(WIN32)
   glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, msg.c_str());
 #endif
 }
@@ -31,36 +32,6 @@ void pass_ended() {
 #if defined(__LINUX__) || defined(WIN32)
   glPopDebugGroup();
 #endif
-}
-
-/// Column major - Camera combined rotation matrix (y, x) & translation matrix
-Mat4<float> Renderer::FPSViewRH(Vec3<float> eye, float pitch, float yaw) {
-  static constexpr float rad = M_PI / 180.0f;
-  float cosPitch = cosf(pitch * rad);
-  float sinPitch = sinf(pitch * rad);
-  float cosYaw = cosf(yaw * rad);
-  float sinYaw = sinf(yaw * rad);
-  auto xaxis = Vec3<float>{cosYaw, 0, -sinYaw};
-  auto yaxis = Vec3<float>{sinYaw * sinPitch, cosPitch, cosYaw * sinPitch};
-  auto zaxis = Vec3<float>{sinYaw * cosPitch, -sinPitch, cosPitch * cosYaw};
-  Mat4<float> matrix;
-  matrix[0][0] = xaxis.x;
-  matrix[0][1] = yaxis.x;
-  matrix[0][2] = zaxis.x;
-  matrix[0][3] = 0.0f;
-  matrix[1][0] = xaxis.y;
-  matrix[1][1] = yaxis.y;
-  matrix[1][2] = zaxis.y;
-  matrix[1][3] = 0.0f;
-  matrix[2][0] = xaxis.z;
-  matrix[2][1] = yaxis.z;
-  matrix[2][2] = zaxis.z;
-  matrix[2][3] = 0.0f;
-  matrix[3][0] = -xaxis.dot(eye);
-  matrix[3][1] = -yaxis.dot(eye);
-  matrix[3][2] = -zaxis.dot(eye); // GLM says no minus , other's say minus
-  matrix[3][3] = 1.0f;
-  return matrix;
 }
 
 /// A.k.a perspective matrix
@@ -83,6 +54,12 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
                     shader_file_monitor(new FileMonitor{}), lights{}, mesh_manager{new MeshManager{}} {
   glewExperimental = (GLboolean) true;
   glewInit();
+
+  // OpenGL debug output
+  glEnable(GL_DEBUG_OUTPUT);
+  glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+  glDebugMessageCallback(gl_debug_callback, 0);
+  glDebugMessageControl(GL_DEBUG_SOURCE_APPLICATION, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_FALSE);
 
   PointLight light{Vec3<float>{0.0, 15.0, 0.0}};
   lights.push_back(light);
@@ -337,9 +314,9 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
   }
 
   /// Camera
-  const auto position  = Vec3<float>{5.0f, 0.0f, 5.0f};  // cam position
-  const auto direction = Vec3<float>{0.0f, 0.0f, -1.0f};  // position of where the cam is looking
-  const auto world_up  = Vec3<float>{0.0f, 1.0f, 0.0f};   // world up
+  const auto position  = Vec3<float>{5.0f, 0.0f, 5.0f};  
+  const auto direction = Vec3<float>{0.0f, 0.0f, -1.0f};  
+  const auto world_up  = Vec3<float>{0.0f, 1.0f, 0.0f};  
   camera = new Camera(position, direction, world_up);
 }
 
@@ -360,7 +337,7 @@ void Renderer::render(uint32_t delta) {
   /// Reset render stats
   state = RenderState();
 
-  auto camera_view = FPSViewRH(camera->position, camera->pitch, camera->yaw);
+  glm::mat4 camera_transform = camera->transform();
 
   /// Geometry pass
   pass_started("Geometry pass");
@@ -371,14 +348,14 @@ void Renderer::render(uint32_t delta) {
     for (const auto& batch : graphics_batches) {
       const auto program = depth_shader->gl_program;
       glUseProgram(program);
-      glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, camera_view.data());
+      glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(camera_transform));
 
       std::vector<Mat4<float>> model_buffer{};
-      Mat4<float> model{};
       std::vector<uint32_t> diffuse_textures_idx{};
       for (const auto& component : batch.components) {
         component->update(); // Copy all graphics state
         
+        Mat4<float> model{};
         model = model.translate(component->graphics_state.position);
         model = model.scale(component->graphics_state.scale);
         model_buffer.push_back(model.transpose());
@@ -523,7 +500,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glBindBuffer(GL_ARRAY_BUFFER, batch.gl_diffuse_textures_layer_idx);
     glVertexAttribIPointer(glGetAttribLocation(program, "diffuse_layer_idx"), 1, GL_UNSIGNED_INT, sizeof(GLint), nullptr);
     glEnableVertexAttribArray(glGetAttribLocation(program, "diffuse_layer_idx"));
-    glVertexAttribDivisor(batch.gl_diffuse_textures_layer_idx, 0);
+    glVertexAttribDivisor(glGetAttribLocation(program, "diffuse_layer_idx"), 1);
 
     GLuint EBO;
     glGenBuffers(1, &EBO);
@@ -545,7 +522,6 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
   for (auto& batch : graphics_batches) {
       if (batch.mesh_id == mesh_id) {
           batch.components.push_back(comp);
-          return batch.id;
 
           for (const auto& item : batch.layer_idxs) {
             const auto id = item.first; // Texture id
@@ -563,7 +539,7 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
           /// Assign layer index to the latest the texture and increment
           g_state.diffuse_texture.layer_idx = batch.diffuse_textures_count++;
           
-          /// Update the mapping from texuture id to layer idx
+          /// Update the mapping from texture id to layer idx
           batch.layer_idxs[g_state.diffuse_texture.id] = g_state.diffuse_texture.layer_idx;
 
           /// Upload the texture to OpenGL
@@ -584,7 +560,7 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
     /// Assign layer index to the latest the texture and increment
     g_state.diffuse_texture.layer_idx = batch.diffuse_textures_count++;
 
-    /// Update the mapping from texuture id to layer idx
+    /// Update the mapping from texture id to layer idx
     batch.layer_idxs[g_state.diffuse_texture.id] = g_state.diffuse_texture.layer_idx;
 
     /// Upload the texture to OpenGL

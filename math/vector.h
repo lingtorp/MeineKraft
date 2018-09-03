@@ -192,6 +192,10 @@ struct Vec2 {
 
     /// Length of the vector
     inline double length() const { return std::sqrt(std::pow(x, 2) + std::pow(y, 2)); }
+
+    friend std::ostream &operator<<(std::ostream& os, const Vec2& v) {
+      return os << "(x: " << v.x << ", y: " << v.y << std::endl;
+    }
 };
 
 template<typename T>
