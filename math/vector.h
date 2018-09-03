@@ -153,11 +153,20 @@ struct Vec3 {
         return Vec3{x - rhs.x, y - rhs.y, z - rhs.z};
     }
 
+    inline Vec3 operator-() const {
+        return Vec3{-x, -y, -z};
+    }
+
 private:
   void hash_combine(size_t &seed, const size_t hash) const {
     seed ^= hash + 0x9e3779b9 + (seed << 6) + (seed >> 2);
   }
 };
+
+template<typename T>
+inline Vec3<T> operator*(const T s, const Vec3<T>& v) {
+    return Vec3<T>{v.x * s, v.y * s, v.z * s};
+}
 
 template<typename T>
 struct Vec2 {
