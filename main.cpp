@@ -72,27 +72,36 @@ int main() {
 
       /// Process input
       SDL_Event event{};
-      renderer.camera->diff_vector = Vec2<float>(0.0, 0.0);
+      // renderer.camera->diff_vector = Vec2<float>(0.0, 0.0);
       while (SDL_PollEvent(&event) != 0) {
         ImGui_ImplSdlGL3_ProcessEvent(&event);
         switch (event.type) {
         case SDL_MOUSEMOTION:
           if (toggle_mouse_capture) { break; }
-          renderer.camera->diff_vector = Vec2<float>(event.motion.xrel, event.motion.yrel);
+          renderer.camera->pitch += event.motion.yrel;
+          renderer.camera->yaw += event.motion.xrel;
+          renderer.camera->direction = renderer.camera->recalculate_direction();
+          // renderer.camera->diff_vector = Vec2<float>(event.motion.xrel, event.motion.yrel);
           break;
         case SDL_KEYDOWN:
           switch (event.key.keysym.sym) {
-            case SDLK_a:
-              renderer.camera->diff_vector.x -= 20.0f;
-              break;
-            case SDLK_d:
-              renderer.camera->diff_vector.x += 20.0f;
-              break;       
             case SDLK_w:
-              renderer.camera->diff_vector.y += 20.0f;
+              renderer.camera->move_forward(true);
+              break;
+            case SDLK_a:
+              renderer.camera->move_left(true);
               break;
             case SDLK_s:
-              renderer.camera->diff_vector.y -= 20.0f;
+              renderer.camera->move_backward(true);
+              break;
+            case SDLK_d:
+              renderer.camera->move_right(true);
+              break;
+            case SDLK_q:
+              renderer.camera->move_down(true);
+              break;
+            case SDLK_e:
+              renderer.camera->move_up(true);
               break;
             case SDLK_TAB:
               toggle_mouse_capture = !toggle_mouse_capture;
@@ -101,11 +110,27 @@ int main() {
               DONE = true;
               break;
           }
-          renderer.camera->update();
+          // renderer.camera->update();
           break;
         case SDL_KEYUP:
           switch (event.key.keysym.sym) {
-           // TODO
+            case SDLK_w:
+              renderer.camera->move_forward(false);
+              break;
+            case SDLK_a:
+              renderer.camera->move_left(false);
+              break;
+            case SDLK_s:
+              renderer.camera->move_backward(false);
+              break;
+            case SDLK_d:
+              renderer.camera->move_right(false);
+              break;
+            case SDLK_q:
+              renderer.camera->move_down(false);
+              break;
+            case SDLK_e:
+              renderer.camera->move_up(false);
           }
         case SDL_WINDOWEVENT:
           switch (event.window.event) {
@@ -119,6 +144,7 @@ int main() {
           break;
       }
     }
+    renderer.camera->position = renderer.camera->update(delta);
 
     /// Render the world
     renderer.render(delta);
