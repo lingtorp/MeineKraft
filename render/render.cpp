@@ -12,7 +12,6 @@
 
 #include "camera.h"
 #include "graphicsbatch.h"
-#include "../util/filemonitor.h"
 #include "../util/filesystem.h"
 #include "debug_opengl.h"
 #include "rendercomponent.h"
@@ -20,6 +19,148 @@
 
 #include <glm/common.hpp>
 #include <glm/gtc/type_ptr.hpp>
+
+static const float SCREEN_WIDTH  = 1280.0f;
+static const float SCREEN_HEIGHT = 720.0f;
+
+class RenderPass {
+  virtual bool setup(Renderer& renderer) const = 0;
+  virtual bool start() const = 0;
+  virtual bool end() const = 0;
+  virtual bool teardown() const = 0;
+};
+
+class SSAOPass : RenderPass {
+  Shader shader;
+  /// SSAO
+  uint32_t ssao_num_samples = 64;
+  float ssao_kernel_radius = 1.0f;
+  float ssao_power = 1.0f;
+  float ssao_bias = 0.0025;
+  float ssao_blur_factor = 16.0f;
+  bool  ssao_blur_enabled = false;
+
+  /// SSAO pass related
+  uint32_t gl_ssao_fbo;
+  uint32_t gl_ssao_texture;
+  uint32_t gl_ssao_texture_unit;
+  uint32_t gl_ssao_vao;
+
+  uint32_t gl_ssao_noise_texture;
+  uint32_t gl_ssao_noise_texture_unit;
+
+  std::vector<Vec3<float>> ssao_samples;
+
+  bool setup(Renderer& renderer) {
+    const bool setup_successful = true;
+    // Allocate all the OpenGL stuff
+    // - Inputs, Outputs, objects
+    // Compile the Shader
+    // gl_variable = glCreate(...)
+    // gl_shader_variable = glGetLocation(program, "variablename")
+    /// Global SSAO framebuffer
+    glGenFramebuffers(1, &gl_ssao_fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, gl_ssao_fbo);
+
+    gl_ssao_texture_unit = renderer.get_next_free_texture_unit();
+    glActiveTexture(GL_TEXTURE0 + gl_ssao_texture_unit);
+    glGenTextures(1, &gl_ssao_texture);
+    glBindTexture(GL_TEXTURE_2D, gl_ssao_texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, SCREEN_WIDTH, SCREEN_HEIGHT, 0, GL_RED, GL_FLOAT, nullptr);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_ssao_texture, 0);
+
+    uint32_t ssao_attachments[1] = { GL_COLOR_ATTACHMENT0 };
+    glDrawBuffers(1, ssao_attachments);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+      SDL_Log("SSAO framebuffer status not complete.");
+      return !setup_successful;
+    }
+
+    /// SSAO Shader
+    shader = Shader{Filesystem::base + "shaders/ssao.vert", Filesystem::base + "shaders/ssao.frag"};
+    bool success = false;
+    std::string err_msg;
+    std::tie(success, err_msg) = shader.compile();
+    if (!success) {
+      SDL_Log("Shader compilation failed; %s", err_msg.c_str());
+      return !setup_successful;
+    }
+
+    /// SSAO noise
+    std::uniform_real_distribution<float> random(-1.0f, 1.0f);
+    std::default_random_engine gen;
+    std::vector<Vec3<float>> ssao_noise;
+    for (int i = 0; i < 64; i++) {
+      auto noise = Vec3<float>{random(gen), random(gen), 0.0f};
+      noise.normalize();
+      ssao_noise.push_back(noise);
+    }
+
+    glGenTextures(1, &gl_ssao_noise_texture);
+    gl_ssao_noise_texture_unit = renderer.get_next_free_texture_unit();
+    glActiveTexture(GL_TEXTURE0 + gl_ssao_noise_texture_unit);
+    glBindTexture(GL_TEXTURE_2D, gl_ssao_noise_texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, 8, 8, 0, GL_RGB, GL_FLOAT, ssao_noise.data());
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+    /// Create SSAO sample sphere/kernel
+    {
+      std::uniform_real_distribution<float> random(0.0f, 1.0f);
+      std::default_random_engine gen;
+
+      for (size_t i = 0; i < ssao_num_samples; i++) {
+        Vec3<float> sample_point = {
+            random(gen) * 2.0f - 1.0f, // [-1.0, 1.0]
+            random(gen) * 2.0f - 1.0f,
+            random(gen)
+        };
+        sample_point.normalize();
+        // Spread the samples inside the hemisphere to fall closer to the origin
+        float scale = float(i) / float(ssao_num_samples);
+        scale = lerp(0.1f, 1.0f, scale * scale);
+        sample_point *= scale;
+        ssao_samples.push_back(sample_point);
+      }
+    }
+
+    /// Fullscreen quad in NDC
+    float quad[] = {
+        // positions        // texture Coords
+        -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+        -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+        1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
+        1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+    };
+
+    /// SSAO setup
+    {
+      auto program = shader.gl_program;
+      glGenVertexArrays(1, &gl_ssao_vao);
+      glBindVertexArray(gl_ssao_vao);
+
+      GLuint ssao_vbo;
+      glGenBuffers(1, &ssao_vbo);
+      glBindBuffer(GL_ARRAY_BUFFER, ssao_vbo);
+      glBufferData(GL_ARRAY_BUFFER, sizeof(quad), &quad, GL_STATIC_DRAW);
+      glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
+      glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
+    }
+
+    return setup_successful;
+  }
+
+  bool start() {
+    // Push the latest values to the shader
+    // glUniform1f(gl_shader_variable, value)
+    return true;
+  }
+};
 
 /// Pass handling code - used for debuggging at this moment
 void pass_started(const std::string& msg) {
@@ -50,8 +191,18 @@ Mat4<float> gen_projection_matrix(float z_near, float z_far, float fov, float as
   return matrix;
 }
 
-Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batches{},
-                    shader_file_monitor(new FileMonitor{}), lights{}, mesh_manager{new MeshManager{}} {
+uint32_t Renderer::get_next_free_texture_unit() {
+  int32_t max_texture_units;
+  glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max_texture_units);
+  next_texture_unit++;
+  if (next_texture_unit >= max_texture_units) {
+    SDL_Log("Reached max texture units: %u", max_texture_units);
+    exit(1);
+  }
+  return next_texture_unit;
+};
+
+Renderer::Renderer(): graphics_batches{}, mesh_manager{new MeshManager{}} {
   glewExperimental = (GLboolean) true;
   glewInit();
 
@@ -61,21 +212,16 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
   glDebugMessageCallback(gl_debug_callback, 0);
   glDebugMessageControl(GL_DEBUG_SOURCE_APPLICATION, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_FALSE);
 
-  PointLight light{Vec3<float>{0.0, 15.0, 0.0}};
-  lights.push_back(light);
-  light = PointLight{Vec3<float>{0.0, 18.0, 0.0}};
-  lights.push_back(light);
-
   int screen_width = 1280; // TODO: Move this into uniforms
   int screen_height = 720;
-
-  int32_t max_texture_units;
-  glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max_texture_units);
-  SDL_Log("Max texture units: %u", max_texture_units);
 
   /// Global geometry pass framebuffer
   glGenFramebuffers(1, &gl_depth_fbo);
   glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
+
+  // TODO: Remove
+  int32_t max_texture_units;
+  glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max_texture_units);
 
   gl_depth_texture_unit = max_texture_units - 1;
   glActiveTexture(GL_TEXTURE0 + gl_depth_texture_unit);
@@ -159,53 +305,6 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
     SDL_Log("Point lightning framebuffer status not complete.");
   }
 
-  /// Global SSAO framebuffer
-  glGenFramebuffers(1, &gl_ssao_fbo);
-  glBindFramebuffer(GL_FRAMEBUFFER, gl_ssao_fbo);
-
-  gl_ssao_texture_unit = max_texture_units - 4;
-  glActiveTexture(GL_TEXTURE0 + gl_ssao_texture_unit);
-  glGenTextures(1, &gl_ssao_texture);
-  glBindTexture(GL_TEXTURE_2D, gl_ssao_texture);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, screen_width, screen_height, 0, GL_RED, GL_FLOAT, nullptr);
-  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_ssao_texture, 0);
-
-  uint32_t ssao_attachments[1] = { GL_COLOR_ATTACHMENT0 };
-  glDrawBuffers(1, ssao_attachments);
-
-  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-    SDL_Log("SSAO framebuffer status not complete.");
-  }
-
-  /// SSAO Shader
-  ssao_shader = new Shader{Filesystem::base + "shaders/ssao.vert", Filesystem::base + "shaders/ssao.frag"};
-  std::tie(success, err_msg) = ssao_shader->compile();
-  if (!success) {
-    SDL_Log("Shader compilation failed; %s", err_msg.c_str());
-  }
-
-  /// SSAO noise
-  std::uniform_real_distribution<float> random(-1.0f, 1.0f);
-  std::default_random_engine gen;
-  std::vector<Vec3<float>> ssao_noise;
-  for (int i = 0; i < 64; i++) {
-    auto noise = Vec3<float>{random(gen), random(gen), 0.0f};
-    noise.normalize();
-    ssao_noise.push_back(noise);
-  }
-
-  glGenTextures(1, &gl_ssao_noise_texture);
-  gl_ssao_noise_texture_unit = max_texture_units - 2;
-  glActiveTexture(GL_TEXTURE0 + gl_ssao_noise_texture_unit);
-  glBindTexture(GL_TEXTURE_2D, gl_ssao_noise_texture);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, 8, 8, 0, GL_RGB, GL_FLOAT, ssao_noise.data());
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
   /// Blur pass
   glGenFramebuffers(1, &gl_blur_fbo);
   glBindFramebuffer(GL_FRAMEBUFFER, gl_blur_fbo);
@@ -232,31 +331,10 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
     SDL_Log("Blur framebuffer status not complete.");
   }
 
-  /// Create SSAO sample sphere/kernel
-  {
-    std::uniform_real_distribution<float> random(0.0f, 1.0f);
-    std::default_random_engine gen;
-
-    for (size_t i = 0; i < ssao_num_samples; i++) {
-      Vec3<float> sample_point = {
-        random(gen) * 2.0f - 1.0f, // [-1.0, 1.0]
-        random(gen) * 2.0f - 1.0f,
-        random(gen)
-      };
-      sample_point.normalize();
-      // Spread the samples inside the hemisphere to fall closer to the origin
-      float scale = float(i) / float(ssao_num_samples);
-      scale = lerp(0.1f, 1.0f, scale * scale);
-      sample_point *= scale;
-      ssao_samples.push_back(sample_point);
-    }
-  }
-
   /// Lightning pass shader
   const auto vertex_shader   = Filesystem::base + "shaders/lightning.vert";
   const auto fragment_shader = Filesystem::base + "shaders/lightning.frag";
   lightning_shader = new Shader{vertex_shader, fragment_shader};
-  // lightning_shader->add("#define FLAG_BLINN_PHONG_SHADING \n");
   std::tie(success, err_msg) = lightning_shader->compile();
   if (!success) {
     SDL_Log("Lightning shader compilation failed; %s", err_msg.c_str());
@@ -270,20 +348,6 @@ Renderer::Renderer(): projection_matrix(Mat4<float>()), state{}, graphics_batche
      1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
      1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
   };
-
-  /// SSAO setup
-  {
-    auto program = ssao_shader->gl_program;
-    glGenVertexArrays(1, &gl_ssao_vao);
-    glBindVertexArray(gl_ssao_vao);
-
-    GLuint ssao_vbo;
-    glGenBuffers(1, &ssao_vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, ssao_vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(quad), &quad, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
-    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
-  }
 
   /// Blur pass setup
   {
@@ -449,15 +513,14 @@ std::array<Plane<float>, 6> Renderer::extract_planes(Mat4<float> mat) {
   return planes;
 }
 
-void Renderer::update_projection_matrix(float fov) {
-  int height, width;
-  SDL_GL_GetDrawableSize(this->window, &width, &height);
-  float aspect = (float) width / (float) height;
+void Renderer::update_projection_matrix(const float fov) {
+  float aspect = (float) screen_width / (float) screen_height;
   this->projection_matrix = gen_projection_matrix(1.0, 10.0, fov, aspect);
-  glViewport(0, 0, width, height); // Update OpenGL viewport
+  glViewport(0, 0, screen_width, screen_height); // Update OpenGL viewport
+  // TODO: Adjust all the passes textures sizes
+  // TODO: Adjust the projections matrix in all passes that use it?
   glUseProgram(depth_shader->gl_program);
   glUniformMatrix4fv(glGetUniformLocation(depth_shader->gl_program, "projection"), 1, GL_FALSE, projection_matrix.data());
-  // TODO: Adjust all the passes textures sizes
 }
 
 void Renderer::link_batch(GraphicsBatch& batch) {
