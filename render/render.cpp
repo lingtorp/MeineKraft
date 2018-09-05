@@ -24,6 +24,7 @@ static const float SCREEN_WIDTH  = 1280.0f;
 static const float SCREEN_HEIGHT = 720.0f;
 
 class RenderPass {
+  // Global buffers needs to be accessable from the render passes in some way.
   virtual bool setup(Renderer& renderer) const = 0;
   virtual bool start() const = 0;
   virtual bool end() const = 0;
@@ -215,13 +216,13 @@ Renderer::Renderer(): graphics_batches{}, mesh_manager{new MeshManager{}} {
   int screen_width = 1280; // TODO: Move this into uniforms
   int screen_height = 720;
 
-  /// Global geometry pass framebuffer
-  glGenFramebuffers(1, &gl_depth_fbo);
-  glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
-
   // TODO: Remove
   int32_t max_texture_units;
   glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max_texture_units);
+
+  /// Global geometry pass framebuffer
+  glGenFramebuffers(1, &gl_depth_fbo);
+  glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
 
   gl_depth_texture_unit = max_texture_units - 1;
   glActiveTexture(GL_TEXTURE0 + gl_depth_texture_unit);
