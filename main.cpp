@@ -40,18 +40,11 @@ int main() {
   // Init ImGui
   ImGui_ImplSdlGL3_Init(window);
   
-  // Inits glew
+  // Inits GLEW
   Renderer& renderer = Renderer::instance();
-  renderer.window = window;
-  renderer.update_projection_matrix(70);
-  
-  // renderer.camera->position = {-0.62f, 17.0f, 2.6f};
   renderer.screen_width = HD.width;
   renderer.screen_height = HD.height;
-  
-  // Model model{Filesystem::base + "resources/models/iron-man/", "Iron_Man.obj"};
-  // model.position = {0, 16, 0};
-  // model.scale = 0.5;
+  renderer.update_projection_matrix(70);
   
   World world{renderer.camera};
   
@@ -150,11 +143,11 @@ int main() {
     renderer.render(delta);
 
     /// ImGui - Debug instruments
-    if (true) {
+    {
       ImGui_ImplSdlGL3_NewFrame(window);
       auto io = ImGui::GetIO();
 
-      ImGui::Begin("Render state");
+      ImGui::Begin("Renderer state");
       ImGui::Text("Graphics batches: %llu", renderer.state.graphic_batches);
       ImGui::Text("Entities: %llu", renderer.state.entities);
       ImGui::Text("Application average %lld ms / frame (%.1f FPS)", delta, io.Framerate);
@@ -163,42 +156,14 @@ int main() {
       deltas[i] = float(delta);
       ImGui::PlotLines("", deltas, num_deltas, 0, "ms / frame", 0.0f, 50.0f, ImVec2(ImGui::GetWindowWidth(), 100));
       
-      static bool show_test_window = false;
-      if (ImGui::Button("ImGui Palette")) show_test_window ^= 1;
-      if (show_test_window) {
-        ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiSetCond_FirstUseEver);
-        ImGui::ShowTestWindow(&show_test_window);
-      }
-      
       if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::InputFloat3("Position", &renderer.camera->position.x);
         ImGui::InputFloat3("Direction", &renderer.camera->direction.x);
       }
       
-      if (ImGui::CollapsingHeader("SSAO", ImGuiTreeNodeFlags_DefaultOpen)) {
-        ImGui::InputInt("Samples", (int*) &renderer.ssao_num_samples, 8, 16);
-        ImGui::InputFloat("Kernel radius", &renderer.ssao_kernel_radius, 0.1f, 0.2f);
-        ImGui::InputFloat("Effect power", &renderer.ssao_power, 0.1f, 0.2f);
-        ImGui::InputFloat("Bias", &renderer.ssao_bias, 0.0001f, 0.0005f);
-        ImGui::Checkbox("Blur Enabled", &renderer.ssao_blur_enabled);
-        ImGui::InputFloat("Blur factor", &renderer.ssao_blur_factor, 0.5f, 1.0f);
-      }
-      
-      if (ImGui::CollapsingHeader("Lightning", ImGuiTreeNodeFlags_DefaultOpen)) {
-        ImGui::Checkbox("Enable lightning", &renderer.lightning_enabled);
-        ImGui::Checkbox("Blinn-Phong/Phong shading", &renderer.blinn_phong_shading);
-        ImGui::Checkbox("Animate lightning", &renderer.animate_light);
-        ImGui::InputFloat3("Color (RGB)", &renderer.lights[0].color.r);
-        ImGui::InputFloat3("Ambient intensity", &renderer.lights[0].ambient_intensity.x);
-        ImGui::InputFloat3("Diffuse intensity", &renderer.lights[0].diffuse_intensity.x);
-        ImGui::InputFloat3("Specular intensity", &renderer.lights[0].specular_intensity.x);
-        ImGui::InputFloat("Specular power", &renderer.specular_power, 16.0f);
-      }
-      
       ImGui::End();
       ImGui::Render();
     }
-
     SDL_GL_SwapWindow(window);
   }
 
