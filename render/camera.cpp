@@ -79,12 +79,26 @@ void Camera::move_up(bool move) {
 }
 
 Vec3<float> Camera::recalculate_direction() const {
-  static constexpr float rad = M_PI / 180.0f;
-  Vec3<float> result;
-  result.x = -sinf(yaw * rad) * cosf(pitch * rad);
-  result.y = sinf(pitch * rad);
-  result.z = -cosf(yaw * rad) * cosf(pitch * rad);
-  return result.normalize();
+  const bool euler_angles = true;
+  if (euler_angles) {
+    static constexpr float rad = M_PI / 180.0f;
+    Vec3<float> result;
+    result.x = -sinf(yaw * rad) * cosf(pitch * rad);
+    result.y = sinf(pitch * rad);
+    result.z = -cosf(yaw * rad) * cosf(pitch * rad);
+    return result.normalize();
+  } else {
+    const float sensitivity = 0.2f;
+    const float dx = glm::radians(yaw * sensitivity);
+    const float dy = glm::radians(pitch * sensitivity);
+
+    quat rotation(direction.cross(up));
+    Vec3<float> new_direction = rotation.rotate(direction, dy).normalize();
+    Vec3<float> new_up = rotation.rotate(up, dy).normalize();
+
+    quat yrotation(new_up);
+    return yrotation.rotate(new_direction, dx).normalize();
+  }
 }
 
 Vec3<float> Camera::update(uint32_t delta) {

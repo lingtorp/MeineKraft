@@ -65,16 +65,16 @@ int main() {
 
       /// Process input
       SDL_Event event{};
-      // renderer.camera->diff_vector = Vec2<float>(0.0, 0.0);
       while (SDL_PollEvent(&event) != 0) {
         ImGui_ImplSdlGL3_ProcessEvent(&event);
         switch (event.type) {
         case SDL_MOUSEMOTION:
           if (toggle_mouse_capture) { break; }
+          // renderer.camera->pitch = 0;
+          // renderer.camera->yaw = 0;
           renderer.camera->pitch += event.motion.yrel;
           renderer.camera->yaw += event.motion.xrel;
           renderer.camera->direction = renderer.camera->recalculate_direction();
-          // renderer.camera->diff_vector = Vec2<float>(event.motion.xrel, event.motion.yrel);
           break;
         case SDL_KEYDOWN:
           switch (event.key.keysym.sym) {
@@ -103,7 +103,6 @@ int main() {
               DONE = true;
               break;
           }
-          // renderer.camera->update();
           break;
         case SDL_KEYUP:
           switch (event.key.keysym.sym) {
