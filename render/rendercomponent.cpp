@@ -17,7 +17,7 @@ void RenderComponent::set_mesh(const std::string& directory, const std::string& 
   // TODO: Remove from previous batch - since we are changing mesh and thus geo. data
   ID mesh_id;
   std::vector<std::pair<Texture::Type, std::string>> texture_info;
-  std::tie(mesh_id, texture_info) = Renderer::instance().mesh_manager->load_mesh(directory, file);
+  std::tie(mesh_id, texture_info) = MeshManager::load_mesh(directory, file);
   graphics_state.mesh_id = mesh_id;
   for (const auto& pair : texture_info) {
     auto texture_type = pair.first;

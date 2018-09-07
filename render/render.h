@@ -45,7 +45,7 @@ public:
   uint64_t add_to_batch(RenderComponent* comp);
 
   /// Updates all the shaders projection matrices in order to support resizing of the window
-  void update_projection_matrix(float fov);
+  void update_projection_matrix(const float fov);
 
   /// Returns the next unused texture unit
   uint32_t get_next_free_texture_unit();
@@ -55,7 +55,6 @@ public:
 
   Camera* camera;
   RenderState state;
-  MeshManager* mesh_manager;
   Mat4<float> projection_matrix; // TODO: Generate on demand
   float screen_width;
   float screen_height;

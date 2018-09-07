@@ -58,9 +58,7 @@ class Chunk {
   public:
   static const int dimension = 2;
   const Vec3<int> world_position;
-  explicit Chunk(Vec3<int> world_position): blocks{std::array<std::array<std::array<Block, dimension>, dimension>, dimension>()}, world_position{world_position} {
-
-  }
+  explicit Chunk(Vec3<int> world_position): blocks{std::array<std::array<std::array<Block, dimension>, dimension>, dimension>()}, world_position{world_position} {}
   
   const Block* block_at(Vec3<int> position) {
     if (position < Vec3<int>{dimension}) {

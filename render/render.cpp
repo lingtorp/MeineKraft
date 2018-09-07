@@ -24,7 +24,9 @@ static const float SCREEN_WIDTH  = 1280.0f;
 static const float SCREEN_HEIGHT = 720.0f;
 
 class RenderPass {
-  // Global buffers needs to be accessable from the render passes in some way.
+public:
+  Shader shader;
+  // Global buffers needs to be accessable from the Renderer
   virtual bool setup(Renderer& renderer) const = 0;
   virtual bool start() const = 0;
   virtual bool end() const = 0;
@@ -32,7 +34,6 @@ class RenderPass {
 };
 
 class SSAOPass : RenderPass {
-  Shader shader;
   /// SSAO
   uint32_t ssao_num_samples = 64;
   float ssao_kernel_radius = 1.0f;
@@ -203,7 +204,7 @@ uint32_t Renderer::get_next_free_texture_unit() {
   return next_texture_unit;
 };
 
-Renderer::Renderer(): graphics_batches{}, mesh_manager{new MeshManager{}} {
+Renderer::Renderer(): graphics_batches{} {
   glewExperimental = (GLboolean) true;
   glewInit();
 
@@ -615,7 +616,7 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
 
   GraphicsBatch batch{mesh_id};
   batch.id = graphics_batches.size(); // TODO: Return real ID
-  batch.mesh = mesh_manager->mesh_from_id(mesh_id);
+  batch.mesh = MeshManager::mesh_from_id(mesh_id);
   link_batch(batch);
 
   if (g_state.diffuse_texture.used) {

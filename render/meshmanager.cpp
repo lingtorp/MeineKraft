@@ -6,7 +6,7 @@
 #include "../util/filesystem.h"
 
 std::pair<ID, std::vector<std::pair<Texture::Type, std::string>>>
-MeshManager::load_mesh(std::string directory, std::string file) {
+MeshManager::load_mesh(const std::string directory, const std::string file) {
     MeshInformation mesh_info;
     mesh_info.loaded_from_filepath = directory + file;
 
@@ -88,6 +88,5 @@ MeshManager::load_mesh(std::string directory, std::string file) {
             }
         }
     }
-    loaded_meshes.push_back(mesh_info.mesh); // FIXME: Always returns the same mesh id; detroys the point of instanced rendering
-    return {loaded_meshes.size() - 1, texture_info};
+    return {1, texture_info};
 }
