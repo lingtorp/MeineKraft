@@ -32,7 +32,7 @@ struct quat {
   /// Rotates point around the quat vector v by deg degrees
   Vec3<float> rotate(const Vec3<float>& point, const float rads) const {
     quat p(point, 1.0);
-    quat q(std::sinf(rads / 2.0f) * v.normalize(), std::cosf(rads / 2.0f));
+    quat q(std::sin(rads / 2.0f) * v.normalize(), std::cos(rads / 2.0f));
     return quat(q * (p * q.inverse())).v;
   }
 

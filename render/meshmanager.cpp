@@ -20,6 +20,7 @@ MeshManager::load_mesh(const std::string directory, const std::string file) {
 
     std::vector<std::pair<Texture::Type, std::string>> texture_info;
     if (scene->HasMaterials()) {
+        SDL_Log("Number of materials: %i", scene->mNumMaterials);
         for (size_t i = 0; i < scene->mNumMaterials; i++) {
             auto material = scene->mMaterials[i];
 
@@ -27,26 +28,75 @@ MeshManager::load_mesh(const std::string directory, const std::string file) {
             material->Get(AI_MATKEY_NAME, material_name);
             SDL_Log("Material name: %s", material_name.C_Str());
 
-            aiString tex_filepath;
-            if (material->GetTexture(aiTextureType_DIFFUSE, 0, &tex_filepath) == AI_SUCCESS) {
-                SDL_Log("Diffuse texture name: %s%s", directory.c_str(), tex_filepath.data);
-                std::string texture_filepath(tex_filepath.data);
+            float shininess;
+            material->Get(AI_MATKEY_SHININESS, shininess);
+            SDL_Log("Material shininess: %f", shininess);
+
+            aiString diffuse_filepath;
+            if (material->GetTexture(aiTextureType_DIFFUSE, 0, &diffuse_filepath) == AI_SUCCESS) {
+                SDL_Log("Diffuse texture name: %s%s", directory.c_str(), diffuse_filepath.data);
+                std::string texture_filepath(diffuse_filepath.data);
                 texture_filepath.insert(0, directory);
                 texture_info.push_back({Texture::Type::Diffuse, texture_filepath});
             }
           
-            float shininess;
-            material->Get(AI_MATKEY_SHININESS, shininess);
-            SDL_Log("Material shininess: %f", shininess);
-          
-            if (material->GetTexture(aiTextureType_SPECULAR, 0, &tex_filepath) == AI_SUCCESS) {
-              SDL_Log("Specular texture name: %s%s", directory.c_str(), tex_filepath.data);
-              std::string texture_filepath(tex_filepath.data);
+            aiString specular_filepath;
+            if (material->GetTexture(aiTextureType_SPECULAR, 0, &specular_filepath) == AI_SUCCESS) {
+              SDL_Log("Specular texture name: %s%s", directory.c_str(), specular_filepath.data);
+              std::string texture_filepath(specular_filepath.data);
               texture_filepath.insert(0, directory);
               texture_info.push_back({Texture::Type::Specular, texture_filepath});
             }
-          
-            // TODO: Load other texture types
+
+            aiString ambient_filepath;
+            if (material->GetTexture(aiTextureType_AMBIENT, 0, &ambient_filepath) == AI_SUCCESS) {
+              SDL_Log("Ambient texture name: %s%s", directory.c_str(), ambient_filepath.data);
+            }
+            
+            aiString shininess_filepath;
+            if (material->GetTexture(aiTextureType_SHININESS, 0, &shininess_filepath) == AI_SUCCESS) {
+              SDL_Log("Shininess texture name: %s%s", directory.c_str(), shininess_filepath.data);
+            }
+
+            aiString emissive_filepath;
+            if (material->GetTexture(aiTextureType_EMISSIVE, 0, &emissive_filepath) == AI_SUCCESS) {
+              SDL_Log("Emissive texture name: %s%s", directory.c_str(), emissive_filepath.data);
+            }
+
+            aiString displacement_filepath;
+            if (material->GetTexture(aiTextureType_DISPLACEMENT, 0, &displacement_filepath) == AI_SUCCESS) {
+              SDL_Log("Displacement texture name: %s%s", directory.c_str(), displacement_filepath.data);
+            }
+
+            aiString height_filepath;
+            if (material->GetTexture(aiTextureType_HEIGHT, 0, &height_filepath) == AI_SUCCESS) {
+              SDL_Log("Bumpmap texture name: %s%s", directory.c_str(), height_filepath.data);
+            }
+
+            aiString lightmap_filepath;
+            if (material->GetTexture(aiTextureType_LIGHTMAP, 0, &lightmap_filepath) == AI_SUCCESS) {
+              SDL_Log("Lightmap texture name: %s%s", directory.c_str(), lightmap_filepath.data);
+            }
+             
+            aiString normals_filepath;
+            if (material->GetTexture(aiTextureType_NORMALS, 0, &normals_filepath) == AI_SUCCESS) {
+              SDL_Log("Normals texture name: %s%s", directory.c_str(), normals_filepath.data);
+            }
+
+            aiString reflection_filepath;
+            if (material->GetTexture(aiTextureType_REFLECTION, 0, &reflection_filepath) == AI_SUCCESS) {
+              SDL_Log("Reflection texture name: %s%s", directory.c_str(), reflection_filepath.data);
+            }
+
+            aiString opacity_filepath;
+            if (material->GetTexture(aiTextureType_OPACITY, 0, &opacity_filepath) == AI_SUCCESS) {
+              SDL_Log("Opacity texture name: %s%s", directory.c_str(), opacity_filepath.data);
+            }
+
+            aiString unknown_filepath;
+            if (material->GetTexture(aiTextureType_OPACITY, 0, &unknown_filepath) == AI_SUCCESS) {
+              SDL_Log("Unknown texture name: %s%s", directory.c_str(), unknown_filepath.data);
+            }
         }
     }
 
@@ -88,5 +138,6 @@ MeshManager::load_mesh(const std::string directory, const std::string file) {
             }
         }
     }
+    // FIXME: Mesh id is worthless since it does not change or anything ...
     return {1, texture_info};
 }

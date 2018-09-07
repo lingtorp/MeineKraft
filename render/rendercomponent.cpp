@@ -33,7 +33,12 @@ void RenderComponent::set_mesh(const std::string& directory, const std::string& 
         }
         break;
       case Texture::Type::Specular:
-        exit(1);
+        graphics_state.specular_texture.data = Texture::load_textures(resource);
+        if (graphics_state.specular_texture.data.pixels) {
+          graphics_state.specular_texture.gl_texture_type = GL_TEXTURE_2D_ARRAY; // FIXME: Assumes texture format
+          graphics_state.specular_texture.used = true;
+          graphics_state.specular_texture.id = resource.to_hash();
+        }
         break;
       default:
         exit(1);
@@ -42,7 +47,6 @@ void RenderComponent::set_mesh(const std::string& directory, const std::string& 
 };
 
 void RenderComponent::update() {
-  // FIXME: Virtual function in order to copy?
   graphics_state.scale = entity->scale;
   graphics_state.position = entity->position;
 }

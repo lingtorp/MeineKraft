@@ -24,4 +24,4 @@ struct MeshManager {
   }
 };
 
-#endif //MEINEKRAFT_MESHMANAGER_HPP
+#endif // MEINEKRAFT_MESHMANAGER_HPP

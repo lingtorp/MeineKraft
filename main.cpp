@@ -47,6 +47,10 @@ int main() {
   renderer.update_projection_matrix(70);
   
   World world{renderer.camera};
+
+  // Model model{Filesystem::base + "resources/models/iron-man/", "Iron_Man.obj"};
+  // model.position = {0, 16, 0};
+  // model.scale = 0.5;
   
   bool toggle_mouse_capture = true;
   bool DONE = false;
