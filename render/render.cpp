@@ -20,16 +20,12 @@
 #include <glm/common.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-static const float SCREEN_WIDTH  = 1280.0f;
-static const float SCREEN_HEIGHT = 720.0f;
-
 class RenderPass {
 public:
   Shader shader;
   // Global buffers needs to be accessable from the Renderer
   virtual bool setup(Renderer& renderer) const = 0;
   virtual bool start() const = 0;
-  virtual bool end() const = 0;
   virtual bool teardown() const = 0;
 };
 
@@ -70,7 +66,7 @@ class SSAOPass : RenderPass {
     glBindTexture(GL_TEXTURE_2D, gl_ssao_texture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, SCREEN_WIDTH, SCREEN_HEIGHT, 0, GL_RED, GL_FLOAT, nullptr);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, renderer.screen_width, renderer.screen_height, 0, GL_RED, GL_FLOAT, nullptr);
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_ssao_texture, 0);
 
     uint32_t ssao_attachments[1] = { GL_COLOR_ATTACHMENT0 };
