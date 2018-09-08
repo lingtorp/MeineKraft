@@ -29,11 +29,11 @@ struct RenderPass;
 
 class Renderer {
 public:
-  Renderer(Renderer &render) = delete;
+  Renderer(Renderer& render) = delete;
   ~Renderer();
 
   /// Singleton instance of core Render, use with caution.
-  static Renderer &instance() {
+  static Renderer& instance() {
     static Renderer instance;
     return instance;
   }
@@ -49,9 +49,6 @@ public:
 
   /// Returns the next unused texture unit
   uint32_t get_next_free_texture_unit();
-  int32_t next_texture_unit;
-
-  std::vector<RenderPass> passes;
 
   Camera* camera;
   RenderState state;
@@ -61,6 +58,11 @@ public:
 
 private:
   Renderer();
+
+  std::vector<GraphicsBatch> graphics_batches;
+
+  /// Setups the VAO and uniforms up between the batch and OpenGL
+  void link_batch(GraphicsBatch &batch);
   
   /// Geometry pass related
   Shader* depth_shader;
@@ -92,18 +94,9 @@ private:
   // Positions
   uint32_t gl_position_texture;
   uint32_t gl_position_texture_unit;
-  // Albedo
-  uint32_t gl_albedo_texture;
-  uint32_t gl_albedo_texture_unit;
-
-  std::vector<GraphicsBatch> graphics_batches;
-
-  bool point_inside_frustrum(Vec3<float> point, std::array<Plane<float>, 6> planes);
-
-  std::array<Plane<float>, 6> extract_planes(Mat4<float> matrix);
-
-  /// Setups the VAO and uniforms up between the batch and OpenGL
-  void link_batch(GraphicsBatch &batch);
+  // Diffuse
+  uint32_t gl_diffuse_texture;
+  uint32_t gl_diffuse_texture_unit;
 };
 
 #endif // MEINEKRAFT_RENDER_H

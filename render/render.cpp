@@ -192,9 +192,10 @@ Mat4<float> gen_projection_matrix(float z_near, float z_far, float fov, float as
 uint32_t Renderer::get_next_free_texture_unit() {
   int32_t max_texture_units;
   glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max_texture_units);
+  static int32_t next_texture_unit = 0;
   next_texture_unit++;
   if (next_texture_unit >= max_texture_units) {
-    SDL_Log("Reached max texture units: %u", max_texture_units);
+    SDL_Log("ERROR: Reached max texture units: %u", max_texture_units);
     exit(1);
   }
   return next_texture_unit;
@@ -248,14 +249,14 @@ Renderer::Renderer(): graphics_batches{} {
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, gl_position_texture, 0);
 
   // Global diffuse buffer
-  gl_albedo_texture_unit = get_next_free_texture_unit();
-  glActiveTexture(GL_TEXTURE0 + gl_albedo_texture_unit);
-  glGenTextures(1, &gl_albedo_texture);
-  glBindTexture(GL_TEXTURE_2D, gl_albedo_texture);
+  gl_diffuse_texture_unit = get_next_free_texture_unit();
+  glActiveTexture(GL_TEXTURE0 + gl_diffuse_texture_unit);
+  glGenTextures(1, &gl_diffuse_texture);
+  glBindTexture(GL_TEXTURE_2D, gl_diffuse_texture);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, screen_width, screen_height, 0, GL_RGBA, GL_FLOAT, nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, gl_albedo_texture, 0);
+  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, gl_diffuse_texture, 0);
 
   uint32_t depth_attachments[3] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
   glDrawBuffers(3, depth_attachments);
@@ -372,23 +373,10 @@ Renderer::Renderer(): graphics_batches{} {
   }
 
   /// Camera
-  const auto position  = Vec3<float>{5.0f, 0.0f, 5.0f};  
+  const auto position  = Vec3<float>{0.0f, 0.0f, 3.0f};  
   const auto direction = Vec3<float>{0.0f, 0.0f, -1.0f};  
   const auto world_up  = Vec3<float>{0.0f, 1.0f, 0.0f};  
   camera = new Camera(position, direction, world_up);
-}
-
-bool Renderer::point_inside_frustrum(Vec3<float> point, std::array<Plane<float>, 6> planes) {
-  const auto left_plane = planes[0]; const auto right_plane = planes[1];
-  const auto top_plane  = planes[2]; const auto bot_plane   = planes[3];
-  const auto near_plane = planes[4]; const auto far_plane   = planes[5];
-  const auto dist_l = left_plane.distance_to_point(point);
-  const auto dist_r = right_plane.distance_to_point(point);
-  const auto dist_t = top_plane.distance_to_point(point);
-  const auto dist_b = bot_plane.distance_to_point(point);
-  const auto dist_n = near_plane.distance_to_point(point);
-  const auto dist_f = far_plane.distance_to_point(point);
-  return dist_l < 0 && dist_r < 0 && dist_t < 0 && dist_b < 0 && dist_n < 0 && dist_f < 0;
 }
 
 void Renderer::render(uint32_t delta) {
@@ -443,7 +431,7 @@ void Renderer::render(uint32_t delta) {
     glBindVertexArray(gl_lightning_vao);
     glUseProgram(program);
 
-    glUniform1i(glGetUniformLocation(program, "diffuse_sampler"), gl_albedo_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "diffuse_sampler"), gl_diffuse_texture_unit);
     glUniform1i(glGetUniformLocation(program, "normal_sampler"), gl_normal_texture_unit);
     glUniform1i(glGetUniformLocation(program, "position_sampler"), gl_position_texture_unit);
     glUniform1f(glGetUniformLocation(program, "screen_width"), screen_width);
@@ -467,44 +455,6 @@ void Renderer::render(uint32_t delta) {
 
   log_gl_error();
   state.graphic_batches = graphics_batches.size();
-}
-
-/// Returns the planes from the frustrum matrix in order; {left, right, bottom, top, near, far}
-/// See: http://gamedevs.org/uploads/fast-extraction-viewing-frustum-planes-from-world-view-projection-matrix.pdf
-std::array<Plane<float>, 6> Renderer::extract_planes(Mat4<float> mat) {
-  auto planes = std::array<Plane<float>, 6>();
-  auto left_plane  = Plane<float>(mat[3][0] + mat[0][0],
-                                  mat[3][1] + mat[0][1],
-                                  mat[3][2] + mat[0][2],
-                                  mat[3][3] + mat[0][3]);
-
-  auto right_plane = Plane<float>(mat[3][0] - mat[0][0],
-                                  mat[3][1] - mat[0][1],
-                                  mat[3][2] - mat[0][2],
-                                  mat[3][3] - mat[0][3]);
-
-  auto bot_plane   = Plane<float>(mat[3][0] + mat[1][0],
-                                  mat[3][1] + mat[1][1],
-                                  mat[3][2] + mat[1][2],
-                                  mat[3][3] + mat[1][3]);
-
-  auto top_plane   = Plane<float>(mat[3][0] - mat[1][0],
-                                  mat[3][1] - mat[1][1],
-                                  mat[3][2] - mat[1][2],
-                                  mat[3][3] - mat[1][3]);
-
-  auto near_plane  = Plane<float>(mat[3][0] + mat[2][0],
-                                  mat[3][1] + mat[2][1],
-                                  mat[3][2] + mat[2][2],
-                                  mat[3][3] + mat[2][3]);
-
-  auto far_plane   = Plane<float>(mat[3][0] - mat[2][0],
-                                  mat[3][1] - mat[2][1],
-                                  mat[3][2] - mat[2][2],
-                                  mat[3][3] - mat[2][3]);
-  planes[0] = left_plane; planes[1] = right_plane; planes[2] = bot_plane;
-  planes[3] = top_plane;  planes[4] = near_plane;  planes[5] = far_plane;
-  return planes;
 }
 
 void Renderer::update_projection_matrix(const float fov) {
