@@ -217,16 +217,11 @@ Renderer::Renderer(): graphics_batches{} {
   int screen_width = 1280; // TODO: Move this into uniforms
   int screen_height = 720;
 
-  // TODO: Remove
-  int32_t max_texture_units;
-  glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max_texture_units);
-  std::cerr << "Max texture units: " << max_texture_units << std::endl;
-
   /// Global geometry pass framebuffer
   glGenFramebuffers(1, &gl_depth_fbo);
   glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
 
-  gl_depth_texture_unit = max_texture_units - 1;
+  gl_depth_texture_unit = get_next_free_texture_unit();
   glActiveTexture(GL_TEXTURE0 + gl_depth_texture_unit);
   glGenTextures(1, &gl_depth_texture);
   glBindTexture(GL_TEXTURE_2D, gl_depth_texture);
@@ -237,7 +232,7 @@ Renderer::Renderer(): graphics_batches{} {
   glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, gl_depth_texture, 0);
 
   // Global normal buffer
-  gl_normal_texture_unit = max_texture_units - 3;
+  gl_normal_texture_unit = get_next_free_texture_unit();
   glActiveTexture(GL_TEXTURE0 + gl_normal_texture_unit);
   glGenTextures(1, &gl_normal_texture);
   glBindTexture(GL_TEXTURE_2D, gl_normal_texture);
@@ -247,7 +242,7 @@ Renderer::Renderer(): graphics_batches{} {
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_normal_texture, 0);
 
   // Global position buffer
-  gl_position_texture_unit = max_texture_units - 5;
+  gl_position_texture_unit = get_next_free_texture_unit();
   glActiveTexture(GL_TEXTURE0 + gl_position_texture_unit);
   glGenTextures(1, &gl_position_texture);
   glBindTexture(GL_TEXTURE_2D, gl_position_texture);
@@ -257,7 +252,7 @@ Renderer::Renderer(): graphics_batches{} {
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, gl_position_texture, 0);
 
   // Global diffuse buffer
-  gl_albedo_texture_unit = max_texture_units - 8;
+  gl_albedo_texture_unit = get_next_free_texture_unit();
   glActiveTexture(GL_TEXTURE0 + gl_albedo_texture_unit);
   glGenTextures(1, &gl_albedo_texture);
   glBindTexture(GL_TEXTURE_2D, gl_albedo_texture);
@@ -292,7 +287,7 @@ Renderer::Renderer(): graphics_batches{} {
   glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, screen_width, screen_height);
   glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, gl_lightning_rbo);
 
-  gl_lightning_texture_unit = max_texture_units - 9;
+  gl_lightning_texture_unit = get_next_free_texture_unit();
   glActiveTexture(GL_TEXTURE0 + gl_lightning_texture_unit);
   glGenTextures(1, &gl_lightning_texture);
   glBindTexture(GL_TEXTURE_2D, gl_lightning_texture);
@@ -318,7 +313,7 @@ Renderer::Renderer(): graphics_batches{} {
     SDL_Log("Blur shader compilation failed; %s", err_msg.c_str());
   }
 
-  gl_blur_texture_unit = max_texture_units - 7;
+  gl_blur_texture_unit = get_next_free_texture_unit();
   glActiveTexture(GL_TEXTURE0 + gl_blur_texture_unit);
   glGenTextures(1, &gl_blur_texture);
   glBindTexture(GL_TEXTURE_2D, gl_blur_texture);
