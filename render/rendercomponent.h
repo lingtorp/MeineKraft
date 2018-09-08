@@ -3,7 +3,6 @@
 
 #include "primitives.h"
 
-class Renderer;
 class Entity;
 
 class Component {
@@ -16,13 +15,6 @@ public:
   virtual void update() {}
 };
 
-/**
-* RenderComponent is added to a Entity that has a visual presence
-* It provides a interface for the Renderer to use when presenting
-* Entities that has a visual presence.
-*
-* Also provides the Entity a nice interface to manipulate its visual data
-*/
 class RenderComponent: public Component {
 public:
   GraphicsState graphics_state;
@@ -47,4 +39,4 @@ public:
   void set_cube_map_texture(const std::vector<std::string>& faces);
 };
 
-#endif //MEINEKRAFT_RENDERCOMPONENT_H
+#endif // MEINEKRAFT_RENDERCOMPONENT_H

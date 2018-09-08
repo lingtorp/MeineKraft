@@ -17,6 +17,6 @@ Skybox::Skybox(): Entity() {
   attach_component(render_comp);
 }
 
-void Skybox::update(uint64_t delta, const std::shared_ptr<Camera> &camera) {
-  position = camera->position;
+void Skybox::update(const uint64_t delta, const Camera& camera) {
+  position = camera.position;
 }

@@ -9,11 +9,11 @@ layout(location = 0) out vec3 gNormal;
 layout(location = 1) out vec3 gPosition;
 layout(location = 2) out vec4 gDiffuse;
 
-uniform samplerCubeArray diffuse;
+uniform sampler2DArray diffuse;
 
 void main() {
     gNormal = normalize(fNormal);
     gPosition = fPosition;
-    gDiffuse.rgb = texture(diffuse, vec4(fPosition, fDiffuse_layer_idx)).rgb; 
+    gDiffuse.rgb = texture(diffuse, vec3(fTexcoord, fDiffuse_layer_idx)).rgb; 
     gDiffuse.a = 1.0; 
 }

@@ -213,41 +213,21 @@ struct Plane {
   /// distance < 0, then point lies in the negative halfspace
   /// distance = 0, then point lies in the plane
   /// distance > 0, then point lies in the positive halfspace
-  inline double distance_to_point(const Vec3<T> &point) const {
+  inline double distance_to_point(const Vec3<T>& point) const {
       return a*point.x + b*point.y + c*point.z + d;
-  }
-};
-
-/// Material properties from (http://devernay.free.fr/cours/opengl/materials.html)
-struct Material {
-  // Intensities over RGB
-  Vec3<float> ambient;
-  Vec3<float> diffuse;
-  Vec3<float> specular;
-  float shininess; // A.k.a specular power
-  /// Default material
-  Material(): ambient{0.5}, diffuse{0.5}, specular{0.5}, shininess(32.0) {};
-  Material(Vec3<float> a, Vec3<float> d, Vec3<float> s): ambient{a}, diffuse{d}, specular{s}, shininess(32.0f) {};
-  
-  static Material Bronze() {
-    return Material{{0.2125f, 0.1275f, 0.054f}, {0.714f, 0.4284f, 0.18144f}, {0.393548f, 0.271906f, 0.166721f}};
   }
 };
 
 /// Opaque ID type used to reference resources throughout the engine
 typedef uint64_t ID;
 
-/**
-* Contains a copy of the Entity positional data which is used to render the object
-* This will allow for double buffering in the future since the copy is before all
-* the modifications are made by Transforms and other subsystems.
-*/
 struct GraphicsState {
-  Vec3<float> position;
-  float scale = 1.0;
+  ID mesh_id;
   Texture diffuse_texture;
   Texture specular_texture;
-  ID mesh_id;
+
+  Vec3<float> position;
+  float scale = 1.0;
 };
 
 /// Represents the state of the Render, used for ImGUI debug panes

@@ -5,8 +5,10 @@
 #include <iostream>
 #include "../util/filesystem.h"
 
+static std::vector<Mesh> loaded_meshes{Cube()};
+
 std::pair<ID, std::vector<std::pair<Texture::Type, std::string>>>
-MeshManager::load_mesh(const std::string directory, const std::string file) {
+MeshManager::load_mesh(const std::string& directory, const std::string& file) {
     MeshInformation mesh_info;
     mesh_info.loaded_from_filepath = directory + file;
 
@@ -139,5 +141,23 @@ MeshManager::load_mesh(const std::string directory, const std::string file) {
         }
     }
     // FIXME: Mesh id is worthless since it does not change or anything ...
-    return {1, texture_info};
+    loaded_meshes.push_back(mesh_info.mesh);
+    return {loaded_meshes.size() - 1, texture_info};
+}
+
+Mesh MeshManager::mesh_from_id(ID id) {
+  if (id < loaded_meshes.size()) {
+    return loaded_meshes[id];
+  } else {
+    std::cerr << "Error: Non existent mesh id provided." << std::endl;
+  }
+}
+
+ID MeshManager::mesh_id_from_primitive(MeshPrimitive primitive) {
+  // FIXME: Needs a proper solution ... like the rest of the mesh handling ...
+  if (primitive == MeshPrimitive::Cube) {
+    return 0;
+  } else {
+    std::cerr << "Loaded unknown primitive" << std::endl;
+  }
 }

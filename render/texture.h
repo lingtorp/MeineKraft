@@ -18,15 +18,14 @@ typedef uint64_t ID;
 
 struct RawTexture {
   uint8_t* pixels = nullptr;
-  size_t size;
+  size_t size; // Byte size per face
   uint32_t width;
   uint32_t height;
+  uint32_t faces; // Number of faces, used for cube maps
   RawTexture() = default;
-  RawTexture(ID id, uint8_t* data): pixels(data), width(0), height(0), size(0) {}
 };
 
 struct TextureResource {
-  TextureResource() = default;
   std::vector<std::string> files;
   
   explicit TextureResource(std::string file): files{file} {};
@@ -42,10 +41,8 @@ struct TextureResource {
 };
 
 struct Texture {
-  Texture() = default;
-  
   static RawTexture load_textures(const TextureResource resource) {
-    RawTexture texture{ 0, nullptr };
+    RawTexture texture{};
 
     if (resource.files.empty()) { return texture; }
 
@@ -74,6 +71,8 @@ struct Texture {
         SDL_Surface* conv = SDL_ConvertSurfaceFormat(image, desired_img_format, 0);
         std::memcpy(texture.pixels + texture.size * i, conv->pixels, texture.size);
         SDL_FreeSurface(image);
+
+        texture.faces++;
       }
     } else {
       std::cerr << "Could not load textures: " << IMG_GetError() << std::endl;

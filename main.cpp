@@ -45,12 +45,9 @@ int main() {
   renderer.screen_width = HD.width;
   renderer.screen_height = HD.height;
   renderer.update_projection_matrix(70);
-  
-  World world{renderer.camera};
 
-  // Model model{Filesystem::base + "resources/models/iron-man/", "Iron_Man.obj"};
-  // model.position = {0, 16, 0};
-  // model.scale = 0.5;
+  Model model{Filesystem::base + "resources/models/iron-man/", "Iron_Man.obj"};
+  model.scale = 0.5;
   
   bool toggle_mouse_capture = true;
   bool DONE = false;
@@ -74,7 +71,7 @@ int main() {
         switch (event.type) {
         case SDL_MOUSEMOTION:
           if (toggle_mouse_capture) { break; }
-          // renderer.camera->pitch = 0;
+          // renderer.camera->pitch = 0; 
           // renderer.camera->yaw = 0;
           renderer.camera->pitch += event.motion.yrel;
           renderer.camera->yaw += event.motion.xrel;

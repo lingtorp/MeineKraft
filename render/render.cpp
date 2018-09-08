@@ -220,6 +220,7 @@ Renderer::Renderer(): graphics_batches{} {
   // TODO: Remove
   int32_t max_texture_units;
   glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max_texture_units);
+  std::cerr << "Max texture units: " << max_texture_units << std::endl;
 
   /// Global geometry pass framebuffer
   glGenFramebuffers(1, &gl_depth_fbo);
@@ -572,6 +573,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, batch.mesh.byte_size_of_indices(), batch.mesh.indices.data(), GL_STATIC_DRAW);
 
+    // TODO: Below are render pass related stuff ... 
     glUseProgram(program); // Must use the program object before accessing uniforms!
     glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, projection_matrix.data());
     glUniform1i(glGetUniformLocation(program, "diffuse"), batch.gl_diffuse_texture_unit);
@@ -608,7 +610,7 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
           batch.layer_idxs[g_state.diffuse_texture.id] = g_state.diffuse_texture.layer_idx;
 
           /// Upload the texture to OpenGL
-          batch.upload(g_state.diffuse_texture);
+          batch.upload(g_state.diffuse_texture, batch.gl_diffuse_texture_unit);
 
           return batch.id;
       }
@@ -617,9 +619,13 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
   GraphicsBatch batch{mesh_id};
   batch.id = graphics_batches.size(); // TODO: Return real ID
   batch.mesh = MeshManager::mesh_from_id(mesh_id);
-  link_batch(batch);
 
   if (g_state.diffuse_texture.used) {
+    batch.gl_diffuse_texture_unit = Renderer::get_next_free_texture_unit();
+
+    /// Set what type the texture array will hold for the type of texture
+    batch.gl_diffuse_texture_type = g_state.diffuse_texture.gl_texture_type;
+
     batch.init_buffer(&batch.gl_diffuse_texture_array, batch.gl_diffuse_texture_unit, g_state.diffuse_texture);
 
     /// Assign layer index to the latest the texture and increment
@@ -629,8 +635,9 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
     batch.layer_idxs[g_state.diffuse_texture.id] = g_state.diffuse_texture.layer_idx;
 
     /// Upload the texture to OpenGL
-    batch.upload(g_state.diffuse_texture);
+    batch.upload(g_state.diffuse_texture, batch.gl_diffuse_texture_unit);
   }
+  link_batch(batch);
 
   batch.components.push_back(comp);
   graphics_batches.push_back(batch);
