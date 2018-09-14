@@ -84,9 +84,6 @@ MeshManager::load_mesh(const std::string& directory, const std::string& file) {
             aiString normals_filepath;
             if (material->GetTexture(aiTextureType_NORMALS, 0, &normals_filepath) == AI_SUCCESS) {
               SDL_Log("Normals texture name: %s%s", directory.c_str(), normals_filepath.data);
-              std::string texture_filepath(normals_filepath.data);
-              texture_filepath.insert(0, directory);
-              texture_info.push_back({Texture::Type::Normal, texture_filepath});
             }
 
             aiString reflection_filepath;
@@ -124,7 +121,7 @@ MeshManager::load_mesh(const std::string& directory, const std::string& file) {
 
                 if (mesh->HasTextureCoords(0)) {
                     auto texCoord = mesh->mTextureCoords[0][j];
-                    vertex.texCoord = {texCoord.x, texCoord.y};
+                    vertex.texCoord = {texCoord.x, -texCoord.y}; // glTF (& .obj) gas a flipped texture coordinate system compared to OpenGL 
                 }
 
                 if (mesh->HasNormals()) {
