@@ -4,7 +4,7 @@
 #include <algorithm>
 #include "../render/rendercomponent.h"
 
-class Camera;
+struct Camera;
 
 class Entity {
 private:

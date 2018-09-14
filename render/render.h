@@ -20,12 +20,12 @@
 #endif 
 
 struct World;
-class Camera;
+struct Camera;
 class RenderComponent;
 class GraphicsBatch;
 class Shader;
 struct MeshManager;
-struct RenderPass;
+class RenderPass;
 
 class Renderer {
 public:

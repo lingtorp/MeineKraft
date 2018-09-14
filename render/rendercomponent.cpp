@@ -8,7 +8,7 @@
 #ifdef _WIN32
 #include <SDL_log.h>
 #else
-#include <SDL2/SDL_log.h>
+#include <sdl2/SDL_log.h>
 #endif 
 
 RenderComponent::RenderComponent(Entity* entity): entity(entity), graphics_state{} {}
@@ -32,16 +32,11 @@ void RenderComponent::set_mesh(const std::string& directory, const std::string& 
           graphics_state.diffuse_texture.id = resource.to_hash();
         }
         break;
-      case Texture::Type::Specular:
-        graphics_state.specular_texture.data = Texture::load_textures(resource);
-        if (graphics_state.specular_texture.data.pixels) {
-          graphics_state.specular_texture.gl_texture_type = GL_TEXTURE_2D_ARRAY; // FIXME: Assumes texture format
-          graphics_state.specular_texture.used = true;
-          graphics_state.specular_texture.id = resource.to_hash();
-        }
+      case Texture::Type::MetallicRoughness:
+        // TODO: Implement.
         break;
       default:
-        exit(1);
+        std::cerr << "RenderComponent: Tried to load unsupported texture: " << texture_file << std::endl;
     }
   }
 };

@@ -24,18 +24,18 @@ class RenderPass {
 public:
   Shader shader;
   // Global buffers needs to be accessable from the Renderer
-  virtual bool setup(Renderer& renderer) const = 0;
-  virtual bool start() const = 0;
-  virtual bool teardown() const = 0;
+  virtual bool setup(Renderer& renderer) = 0;
+  virtual bool render() const = 0;
+  virtual bool teardown() = 0;
 };
 
 class SSAOPass : RenderPass {
   /// SSAO
   uint32_t ssao_num_samples = 64;
-  float ssao_kernel_radius = 1.0f;
-  float ssao_power = 1.0f;
+  float ssao_kernel_radius = 1.0;
+  float ssao_power = 1.0;
   float ssao_bias = 0.0025;
-  float ssao_blur_factor = 16.0f;
+  float ssao_blur_factor = 16.0;
   bool  ssao_blur_enabled = false;
 
   /// SSAO pass related
@@ -49,7 +49,7 @@ class SSAOPass : RenderPass {
 
   std::vector<Vec3<float>> ssao_samples;
 
-  bool setup(Renderer& renderer) {
+  bool setup(Renderer& renderer) override {
     const bool setup_successful = true;
     // Allocate all the OpenGL stuff
     // - Inputs, Outputs, objects
@@ -153,7 +153,7 @@ class SSAOPass : RenderPass {
     return setup_successful;
   }
 
-  bool start() {
+  bool render() const override {
     // Push the latest values to the shader
     // glUniform1f(gl_shader_variable, value)
     return true;
@@ -201,16 +201,20 @@ uint32_t Renderer::get_next_free_texture_unit() {
   return next_texture_unit;
 };
 
+Renderer::~Renderer() = default;
+
 Renderer::Renderer(): graphics_batches{} {
   glewExperimental = (GLboolean) true;
   glewInit();
 
+#if defined(WIN32)
   // OpenGL debug output
   glEnable(GL_DEBUG_OUTPUT);
   glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
   glDebugMessageCallback(gl_debug_callback, 0);
   glDebugMessageControl(GL_DEBUG_SOURCE_APPLICATION, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_FALSE);
-
+#endif
+  
   int screen_width = 1280; // TODO: Move this into uniforms
   int screen_height = 720;
 
@@ -395,6 +399,8 @@ void Renderer::render(uint32_t delta) {
       const auto program = depth_shader->gl_program;
       glUseProgram(program);
       glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(camera_transform));
+      glUniform1i(glGetUniformLocation(program, "diffuse"), batch.gl_diffuse_texture_unit);
+      glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, projection_matrix.data());
 
       std::vector<Mat4<float>> model_buffer{};
       std::vector<uint32_t> diffuse_textures_idx{};
@@ -513,15 +519,8 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glGenBuffers(1, &EBO);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, batch.mesh.byte_size_of_indices(), batch.mesh.indices.data(), GL_STATIC_DRAW);
-
-    // TODO: Below are render pass related stuff ... 
-    glUseProgram(program); // Must use the program object before accessing uniforms!
-    glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, projection_matrix.data());
-    glUniform1i(glGetUniformLocation(program, "diffuse"), batch.gl_diffuse_texture_unit);
   }
 }
-
-Renderer::~Renderer() = default;
 
 uint64_t Renderer::add_to_batch(RenderComponent* comp) {
   auto mesh_id = comp->graphics_state.mesh_id;

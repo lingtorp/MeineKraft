@@ -6,7 +6,7 @@
 #ifdef _WIN32
 #include <SDL_log.h>
 #else
-#include <SDL2/SDL_log.h>
+#include <sdl2/SDL_log.h>
 #endif 
 
 #include "../math/quaternion.h"
@@ -51,7 +51,7 @@ static double clamp(double x, double lo, double hi) {
 }
 
 Camera::Camera(Vec3<float> position, Vec3<float> direction, Vec3<float> world_up) :
-  position(position), direction(direction), up(world_up),
+  direction(direction), position(position), up(world_up),
   pitch(0), yaw(0), velocity{ 0.0, 0.0, 0.0 }, max_velocity{ 0.5, 0.5, 0.5 }, acceleration{ {false, false}, {false, false}, {false, false} } {};
 
 void Camera::move_forward(bool move) {

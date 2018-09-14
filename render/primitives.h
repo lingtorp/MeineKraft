@@ -43,7 +43,7 @@ struct Vertex {
   Vec3<T>   normal   = {};
   Vertex() = default;
   explicit Vertex(Vec3<T> position): position(position), texCoord{}, color{}, normal{} {};
-  Vertex(Vec3<T> position, Vec2<T> texCoord): position(position), texCoord(texCoord), color{}, normal{} {};
+  Vertex(Vec3<T> position, Vec2<T> texCoord): position(position), color{}, texCoord(texCoord), normal{} {};
 
   bool operator==(const Vertex<T> &rhs) const {
       return position == rhs.position && color == rhs.color && texCoord == rhs.texCoord && normal == rhs.normal;

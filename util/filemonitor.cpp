@@ -3,8 +3,8 @@
 #include <iostream>
 #include <thread>
 
-FileMonitor::FileMonitor(): modified_files{}, monitoring(false), watched_files{}, internal_lock{},
-                            files_modification_time{}, files_modfied(false) {}
+FileMonitor::FileMonitor(): monitoring(false), internal_lock{},
+                            files_modfied(false), modified_files{}, watched_files{}, files_modification_time{} {}
 
 void FileMonitor::poll_files() {
     using namespace std::chrono;

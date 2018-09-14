@@ -7,6 +7,7 @@
 
 static std::vector<Mesh> loaded_meshes{Cube()};
 
+// Assuming the metallic-roughness material model of models loaded with GLTF.
 std::pair<ID, std::vector<std::pair<Texture::Type, std::string>>>
 MeshManager::load_mesh(const std::string& directory, const std::string& file) {
     MeshInformation mesh_info;
@@ -29,11 +30,7 @@ MeshManager::load_mesh(const std::string& directory, const std::string& file) {
             aiString material_name;
             material->Get(AI_MATKEY_NAME, material_name);
             SDL_Log("Material name: %s", material_name.C_Str());
-
-            float shininess;
-            material->Get(AI_MATKEY_SHININESS, shininess);
-            SDL_Log("Material shininess: %f", shininess);
-
+          
             aiString diffuse_filepath;
             if (material->GetTexture(aiTextureType_DIFFUSE, 0, &diffuse_filepath) == AI_SUCCESS) {
                 SDL_Log("Diffuse texture name: %s%s", directory.c_str(), diffuse_filepath.data);
@@ -45,9 +42,6 @@ MeshManager::load_mesh(const std::string& directory, const std::string& file) {
             aiString specular_filepath;
             if (material->GetTexture(aiTextureType_SPECULAR, 0, &specular_filepath) == AI_SUCCESS) {
               SDL_Log("Specular texture name: %s%s", directory.c_str(), specular_filepath.data);
-              std::string texture_filepath(specular_filepath.data);
-              texture_filepath.insert(0, directory);
-              texture_info.push_back({Texture::Type::Specular, texture_filepath});
             }
 
             aiString ambient_filepath;
@@ -63,6 +57,9 @@ MeshManager::load_mesh(const std::string& directory, const std::string& file) {
             aiString emissive_filepath;
             if (material->GetTexture(aiTextureType_EMISSIVE, 0, &emissive_filepath) == AI_SUCCESS) {
               SDL_Log("Emissive texture name: %s%s", directory.c_str(), emissive_filepath.data);
+              std::string texture_filepath(emissive_filepath.data);
+              texture_filepath.insert(0, directory);
+              texture_info.push_back({Texture::Type::Emissive, texture_filepath});
             }
 
             aiString displacement_filepath;
@@ -75,14 +72,21 @@ MeshManager::load_mesh(const std::string& directory, const std::string& file) {
               SDL_Log("Bumpmap texture name: %s%s", directory.c_str(), height_filepath.data);
             }
 
+            // Lightmap is usually the ambient occlusion map ...
             aiString lightmap_filepath;
             if (material->GetTexture(aiTextureType_LIGHTMAP, 0, &lightmap_filepath) == AI_SUCCESS) {
               SDL_Log("Lightmap texture name: %s%s", directory.c_str(), lightmap_filepath.data);
+              std::string texture_filepath(lightmap_filepath.data);
+              texture_filepath.insert(0, directory);
+              texture_info.push_back({Texture::Type::AmbientOcclusion, texture_filepath});
             }
              
             aiString normals_filepath;
             if (material->GetTexture(aiTextureType_NORMALS, 0, &normals_filepath) == AI_SUCCESS) {
               SDL_Log("Normals texture name: %s%s", directory.c_str(), normals_filepath.data);
+              std::string texture_filepath(normals_filepath.data);
+              texture_filepath.insert(0, directory);
+              texture_info.push_back({Texture::Type::Normal, texture_filepath});
             }
 
             aiString reflection_filepath;
@@ -94,16 +98,21 @@ MeshManager::load_mesh(const std::string& directory, const std::string& file) {
             if (material->GetTexture(aiTextureType_OPACITY, 0, &opacity_filepath) == AI_SUCCESS) {
               SDL_Log("Opacity texture name: %s%s", directory.c_str(), opacity_filepath.data);
             }
-
+          
+            // NOTE: Roughness metallic textures are not detected so here we are assuming this is the unknown texture of the material.
             aiString unknown_filepath;
-            if (material->GetTexture(aiTextureType_OPACITY, 0, &unknown_filepath) == AI_SUCCESS) {
+            if (material->GetTexture(aiTextureType_UNKNOWN, 0, &unknown_filepath) == AI_SUCCESS) {
               SDL_Log("Unknown texture name: %s%s", directory.c_str(), unknown_filepath.data);
+              std::string texture_filepath(normals_filepath.data);
+              texture_filepath.insert(0, directory);
+              texture_info.push_back({Texture::Type::MetallicRoughness, texture_filepath});
             }
         }
     }
 
     if (scene->HasMeshes()) {
         // FIXME: Assumes the mesh is a single mesh and not a hierarchy
+        SDL_Log("Scene has %u meshes", scene->mNumMeshes);
         for (size_t i = 0; i < scene->mNumMeshes; i++) {
             auto mesh = scene->mMeshes[i];
 
@@ -115,8 +124,7 @@ MeshManager::load_mesh(const std::string& directory, const std::string& file) {
 
                 if (mesh->HasTextureCoords(0)) {
                     auto texCoord = mesh->mTextureCoords[0][j];
-                    // FIXME: Assumes the model file is a .obj file with an inverted y-axis
-                    vertex.texCoord = {texCoord.x, -texCoord.y};
+                    vertex.texCoord = {texCoord.x, texCoord.y};
                 }
 
                 if (mesh->HasNormals()) {

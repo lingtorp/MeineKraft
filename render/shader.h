@@ -7,8 +7,7 @@
 
 #include "texture.h"
 
-class Shader {
-public:
+struct Shader {
   Shader() = default;
   Shader(std::string vertex_filepath, std::string fragment_filepath);
   

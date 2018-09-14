@@ -96,7 +96,7 @@ struct Texture {
   uint32_t layer_idx;
 
   enum class Type: uint8_t {
-    Diffuse, Specular
+    Diffuse, MetallicRoughness, AmbientOcclusion, Emissive, Normal
   };
 };
 

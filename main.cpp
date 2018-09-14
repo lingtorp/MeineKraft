@@ -46,8 +46,8 @@ int main() {
   renderer.screen_height = HD.height;
   renderer.update_projection_matrix(70);
 
-  Model model{Filesystem::base + "resources/models/iron-man/", "Iron_Man.obj"};
-  model.scale = 0.5;
+  Model model{Filesystem::home + "Desktop/", "DamagedHelmet.gltf"};
+  model.scale = 1.0;
   
   bool toggle_mouse_capture = true;
   bool DONE = false;
