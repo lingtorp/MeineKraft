@@ -112,6 +112,7 @@ MeshManager::load_mesh(const std::string& directory, const std::string& file) {
         SDL_Log("Scene has %u meshes", scene->mNumMeshes);
         for (size_t i = 0; i < scene->mNumMeshes; i++) {
             auto mesh = scene->mMeshes[i];
+            SDL_Log("Loading mesh with name: %s", mesh->mName.data);
 
             for (size_t j = 0; j < mesh->mNumVertices; j++) {
                 Vertex<float> vertex;
@@ -121,7 +122,7 @@ MeshManager::load_mesh(const std::string& directory, const std::string& file) {
 
                 if (mesh->HasTextureCoords(0)) {
                     auto texCoord = mesh->mTextureCoords[0][j];
-                    vertex.texCoord = {texCoord.x, -texCoord.y}; // glTF (& .obj) gas a flipped texture coordinate system compared to OpenGL 
+                    vertex.texCoord = {texCoord.x, -texCoord.y}; // glTF (& .obj) has a flipped texture coordinate system compared to OpenGL 
                 }
 
                 if (mesh->HasNormals()) {

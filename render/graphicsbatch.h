@@ -32,7 +32,7 @@ public:
     glActiveTexture(GL_TEXTURE0 + gl_texture_unit);
     glBindTexture(texture.gl_texture_type, *gl_buffer);
     const int buffer_size = 3;
-    glTexStorage3D(texture.gl_texture_type, 1, GL_RGB8, texture.data.width, texture.data.height, texture.data.faces *buffer_size); // depth = layer faces
+    glTexStorage3D(texture.gl_texture_type, 1, GL_RGB8, texture.data.width, texture.data.height, texture.data.faces * buffer_size); // depth = layer faces
     if (texture.gl_texture_type == GL_TEXTURE_CUBE_MAP) {
       glTexParameteri(texture.gl_texture_type, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
       glTexParameteri(texture.gl_texture_type, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -93,6 +93,9 @@ public:
   uint32_t gl_diffuse_texture_unit;
   
   uint32_t gl_diffuse_textures_layer_idx;
+  
+  // Metallic roughness texture buffer
+  uint32_t gl_metallic_roughness_texture_unit;
   
   std::vector<RenderComponent*> components;
   

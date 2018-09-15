@@ -19,6 +19,7 @@
 
 #include <glm/common.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 class RenderPass {
 public:
@@ -218,6 +219,14 @@ Renderer::Renderer(): graphics_batches{} {
   int screen_width = 1280; // TODO: Move this into uniforms
   int screen_height = 720;
 
+  GLint max_draw_buffers = 0;
+  glGetIntegerv(GL_MAX_DRAW_BUFFERS, &max_draw_buffers);
+  SDL_Log("Max draw buffers: %u", max_draw_buffers);
+
+  GLint max_color_attachments = 0;
+  glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &max_color_attachments);
+  SDL_Log("Max color attachments: %u", max_color_attachments);
+
   /// Global geometry pass framebuffer
   glGenFramebuffers(1, &gl_depth_fbo);
   glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
@@ -262,8 +271,18 @@ Renderer::Renderer(): graphics_batches{} {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, gl_diffuse_texture, 0);
 
-  uint32_t depth_attachments[3] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
-  glDrawBuffers(3, depth_attachments);
+  // Global PBR parameters buffer
+  gl_pbr_parameters_texture_unit = get_next_free_texture_unit();
+  glActiveTexture(GL_TEXTURE0 + gl_pbr_parameters_texture_unit);
+  glGenTextures(1, &gl_pbr_parameters_texture);
+  glBindTexture(GL_TEXTURE_2D, gl_pbr_parameters_texture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen_width, screen_height, 0, GL_RGB, GL_FLOAT, nullptr);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, gl_pbr_parameters_texture, 0);
+
+  uint32_t depth_attachments[4] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3 };
+  glDrawBuffers(4, depth_attachments);
 
   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
     SDL_Log("Lightning framebuffer status not complete.");
@@ -331,9 +350,7 @@ Renderer::Renderer(): graphics_batches{} {
   }
 
   /// Lightning pass shader
-  const auto vertex_shader   = Filesystem::base + "shaders/lightning.vert";
-  const auto fragment_shader = Filesystem::base + "shaders/lightning.frag";
-  lightning_shader = new Shader{vertex_shader, fragment_shader};
+  lightning_shader = new Shader{Filesystem::base + "shaders/lightning.vert", Filesystem::base + "shaders/lightning.frag" };
   std::tie(success, err_msg) = lightning_shader->compile();
   if (!success) {
     SDL_Log("Lightning shader compilation failed; %s", err_msg.c_str());
@@ -401,6 +418,7 @@ void Renderer::render(uint32_t delta) {
       glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(camera_transform));
       glUniform1i(glGetUniformLocation(program, "diffuse"), batch.gl_diffuse_texture_unit);
       glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, projection_matrix.data());
+      glUniform1i(glGetUniformLocation(program, "pbr_parameters"), batch.gl_metallic_roughness_texture_unit);
 
       std::vector<Mat4<float>> model_buffer{};
       std::vector<uint32_t> diffuse_textures_idx{};
@@ -437,6 +455,7 @@ void Renderer::render(uint32_t delta) {
     glBindVertexArray(gl_lightning_vao);
     glUseProgram(program);
 
+    glUniform1i(glGetUniformLocation(program, "pbr_parameters_sampler"), gl_pbr_parameters_texture_unit);
     glUniform1i(glGetUniformLocation(program, "diffuse_sampler"), gl_diffuse_texture_unit);
     glUniform1i(glGetUniformLocation(program, "normal_sampler"), gl_normal_texture_unit);
     glUniform1i(glGetUniformLocation(program, "position_sampler"), gl_position_texture_unit);
@@ -466,9 +485,11 @@ void Renderer::render(uint32_t delta) {
 void Renderer::update_projection_matrix(const float fov) {
   float aspect = (float) screen_width / (float) screen_height;
   this->projection_matrix = gen_projection_matrix(1.0, 10.0, fov, aspect);
+  glm::mat4 perspectiive = glm::perspective(fov, aspect, 1.0f, 10.0f);
   glViewport(0, 0, screen_width, screen_height); // Update OpenGL viewport
   // TODO: Adjust all the passes textures sizes
   // TODO: Adjust the projections matrix in all passes that use it?
+  // TODO: Adjust all the global texture buffer sizes
   glUseProgram(depth_shader->gl_program);
   glUniformMatrix4fv(glGetUniformLocation(depth_shader->gl_program, "projection"), 1, GL_FALSE, projection_matrix.data());
 }
@@ -576,6 +597,18 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
 
     /// Upload the texture to OpenGL
     batch.upload(g_state.diffuse_texture, batch.gl_diffuse_texture_unit);
+  }
+
+  if (g_state.metallic_roughness_texture.used) {
+    const Texture& texture = g_state.metallic_roughness_texture;
+    batch.gl_metallic_roughness_texture_unit = Renderer::get_next_free_texture_unit();
+    glActiveTexture(GL_TEXTURE0 + batch.gl_metallic_roughness_texture_unit);
+    uint32_t gl_metallic_roughness_texture = 0;
+    glGenTextures(1, &gl_metallic_roughness_texture);
+    glBindTexture(texture.gl_texture_type, gl_metallic_roughness_texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexImage2D(texture.gl_texture_type, 0, GL_RGB, texture.data.width, texture.data.height, 0, GL_RGB, GL_UNSIGNED_BYTE, texture.data.pixels);
   }
   link_batch(batch);
 

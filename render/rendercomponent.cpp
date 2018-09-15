@@ -33,7 +33,12 @@ void RenderComponent::set_mesh(const std::string& directory, const std::string& 
         }
         break;
       case Texture::Type::MetallicRoughness:
-        // TODO: Implement.
+        graphics_state.metallic_roughness_texture.data = Texture::load_textures(resource);
+        if (graphics_state.metallic_roughness_texture.data.pixels) {
+          graphics_state.metallic_roughness_texture.gl_texture_type = GL_TEXTURE_2D; // FIXME: Assumes texture format
+          graphics_state.metallic_roughness_texture.used = true;
+          graphics_state.metallic_roughness_texture.id = resource.to_hash();
+        }
         break;
       default:
         std::cerr << "RenderComponent: Tried to load unsupported texture: " << texture_file << std::endl;

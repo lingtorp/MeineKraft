@@ -224,7 +224,7 @@ typedef uint64_t ID;
 struct GraphicsState {
   ID mesh_id;
   Texture diffuse_texture;
-  Texture specular_texture;
+  Texture metallic_roughness_texture;
 
   Vec3<float> position;
   float scale = 1.0;

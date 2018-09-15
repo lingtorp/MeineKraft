@@ -97,6 +97,9 @@ private:
   // Diffuse
   uint32_t gl_diffuse_texture;
   uint32_t gl_diffuse_texture_unit;
+  // PBR Parameters
+  uint32_t gl_pbr_parameters_texture;
+  uint32_t gl_pbr_parameters_texture_unit;
 };
 
 #endif // MEINEKRAFT_RENDER_H
