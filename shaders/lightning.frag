@@ -25,8 +25,19 @@ struct PBRInputs {
     vec3 base_color;
 };
 
-vec3 fresenel_schlick(vec3 F0, vec3 V, vec3 H) {
+vec3 fresnel_schlick(vec3 F0, vec3 V, vec3 H) {
     return F0 + (vec3(1.0) - F0) * pow((1.0 - dot(V, H)), 5.0);
+}
+
+float geometric_occlusion_schlick(float roughness, vec3 N, vec3 V, vec3 H) {
+    float k = roughness * sqrt(2 / M_PI);
+    float GV = dot(V, H) / dot(V, H) * (1.0 - k) + k;
+    float GN = dot(N, H) / dot(N, H) * (1.0 - k) + k;
+    return GV * GN;
+}
+
+float microfaced_distribution_trowbridge_reitz(float a, vec3 N, vec3 H) {
+    return a * a / M_PI * pow(pow(dot(N, H), 2) * (a * a - 1.0) + 1.0, 2);
 }
 
 vec3 schlick_brdf(PBRInputs inputs) {
@@ -36,11 +47,15 @@ vec3 schlick_brdf(PBRInputs inputs) {
     vec3 normal_incidence = mix(dieletric_specular, inputs.base_color, inputs.metallic); // F0/R(0) (Fresnel)
     float alpha = inputs.roughness * inputs.roughness;
 
-    vec3 F = fresenel_schlick(normal_incidence, inputs.V, inputs.H);
+    vec3 F = fresnel_schlick(normal_incidence, inputs.V, inputs.H);
     vec3 diffuse = inputs.base_color / M_PI; 
-    vec3 fdiffuse = (1 - F) * diffuse;
+    vec3 fdiffuse = (1.0 - F) * diffuse;
 
-    vec3 f = dot(inputs.V, inputs.L) * fdiffuse;
+    float G = geometric_occlusion_schlick(inputs.roughness, inputs.N, inputs.V, inputs.H);
+    float D = microfaced_distribution_trowbridge_reitz(inputs.roughness, inputs.N, inputs.H);
+    vec3 fspecular = F * G * D / 4 * dot(inputs.N, inputs.L) * dot(inputs.N, inputs.V);
+
+    vec3 f = dot(inputs.V, inputs.L) * (fdiffuse + fspecular);
     
     return f;
 }
@@ -55,7 +70,7 @@ void main() {
     PBRInputs pbr_inputs;
 
     // TEST 
-    pbr_inputs.L = normalize(vec3(0.0, 1.0, 0.0) - position);
+    pbr_inputs.L = normalize(vec3(0.0, 4.0, 0.0) - position);
     pbr_inputs.V = normalize(camera - position);
 
     // Metallic roughness material model glTF specific 
