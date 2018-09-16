@@ -26,7 +26,7 @@ struct PBRInputs {
 };
 
 vec3 fresnel_schlick(vec3 F0, vec3 V, vec3 H) {
-    return F0 + (vec3(1.0) - F0) * pow((1.0 - dot(V, H)), 5.0);
+    return F0 + (vec3(1.0) - F0) * pow(1.0 - dot(V, H), 5.0);
 }
 
 float geometric_occlusion_schlick(float roughness, vec3 N, vec3 V, vec3 H) {
@@ -51,7 +51,7 @@ vec3 schlick_brdf(PBRInputs inputs) {
     vec3 diffuse = inputs.base_color / M_PI; 
     vec3 fdiffuse = (1.0 - F) * diffuse;
 
-    float G = geometric_occlusion_schlick(inputs.roughness, inputs.N, inputs.V, inputs.H);
+    float G = geometric_occlusion_schlick(alpha, inputs.N, inputs.V, inputs.H);
     float D = microfaced_distribution_trowbridge_reitz(inputs.roughness, inputs.N, inputs.H);
     vec3 fspecular = F * G * D / 4 * dot(inputs.N, inputs.L) * dot(inputs.N, inputs.V);
 
