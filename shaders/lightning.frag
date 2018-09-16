@@ -70,6 +70,7 @@ void main() {
     PBRInputs pbr_inputs;
 
     // TEST 
+    // TODO: Need to clamp all dot products between 0 and 1 because it is zero for angles larger than 90 deg.
     pbr_inputs.L = normalize(vec3(0.0, 4.0, 0.0) - position);
     pbr_inputs.V = normalize(camera - position);
 
