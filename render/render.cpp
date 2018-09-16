@@ -461,6 +461,7 @@ void Renderer::render(uint32_t delta) {
     glUniform1i(glGetUniformLocation(program, "position_sampler"), gl_position_texture_unit);
     glUniform1f(glGetUniformLocation(program, "screen_width"), screen_width);
     glUniform1f(glGetUniformLocation(program, "screen_height"), screen_height);
+    glUniform3fv(glGetUniformLocation(program, "camera"), 1, &camera->position.x);
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
