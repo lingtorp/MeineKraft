@@ -48,7 +48,7 @@ public:
   void update_projection_matrix(const float fov);
 
   /// Returns the next unused texture unit
-  uint32_t get_next_free_texture_unit();
+  static uint32_t get_next_free_texture_unit();
 
   Camera* camera;
   RenderState state;
@@ -100,6 +100,9 @@ private:
   // PBR Parameters
   uint32_t gl_pbr_parameters_texture;
   uint32_t gl_pbr_parameters_texture_unit;
+  // Ambient occlusion map
+  uint32_t gl_ambient_occlusion_texture;
+  uint32_t gl_ambient_occlusion_texture_unit;
 };
 
 #endif // MEINEKRAFT_RENDER_H

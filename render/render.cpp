@@ -61,7 +61,7 @@ class SSAOPass : RenderPass {
     glGenFramebuffers(1, &gl_ssao_fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, gl_ssao_fbo);
 
-    gl_ssao_texture_unit = renderer.get_next_free_texture_unit();
+    gl_ssao_texture_unit = Renderer::get_next_free_texture_unit();
     glActiveTexture(GL_TEXTURE0 + gl_ssao_texture_unit);
     glGenTextures(1, &gl_ssao_texture);
     glBindTexture(GL_TEXTURE_2D, gl_ssao_texture);
@@ -231,7 +231,7 @@ Renderer::Renderer(): graphics_batches{} {
   glGenFramebuffers(1, &gl_depth_fbo);
   glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
 
-  gl_depth_texture_unit = get_next_free_texture_unit();
+  gl_depth_texture_unit = Renderer::get_next_free_texture_unit();
   glActiveTexture(GL_TEXTURE0 + gl_depth_texture_unit);
   glGenTextures(1, &gl_depth_texture);
   glBindTexture(GL_TEXTURE_2D, gl_depth_texture);
@@ -242,7 +242,7 @@ Renderer::Renderer(): graphics_batches{} {
   glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, gl_depth_texture, 0);
 
   // Global normal buffer
-  gl_normal_texture_unit = get_next_free_texture_unit();
+  gl_normal_texture_unit = Renderer::get_next_free_texture_unit();
   glActiveTexture(GL_TEXTURE0 + gl_normal_texture_unit);
   glGenTextures(1, &gl_normal_texture);
   glBindTexture(GL_TEXTURE_2D, gl_normal_texture);
@@ -252,7 +252,7 @@ Renderer::Renderer(): graphics_batches{} {
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_normal_texture, 0);
 
   // Global position buffer
-  gl_position_texture_unit = get_next_free_texture_unit();
+  gl_position_texture_unit = Renderer::get_next_free_texture_unit();
   glActiveTexture(GL_TEXTURE0 + gl_position_texture_unit);
   glGenTextures(1, &gl_position_texture);
   glBindTexture(GL_TEXTURE_2D, gl_position_texture);
@@ -262,7 +262,7 @@ Renderer::Renderer(): graphics_batches{} {
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, gl_position_texture, 0);
 
   // Global diffuse buffer
-  gl_diffuse_texture_unit = get_next_free_texture_unit();
+  gl_diffuse_texture_unit = Renderer::get_next_free_texture_unit();
   glActiveTexture(GL_TEXTURE0 + gl_diffuse_texture_unit);
   glGenTextures(1, &gl_diffuse_texture);
   glBindTexture(GL_TEXTURE_2D, gl_diffuse_texture);
@@ -272,7 +272,7 @@ Renderer::Renderer(): graphics_batches{} {
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, gl_diffuse_texture, 0);
 
   // Global PBR parameters buffer
-  gl_pbr_parameters_texture_unit = get_next_free_texture_unit();
+  gl_pbr_parameters_texture_unit = Renderer::get_next_free_texture_unit();
   glActiveTexture(GL_TEXTURE0 + gl_pbr_parameters_texture_unit);
   glGenTextures(1, &gl_pbr_parameters_texture);
   glBindTexture(GL_TEXTURE_2D, gl_pbr_parameters_texture);
@@ -281,8 +281,18 @@ Renderer::Renderer(): graphics_batches{} {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, gl_pbr_parameters_texture, 0);
 
-  uint32_t depth_attachments[4] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3 };
-  glDrawBuffers(4, depth_attachments);
+  // Global ambient occlusion map
+  gl_ambient_occlusion_texture_unit = Renderer::get_next_free_texture_unit();
+  glActiveTexture(GL_TEXTURE0 + gl_ambient_occlusion_texture_unit);
+  glGenTextures(1, &gl_ambient_occlusion_texture);
+  glBindTexture(GL_TEXTURE_2D, gl_ambient_occlusion_texture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen_width, screen_height, 0, GL_RGB, GL_FLOAT, nullptr);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, gl_ambient_occlusion_texture, 0);
+
+  uint32_t depth_attachments[5] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4 };
+  glDrawBuffers(5, depth_attachments);
 
   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
     SDL_Log("Lightning framebuffer status not complete.");
@@ -307,7 +317,7 @@ Renderer::Renderer(): graphics_batches{} {
   glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, screen_width, screen_height);
   glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, gl_lightning_rbo);
 
-  gl_lightning_texture_unit = get_next_free_texture_unit();
+  gl_lightning_texture_unit = Renderer::get_next_free_texture_unit();
   glActiveTexture(GL_TEXTURE0 + gl_lightning_texture_unit);
   glGenTextures(1, &gl_lightning_texture);
   glBindTexture(GL_TEXTURE_2D, gl_lightning_texture);
@@ -333,7 +343,7 @@ Renderer::Renderer(): graphics_batches{} {
     SDL_Log("Blur shader compilation failed; %s", err_msg.c_str());
   }
 
-  gl_blur_texture_unit = get_next_free_texture_unit();
+  gl_blur_texture_unit = Renderer::get_next_free_texture_unit();
   glActiveTexture(GL_TEXTURE0 + gl_blur_texture_unit);
   glGenTextures(1, &gl_blur_texture);
   glBindTexture(GL_TEXTURE_2D, gl_blur_texture);
@@ -419,6 +429,7 @@ void Renderer::render(uint32_t delta) {
       glUniform1i(glGetUniformLocation(program, "diffuse"), batch.gl_diffuse_texture_unit);
       glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, projection_matrix.data());
       glUniform1i(glGetUniformLocation(program, "pbr_parameters"), batch.gl_metallic_roughness_texture_unit);
+      glUniform1i(glGetUniformLocation(program, "ambient_occlusion"), batch.gl_ambient_occlusion_texture_unit);
 
       std::vector<Mat4<float>> model_buffer{};
       std::vector<uint32_t> diffuse_textures_idx{};
@@ -455,6 +466,7 @@ void Renderer::render(uint32_t delta) {
     glBindVertexArray(gl_lightning_vao);
     glUseProgram(program);
 
+    glUniform1i(glGetUniformLocation(program, "ambient_occlusion_sampler"), gl_ambient_occlusion_texture_unit);
     glUniform1i(glGetUniformLocation(program, "pbr_parameters_sampler"), gl_pbr_parameters_texture_unit);
     glUniform1i(glGetUniformLocation(program, "diffuse_sampler"), gl_diffuse_texture_unit);
     glUniform1i(glGetUniformLocation(program, "normal_sampler"), gl_normal_texture_unit);
@@ -611,6 +623,19 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexImage2D(texture.gl_texture_type, 0, GL_RGB, texture.data.width, texture.data.height, 0, GL_RGB, GL_UNSIGNED_BYTE, texture.data.pixels);
   }
+
+  if (g_state.ambient_occlusion_texture.used) {
+    const Texture& texture = g_state.ambient_occlusion_texture;
+    batch.gl_ambient_occlusion_texture_unit = Renderer::get_next_free_texture_unit();
+    glActiveTexture(GL_TEXTURE0 + batch.gl_ambient_occlusion_texture_unit);
+    uint32_t gl_ambient_occlusion_texture = 0;
+    glGenTextures(1, &gl_ambient_occlusion_texture);
+    glBindTexture(texture.gl_texture_type, gl_ambient_occlusion_texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexImage2D(texture.gl_texture_type, 0, GL_RGB, texture.data.width, texture.data.height, 0, GL_RGB, GL_UNSIGNED_BYTE, texture.data.pixels);
+  }
+
   link_batch(batch);
 
   batch.components.push_back(comp);

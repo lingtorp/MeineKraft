@@ -1,4 +1,4 @@
-#version 410 core 
+#version 430 core 
 
 #define M_PI 3.1415926535897932384626433832795
 
@@ -10,6 +10,7 @@ uniform sampler2D depth_sampler;
 uniform sampler2D position_sampler;
 uniform sampler2D diffuse_sampler;
 uniform sampler2D pbr_parameters_sampler;
+uniform sampler2D ambient_occlusion_sampler;
 
 uniform vec3 camera; // TEST
 
@@ -30,20 +31,20 @@ vec3 fresnel_schlick(vec3 F0, vec3 V, vec3 H) {
 }
 
 float geometric_occlusion_schlick(float roughness, vec3 N, vec3 V, vec3 H) {
-    float k = roughness * sqrt(2 / M_PI);
+    float k = roughness * sqrt(2.0 / M_PI);
     float GV = dot(V, H) / dot(V, H) * (1.0 - k) + k;
     float GN = dot(N, H) / dot(N, H) * (1.0 - k) + k;
     return GV * GN;
 }
 
 float microfaced_distribution_trowbridge_reitz(float a, vec3 N, vec3 H) {
-    return a * a / M_PI * pow(pow(dot(N, H), 2) * (a * a - 1.0) + 1.0, 2);
+    return a * a / M_PI * pow(pow(dot(N, H), 2) * (a * a - 1.0) + 1.0, 2.0);
 }
 
 vec3 schlick_brdf(PBRInputs inputs) {
     const vec3 dieletric_specular = vec3(0.04);
     const vec3 black = vec3(0.0);
-    vec3 cdiff = mix(inputs.base_color * (1 - dieletric_specular.r), black, inputs.metallic);
+    vec3 cdiff = mix(inputs.base_color * (1.0 - dieletric_specular.r), black, inputs.metallic);
     vec3 normal_incidence = mix(dieletric_specular, inputs.base_color, inputs.metallic); // F0/R(0) (Fresnel)
     float alpha = inputs.roughness * inputs.roughness;
 
@@ -53,7 +54,7 @@ vec3 schlick_brdf(PBRInputs inputs) {
 
     float G = geometric_occlusion_schlick(alpha, inputs.N, inputs.V, inputs.H);
     float D = microfaced_distribution_trowbridge_reitz(inputs.roughness, inputs.N, inputs.H);
-    vec3 fspecular = F * G * D / 4 * dot(inputs.N, inputs.L) * dot(inputs.N, inputs.V);
+    vec3 fspecular = F * G * D / 4.0 * dot(inputs.N, inputs.L) * dot(inputs.N, inputs.V);
 
     vec3 f = dot(inputs.V, inputs.L) * (fdiffuse + fspecular);
     

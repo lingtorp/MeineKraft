@@ -96,6 +96,9 @@ public:
   
   // Metallic roughness texture buffer
   uint32_t gl_metallic_roughness_texture_unit;
+
+  // Ambient occlusion map
+  uint32_t gl_ambient_occlusion_texture_unit;
   
   std::vector<RenderComponent*> components;
   

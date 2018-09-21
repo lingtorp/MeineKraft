@@ -225,6 +225,7 @@ struct GraphicsState {
   ID mesh_id;
   Texture diffuse_texture;
   Texture metallic_roughness_texture;
+  Texture ambient_occlusion_texture;
 
   Vec3<float> position;
   float scale = 1.0;
