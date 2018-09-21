@@ -65,23 +65,39 @@ void main() {
     
     vec3 normal = texture(normal_sampler, frag_coord).xyz;
     vec3 position = texture(position_sampler, frag_coord).xyz;
-    vec4 diffuse = texture(diffuse_sampler, frag_coord).rgba;
-    
+    vec3 diffuse = texture(diffuse_sampler, frag_coord).rgb;
+    diffuse.r = pow(diffuse.r, 2.2);  // sRGB to linear (due to glTF mandates sRGB base color texture)
+    diffuse.g = pow(diffuse.g, 2.2);
+    diffuse.b = pow(diffuse.b, 2.2);
+    vec3 ambient_occlusion = texture(ambient_occlusion_sampler, frag_coord).rgb;
+
     PBRInputs pbr_inputs;
 
     // TEST 
     // TODO: Need to clamp all dot products between 0 and 1 because it is zero for angles larger than 90 deg.
-    pbr_inputs.L = normalize(vec3(0.0, 4.0, 0.0) - position);
-    pbr_inputs.V = normalize(camera - position);
+    vec3 light_color = vec3(23.47, 21.31, 20.79);
+    vec3 light_position = vec3(0.0, 2.0, 0.0);
+
+    pbr_inputs.L = normalize(light_position - position);
+    float distance = length(light_position - position);
+    float attenuation = 1.0 / (distance * distance);
+    vec3 radiance = attenuation * light_color;
 
     // Metallic roughness material model glTF specific 
+    pbr_inputs.V = normalize(camera - position);
     pbr_inputs.metallic = texture(pbr_parameters_sampler, frag_coord).b;
     pbr_inputs.roughness = texture(pbr_parameters_sampler, frag_coord).g;  
     pbr_inputs.N = normal;
     pbr_inputs.H = normalize(pbr_inputs.L + pbr_inputs.V);
     pbr_inputs.base_color = diffuse.rgb;
 
-    vec3 color = schlick_brdf(pbr_inputs);
-    
+    vec3 ambient = vec3(0.3) * diffuse * ambient_occlusion; 
+    vec3 color = ambient + radiance * schlick_brdf(pbr_inputs);
+
+    // Tone mapping (using Reinhard operator)
+    color = color / (color + vec3(1.0));
+    // Gamma correction
+    color = pow(color, vec3(1.0 / 2.2));
+
     outColor = vec4(color, 1.0);
 }
