@@ -19,7 +19,7 @@ void main() {
 
     mat3 normal_matrix = mat3(camera_view * model);
     fNormal = normal_matrix * normal;
-    fPosition = position;
+    fPosition = vec3(model * vec4(position, 1.0));
     fTexcoord = texcoord;
     fDiffuse_layer_idx = diffuse_layer_idx;
 }
