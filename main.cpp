@@ -8,6 +8,7 @@
 #include "util/filesystem.h"
 #include "scene/world.hpp"
 #include "render/debug_opengl.h"
+#include "render/transform.h"
 
 struct Resolution {
   int width, height;
@@ -48,6 +49,11 @@ int main() {
 
   Model model{Filesystem::home + "Desktop/", "DamagedHelmet.gltf"};
   model.scale = 1.0;
+
+  std::vector<Transform> transformations{};
+  Transform rotation;
+  rotation.current_position = model.position;
+  transformations.push_back(rotation);
   
   bool toggle_mouse_capture = true;
   bool DONE = false;
@@ -138,6 +144,11 @@ int main() {
       }
     }
     renderer.camera->position = renderer.camera->update(delta);
+
+    for (Transform& transform : transformations) {
+      transform.update(delta);
+      // model.position = transform.current_position;
+    }
 
     /// Render the world
     renderer.render(delta);
