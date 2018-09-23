@@ -72,15 +72,16 @@ vec3 schlick_brdf(PBRInputs inputs) {
     return f;
 }
 
+vec3 SRGB_to_linear(vec3 srgb) {
+    return pow(srgb, vec3(2.2));
+}
+
 void main() {
     vec2 frag_coord = vec2(gl_FragCoord.x / screen_width, gl_FragCoord.y / screen_height);
     
     vec3 normal = texture(normal_sampler, frag_coord).xyz;
     vec3 position = texture(position_sampler, frag_coord).xyz;
-    vec3 diffuse = texture(diffuse_sampler, frag_coord).rgb;
-    diffuse.r = pow(diffuse.r, 2.2);  // sRGB to linear (due to glTF mandates sRGB base color texture)
-    diffuse.g = pow(diffuse.g, 2.2);
-    diffuse.b = pow(diffuse.b, 2.2);
+    vec3 diffuse = SRGB_to_linear(texture(diffuse_sampler, frag_coord).rgb); // Mandated by glTF 2.0
     vec3 ambient_occlusion = texture(ambient_occlusion_sampler, frag_coord).rgb;
 
     PBRInputs pbr_inputs;

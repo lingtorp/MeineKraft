@@ -218,6 +218,17 @@ struct Plane {
   }
 };
 
+namespace Primitive {
+  /// Fullscreen quad in NDC
+  float quad[] = {
+    // positions        // texture Coords
+    -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+    -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+     1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
+     1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+  };
+}
+
 /// Opaque ID type used to reference resources throughout the engine
 typedef uint64_t ID;
 

@@ -30,6 +30,60 @@ public:
   virtual bool teardown() = 0;
 };
 
+class BlurPass : RenderPass {
+  uint32_t gl_blur_fbo;
+  uint32_t gl_blur_texture_unit;
+  uint32_t gl_blur_texture;
+  uint32_t gl_blur_vao;
+  bool setup(Renderer& renderer) override {
+    /// Blur pass
+    glGenFramebuffers(1, &gl_blur_fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, gl_blur_fbo);
+
+    shader = Shader{ Filesystem::base + "shaders/blur.vert", Filesystem::base + "shaders/blur.frag" };
+    bool success = false;
+    std::string err_msg = "";
+    std::tie(success, err_msg) = shader.compile();
+    if (!success) {
+      SDL_Log("Blur shader compilation failed; %s", err_msg.c_str());
+      return success;
+    }
+
+    gl_blur_texture_unit = Renderer::get_next_free_texture_unit();
+    glActiveTexture(GL_TEXTURE0 + gl_blur_texture_unit);
+    glGenTextures(1, &gl_blur_texture);
+    glBindTexture(GL_TEXTURE_2D, gl_blur_texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, renderer.screen_width, renderer.screen_height, 0, GL_RED, GL_FLOAT, nullptr);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_blur_texture, 0);
+
+    uint32_t blur_attachments[1] = { GL_COLOR_ATTACHMENT0 };
+    glDrawBuffers(1, blur_attachments);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+      SDL_Log("Blur framebuffer status not complete.");
+      return false;
+    }
+
+    glGenVertexArrays(1, &gl_blur_vao);
+    glBindVertexArray(gl_blur_vao);
+
+    GLuint blur_vbo;
+    glGenBuffers(1, &blur_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, blur_vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(Primitive::quad), &Primitive::quad, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(glGetAttribLocation(shader.gl_program, "position"));
+    glVertexAttribPointer(glGetAttribLocation(shader.gl_program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
+    
+    return success;
+  }
+
+  bool render() const override {
+
+  }
+};
+
 class SSAOPass : RenderPass {
   /// SSAO
   uint32_t ssao_num_samples = 64;
@@ -128,15 +182,6 @@ class SSAOPass : RenderPass {
       }
     }
 
-    /// Fullscreen quad in NDC
-    float quad[] = {
-        // positions        // texture Coords
-        -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
-        -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
-        1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
-        1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
-    };
-
     /// SSAO setup
     {
       auto program = shader.gl_program;
@@ -146,7 +191,7 @@ class SSAOPass : RenderPass {
       GLuint ssao_vbo;
       glGenBuffers(1, &ssao_vbo);
       glBindBuffer(GL_ARRAY_BUFFER, ssao_vbo);
-      glBufferData(GL_ARRAY_BUFFER, sizeof(quad), &quad, GL_STATIC_DRAW);
+      glBufferData(GL_ARRAY_BUFFER, sizeof(Primitive::quad), &quad, GL_STATIC_DRAW);
       glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
       glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
     }
@@ -333,32 +378,6 @@ Renderer::Renderer(): graphics_batches{} {
     SDL_Log("Point lightning framebuffer status not complete.");
   }
 
-  /// Blur pass
-  glGenFramebuffers(1, &gl_blur_fbo);
-  glBindFramebuffer(GL_FRAMEBUFFER, gl_blur_fbo);
-
-  blur_shader = new Shader{Filesystem::base + "shaders/blur.vert", Filesystem::base + "shaders/blur.frag"};
-  std::tie(success, err_msg) = blur_shader->compile();
-  if (!success) {
-    SDL_Log("Blur shader compilation failed; %s", err_msg.c_str());
-  }
-
-  gl_blur_texture_unit = Renderer::get_next_free_texture_unit();
-  glActiveTexture(GL_TEXTURE0 + gl_blur_texture_unit);
-  glGenTextures(1, &gl_blur_texture);
-  glBindTexture(GL_TEXTURE_2D, gl_blur_texture);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, screen_width, screen_height, 0, GL_RED, GL_FLOAT, nullptr);
-  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_blur_texture, 0);
-
-  uint32_t blur_attachments[1] = { GL_COLOR_ATTACHMENT0 };
-  glDrawBuffers(1, blur_attachments);
-
-  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-    SDL_Log("Blur framebuffer status not complete.");
-  }
-
   /// Lightning pass shader
   lightning_shader = new Shader{Filesystem::base + "shaders/lightning.vert", Filesystem::base + "shaders/lightning.frag" };
   std::tie(success, err_msg) = lightning_shader->compile();
@@ -374,20 +393,6 @@ Renderer::Renderer(): graphics_batches{} {
      1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
      1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
   };
-
-  /// Blur pass setup
-  {
-    auto program = blur_shader->gl_program;
-    glGenVertexArrays(1, &gl_blur_vao);
-    glBindVertexArray(gl_blur_vao);
-
-    GLuint blur_vbo;
-    glGenBuffers(1, &blur_vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, blur_vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(quad), &quad, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
-    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
-  }
 
   /// Point light pass setup
   {
