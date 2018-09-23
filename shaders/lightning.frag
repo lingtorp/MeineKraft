@@ -77,23 +77,23 @@ vec3 SRGB_to_linear(vec3 srgb) {
 }
 
 void main() {
-    vec2 frag_coord = vec2(gl_FragCoord.x / screen_width, gl_FragCoord.y / screen_height);
+    const vec2 frag_coord = vec2(gl_FragCoord.x / screen_width, gl_FragCoord.y / screen_height);
     
-    vec3 normal = texture(normal_sampler, frag_coord).xyz;
-    vec3 position = texture(position_sampler, frag_coord).xyz;
-    vec3 diffuse = SRGB_to_linear(texture(diffuse_sampler, frag_coord).rgb); // Mandated by glTF 2.0
-    vec3 ambient_occlusion = texture(ambient_occlusion_sampler, frag_coord).rgb;
+    const vec3 normal = texture(normal_sampler, frag_coord).xyz;
+    const vec3 position = texture(position_sampler, frag_coord).xyz;
+    const vec3 diffuse = SRGB_to_linear(texture(diffuse_sampler, frag_coord).rgb); // Mandated by glTF 2.0
+    const vec3 ambient_occlusion = texture(ambient_occlusion_sampler, frag_coord).rgb;
 
     PBRInputs pbr_inputs;
 
     // TEST 
-    vec3 light_color = vec3(23.47, 21.31, 20.79);
+    vec3 light_intensities = vec3(23.47, 21.31, 20.79);
     vec3 light_position = vec3(0.0, 2.0, 0.0);
 
     pbr_inputs.L = normalize(light_position - position);
     float distance = length(light_position - position);
     float attenuation = 1.0 / (distance * distance);
-    vec3 radiance = attenuation * light_color;
+    vec3 radiance = attenuation * light_intensities;
 
     // Metallic roughness material model glTF specific 
     pbr_inputs.V = normalize(camera - position);
