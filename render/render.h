@@ -19,12 +19,12 @@
 #include <sdl2/SDL_video.h>
 #endif 
 
-struct World;
+#include <glm/mat4x4.hpp>
+
 struct Camera;
 class RenderComponent;
 class GraphicsBatch;
 class Shader;
-struct MeshManager;
 class RenderPass;
 
 class Renderer {
@@ -52,7 +52,7 @@ public:
 
   Camera* camera;
   RenderState state;
-  Mat4<float> projection_matrix; // TODO: Generate on demand
+  glm::mat4 projection_matrix; 
   float screen_width;
   float screen_height;
 
@@ -62,25 +62,16 @@ private:
   std::vector<GraphicsBatch> graphics_batches;
 
   /// Setups the VAO and uniforms up between the batch and OpenGL
-  void link_batch(GraphicsBatch &batch);
+  void link_batch(GraphicsBatch& batch);
   
   /// Geometry pass related
   Shader* depth_shader;
   uint32_t gl_depth_fbo;
   uint32_t gl_depth_texture;
   uint32_t gl_depth_texture_unit;
-  
-  /// Blur pass related
-  Shader* blur_shader;
-  uint32_t gl_blur_fbo;
-  uint32_t gl_blur_texture;
-  uint32_t gl_blur_texture_unit;
-  uint32_t gl_blur_vao;
 
   /// Lightning pass related
   Shader* lightning_shader;
-  // Point light
-  uint32_t gl_pointlight_models_buffer_object;
   // Used since default fbo is not to be trusted
   uint32_t gl_lightning_texture;
   uint32_t gl_lightning_fbo;

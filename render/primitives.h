@@ -220,7 +220,7 @@ struct Plane {
 
 namespace Primitive {
   /// Fullscreen quad in NDC
-  float quad[] = {
+  static float quad[] = {
     // positions        // texture Coords
     -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
     -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,

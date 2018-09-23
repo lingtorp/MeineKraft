@@ -191,7 +191,7 @@ class SSAOPass : RenderPass {
       GLuint ssao_vbo;
       glGenBuffers(1, &ssao_vbo);
       glBindBuffer(GL_ARRAY_BUFFER, ssao_vbo);
-      glBufferData(GL_ARRAY_BUFFER, sizeof(Primitive::quad), &quad, GL_STATIC_DRAW);
+      glBufferData(GL_ARRAY_BUFFER, sizeof(Primitive::quad), &Primitive::quad, GL_STATIC_DRAW);
       glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
       glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
     }
@@ -217,22 +217,6 @@ void pass_ended() {
 #if defined(__LINUX__) || defined(WIN32)
   glPopDebugGroup();
 #endif
-}
-
-/// A.k.a perspective matrix
-Mat4<float> gen_projection_matrix(float z_near, float z_far, float fov, float aspect) {
-  const float rad = M_PI / 180.0f;
-  float tanHalf = tanf(fov * rad / 2);
-  float a = 1.0f / (tanHalf * aspect);
-  float b = 1.0f / tanHalf;
-  float c = -(z_far + z_near) / (z_far - z_near);
-  float d = -(2 * z_far * z_near) / (z_far - z_near);
-  Mat4<float> matrix;
-  matrix[0] = {a, 0.0f, 0.0f, 0.0f};
-  matrix[1] = {0.0f, b, 0.0f, 0.0f};
-  matrix[2] = {0.0f, 0.0f, c, d};
-  matrix[3] = {0.0f, 0.0f, -1.0f, 0.0f};
-  return matrix;
 }
 
 uint32_t Renderer::get_next_free_texture_unit() {
@@ -261,7 +245,7 @@ Renderer::Renderer(): graphics_batches{} {
   glDebugMessageControl(GL_DEBUG_SOURCE_APPLICATION, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_FALSE);
 #endif
   
-  int screen_width = 1280; // TODO: Move this into uniforms
+  int screen_width = 1280; // TODO: Remove after singleton is removed
   int screen_height = 720;
 
   GLint max_draw_buffers = 0;
@@ -385,15 +369,6 @@ Renderer::Renderer(): graphics_batches{} {
     SDL_Log("Lightning shader compilation failed; %s", err_msg.c_str());
   }
 
-  /// Fullscreen quad in NDC
-  float quad[] = {
-    // positions        // texture Coords
-    -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
-    -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
-     1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
-     1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
-  };
-
   /// Point light pass setup
   {
     auto program = lightning_shader->gl_program;
@@ -403,7 +378,7 @@ Renderer::Renderer(): graphics_batches{} {
     GLuint gl_vbo;
     glGenBuffers(1, &gl_vbo);
     glBindBuffer(GL_ARRAY_BUFFER, gl_vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(quad), &quad, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(Primitive::quad), &Primitive::quad, GL_STATIC_DRAW);
     glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
     glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
   }
@@ -435,7 +410,7 @@ void Renderer::render(uint32_t delta) {
       glUseProgram(program);
       glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(camera_transform));
       glUniform1i(glGetUniformLocation(program, "diffuse"), batch.gl_diffuse_texture_unit);
-      glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, projection_matrix.data());
+      glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, glm::value_ptr(projection_matrix));
       glUniform1i(glGetUniformLocation(program, "pbr_parameters"), batch.gl_metallic_roughness_texture_unit);
       glUniform1i(glGetUniformLocation(program, "ambient_occlusion"), batch.gl_ambient_occlusion_texture_unit);
 
@@ -504,15 +479,11 @@ void Renderer::render(uint32_t delta) {
 }
 
 void Renderer::update_projection_matrix(const float fov) {
-  float aspect = (float) screen_width / (float) screen_height;
-  this->projection_matrix = gen_projection_matrix(1.0, 10.0, fov, aspect);
-  glm::mat4 perspectiive = glm::perspective(fov, aspect, 1.0f, 10.0f);
-  glViewport(0, 0, screen_width, screen_height); // Update OpenGL viewport
   // TODO: Adjust all the passes textures sizes
-  // TODO: Adjust the projections matrix in all passes that use it?
   // TODO: Adjust all the global texture buffer sizes
-  glUseProgram(depth_shader->gl_program);
-  glUniformMatrix4fv(glGetUniformLocation(depth_shader->gl_program, "projection"), 1, GL_FALSE, projection_matrix.data());
+  const float aspect = (float) screen_width / (float) screen_height;
+  this->projection_matrix = glm::perspective(glm::radians(fov), aspect, 1.0f, 10.0f);
+  glViewport(0, 0, screen_width, screen_height); // Update OpenGL viewport
 }
 
 void Renderer::link_batch(GraphicsBatch& batch) {
