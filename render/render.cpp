@@ -35,7 +35,7 @@ class BlurPass : RenderPass {
   uint32_t gl_blur_texture_unit;
   uint32_t gl_blur_texture;
   uint32_t gl_blur_vao;
-  bool setup(Renderer& renderer) override {
+  bool setup(Renderer& renderer) override final {
     /// Blur pass
     glGenFramebuffers(1, &gl_blur_fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, gl_blur_fbo);
@@ -79,7 +79,7 @@ class BlurPass : RenderPass {
     return success;
   }
 
-  bool render() const override {
+  bool render() const override final {
 
   }
 };
@@ -104,7 +104,7 @@ class SSAOPass : RenderPass {
 
   std::vector<Vec3<float>> ssao_samples;
 
-  bool setup(Renderer& renderer) override {
+  bool setup(Renderer& renderer) override final {
     const bool setup_successful = true;
     // Allocate all the OpenGL stuff
     // - Inputs, Outputs, objects
@@ -199,7 +199,7 @@ class SSAOPass : RenderPass {
     return setup_successful;
   }
 
-  bool render() const override {
+  bool render() const override final {
     // Push the latest values to the shader
     // glUniform1f(gl_shader_variable, value)
     return true;
