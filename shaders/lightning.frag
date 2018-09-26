@@ -65,7 +65,7 @@ vec3 schlick_brdf(PBRInputs inputs) {
 
     float G = geometric_occlusion_schlick(inputs);
     float D = microfaced_distribution_trowbridge_reitz(inputs);
-    vec3 fspecular = (F * G * D) / max(4.0 * inputs.NdotL * inputs.NdotV, 0.001);
+    vec3 fspecular = (F * G * D) / (4.0 * inputs.NdotL * inputs.NdotV);
 
     vec3 f = fdiffuse + fspecular;
     
@@ -73,7 +73,10 @@ vec3 schlick_brdf(PBRInputs inputs) {
 }
 
 vec3 SRGB_to_linear(vec3 srgb) {
-    return pow(srgb, vec3(2.2));
+    // TODO: Look this up
+    // vec3 bLess = step(vec3(0.04045), srgb.xyz);
+    // return mix(srgb.xyz/vec3(12.92), pow((srgb.xyz+vec3(0.055))/vec3(1.055),vec3(2.4)), bLess);
+    return pow(srgb, vec3(2.2)); // Fast approximation
 }
 
 void main() {
@@ -88,7 +91,7 @@ void main() {
 
     // TEST 
     vec3 light_intensities = vec3(23.47, 21.31, 20.79);
-    vec3 light_position = vec3(0.0, 2.0, 0.0);
+    vec3 light_position = vec3(0.0, 3.0, 0.0);
 
     pbr_inputs.L = normalize(light_position - position);
     float distance = length(light_position - position);
@@ -110,7 +113,7 @@ void main() {
     pbr_inputs.LdotH = clamp(dot(pbr_inputs.L, pbr_inputs.H), 0.0, 1.0);
 
     vec3 ambient = vec3(0.3) * diffuse * ambient_occlusion; 
-    vec3 color = ambient + radiance * schlick_brdf(pbr_inputs) * pbr_inputs.VdotL;
+    vec3 color = ambient + radiance * schlick_brdf(pbr_inputs) * pbr_inputs.NdotL;
 
     // Tone mapping (using Reinhard operator)
     color = color / (color + vec3(1.0));
