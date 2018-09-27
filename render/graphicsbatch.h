@@ -99,6 +99,9 @@ public:
 
   // Ambient occlusion map
   uint32_t gl_ambient_occlusion_texture_unit;
+
+  // Emissive map
+  uint32_t gl_emissive_texture_unit;
   
   std::vector<RenderComponent*> components;
   

@@ -60,6 +60,7 @@ MeshManager::load_mesh(const std::string& directory, const std::string& file) {
               std::string texture_filepath(emissive_filepath.data);
               texture_filepath.insert(0, directory);
               texture_info.push_back({Texture::Type::Emissive, texture_filepath});
+              // TODO: Fetch emissive factor as well 
             }
 
             aiString displacement_filepath;

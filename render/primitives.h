@@ -237,7 +237,7 @@ struct GraphicsState {
   Texture diffuse_texture;
   Texture metallic_roughness_texture;
   Texture ambient_occlusion_texture;
-
+  Texture emissive_texture;
   Vec3<float> position;
   float scale = 1.0;
 };
