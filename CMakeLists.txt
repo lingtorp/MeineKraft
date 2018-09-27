@@ -38,7 +38,7 @@ set(RENDER_SRC_FILES "render/shader.cpp" "render/shader.h" "render/texture.cpp" 
         "render/transform.h" "render/light.h" "render/meshmanager.cpp" "render/meshmanager.h")
 source_group("render" FILES ${RENDER_SRC_FILES})
 
-set(UTIL_SRC_FILES "util/filemonitor.cpp" "util/filemonitor.h" "util/filesystem.h")
+set(UTIL_SRC_FILES "util/filemonitor.cpp" "util/filemonitor.h" "util/filesystem.h" "util/stb_image.h")
 source_group("utils" FILES ${UTIL_SRC_FILES})
 
 set(SCENE_SRC_FILES "scene/world.cpp" "scene/world.hpp")

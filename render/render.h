@@ -50,6 +50,8 @@ public:
   /// Returns the next unused texture unit
   static uint32_t get_next_free_texture_unit();
 
+  void load_environment_map(std::string directory, std::string file);
+
   Camera* camera;
   RenderState state;
   glm::mat4 projection_matrix; 

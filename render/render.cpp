@@ -21,6 +21,9 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "../util/stb_image.h"
+
 class RenderPass {
 public:
   Shader shader;
@@ -229,7 +232,17 @@ uint32_t Renderer::get_next_free_texture_unit() {
     exit(1);
   }
   return next_texture_unit;
-};
+}
+
+void Renderer::load_environment_map(std::string directory, std::string file) {
+  stbi_set_flip_vertically_on_load(true);
+  int width, height, num_components;
+  std::string f = directory + file;
+  float* data = stbi_loadf(f.c_str(), &width, &height, &num_components, 0);
+  if (data) {
+    // TODO: Implement ...
+  }
+}
 
 Renderer::~Renderer() = default;
 

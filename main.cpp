@@ -47,6 +47,8 @@ int main() {
   renderer.screen_height = HD.height;
   renderer.update_projection_matrix(70);
 
+  renderer.load_environment_map(Filesystem::home + "Desktop/", "environment.hdr");
+
   Model model{Filesystem::home + "Desktop/", "DamagedHelmet.gltf"};
   model.scale = 1.0;
 
