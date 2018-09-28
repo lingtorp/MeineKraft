@@ -9,6 +9,21 @@
 #include <SDL_opengl.h>
 #endif
 
+/// Gathers information about the OpenGL context 
+struct OpenGLContextInfo {
+  int max_texture_units;
+  int max_color_attachments;
+  int max_draw_buffers;
+
+  OpenGLContextInfo() {
+    glGetIntegerv(GL_MAX_DRAW_BUFFERS, &max_draw_buffers);
+    SDL_Log("Max draw buffers: %u", max_draw_buffers);
+
+    glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &max_color_attachments);
+    SDL_Log("Max color attachments: %u", max_color_attachments);
+  }
+};
+
 static void GLAPIENTRY gl_debug_callback(
   GLenum source,
   GLenum type,

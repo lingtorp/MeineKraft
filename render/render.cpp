@@ -261,14 +261,6 @@ Renderer::Renderer(): graphics_batches{} {
   int screen_width = 1280; // TODO: Remove after singleton is removed
   int screen_height = 720;
 
-  GLint max_draw_buffers = 0;
-  glGetIntegerv(GL_MAX_DRAW_BUFFERS, &max_draw_buffers);
-  SDL_Log("Max draw buffers: %u", max_draw_buffers);
-
-  GLint max_color_attachments = 0;
-  glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &max_color_attachments);
-  SDL_Log("Max color attachments: %u", max_color_attachments);
-
   /// Global geometry pass framebuffer
   glGenFramebuffers(1, &gl_depth_fbo);
   glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
