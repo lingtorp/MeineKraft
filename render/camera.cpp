@@ -145,8 +145,8 @@ Vec3<float> Camera::update(uint32_t delta) {
 }
 
 glm::mat4 Camera::transform() const {
-  glm::vec3 direction(direction.x, direction.y, direction.z);
-  glm::vec3 up(up.x, up.y, up.z);
-  glm::vec3 position(position.x, position.y, position.z);
-  return glm::lookAt(position, position + direction, up);
+  glm::vec3 d(direction.x, direction.y, direction.z);
+  glm::vec3 u(up.x, up.y, up.z);
+  glm::vec3 p(position.x, position.y, position.z);
+  return glm::lookAt(p, p + d, u);
 }

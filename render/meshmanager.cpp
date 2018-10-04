@@ -158,6 +158,7 @@ Mesh MeshManager::mesh_from_id(ID id) {
   } else {
     std::cerr << "Error: Non existent mesh id provided." << std::endl;
   }
+  return 0;
 }
 
 ID MeshManager::mesh_id_from_primitive(MeshPrimitive primitive) {
@@ -167,4 +168,5 @@ ID MeshManager::mesh_id_from_primitive(MeshPrimitive primitive) {
   } else {
     std::cerr << "Loaded unknown primitive" << std::endl;
   }
+  return 0;
 }

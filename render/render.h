@@ -24,7 +24,7 @@
 struct Camera;
 class RenderComponent;
 class GraphicsBatch;
-class Shader;
+struct Shader;
 class RenderPass;
 
 class Renderer {

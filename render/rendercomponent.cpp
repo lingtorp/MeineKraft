@@ -11,7 +11,7 @@
 #include <sdl2/SDL_log.h>
 #endif 
 
-RenderComponent::RenderComponent(Entity* entity): entity(entity), graphics_state{} {}
+RenderComponent::RenderComponent(Entity* entity): entity(entity) {}
 
 void RenderComponent::set_mesh(const std::string& directory, const std::string& file) {
   // TODO: Remove from previous batch - since we are changing mesh and thus geo. data

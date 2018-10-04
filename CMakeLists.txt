@@ -92,8 +92,6 @@ else(WIN32)
         include_directories(${GLEW_INCLUDE_DIRS})
         target_link_libraries(MeineKraft ${GLEW_LIBRARIES})
 
-        cmake_policy(SET CMP0004 OLD)
-
         FIND_PATH(SDL2IMAGE_INCLUDE_DIR SDL_image.h
                 HINTS
                 $ENV{SDL2IMAGEDIR}

@@ -12,12 +12,13 @@ struct PointLight {
   float linear = 0.7f;
   float quadratic = 1.8f;
   
-  Color3<float> color;
+  Vec3<float> position;
+  
   // Intensities over RGB
   Vec3<float> ambient_intensity;
   Vec3<float> diffuse_intensity;
   Vec3<float> specular_intensity;
-  Vec3<float> position;
+  Color3<float> color;
 
   explicit PointLight(Vec3<float> position): position(position), color{1.0}, ambient_intensity{1.0},
                                              diffuse_intensity{1.0}, specular_intensity{1.0} {};
