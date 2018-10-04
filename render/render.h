@@ -99,6 +99,11 @@ private:
   // Emissive map
   uint32_t gl_emissive_texture_unit;
   uint32_t gl_emissive_texture;
+
+  // Environment map
+  uint32_t gl_hdr_environment_texture; 
+
+  std::vector<RenderPass> render_passes;
 };
 
 #endif // MEINEKRAFT_RENDER_H

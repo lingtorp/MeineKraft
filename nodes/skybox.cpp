@@ -4,7 +4,7 @@
 #include "../util/filesystem.h"
 
 Skybox::Skybox(): Entity() {
-  scale = 100;
+  scale = 100.0;
   auto render_comp = new RenderComponent(this);
   render_comp->set_mesh(MeshPrimitive::Cube);
   std::vector<std::string> faces = {Filesystem::base + std::string("resources/sky/right.jpg"),

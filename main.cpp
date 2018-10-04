@@ -9,6 +9,8 @@
 #include "scene/world.hpp"
 #include "render/debug_opengl.h"
 #include "render/transform.h"
+#include "nodes/skybox.h"
+#include "scene/world.hpp"
 
 struct Resolution {
   int width, height;
@@ -49,10 +51,12 @@ int main() {
   renderer.screen_height = HD.height;
   renderer.update_projection_matrix(70);
 
-  renderer.load_environment_map(Filesystem::home + "Desktop/", "environment.hdr");
-
+  renderer.load_environment_map(Filesystem::home + "Desktop/canyon/", "GCanyon_C_YumaPoint_3k.hdr");
+  
   Model model{Filesystem::home + "Desktop/", "DamagedHelmet.gltf"};
   model.scale = 1.0;
+
+ //  World world;
 
   std::vector<Transform> transformations{};
   Transform rotation;

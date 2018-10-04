@@ -75,7 +75,7 @@ struct World {
   public:
   std::unordered_map<Vec3<int>, Chunk> chunks;
   
-  explicit World(const Camera* camera): chunks{} {
+  explicit World(): chunks{} {
     std::mt19937 engine(1337);
     std::uniform_real_distribution<> distr(0.0, 1.0);
 

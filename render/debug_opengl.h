@@ -78,8 +78,7 @@ static void GLAPIENTRY gl_debug_callback(
 
   std::cerr << "Type: " << glewGetErrorString(type) << std::endl;
   std::cerr << "Message: " << message << std::endl;
-  std::cerr << " ----- ----- ----- ----- ----- " << std::endl;
-  std::cerr << std::endl;
+  std::cerr << " ----- ----- ----- ----- ----- " << std::endl;  std::cerr << std::endl;
 }
 
 static void log_gl_error() {

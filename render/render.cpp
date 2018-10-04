@@ -238,9 +238,19 @@ void Renderer::load_environment_map(std::string directory, std::string file) {
   stbi_set_flip_vertically_on_load(true);
   int width, height, num_components;
   std::string f = directory + file;
-  float* data = stbi_loadf(f.c_str(), &width, &height, &num_components, 0);
-  if (data) {
-    // TODO: Implement ...
+  float* pixels = stbi_loadf(f.c_str(), &width, &height, &num_components, 0);
+  if (pixels) {
+    glGenTextures(1, &gl_hdr_environment_texture);
+    glBindTexture(GL_TEXTURE_2D, gl_hdr_environment_texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGB, GL_FLOAT, pixels);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    stbi_image_free(pixels);
+  } else {
+    std::cerr << "ERROR: Could not load environment map" << std::endl;
   }
 }
 
@@ -265,6 +275,7 @@ Renderer::Renderer(): graphics_batches{} {
   glGenFramebuffers(1, &gl_depth_fbo);
   glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
 
+  // Global depth buffer
   gl_depth_texture_unit = Renderer::get_next_free_texture_unit();
   glActiveTexture(GL_TEXTURE0 + gl_depth_texture_unit);
   glGenTextures(1, &gl_depth_texture);
@@ -412,7 +423,7 @@ void Renderer::render(uint32_t delta) {
   /// Reset render stats
   state = RenderState();
 
-  glm::mat4 camera_transform = camera->transform();
+  glm::mat4 camera_transform = camera->transform(); 
 
   /// Geometry pass
   pass_started("Geometry pass");
@@ -424,11 +435,7 @@ void Renderer::render(uint32_t delta) {
       const auto program = depth_shader->gl_program;
       glUseProgram(program);
       glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(camera_transform));
-      glUniform1i(glGetUniformLocation(program, "diffuse"), batch.gl_diffuse_texture_unit);
       glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, glm::value_ptr(projection_matrix));
-      glUniform1i(glGetUniformLocation(program, "pbr_parameters"), batch.gl_metallic_roughness_texture_unit);
-      glUniform1i(glGetUniformLocation(program, "ambient_occlusion"), batch.gl_ambient_occlusion_texture_unit);
-      glUniform1i(glGetUniformLocation(program, "emissive"), batch.gl_emissive_texture_unit);
 
       std::vector<Mat4<float>> model_buffer{};
       std::vector<uint32_t> diffuse_textures_idx{};
@@ -457,7 +464,7 @@ void Renderer::render(uint32_t delta) {
   }
   pass_ended();
 
-  pass_started("Point lightning pass");
+  pass_started("Lightning pass");
   {
     const auto program = lightning_shader->gl_program;
     glBindFramebuffer(GL_FRAMEBUFFER, gl_lightning_fbo);
@@ -473,6 +480,7 @@ void Renderer::render(uint32_t delta) {
     glUniform1i(glGetUniformLocation(program, "position_sampler"), gl_position_texture_unit);
     glUniform1f(glGetUniformLocation(program, "screen_width"), screen_width);
     glUniform1f(glGetUniformLocation(program, "screen_height"), screen_height);
+
     glUniform3fv(glGetUniformLocation(program, "camera"), 1, &camera->position.x);
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -507,6 +515,14 @@ void Renderer::link_batch(GraphicsBatch& batch) {
   /// Geometry pass setup
   {
     auto program = depth_shader->gl_program;
+
+    /// Shaderbindings
+    glUseProgram(program);
+    glUniform1i(glGetUniformLocation(program, "diffuse"), batch.gl_diffuse_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "pbr_parameters"), batch.gl_metallic_roughness_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "ambient_occlusion"), batch.gl_ambient_occlusion_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "emissive"), batch.gl_emissive_texture_unit);
+
     glGenVertexArrays(1, &batch.gl_depth_vao);
     glBindVertexArray(batch.gl_depth_vao);
 
