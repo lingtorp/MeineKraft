@@ -74,26 +74,9 @@ vec3 schlick_brdf(PBRInputs inputs) {
     return f;
 }
 
-vec3 SRGB_to_linear(vec3 srgb) {
-    // TODO: Look this up
-    // vec3 bLess = step(vec3(0.04045), srgb.xyz);
-    // return mix(srgb.xyz/vec3(12.92), pow((srgb.xyz+vec3(0.055))/vec3(1.055),vec3(2.4)), bLess);
-    return pow(srgb, vec3(2.2)); // Fast approximation
-}
-
-void main() {
-    const vec2 frag_coord = vec2(gl_FragCoord.x / screen_width, gl_FragCoord.y / screen_height);
-    
-    const vec3 normal = texture(normal_sampler, frag_coord).xyz;
-    const vec3 position = texture(position_sampler, frag_coord).xyz;
-    const vec3 diffuse = SRGB_to_linear(texture(diffuse_sampler, frag_coord).rgb); // Mandated by glTF 2.0
-    const vec3 ambient_occlusion = texture(ambient_occlusion_sampler, frag_coord).rgb;
-    const vec3 emissive = texture(emissive_sampler, frag_coord).rgb;
-    const int shading_model_id = int(texture(shading_model_id_sampler, frag_coord).r);
-
+vec3 schlick_render(vec2 frag_coord, vec3 position, vec3 normal, vec3 diffuse, vec3 ambient_occlusion) {
     PBRInputs pbr_inputs;
 
-    // TEST 
     vec3 light_intensities = vec3(23.47, 21.31, 20.79);
     vec3 light_position = vec3(0.0, 3.0, 0.0);
 
@@ -118,9 +101,41 @@ void main() {
 
     vec3 ambient = vec3(0.3) * diffuse * ambient_occlusion; 
     vec3 color = ambient + radiance * schlick_brdf(pbr_inputs) * pbr_inputs.NdotL;
+    return color;
+}
 
-    // Emissive
-    color += emissive; // TODO: Emissive factor missing
+vec3 unlit_render(vec3 diffuse) {
+    return diffuse;
+}
+
+vec3 SRGB_to_linear(vec3 srgb) {
+    // TODO: Look this up
+    // vec3 bLess = step(vec3(0.04045), srgb.xyz);
+    // return mix(srgb.xyz/vec3(12.92), pow((srgb.xyz+vec3(0.055))/vec3(1.055),vec3(2.4)), bLess);
+    return pow(srgb, vec3(2.2)); // Fast approximation
+}
+
+void main() {
+    const vec2 frag_coord = vec2(gl_FragCoord.x / screen_width, gl_FragCoord.y / screen_height);
+    
+    const vec3 normal = texture(normal_sampler, frag_coord).xyz;
+    const vec3 position = texture(position_sampler, frag_coord).xyz;
+    const vec3 diffuse = SRGB_to_linear(texture(diffuse_sampler, frag_coord).rgb); // Mandated by glTF 2.0
+    const vec3 ambient_occlusion = texture(ambient_occlusion_sampler, frag_coord).rgb;
+    const vec3 emissive = texture(emissive_sampler, frag_coord).rgb;
+    const int shading_model_id = int(texture(shading_model_id_sampler, frag_coord).r);
+
+    vec3 color = vec3(1.0);
+    switch (shading_model_id) {
+        case 0: // Unlit
+        color = unlit_render(diffuse);
+        break;     
+        case 1: // Physically based rendering
+        color = schlick_render(frag_coord, position, normal, diffuse, ambient_occlusion);
+        // Emissive
+        color += emissive; // TODO: Emissive factor missing
+        break;
+    }
 
     // Tone mapping (using Reinhard operator)
     color = color / (color + vec3(1.0));

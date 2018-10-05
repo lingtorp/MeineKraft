@@ -110,6 +110,8 @@ public:
   uint32_t gl_depth_vbo;
   uint32_t gl_depth_models_buffer_object;
   uint32_t gl_shading_model;
+
+  ShadingModel shading_model;
 };
 
 #endif // MEINEKRAFT_GRAPHICSBATCH_H
