@@ -346,7 +346,17 @@ Renderer::Renderer(): graphics_batches{} {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT5, gl_emissive_texture, 0);
 
-  uint32_t depth_attachments[6] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4 };
+  // Global shading model id 
+  gl_shading_model_texture_unit = Renderer::get_next_free_texture_unit();
+  glActiveTexture(GL_TEXTURE0 + gl_shading_model_texture_unit);
+  glGenTextures(1, &gl_shading_model_texture);
+  glBindTexture(GL_TEXTURE_2D, gl_shading_model_texture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, screen_width, screen_height, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, nullptr);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT6, gl_shading_model_texture, 0);
+
+  uint32_t depth_attachments[6] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT6};
   glDrawBuffers(6, depth_attachments);
 
   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
@@ -439,6 +449,7 @@ void Renderer::render(uint32_t delta) {
 
       std::vector<Mat4<float>> model_buffer{};
       std::vector<uint32_t> diffuse_textures_idx{};
+      std::vector<ShadingModel> shading_models{};
       for (const auto& component : batch.components) {
         component->update(); // Copy all graphics state
         
@@ -448,6 +459,7 @@ void Renderer::render(uint32_t delta) {
         model_buffer.push_back(model.transpose());
         
         diffuse_textures_idx.push_back(component->graphics_state.diffuse_texture.layer_idx);
+        shading_models.push_back(component->graphics_state.shading_model);
       }
       
       glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_models_buffer_object);
@@ -455,6 +467,9 @@ void Renderer::render(uint32_t delta) {
       
       glBindBuffer(GL_ARRAY_BUFFER, batch.gl_diffuse_textures_layer_idx);
       glBufferData(GL_ARRAY_BUFFER, diffuse_textures_idx.size() * sizeof(uint32_t), diffuse_textures_idx.data(), GL_DYNAMIC_DRAW);
+
+      glBindBuffer(GL_ARRAY_BUFFER, batch.gl_shading_model);
+      glBufferData(GL_ARRAY_BUFFER, shading_models.size() * sizeof(ShadingModel), shading_models.data(), GL_DYNAMIC_DRAW);
 
       glBindVertexArray(batch.gl_depth_vao);
       glDrawElementsInstanced(GL_TRIANGLES, batch.mesh.indices.size(), GL_UNSIGNED_INT, nullptr, model_buffer.size());
@@ -522,7 +537,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glUniform1i(glGetUniformLocation(program, "pbr_parameters"), batch.gl_metallic_roughness_texture_unit);
     glUniform1i(glGetUniformLocation(program, "ambient_occlusion"), batch.gl_ambient_occlusion_texture_unit);
     glUniform1i(glGetUniformLocation(program, "emissive"), batch.gl_emissive_texture_unit);
-
+    
     glGenVertexArrays(1, &batch.gl_depth_vao);
     glBindVertexArray(batch.gl_depth_vao);
 
@@ -560,6 +575,12 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glVertexAttribIPointer(glGetAttribLocation(program, "diffuse_layer_idx"), 1, GL_UNSIGNED_INT, sizeof(GLint), nullptr);
     glEnableVertexAttribArray(glGetAttribLocation(program, "diffuse_layer_idx"));
     glVertexAttribDivisor(glGetAttribLocation(program, "diffuse_layer_idx"), 1);
+
+    glGenBuffers(1, &batch.gl_shading_model);
+    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_shading_model);
+    glVertexAttribIPointer(glGetAttribLocation(program, "shading_model_id"), 1, GL_UNSIGNED_INT, sizeof(GLint), nullptr);
+    glEnableVertexAttribArray(glGetAttribLocation(program, "shading_model_id"));
+    glVertexAttribDivisor(glGetAttribLocation(program, "shading_model_id"), 1);
 
     GLuint EBO;
     glGenBuffers(1, &EBO);

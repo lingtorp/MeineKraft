@@ -12,6 +12,7 @@ uniform sampler2D diffuse_sampler;
 uniform sampler2D pbr_parameters_sampler;
 uniform sampler2D ambient_occlusion_sampler;
 uniform sampler2D emissive_sampler;
+uniform sampler2D shading_model_id_sampler;
 
 uniform vec3 camera; // TEST
 
@@ -88,6 +89,7 @@ void main() {
     const vec3 diffuse = SRGB_to_linear(texture(diffuse_sampler, frag_coord).rgb); // Mandated by glTF 2.0
     const vec3 ambient_occlusion = texture(ambient_occlusion_sampler, frag_coord).rgb;
     const vec3 emissive = texture(emissive_sampler, frag_coord).rgb;
+    const int shading_model_id = int(texture(shading_model_id_sampler, frag_coord).r);
 
     PBRInputs pbr_inputs;
 

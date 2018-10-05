@@ -99,6 +99,9 @@ private:
   // Emissive map
   uint32_t gl_emissive_texture_unit;
   uint32_t gl_emissive_texture;
+  // Shading model 
+  uint32_t gl_shading_model_texture_unit;
+  uint32_t gl_shading_model_texture;
 
   // Environment map
   uint32_t gl_hdr_environment_texture; 

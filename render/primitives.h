@@ -232,7 +232,13 @@ namespace Primitive {
 /// Opaque ID type used to reference resources throughout the engine
 typedef uint64_t ID;
 
+enum class ShadingModel: uint32_t {
+  Unlit = 0, // Unlit, using its surface color 
+  PhysicallyBased = 1
+};
+
 struct GraphicsState {
+  ShadingModel shading_model = ShadingModel::Unlit;
   ID mesh_id;
   Texture diffuse_texture;
   Texture metallic_roughness_texture;

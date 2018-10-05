@@ -72,6 +72,10 @@ void RenderComponent::set_mesh(MeshPrimitive primitive) {
   graphics_state.mesh_id = MeshManager::mesh_id_from_primitive(primitive);
 }
 
+void RenderComponent::set_shading_model(const ShadingModel shading_model) {
+  graphics_state.shading_model = shading_model;
+}
+
 void RenderComponent::set_cube_map_texture(const std::vector<std::string>& faces) {
   // FIXME: Assumes the diffuse texture?
   auto resource = TextureResource{faces};

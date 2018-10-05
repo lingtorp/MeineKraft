@@ -27,6 +27,7 @@ class Block: public Entity {
     auto render_comp = new RenderComponent(this);
     render_comp->set_mesh(MeshPrimitive::Cube);
     render_comp->set_cube_map_texture(textures_for_block(type));
+    render_comp->set_shading_model(ShadingModel::Unlit);
     attach_component(render_comp);
   }
   

@@ -82,18 +82,18 @@ struct Texture {
   }
   
   /// Texture id
-  ID id;
+  ID id = 0;
   
   RawTexture data;
   
   /// Indicates that this should be loaded by the Renderer and is used by the GState
-  bool used;
+  bool used = false;
 
   /// OpenGL texture type; CUBE_MAP, CUBE_MAP_ARRAY, TEXTURE_2D, etc
-  uint32_t gl_texture_type;
+  uint32_t gl_texture_type = 0;
   
   /// Layer index for the textures sampler type
-  uint32_t layer_idx;
+  uint32_t layer_idx = 0;
 
   enum class Type: uint8_t {
     Diffuse, MetallicRoughness, AmbientOcclusion, Emissive

@@ -29,6 +29,8 @@ public:
   /// Sets the mesh to one of the Mesh primitives
   void set_mesh(MeshPrimitive primitive);
 
+  void set_shading_model(const ShadingModel shading_model);
+
   /** Component Interface **/
   void update() override;
 

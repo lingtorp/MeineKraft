@@ -56,7 +56,7 @@ int main() {
   Model model{Filesystem::home + "Desktop/", "DamagedHelmet.gltf"};
   model.scale = 1.0;
 
- //  World world;
+  // World world;
 
   std::vector<Transform> transformations{};
   Transform rotation;
