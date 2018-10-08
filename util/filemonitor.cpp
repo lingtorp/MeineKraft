@@ -1,6 +1,5 @@
 #include "filemonitor.h"
 #include <sys/stat.h>
-#include <iostream>
 #include <thread>
 
 FileMonitor::FileMonitor(): monitoring(false), internal_lock{},

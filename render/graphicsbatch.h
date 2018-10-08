@@ -2,8 +2,6 @@
 #define MEINEKRAFT_GRAPHICSBATCH_H
 
 #include <map>
-#include <SDL_log.h>
-#include <iostream>
 #include <cstring>
 
 #include "primitives.h"

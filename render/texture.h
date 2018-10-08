@@ -5,7 +5,6 @@
 #include <string>
 #include <vector>
 #include <cstring>
-#include <iostream>
 
 #ifdef _WIN32
 #include <SDL_image.h>

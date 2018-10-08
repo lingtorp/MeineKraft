@@ -4,7 +4,6 @@
 #include <random>
 #include <algorithm>
 #include "vector.h"
-#include <iostream>
 #include <stdint.h>
 #include <array>
 

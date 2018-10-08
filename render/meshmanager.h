@@ -3,7 +3,6 @@
 
 #include "primitives.h"
 
-#include <iostream>
 #include <vector>
 
 struct MeshInformation {

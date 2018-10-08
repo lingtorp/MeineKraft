@@ -2,8 +2,6 @@
 #define MEINEKRAFT_VECTOR_H
 
 #include <math.h>
-#include <ostream>
-#include <cmath>
 #include <vector>
 
 /************ Forward declarations ************/

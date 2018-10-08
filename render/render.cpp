@@ -1,8 +1,6 @@
 #include "render.h"
 
 #include <random>
-#include <iostream>
-#include <fstream>
 
 #ifdef WIN32
 #include <glew.h>

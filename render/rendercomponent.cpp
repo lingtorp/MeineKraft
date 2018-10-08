@@ -5,12 +5,6 @@
 #include "../nodes/entity.h"
 #include "meshmanager.h"
 
-#ifdef _WIN32
-#include <SDL_log.h>
-#else
-#include <sdl2/SDL_log.h>
-#endif 
-
 RenderComponent::RenderComponent(Entity* entity): entity(entity) {}
 
 void RenderComponent::set_mesh(const std::string& directory, const std::string& file) {

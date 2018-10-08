@@ -2,7 +2,6 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 #include <assimp/Importer.hpp>
-#include <iostream>
 #include "../util/filesystem.h"
 #include "../util/logging.h"
 

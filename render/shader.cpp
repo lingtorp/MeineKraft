@@ -1,8 +1,6 @@
 #include "shader.h"
 
-#include <iostream>
 #include <fstream>
-#include <SDL_log.h>
 
 #include "debug_opengl.h"
 

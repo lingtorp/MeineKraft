@@ -1,15 +1,10 @@
 #include "camera.h"
 
 #include <algorithm>
-#include <iostream>
-
-#ifdef _WIN32
-#include <SDL_log.h>
-#else
-#include <sdl2/SDL_log.h>
-#endif 
-
 #include "../math/quaternion.h"
+
+// TODO: Move this to something more suitable
+#define M_PI 3.1415926535897932384626433832795
 
 /*
 Camera::Camera(Vec3<float> position, Vec3<float> direction, Vec3<float> up):
