@@ -98,6 +98,11 @@ struct World {
     result.z = std::round(position.z / Chunk::dimension) * Chunk::dimension;
     return result;
   }
+
+  // TODO: Update all Entities 
+  void tick() {
+
+  }
 };
 
 #endif // MEINEKRAFT_WORLD_HPP

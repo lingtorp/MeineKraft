@@ -24,49 +24,46 @@ class RenderComponent;
 
 class GraphicsBatch {
 public:
-  explicit GraphicsBatch(ID mesh_id): mesh_id(mesh_id), components{}, mesh{}, id(0), diffuse_textures{}, layer_idxs{},
+  explicit GraphicsBatch(ID mesh_id): mesh_id(mesh_id), components{}, mesh{}, id(0), layer_idxs{},
     diffuse_textures_capacity(3), diffuse_textures_count(0) {};
   
   void init_buffer(uint32_t* gl_buffer, const uint32_t gl_texture_unit, const Texture& texture) {
-    glGenTextures(1, gl_buffer); 
     glActiveTexture(GL_TEXTURE0 + gl_texture_unit);
+    glGenTextures(1, gl_buffer);
     glBindTexture(texture.gl_texture_type, *gl_buffer);
-    const int buffer_size = 3;
-    glTexStorage3D(texture.gl_texture_type, 1, GL_RGB8, texture.data.width, texture.data.height, texture.data.faces * buffer_size); // depth = layer faces
-    if (texture.gl_texture_type == GL_TEXTURE_CUBE_MAP) {
+    const int default_buffer_size = 3;
+    glTexStorage3D(texture.gl_texture_type, 1, GL_RGB8, texture.data.width, texture.data.height, texture.data.faces * default_buffer_size); // depth = layer faces
+    /*if (texture.gl_texture_type == GL_TEXTURE_CUBE_MAP_ARRAY) {
       glTexParameteri(texture.gl_texture_type, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
       glTexParameteri(texture.gl_texture_type, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
       glTexParameteri(texture.gl_texture_type, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
       glTexParameteri(texture.gl_texture_type, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
       glTexParameteri(texture.gl_texture_type, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    }
+    }*/
   }
 
   /// GL buffer type or in GL-speak target rather than type
-  void expand_texture_buffer(uint32_t* gl_buffer, const uint32_t gl_buffer_type) {
-    // TODO: NOT TEXTURE AWARE
-    
-    /// Allocate new memory
+  void expand_texture_buffer(uint32_t* gl_buffer, const Texture& texture) {
+    // TODO: Dealloc the old buffer
+    // Allocate new memory
     uint32_t gl_new_texture_array;
     glGenTextures(1, &gl_new_texture_array);
     glActiveTexture(GL_TEXTURE0 + gl_diffuse_texture_unit);
-    glBindTexture(gl_buffer_type, gl_new_texture_array);
+    glBindTexture(texture.gl_texture_type, gl_new_texture_array);
     
     // # of new textures to accommodate
     const float texture_array_growth_factor = 1.5f; 
-    auto new_textures_capacity = (uint32_t) std::ceil(diffuse_textures_capacity * texture_array_growth_factor);
-    auto layers_faces = 6 * new_textures_capacity; 
-    glTexStorage3D(gl_buffer_type, 1, GL_RGB8, 512, 512, layers_faces);
+    diffuse_textures_capacity = (uint32_t) std::ceil(diffuse_textures_capacity * texture_array_growth_factor);
+    glTexStorage3D(texture.gl_texture_type, 1, GL_RGB8, texture.data.width, texture.data.height, texture.data.faces * diffuse_textures_capacity);
     
-    /// Update state
+    // Update state
     *gl_buffer = gl_new_texture_array;
-    diffuse_textures_capacity = new_textures_capacity;
   }
   
   /// Upload a texture to the diffuse array
-  void upload(const Texture& texture, const uint32_t gl_texture_unit) {
+  void upload(const Texture& texture, const uint32_t gl_texture_unit, const uint32_t gl_texture_array) {
     glActiveTexture(GL_TEXTURE0 + gl_texture_unit);
-    glBindTexture(texture.gl_texture_type, gl_diffuse_texture_array);
+    glBindTexture(texture.gl_texture_type, gl_texture_array);
     glTexSubImage3D(texture.gl_texture_type,
       0,                     // Mipmap number (a.k.a level)
       0, 0, texture.layer_idx *  texture.data.faces, // xoffset, yoffset, zoffset = layer face
@@ -77,14 +74,14 @@ public:
   }
 
   ID id;
-  ID mesh_id;
+  ID mesh_id; 
   Mesh mesh; 
+  std::vector<RenderComponent*> components;
   
   /// Textures
   std::map<ID, uint32_t> layer_idxs; // Texture ID to layer index mapping
 
-  // Diffuse texture buffer
-  std::vector<ID> diffuse_textures;
+  /// Diffuse texture buffer
   uint32_t diffuse_textures_count;    // # texture currently in the GL buffer
   uint32_t diffuse_textures_capacity; // # textures the GL buffer can hold
   
@@ -92,26 +89,21 @@ public:
   uint32_t gl_diffuse_texture_type;   // GL_TEXTURE_2D, GL_TEXTURE_CUBE_MAP, etc
   uint32_t gl_diffuse_texture_unit;
   
-  uint32_t gl_diffuse_textures_layer_idx;
+  uint32_t gl_diffuse_textures_layer_idx; // Attribute buffer for layer indices
   
-  // Metallic roughness texture buffer
-  uint32_t gl_metallic_roughness_texture_unit;
-
-  // Ambient occlusion map
-  uint32_t gl_ambient_occlusion_texture_unit;
-
-  // Emissive map
-  uint32_t gl_emissive_texture_unit;
-  
-  std::vector<RenderComponent*> components;
-  
+  /// Physically based rendering related
+  uint32_t gl_metallic_roughness_texture_unit;  // Metallic roughness texture buffer
+  uint32_t gl_ambient_occlusion_texture_unit;   // Ambient occlusion map
+  uint32_t gl_emissive_texture_unit;            // Emissive map
+    
   /// Depth pass variables
   uint32_t gl_depth_vao;
   uint32_t gl_depth_vbo;
   uint32_t gl_depth_models_buffer_object;
-  uint32_t gl_shading_model;
+  uint32_t gl_shading_model_buffer_object;
 
-  ShadingModel shading_model;
+  ShadingModel shading_model; // Shading model to use with the shader
+  Shader depth_shader;        // Shader used to render all the components in this batch
 };
 
 #endif // MEINEKRAFT_GRAPHICSBATCH_H

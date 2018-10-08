@@ -53,16 +53,12 @@ int main() {
 
   renderer.load_environment_map(Filesystem::home + "Desktop/canyon/", "GCanyon_C_YumaPoint_3k.hdr");
   
-  Model model{Filesystem::home + "Desktop/", "DamagedHelmet.gltf"};
+  // WORKAROUND: Diffuse texture from world overwrites the model if the model is loaded first ...
+  World world;
+  
+  Model model{ Filesystem::home + "Desktop/", "DamagedHelmet.gltf" };
   model.scale = 1.0;
 
-  // World world;
-
-  std::vector<Transform> transformations{};
-  Transform rotation;
-  rotation.current_position = model.position;
-  transformations.push_back(rotation);
-  
   bool toggle_mouse_capture = true;
   bool DONE = false;
   auto last_tick = std::chrono::high_resolution_clock::now();
@@ -152,11 +148,6 @@ int main() {
       }
     }
     renderer.camera->position = renderer.camera->update(delta);
-
-    for (Transform& transform : transformations) {
-      transform.update(delta);
-      // model.position = transform.current_position;
-    }
 
     /// Render the world
     renderer.render(delta);

@@ -32,6 +32,10 @@ std::pair<bool, std::string> Shader::compile() {
       fragment_src.insert(0, define);
   }
 
+  static const char* GLSL_VERSION = "#version 430 core \n";
+  vertex_src.insert(0, GLSL_VERSION);
+  fragment_src.insert(0, GLSL_VERSION);
+
 #ifdef DEBUG
   vertex_shader_src = vertex_src;
   fragment_shader_src = fragment_src;
@@ -165,8 +169,17 @@ const std::string Shader::load_shader_source(std::string filename) const {
   return std::string((std::istreambuf_iterator<char>(ifs)), (std::istreambuf_iterator<char>()));
 }
 
-void Shader::add(std::string define) {
-  defines.insert(define);
+void Shader::add(Shader::Defines define) {
+  switch (define) {
+  case Shader::Defines::Diffuse2D:
+    defines.insert("#define DIFFUSE_2D \n");
+    break;
+  case Shader::Defines::DiffuseCubemap:
+    defines.insert("#define DIFFUSE_CUBEMAP \n");
+    break;
+  default:
+    std::cerr << "ERROR: Invalid shader define passed" << std::endl;   
+  }
 }
 
 bool Shader::operator==(const Shader &rhs) {

@@ -1,4 +1,3 @@
-#version 410 core 
 
 uniform mat4 projection;
 uniform mat4 camera_view;

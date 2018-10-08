@@ -363,15 +363,6 @@ Renderer::Renderer(): graphics_batches{} {
     SDL_Log("Lightning framebuffer status not complete.");
   }
 
-  /// Depth shader
-  depth_shader = new Shader{Filesystem::base + "shaders/geometry.vert", Filesystem::base + "shaders/geometry.frag"};
-  std::string err_msg;
-  bool success;
-  std::tie(success, err_msg) = depth_shader->compile();
-  if (!success) {
-    SDL_Log("Shader compilation failed; %s", err_msg.c_str());
-  }
-
   /// Point lightning framebuffer
   glGenFramebuffers(1, &gl_lightning_fbo);
   glBindFramebuffer(GL_FRAMEBUFFER, gl_lightning_fbo);
@@ -399,6 +390,8 @@ Renderer::Renderer(): graphics_batches{} {
   }
 
   /// Lightning pass shader
+  bool success = false;
+  std::string err_msg;
   lightning_shader = new Shader{Filesystem::base + "shaders/lightning.vert", Filesystem::base + "shaders/lightning.frag" };
   std::tie(success, err_msg) = lightning_shader->compile();
   if (!success) {
@@ -442,7 +435,7 @@ void Renderer::render(uint32_t delta) {
     glEnable(GL_DEPTH_TEST);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); // Always update the depth buffer with the new values
     for (const auto& batch : graphics_batches) {
-      const auto program = depth_shader->gl_program;
+      const auto program = batch.depth_shader.gl_program;
       glUseProgram(program);
       glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(camera_transform));
       glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, glm::value_ptr(projection_matrix));
@@ -468,10 +461,11 @@ void Renderer::render(uint32_t delta) {
       glBindBuffer(GL_ARRAY_BUFFER, batch.gl_diffuse_textures_layer_idx);
       glBufferData(GL_ARRAY_BUFFER, diffuse_textures_idx.size() * sizeof(uint32_t), diffuse_textures_idx.data(), GL_DYNAMIC_DRAW);
 
-      glBindBuffer(GL_ARRAY_BUFFER, batch.gl_shading_model);
+      glBindBuffer(GL_ARRAY_BUFFER, batch.gl_shading_model_buffer_object);
       glBufferData(GL_ARRAY_BUFFER, shading_models.size() * sizeof(ShadingModel), shading_models.data(), GL_DYNAMIC_DRAW);
 
       glBindVertexArray(batch.gl_depth_vao);
+      
       glDrawElementsInstanced(GL_TRIANGLES, batch.mesh.indices.size(), GL_UNSIGNED_INT, nullptr, model_buffer.size());
       
       state.entities += model_buffer.size();
@@ -520,19 +514,17 @@ void Renderer::render(uint32_t delta) {
 }
 
 void Renderer::update_projection_matrix(const float fov) {
-  // TODO: Adjust all the passes textures sizes
-  // TODO: Adjust all the global texture buffer sizes
+  // TODO: Adjust all the passes textures sizes & all the global texture buffers
   const float aspect = (float) screen_width / (float) screen_height;
   this->projection_matrix = glm::perspective(glm::radians(fov), aspect, 1.0f, 10.0f);
-  glViewport(0, 0, screen_width, screen_height); // Update OpenGL viewport
+  glViewport(0, 0, screen_width, screen_height); 
 }
 
 void Renderer::link_batch(GraphicsBatch& batch) {
   /// Geometry pass setup
-  {
-    auto program = depth_shader->gl_program;
-
+  {    
     /// Shaderbindings
+    auto program = batch.depth_shader.gl_program;
     glUseProgram(program);
     glUniform1i(glGetUniformLocation(program, "diffuse"), batch.gl_diffuse_texture_unit);
     if (batch.shading_model == ShadingModel::PhysicallyBased) {
@@ -579,9 +571,9 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glEnableVertexAttribArray(glGetAttribLocation(program, "diffuse_layer_idx"));
     glVertexAttribDivisor(glGetAttribLocation(program, "diffuse_layer_idx"), 1);
 
-    glGenBuffers(1, &batch.gl_shading_model);
-    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_shading_model);
-    glVertexAttribIPointer(glGetAttribLocation(program, "shading_model_id"), 1, GL_UNSIGNED_INT, sizeof(GLint), nullptr);
+    glGenBuffers(1, &batch.gl_shading_model_buffer_object);
+    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_shading_model_buffer_object);
+    glVertexAttribIPointer(glGetAttribLocation(program, "shading_model_id"), 1, GL_UNSIGNED_INT, sizeof(GLuint), nullptr);
     glEnableVertexAttribArray(glGetAttribLocation(program, "shading_model_id"));
     glVertexAttribDivisor(glGetAttribLocation(program, "shading_model_id"), 1);
 
@@ -596,34 +588,35 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
   auto mesh_id = comp->graphics_state.mesh_id;
   auto& g_state = comp->graphics_state;
 
+  // TODO: Check if g_state/comp matches any existing batch config.
   for (auto& batch : graphics_batches) {
-      if (batch.mesh_id == mesh_id) {
-          batch.components.push_back(comp);
+    if (batch.mesh_id == mesh_id) {
+      batch.components.push_back(comp);
 
-          for (const auto& item : batch.layer_idxs) {
-            const auto id = item.first; // Texture id
-            if (id == g_state.diffuse_texture.id) {
-              g_state.diffuse_texture.layer_idx = batch.layer_idxs[id];
-              return batch.id;
-            }
-          }
-
-          /// Expand texture buffer if needed
-          if (batch.diffuse_textures_count + 1 > batch.diffuse_textures_capacity) {
-            batch.expand_texture_buffer(&batch.gl_diffuse_texture_array, batch.gl_diffuse_texture_type);
-          }
-
-          /// Assign layer index to the latest the texture and increment
-          g_state.diffuse_texture.layer_idx = batch.diffuse_textures_count++;
-          
-          /// Update the mapping from texture id to layer idx
-          batch.layer_idxs[g_state.diffuse_texture.id] = g_state.diffuse_texture.layer_idx;
-
-          /// Upload the texture to OpenGL
-          batch.upload(g_state.diffuse_texture, batch.gl_diffuse_texture_unit);
-
+      for (const auto& item : batch.layer_idxs) {
+        const auto id = item.first; // Texture id
+        if (id == g_state.diffuse_texture.id) {
+          g_state.diffuse_texture.layer_idx = batch.layer_idxs[id];
           return batch.id;
+        }
       }
+
+      /// Expand texture buffer if needed
+      if (batch.diffuse_textures_count + 1 > batch.diffuse_textures_capacity) {
+        batch.expand_texture_buffer(&batch.gl_diffuse_texture_array, g_state.diffuse_texture);
+      }
+
+      /// Assign layer index to the latest the texture and increment
+      g_state.diffuse_texture.layer_idx = batch.diffuse_textures_count++;
+
+      /// Update the mapping from texture id to layer idx
+      batch.layer_idxs[g_state.diffuse_texture.id] = g_state.diffuse_texture.layer_idx;
+
+      /// Upload the texture to OpenGL
+      batch.upload(g_state.diffuse_texture, batch.gl_diffuse_texture_unit, batch.gl_diffuse_texture_array);
+
+      return batch.id;
+    }
   }
 
   GraphicsBatch batch{mesh_id};
@@ -631,7 +624,21 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
   batch.mesh = MeshManager::mesh_from_id(mesh_id);
   batch.shading_model = g_state.shading_model;
 
+  /// Batch shader prepass (depth pass) shader creation process
+  batch.depth_shader = Shader{ Filesystem::base + "shaders/geometry.vert", Filesystem::base + "shaders/geometry.frag" };
+
   if (g_state.diffuse_texture.used) {
+    switch (g_state.diffuse_texture.gl_texture_type) {
+    case GL_TEXTURE_2D_ARRAY:
+      batch.depth_shader.add(Shader::Defines::Diffuse2D);
+      break;
+    case GL_TEXTURE_CUBE_MAP_ARRAY:
+      batch.depth_shader.add(Shader::Defines::DiffuseCubemap);
+      break;
+    default:
+      std::cerr << "ERROR: Depth shader diffuse texture type not handled." << std::endl;
+    }
+
     batch.gl_diffuse_texture_unit = Renderer::get_next_free_texture_unit();
 
     /// Set what type the texture array will hold for the type of texture
@@ -646,7 +653,7 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
     batch.layer_idxs[g_state.diffuse_texture.id] = g_state.diffuse_texture.layer_idx;
 
     /// Upload the texture to OpenGL
-    batch.upload(g_state.diffuse_texture, batch.gl_diffuse_texture_unit);
+    batch.upload(g_state.diffuse_texture, batch.gl_diffuse_texture_unit, batch.gl_diffuse_texture_array);
   }
 
   if (g_state.metallic_roughness_texture.used) {
@@ -683,6 +690,13 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexImage2D(texture.gl_texture_type, 0, GL_RGB, texture.data.width, texture.data.height, 0, GL_RGB, GL_UNSIGNED_BYTE, texture.data.pixels);
+  }
+
+  std::string err_msg;
+  bool success;
+  std::tie(success, err_msg) = batch.depth_shader.compile();
+  if (!success) {
+    SDL_Log("Shader compilation failed; %s", err_msg.c_str());
   }
 
   link_batch(batch);

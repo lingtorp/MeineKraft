@@ -60,14 +60,10 @@ public:
 
 private:
   Renderer();
-
   std::vector<GraphicsBatch> graphics_batches;
-
-  /// Setups the VAO and uniforms up between the batch and OpenGL
   void link_batch(GraphicsBatch& batch);
   
   /// Geometry pass related
-  Shader* depth_shader;
   uint32_t gl_depth_fbo;
   uint32_t gl_depth_texture;
   uint32_t gl_depth_texture_unit;

@@ -44,4 +44,4 @@ private:
     uint64_t get_time_modified(struct stat &stats);
 };
 
-#endif //MEINEKRAFT_FILEMONITOR_H
+#endif // MEINEKRAFT_FILEMONITOR_H

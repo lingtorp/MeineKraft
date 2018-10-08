@@ -8,6 +8,11 @@
 #include "texture.h"
 
 struct Shader {
+  enum class Defines: uint32_t {
+    Diffuse2D, 
+    DiffuseCubemap
+  };
+
   Shader() = default;
   Shader(std::string vertex_filepath, std::string fragment_filepath);
   
@@ -19,7 +24,7 @@ struct Shader {
   /// Loads and recompiles both shaders
   std::pair<bool, std::string> recompile();
 
-  void add(std::string define);
+  void add(Shader::Defines define);
 
   std::string vertex_filepath;
   std::string fragment_filepath;

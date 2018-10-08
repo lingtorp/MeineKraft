@@ -1,4 +1,3 @@
-#version 410 core 
 
 uniform mat4 projection;
 uniform mat4 camera_view;
@@ -21,7 +20,11 @@ void main() {
 
     mat3 normal_matrix = mat3(camera_view * model);
     fNormal = normal_matrix * normal;
+    #ifdef DIFFUSE_2D
     fPosition = vec3(model * vec4(position, 1.0));
+    #elif defined(DIFFUSE_CUBEMAP)
+    fPosition = vec3(vec4(position, 1.0));
+    #endif
     fTexcoord = texcoord;
     fDiffuse_layer_idx = diffuse_layer_idx;
     fShading_model_id = shading_model_id;

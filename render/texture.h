@@ -89,8 +89,8 @@ struct Texture {
   /// Indicates that this should be loaded by the Renderer and is used by the GState
   bool used = false;
 
-  /// OpenGL texture type; CUBE_MAP, CUBE_MAP_ARRAY, TEXTURE_2D, etc
-  uint32_t gl_texture_type = 0;
+  /// OpenGL texture target; CUBE_MAP, CUBE_MAP_ARRAY, TEXTURE_2D, etc
+  uint32_t gl_texture_type = 0; // TODO: Rename to *_target 
   
   /// Layer index for the textures sampler type
   uint32_t layer_idx = 0;

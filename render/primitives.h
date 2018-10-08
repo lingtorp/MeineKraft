@@ -233,8 +233,8 @@ namespace Primitive {
 typedef uint64_t ID;
 
 enum class ShadingModel: uint32_t {
-  Unlit = 0, // Unlit, using its surface color 
-  PhysicallyBased = 1
+  Unlit = 1, // Unlit, using its surface color 
+  PhysicallyBased = 2
 };
 
 struct GraphicsState {
