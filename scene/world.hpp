@@ -85,7 +85,7 @@ struct World {
     for (const auto x : X) {
       Block::BlockType block_type = distr(engine) < 0.5 ? Block::BlockType::GRASS : Block::BlockType::DIRT;
       Block* block = new Block(block_type);
-      block->position = Vec3<float>(0, 0, x);
+      block->position = Vec3<float>(0, 0, x - 2);
       std::cerr << block->position << std::endl;
     }
   }

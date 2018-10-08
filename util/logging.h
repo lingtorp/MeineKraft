@@ -6,7 +6,7 @@
 
 namespace Log {
     static inline void log_to_console(const std::string& msg, const std::string& type, 
-                                      const char* file, const char* line) {
+                                      const char* file, const int line) {
         std::cerr << type << "(" << file << ", " << line << "):" << msg << std::endl; 
     }
 
