@@ -18,23 +18,23 @@ MeshManager::load_mesh(const std::string& directory, const std::string& file) {
     auto scene = importer.ReadFile(mesh_info.loaded_from_filepath.c_str(), aiProcess_Triangulate | aiProcess_JoinIdenticalVertices);
 
     if (scene == nullptr || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) {
-        SDL_Log("Error: %s", importer.GetErrorString());
+        Log::error("Error: " + std::string(importer.GetErrorString()));
         return {0, {}};
     }
 
     std::vector<std::pair<Texture::Type, std::string>> texture_info;
     if (scene->HasMaterials()) {
-        SDL_Log("Number of materials: %i", scene->mNumMaterials);
+        Log::info("Number of materials: " + std::to_string(scene->mNumMaterials));
         for (size_t i = 0; i < scene->mNumMaterials; i++) {
             auto material = scene->mMaterials[i];
 
             aiString material_name;
             material->Get(AI_MATKEY_NAME, material_name);
-            SDL_Log("Material name: %s", material_name.C_Str());
+            Log::info("Material name: " + std::string(material_name.C_Str()));
           
             aiString diffuse_filepath;
             if (material->GetTexture(aiTextureType_DIFFUSE, 0, &diffuse_filepath) == AI_SUCCESS) {
-                SDL_Log("Diffuse texture name: %s%s", directory.c_str(), diffuse_filepath.data);
+                Log::info("Diffuse texture name: " + std::string(directory.c_str()) + std::string(diffuse_filepath.data));
                 std::string texture_filepath(diffuse_filepath.data);
                 texture_filepath.insert(0, directory);
                 texture_info.push_back({Texture::Type::Diffuse, texture_filepath});
@@ -42,22 +42,22 @@ MeshManager::load_mesh(const std::string& directory, const std::string& file) {
           
             aiString specular_filepath;
             if (material->GetTexture(aiTextureType_SPECULAR, 0, &specular_filepath) == AI_SUCCESS) {
-              SDL_Log("Specular texture name: %s%s", directory.c_str(), specular_filepath.data);
+              Log::info("Specular texture name: " + std::string(directory.c_str()) + std::string(diffuse_filepath.data));
             }
 
             aiString ambient_filepath;
             if (material->GetTexture(aiTextureType_AMBIENT, 0, &ambient_filepath) == AI_SUCCESS) {
-              SDL_Log("Ambient texture name: %s%s", directory.c_str(), ambient_filepath.data);
+              Log::info("Ambient occlusion texture name: " + std::string(directory.c_str()) + std::string(diffuse_filepath.data));
             }
             
             aiString shininess_filepath;
             if (material->GetTexture(aiTextureType_SHININESS, 0, &shininess_filepath) == AI_SUCCESS) {
-              SDL_Log("Shininess texture name: %s%s", directory.c_str(), shininess_filepath.data);
+              Log::info("Shininess texture name: " + std::string(directory.c_str()) + std::string(diffuse_filepath.data));
             }
 
             aiString emissive_filepath;
             if (material->GetTexture(aiTextureType_EMISSIVE, 0, &emissive_filepath) == AI_SUCCESS) {
-              SDL_Log("Emissive texture name: %s%s", directory.c_str(), emissive_filepath.data);
+              Log::info("Emissive texture name: " + std::string(directory.c_str()) + std::string(diffuse_filepath.data));
               std::string texture_filepath(emissive_filepath.data);
               texture_filepath.insert(0, directory);
               texture_info.push_back({Texture::Type::Emissive, texture_filepath});
@@ -66,18 +66,18 @@ MeshManager::load_mesh(const std::string& directory, const std::string& file) {
 
             aiString displacement_filepath;
             if (material->GetTexture(aiTextureType_DISPLACEMENT, 0, &displacement_filepath) == AI_SUCCESS) {
-              SDL_Log("Displacement texture name: %s%s", directory.c_str(), displacement_filepath.data);
+              Log::info("Displacement texture name: " + std::string(directory.c_str()) + std::string(diffuse_filepath.data));
             }
 
             aiString height_filepath;
             if (material->GetTexture(aiTextureType_HEIGHT, 0, &height_filepath) == AI_SUCCESS) {
-              SDL_Log("Bumpmap texture name: %s%s", directory.c_str(), height_filepath.data);
+              Log::info("Bumpmap texture name: " + std::string(directory.c_str()) + std::string(diffuse_filepath.data));
             }
 
             // Lightmap is usually the ambient occlusion map ...
             aiString lightmap_filepath;
             if (material->GetTexture(aiTextureType_LIGHTMAP, 0, &lightmap_filepath) == AI_SUCCESS) {
-              SDL_Log("Lightmap texture name: %s%s", directory.c_str(), lightmap_filepath.data);
+              Log::info("Lightmap texture name: " + std::string(directory.c_str()) + std::string(diffuse_filepath.data));
               std::string texture_filepath(lightmap_filepath.data);
               texture_filepath.insert(0, directory);
               texture_info.push_back({Texture::Type::AmbientOcclusion, texture_filepath});
@@ -85,23 +85,23 @@ MeshManager::load_mesh(const std::string& directory, const std::string& file) {
              
             aiString normals_filepath;
             if (material->GetTexture(aiTextureType_NORMALS, 0, &normals_filepath) == AI_SUCCESS) {
-              SDL_Log("Normals texture name: %s%s", directory.c_str(), normals_filepath.data);
+              Log::info("Normals texture name: " + std::string(directory.c_str()) + std::string(diffuse_filepath.data));
             }
 
             aiString reflection_filepath;
             if (material->GetTexture(aiTextureType_REFLECTION, 0, &reflection_filepath) == AI_SUCCESS) {
-              SDL_Log("Reflection texture name: %s%s", directory.c_str(), reflection_filepath.data);
+              Log::info("Reflection texture name: " + std::string(directory.c_str()) + std::string(diffuse_filepath.data));
             }
 
             aiString opacity_filepath;
             if (material->GetTexture(aiTextureType_OPACITY, 0, &opacity_filepath) == AI_SUCCESS) {
-              SDL_Log("Opacity texture name: %s%s", directory.c_str(), opacity_filepath.data);
+              Log::info("Opacity texture name: " + std::string(directory.c_str()) + std::string(diffuse_filepath.data));
             }
           
             // NOTE: Roughness metallic textures are not detected so here we are assuming this is the unknown texture of the material.
             aiString unknown_filepath;
             if (material->GetTexture(aiTextureType_UNKNOWN, 0, &unknown_filepath) == AI_SUCCESS) {
-              SDL_Log("Unknown texture name: %s%s", directory.c_str(), unknown_filepath.data);
+              Log::info("Unknown texture name: " + std::string(directory.c_str()) + std::string(diffuse_filepath.data));
               std::string texture_filepath(normals_filepath.data);
               texture_filepath.insert(0, directory);
               texture_info.push_back({Texture::Type::MetallicRoughness, texture_filepath});
@@ -111,10 +111,10 @@ MeshManager::load_mesh(const std::string& directory, const std::string& file) {
 
     if (scene->HasMeshes()) {
         // FIXME: Assumes the mesh is a single mesh and not a hierarchy
-        SDL_Log("Scene has %u meshes", scene->mNumMeshes);
+        Log::info("Scene: # meshes " + std::to_string(scene->mNumMeshes));
         for (size_t i = 0; i < scene->mNumMeshes; i++) {
             auto mesh = scene->mMeshes[i];
-            SDL_Log("Loading mesh with name: %s", mesh->mName.data);
+            Log::info("Loading mesh with name: " + std::string(mesh->mName.data));
 
             for (size_t j = 0; j < mesh->mNumVertices; j++) {
                 Vertex<float> vertex;
@@ -138,7 +138,7 @@ MeshManager::load_mesh(const std::string& directory, const std::string& file) {
             for (size_t j = 0; j < mesh->mNumFaces; j++) {
                 auto face = &mesh->mFaces[j];
                 if (face->mNumIndices != 3) {
-                    SDL_Log("Not 3 vertices per face.");
+                    Log::warn("Not 3 vertices per face in model.");
                     return {0, {}};
                 }
                 for (size_t k = 0; k < 3; k++) {

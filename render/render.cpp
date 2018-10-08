@@ -48,7 +48,7 @@ class BlurPass : RenderPass {
     std::string err_msg = "";
     std::tie(success, err_msg) = shader.compile();
     if (!success) {
-      SDL_Log("Blur shader compilation failed; %s", err_msg.c_str());
+      Log::error("Blur shader compilation failed; " + err_msg);
       return success;
     }
 
@@ -65,7 +65,7 @@ class BlurPass : RenderPass {
     glDrawBuffers(1, blur_attachments);
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-      SDL_Log("Blur framebuffer status not complete.");
+      Log::error("Blur framebuffer status not complete.");
       return false;
     }
 
@@ -131,7 +131,7 @@ class SSAOPass : RenderPass {
     glDrawBuffers(1, ssao_attachments);
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-      SDL_Log("SSAO framebuffer status not complete.");
+      Log::error("SSAO framebuffer status not complete.");
       return !setup_successful;
     }
 
@@ -141,7 +141,7 @@ class SSAOPass : RenderPass {
     std::string err_msg;
     std::tie(success, err_msg) = shader.compile();
     if (!success) {
-      SDL_Log("Shader compilation failed; %s", err_msg.c_str());
+      Log::error("Shader compilation failed; " + err_msg);
       return !setup_successful;
     }
 
@@ -228,7 +228,7 @@ uint32_t Renderer::get_next_free_texture_unit() {
   static int32_t next_texture_unit = 0;
   next_texture_unit++;
   if (next_texture_unit >= max_texture_units) {
-    SDL_Log("ERROR: Reached max texture units: %u", max_texture_units);
+    Log::error("Reached max texture units: " + std::to_string(max_texture_units));
     exit(1);
   }
   return next_texture_unit;
@@ -360,7 +360,7 @@ Renderer::Renderer(): graphics_batches{} {
   glDrawBuffers(7, depth_attachments);
 
   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-    SDL_Log("Lightning framebuffer status not complete.");
+    Log::error("Lightning framebuffer status not complete.");
   }
 
   /// Point lightning framebuffer
@@ -386,7 +386,7 @@ Renderer::Renderer(): graphics_batches{} {
   glDrawBuffers(1, lightning_attachments);
 
   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-    SDL_Log("Point lightning framebuffer status not complete.");
+    Log::error("Point lightning framebuffer status not complete.");
   }
 
   /// Lightning pass shader
@@ -395,7 +395,7 @@ Renderer::Renderer(): graphics_batches{} {
   lightning_shader = new Shader{Filesystem::base + "shaders/lightning.vert", Filesystem::base + "shaders/lightning.frag" };
   std::tie(success, err_msg) = lightning_shader->compile();
   if (!success) {
-    SDL_Log("Lightning shader compilation failed; %s", err_msg.c_str());
+    Log::error("Lightning shader compilation failed; " + err_msg);
   }
 
   /// Point light pass setup
@@ -696,7 +696,7 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
   bool success;
   std::tie(success, err_msg) = batch.depth_shader.compile();
   if (!success) {
-    SDL_Log("Shader compilation failed; %s", err_msg.c_str());
+    Log::error("Shader compilation failed; " + err_msg);
   }
 
   link_batch(batch);

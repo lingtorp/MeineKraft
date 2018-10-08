@@ -76,17 +76,17 @@ std::pair<bool, std::string> Shader::compile() {
   glGetShaderiv(vertex_shader, GL_INFO_LOG_LENGTH, &err_size);
   char* vert_err_msg = new char[1024];
   glGetShaderInfoLog(vertex_shader, err_size, nullptr, vert_err_msg);
-  SDL_Log("%s", vert_err_msg);
+  Log::info(vert_err_msg);
 
   glGetShaderiv(fragment_shader, GL_INFO_LOG_LENGTH, &err_size);
   char* frag_err_msg = new char[1024];
   glGetShaderInfoLog(fragment_shader, err_size, nullptr, frag_err_msg);
-  SDL_Log("%s", frag_err_msg);
+  Log::info(frag_err_msg);
   
   glGetProgramiv(shader_program, GL_INFO_LOG_LENGTH, &err_size);
   char* prog_err_msg = new char[1024];
   glGetProgramInfoLog(shader_program, err_size, nullptr, prog_err_msg);
-  SDL_Log("%s", prog_err_msg);
+  Log::info(prog_err_msg);
   
   log_gl_error();
   
@@ -129,7 +129,7 @@ std::pair<bool, std::string> Shader::recompile() {
       glLinkProgram(gl_program);
       GLint is_linked = GL_FALSE;
       glGetProgramiv(gl_program, GL_LINK_STATUS, &is_linked);
-      SDL_Log("Shader relinking is success: %i", is_linked == GL_TRUE);
+      Log::info("Shader relinking is success: " + std::to_string(is_linked == GL_TRUE));
 
       if (is_linked) {
           // Always detach shaders after a successful link.
@@ -144,7 +144,7 @@ std::pair<bool, std::string> Shader::recompile() {
       glGetProgramiv(gl_program, GL_INFO_LOG_LENGTH, &max_log_lng);
       err_log.reserve(max_log_lng);
       glGetProgramInfoLog(gl_program, max_log_lng, nullptr, (char *) err_log.c_str());
-      SDL_Log("%s", err_log.c_str());
+      Log::info(err_log);
 
       return {true, ""};
   }

@@ -17,10 +17,10 @@ struct OpenGLContextInfo {
 
   OpenGLContextInfo() {
     glGetIntegerv(GL_MAX_DRAW_BUFFERS, &max_draw_buffers);
-    SDL_Log("Max draw buffers: %u", max_draw_buffers);
+    Log::info("Max draw buffers: " + std::to_string(max_draw_buffers));
 
     glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &max_color_attachments);
-    SDL_Log("Max color attachments: %u", max_color_attachments);
+    Log::info("Max color attachments: " + std::to_string(max_color_attachments));
   }
 };
 
@@ -78,7 +78,8 @@ static void GLAPIENTRY gl_debug_callback(
 
   std::cerr << "Type: " << glewGetErrorString(type) << std::endl;
   std::cerr << "Message: " << message << std::endl;
-  std::cerr << " ----- ----- ----- ----- ----- " << std::endl;  std::cerr << std::endl;
+  std::cerr << " ----- ----- ----- ----- ----- " << std::endl;  
+  std::cerr << std::endl;
 }
 
 static void log_gl_error() {
@@ -112,8 +113,8 @@ static void log_gl_error() {
       err_str = "UNKNOWN ERROR";
       break;
   }
-  std::cerr << glewGetErrorString(err) << std::endl;
-  SDL_Log("OpenGL error (%s): 0x%X (%i)", err_str.c_str(), err, err);
+  Log::error(glewGetErrorString(err));
+  Log::error("OpenGL error " + err_str + ":" + std::to_string(err));
 }
 
 #endif // MEINEKRAFT_DEBUG_OPENGL_H
