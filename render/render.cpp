@@ -626,7 +626,7 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
   batch.depth_shader = Shader{ Filesystem::base + "shaders/geometry.vert", Filesystem::base + "shaders/geometry.frag" };
 
   if (g_state.diffuse_texture.used) {
-    switch (g_state.diffuse_texture.gl_texture_type) {
+    switch (g_state.diffuse_texture.gl_texture_target) {
     case GL_TEXTURE_2D_ARRAY:
       batch.depth_shader.add(Shader::Defines::Diffuse2D);
       break;
@@ -640,7 +640,7 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
     batch.gl_diffuse_texture_unit = Renderer::get_next_free_texture_unit();
 
     /// Set what type the texture array will hold for the type of texture
-    batch.gl_diffuse_texture_type = g_state.diffuse_texture.gl_texture_type;
+    batch.gl_diffuse_texture_type = g_state.diffuse_texture.gl_texture_target;
 
     batch.init_buffer(&batch.gl_diffuse_texture_array, batch.gl_diffuse_texture_unit, g_state.diffuse_texture);
 
@@ -660,10 +660,10 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
     glActiveTexture(GL_TEXTURE0 + batch.gl_metallic_roughness_texture_unit);
     uint32_t gl_metallic_roughness_texture = 0;
     glGenTextures(1, &gl_metallic_roughness_texture);
-    glBindTexture(texture.gl_texture_type, gl_metallic_roughness_texture);
+    glBindTexture(texture.gl_texture_target, gl_metallic_roughness_texture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexImage2D(texture.gl_texture_type, 0, GL_RGB, texture.data.width, texture.data.height, 0, GL_RGB, GL_UNSIGNED_BYTE, texture.data.pixels);
+    glTexImage2D(texture.gl_texture_target, 0, GL_RGB, texture.data.width, texture.data.height, 0, GL_RGB, GL_UNSIGNED_BYTE, texture.data.pixels);
   }
 
   if (g_state.ambient_occlusion_texture.used) {
@@ -672,10 +672,10 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
     glActiveTexture(GL_TEXTURE0 + batch.gl_ambient_occlusion_texture_unit);
     uint32_t gl_ambient_occlusion_texture = 0;
     glGenTextures(1, &gl_ambient_occlusion_texture);
-    glBindTexture(texture.gl_texture_type, gl_ambient_occlusion_texture);
+    glBindTexture(texture.gl_texture_target, gl_ambient_occlusion_texture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexImage2D(texture.gl_texture_type, 0, GL_RGB, texture.data.width, texture.data.height, 0, GL_RGB, GL_UNSIGNED_BYTE, texture.data.pixels);
+    glTexImage2D(texture.gl_texture_target, 0, GL_RGB, texture.data.width, texture.data.height, 0, GL_RGB, GL_UNSIGNED_BYTE, texture.data.pixels);
   }
 
   if (g_state.emissive_texture.used) {
@@ -684,10 +684,10 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
     glActiveTexture(GL_TEXTURE0 + batch.gl_emissive_texture_unit);
     uint32_t gl_emissive_texture = 0;
     glGenTextures(1, &gl_emissive_texture);
-    glBindTexture(texture.gl_texture_type, gl_emissive_texture);
+    glBindTexture(texture.gl_texture_target, gl_emissive_texture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexImage2D(texture.gl_texture_type, 0, GL_RGB, texture.data.width, texture.data.height, 0, GL_RGB, GL_UNSIGNED_BYTE, texture.data.pixels);
+    glTexImage2D(texture.gl_texture_target, 0, GL_RGB, texture.data.width, texture.data.height, 0, GL_RGB, GL_UNSIGNED_BYTE, texture.data.pixels);
   }
 
   std::string err_msg;

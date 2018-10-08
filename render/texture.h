@@ -91,7 +91,7 @@ struct Texture {
   bool used = false;
 
   /// OpenGL texture target; CUBE_MAP, CUBE_MAP_ARRAY, TEXTURE_2D, etc
-  uint32_t gl_texture_type = 0; // TODO: Rename to *_target 
+  uint32_t gl_texture_target = 0;
   
   /// Layer index for the textures sampler type
   uint32_t layer_idx = 0;

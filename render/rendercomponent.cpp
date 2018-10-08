@@ -21,7 +21,7 @@ void RenderComponent::set_mesh(const std::string& directory, const std::string& 
       case Texture::Type::Diffuse:
         graphics_state.diffuse_texture.data = Texture::load_textures(resource);
         if (graphics_state.diffuse_texture.data.pixels) {
-          graphics_state.diffuse_texture.gl_texture_type = GL_TEXTURE_2D_ARRAY; // FIXME: Assumes texture format
+          graphics_state.diffuse_texture.gl_texture_target = GL_TEXTURE_2D_ARRAY; // FIXME: Assumes texture format
           graphics_state.diffuse_texture.used = true;
           graphics_state.diffuse_texture.id = resource.to_hash();
         }
@@ -29,7 +29,7 @@ void RenderComponent::set_mesh(const std::string& directory, const std::string& 
       case Texture::Type::MetallicRoughness:
         graphics_state.metallic_roughness_texture.data = Texture::load_textures(resource);
         if (graphics_state.metallic_roughness_texture.data.pixels) {
-          graphics_state.metallic_roughness_texture.gl_texture_type = GL_TEXTURE_2D; // FIXME: Assumes texture format
+          graphics_state.metallic_roughness_texture.gl_texture_target = GL_TEXTURE_2D; // FIXME: Assumes texture format
           graphics_state.metallic_roughness_texture.used = true;
           graphics_state.metallic_roughness_texture.id = resource.to_hash();
         }
@@ -37,7 +37,7 @@ void RenderComponent::set_mesh(const std::string& directory, const std::string& 
       case Texture::Type::AmbientOcclusion:
         graphics_state.ambient_occlusion_texture.data = Texture::load_textures(resource);
         if (graphics_state.ambient_occlusion_texture.data.pixels) {
-          graphics_state.ambient_occlusion_texture.gl_texture_type = GL_TEXTURE_2D;
+          graphics_state.ambient_occlusion_texture.gl_texture_target = GL_TEXTURE_2D;
           graphics_state.ambient_occlusion_texture.used = true;
           graphics_state.ambient_occlusion_texture.id = resource.to_hash();
         }
@@ -45,7 +45,7 @@ void RenderComponent::set_mesh(const std::string& directory, const std::string& 
       case Texture::Type::Emissive:
         graphics_state.emissive_texture.data = Texture::load_textures(resource);
         if (graphics_state.emissive_texture.data.pixels) {
-          graphics_state.emissive_texture.gl_texture_type = GL_TEXTURE_2D;
+          graphics_state.emissive_texture.gl_texture_target = GL_TEXTURE_2D;
           graphics_state.emissive_texture.used = true;
           graphics_state.emissive_texture.id = resource.to_hash();
         }
@@ -75,7 +75,7 @@ void RenderComponent::set_cube_map_texture(const std::vector<std::string>& faces
   auto resource = TextureResource{faces};
   graphics_state.diffuse_texture.data = Texture::load_textures(resource);
   if (graphics_state.diffuse_texture.data.pixels) {
-    graphics_state.diffuse_texture.gl_texture_type = GL_TEXTURE_CUBE_MAP_ARRAY;
+    graphics_state.diffuse_texture.gl_texture_target = GL_TEXTURE_CUBE_MAP_ARRAY;
     graphics_state.diffuse_texture.used = true;
     graphics_state.diffuse_texture.id = resource.to_hash();
   }

@@ -28,7 +28,7 @@ public:
   void init_buffer(uint32_t* gl_buffer, const uint32_t gl_texture_unit, const Texture& texture) {
     glActiveTexture(GL_TEXTURE0 + gl_texture_unit);
     glGenTextures(1, gl_buffer);
-    glBindTexture(texture.gl_texture_type, *gl_buffer);
+    glBindTexture(texture.gl_texture_target, *gl_buffer);
     const int default_buffer_size = 3;
     glTexStorage3D(texture.gl_texture_target, 1, GL_RGB8, texture.data.width, texture.data.height, texture.data.faces * default_buffer_size); // depth = layer faces
   }
@@ -40,12 +40,12 @@ public:
     uint32_t gl_new_texture_array;
     glGenTextures(1, &gl_new_texture_array);
     glActiveTexture(GL_TEXTURE0 + gl_diffuse_texture_unit);
-    glBindTexture(texture.gl_texture_type, gl_new_texture_array);
+    glBindTexture(texture.gl_texture_target, gl_new_texture_array);
     
     // # of new textures to accommodate
     const float texture_array_growth_factor = 1.5f; 
     diffuse_textures_capacity = (uint32_t) std::ceil(diffuse_textures_capacity * texture_array_growth_factor);
-    glTexStorage3D(texture.gl_texture_type, 1, GL_RGB8, texture.data.width, texture.data.height, texture.data.faces * diffuse_textures_capacity);
+    glTexStorage3D(texture.gl_texture_target, 1, GL_RGB8, texture.data.width, texture.data.height, texture.data.faces * diffuse_textures_capacity);
     
     // Update state
     *gl_buffer = gl_new_texture_array;
@@ -54,8 +54,8 @@ public:
   /// Upload a texture to the diffuse array
   void upload(const Texture& texture, const uint32_t gl_texture_unit, const uint32_t gl_texture_array) {
     glActiveTexture(GL_TEXTURE0 + gl_texture_unit);
-    glBindTexture(texture.gl_texture_type, gl_texture_array);
-    glTexSubImage3D(texture.gl_texture_type,
+    glBindTexture(texture.gl_texture_target, gl_texture_array);
+    glTexSubImage3D(texture.gl_texture_target,
       0,                     // Mipmap number (a.k.a level)
       0, 0, texture.layer_idx *  texture.data.faces, // xoffset, yoffset, zoffset = layer face
       texture.data.width, texture.data.height, texture.data.faces, // width, height, depth = faces
