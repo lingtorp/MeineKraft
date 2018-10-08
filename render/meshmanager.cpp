@@ -4,6 +4,7 @@
 #include <assimp/Importer.hpp>
 #include <iostream>
 #include "../util/filesystem.h"
+#include "../util/logging.h"
 
 static std::vector<Mesh> loaded_meshes{Cube()};
 
@@ -156,7 +157,7 @@ Mesh MeshManager::mesh_from_id(ID id) {
   if (id < loaded_meshes.size()) {
     return loaded_meshes[id];
   } else {
-    std::cerr << "Error: Non existent mesh id provided." << std::endl;
+    Log::error("Non existent mesh id provided.");
   }
   return {};
 }
@@ -166,7 +167,7 @@ ID MeshManager::mesh_id_from_primitive(MeshPrimitive primitive) {
   if (primitive == MeshPrimitive::Cube) {
     return 0;
   } else {
-    std::cerr << "Loaded unknown primitive" << std::endl;
+    Log::error("Loaded unknown primitive");
   }
   return 0;
 }

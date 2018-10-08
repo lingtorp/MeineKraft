@@ -13,6 +13,8 @@
 #include <SDL2/SDL_image.h>
 #endif 
 
+#include "../util/logging.h"
+
 /// Opaque ID type used to reference resources throughout the engine
 typedef uint64_t ID;
 
@@ -63,7 +65,7 @@ struct Texture {
       for (size_t i = 0; i < resource.files.size(); i++) {
         image = IMG_Load(resource.files[i].c_str());
         if (!image) {
-          std::cerr << "Could not load texture: " << IMG_GetError() << std::endl;
+          Log::error("Could not load texture: " + std::string(IMG_GetError()));
           continue;
         }
         // Convert it to OpenGL friendly format
@@ -75,7 +77,7 @@ struct Texture {
         texture.faces++;
       }
     } else {
-      std::cerr << "Could not load textures: " << IMG_GetError() << std::endl;
+      Log::error("Could not load textures: " + std::string(IMG_GetError()));
     }
 
     return texture;

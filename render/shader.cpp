@@ -178,7 +178,7 @@ void Shader::add(Shader::Defines define) {
     defines.insert("#define DIFFUSE_CUBEMAP \n");
     break;
   default:
-    std::cerr << "ERROR: Invalid shader define passed" << std::endl;   
+    Log::error("Invalid shader define passed");   
   }
 }
 

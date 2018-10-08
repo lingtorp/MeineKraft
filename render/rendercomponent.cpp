@@ -57,7 +57,7 @@ void RenderComponent::set_mesh(const std::string& directory, const std::string& 
         }
         break;
        default:
-        std::cerr << "RenderComponent: Tried to load unsupported texture: " << texture_file << std::endl;
+        Log::warn("Tried to load unsupported texture: " + texture_file);
     }
   }
 };

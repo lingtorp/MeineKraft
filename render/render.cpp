@@ -250,7 +250,7 @@ void Renderer::load_environment_map(std::string directory, std::string file) {
 
     stbi_image_free(pixels);
   } else {
-    std::cerr << "ERROR: Could not load environment map" << std::endl;
+    Log::error("Could not load environment map");
   }
 }
 
@@ -636,7 +636,7 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
       batch.depth_shader.add(Shader::Defines::DiffuseCubemap);
       break;
     default:
-      std::cerr << "ERROR: Depth shader diffuse texture type not handled." << std::endl;
+      Log::error("Depth shader diffuse texture type not handled.");
     }
 
     batch.gl_diffuse_texture_unit = Renderer::get_next_free_texture_unit();
