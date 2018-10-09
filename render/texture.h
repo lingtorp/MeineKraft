@@ -67,6 +67,10 @@ struct Texture {
           Log::error("Could not load texture: " + std::string(IMG_GetError()));
           continue;
         }
+        if (image->w != texture.width || image->h != texture.height) {
+          Log::error("Textures non-uniform size");
+          return texture;
+        }
         // Convert it to OpenGL friendly format
         const auto desired_img_format = bytes_per_pixel == 3 ? SDL_PIXELFORMAT_RGB24 : SDL_PIXELFORMAT_RGBA32;
         SDL_Surface* conv = SDL_ConvertSurfaceFormat(image, desired_img_format, 0);
