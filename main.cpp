@@ -50,11 +50,11 @@ int main() {
   renderer.screen_width = HD.width;
   renderer.screen_height = HD.height;
   renderer.update_projection_matrix(70);
-
-  renderer.load_environment_map(Filesystem::home + "Desktop/canyon/", "GCanyon_C_YumaPoint_3k.hdr");
   
   // WORKAROUND: Diffuse texture from world overwrites the model if the model is loaded first ...
   World world;
+
+  Skybox skybox;
   
   Model model{ Filesystem::home + "Desktop/", "DamagedHelmet.gltf" };
   model.scale = 1.0;

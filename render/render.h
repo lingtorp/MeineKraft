@@ -50,7 +50,7 @@ public:
   /// Returns the next unused texture unit
   static uint32_t get_next_free_texture_unit();
 
-  void load_environment_map(std::string directory, std::string file);
+  void load_environment_map(const std::vector<std::string>& faces);
 
   Camera* camera;
   RenderState state;
@@ -100,7 +100,8 @@ private:
   uint32_t gl_shading_model_texture;
 
   // Environment map
-  uint32_t gl_hdr_environment_texture; 
+  Texture environment_map; 
+  uint32_t gl_environment_map_texture_unit;
 
   std::vector<RenderPass> render_passes;
 };

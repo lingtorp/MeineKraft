@@ -232,24 +232,28 @@ uint32_t Renderer::get_next_free_texture_unit() {
   return next_texture_unit;
 }
 
-void Renderer::load_environment_map(std::string directory, std::string file) {
-  stbi_set_flip_vertically_on_load(true);
-  int width, height, num_components;
-  std::string f = directory + file;
-  float* pixels = stbi_loadf(f.c_str(), &width, &height, &num_components, 0);
-  if (pixels) {
-    glGenTextures(1, &gl_hdr_environment_texture);
-    glBindTexture(GL_TEXTURE_2D, gl_hdr_environment_texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGB, GL_FLOAT, pixels);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+void Renderer::load_environment_map(const std::vector<std::string>& faces) {
+  Texture texture;
+  auto resource = TextureResource{ faces };
+  texture.data = Texture::load_textures(resource);
+  if (texture.data.pixels) {
+    texture.gl_texture_target = GL_TEXTURE_CUBE_MAP_ARRAY;
+    texture.used = true;
+    texture.id = resource.to_hash();
 
-    stbi_image_free(pixels);
+    gl_environment_map_texture_unit = Renderer::get_next_free_texture_unit();
+    glActiveTexture(GL_TEXTURE0 + gl_environment_map_texture_unit);
+    uint32_t gl_environment_map_texture = 0; 
+    glGenTextures(1, &gl_environment_map_texture);
+    glBindTexture(texture.gl_texture_target, gl_environment_map_texture);
+    glTexParameteri(texture.gl_texture_target, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(texture.gl_texture_target, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexStorage3D(texture.gl_texture_target, 1, GL_RGB8, texture.data.width, texture.data.height, texture.data.faces);
+    glTexSubImage3D(texture.gl_texture_target, 0, 0, 0, 0, texture.data.width, texture.data.height, texture.data.faces, GL_RGB, GL_UNSIGNED_BYTE, texture.data.pixels);
   } else {
-    Log::error("Could not load environment map");
+    Log::warn("Could not load environment map");
   }
+  environment_map = texture;
 }
 
 Renderer::~Renderer() = default;
@@ -479,6 +483,7 @@ void Renderer::render(uint32_t delta) {
     glBindVertexArray(gl_lightning_vao);
     glUseProgram(program);
 
+    glUniform1i(glGetUniformLocation(program, "environment_map_sampler"), gl_environment_map_texture_unit);
     glUniform1i(glGetUniformLocation(program, "shading_model_id_sampler"), gl_shading_model_texture_unit);
     glUniform1i(glGetUniformLocation(program, "emissive_sampler"), gl_emissive_texture_unit);
     glUniform1i(glGetUniformLocation(program, "ambient_occlusion_sampler"), gl_ambient_occlusion_texture_unit);
@@ -514,7 +519,7 @@ void Renderer::render(uint32_t delta) {
 void Renderer::update_projection_matrix(const float fov) {
   // TODO: Adjust all the passes textures sizes & all the global texture buffers
   const float aspect = (float) screen_width / (float) screen_height;
-  this->projection_matrix = glm::perspective(glm::radians(fov), aspect, 1.0f, 10.0f);
+  this->projection_matrix = glm::perspective(glm::radians(fov), aspect, 0.1f, 100.0f);
   glViewport(0, 0, screen_width, screen_height); 
 }
 

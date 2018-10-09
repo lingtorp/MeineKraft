@@ -23,7 +23,7 @@ class RenderComponent;
 class GraphicsBatch {
 public:
   explicit GraphicsBatch(ID mesh_id): mesh_id(mesh_id), components{}, mesh{}, id(0), layer_idxs{},
-    diffuse_textures_capacity(3), diffuse_textures_count(0) {};
+    diffuse_textures_capacity(5), diffuse_textures_count(0) {};
   
   void init_buffer(uint32_t* gl_buffer, const uint32_t gl_texture_unit, const Texture& texture) {
     glActiveTexture(GL_TEXTURE0 + gl_texture_unit);
