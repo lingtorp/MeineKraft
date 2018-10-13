@@ -86,12 +86,23 @@ struct World {
       Block::BlockType block_type = distr(engine) < 0.5 ? Block::BlockType::GRASS : Block::BlockType::DIRT;
       Block* block = new Block(block_type);
       block->position = Vec3<float>(0, 0, x - 2);
-      Log::info(block->position);
+    }
+
+    for (size_t i = 0; i < 10; i++) {
+      for (size_t j = 0; j < 10; j++) {
+        Entity* entity = new Entity();
+        entity->position = Vec3<float>{ -15.0f + 2.5f * j, -15.0f + 2.5f * i, -5.0f };
+        RenderComponent* comp = new RenderComponent(entity);
+        comp->set_mesh(MeshPrimitive::Sphere);
+        comp->graphics_state.pbr_scalar_parameters = Vec3<float>(0.1 * i, 0.1, 0.0);
+        comp->set_shading_model(ShadingModel::PhysicallyBasedScalars);
+        entity->attach_component(comp);
+      }
     }
   }
   
   /// World position is measured in Chunk lengths
-  Vec3<float> world_position(Vec3<float> position) const {
+  Vec3<float> world_position(const Vec3<float>& position) const {
     Vec3<float> result{};
     result.x = std::round(position.x / Chunk::dimension) * Chunk::dimension;
     result.y = std::round(position.y / Chunk::dimension) * Chunk::dimension;
