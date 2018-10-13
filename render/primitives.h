@@ -6,6 +6,9 @@
 #include "../math/vector.h"
 #include "texture.h"
 
+/// Mathematical constants
+constexpr double PI = 3.1415926535897932384626433832795;
+
 /// Linear interpolation of a, b given t
 static float lerp(float a, float b, float t) {
   return a + t * (b - a);
@@ -107,9 +110,9 @@ namespace std {
 }
 
 /// Represents primitive types of meshes supported
-// TODO: Quad/sphere
-enum class MeshPrimitive {
-  Cube
+/// MeshPrimitives are their own mesh IDs
+enum class MeshPrimitive: uint32_t {
+  Cube, Sphere, Quad
 };
 
 struct Mesh {
@@ -152,7 +155,7 @@ struct Mesh {
 };
 
 /// Unit cube
-struct Cube: Mesh {
+struct Cube: public Mesh {
   Cube(): Mesh() {
       auto a = Vec3<float>(-0.5f, -0.5f, 0.5f);
       auto b = Vec3<float>(0.5f, -0.5f, 0.5f);
@@ -195,6 +198,59 @@ struct Cube: Mesh {
   }
 };
 
+/// Sphere mesh
+struct Sphere: public Mesh {
+  explicit Sphere(const float radius = 1.0f): Mesh() {
+    const uint32_t X_SEGMENTS = 64;
+    const uint32_t Y_SEGMENTS = X_SEGMENTS;
+
+    for (size_t j = 0; j <= Y_SEGMENTS; ++j) {
+      for (size_t i = 0; i <= X_SEGMENTS; ++i) {
+        float x_segment = (float)i / (float)X_SEGMENTS;
+        float y_segment = (float)j / (float)Y_SEGMENTS;
+        float x = std::cos(x_segment * 2.0f * PI) * std::sin(y_segment * PI);
+        float y = std::cos(y_segment * PI);
+        float z = std::sin(x_segment * 2.0f * PI) * std::sin(y_segment * PI);
+        Vertex<float> vertex;
+        vertex.position = Vec3<float>{x, y, z} * radius;
+        vertex.normal = Vec3<float>{x, y, z} * radius;
+        vertices.emplace_back(vertex);
+
+        if (j < Y_SEGMENTS - 1) {
+          const int curRow  = j * X_SEGMENTS;
+          const int nextRow = (j + 1) * X_SEGMENTS;
+          const int nextS   = (i + 1) % X_SEGMENTS;
+
+          indices.push_back(curRow + i);
+          indices.push_back(nextRow + i);
+          indices.push_back(nextRow + nextS);
+
+          indices.push_back(curRow + i);
+          indices.push_back(nextRow + nextS);
+          indices.push_back(curRow + nextS);
+        }
+      }
+    }
+  }
+};
+
+struct Quad: public Mesh {
+  Quad(): Mesh() {
+
+  }
+};
+
+namespace Primitive {
+  /// Fullscreen quad in NDC
+  static float quad[] = {
+    // positions        // texture Coords
+    -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+    -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+     1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
+     1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+  };
+}
+
 /// Mathematical plane: a*x + b*y + c*z = d
 template<typename T>
 struct Plane {
@@ -218,34 +274,25 @@ struct Plane {
   }
 };
 
-namespace Primitive {
-  /// Fullscreen quad in NDC
-  static float quad[] = {
-    // positions        // texture Coords
-    -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
-    -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
-     1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
-     1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
-  };
-}
-
 /// Opaque ID type used to reference resources throughout the engine
 typedef uint64_t ID;
 
 enum class ShadingModel: uint32_t {
-  Unlit = 1, // Unlit, using its surface color 
-  PhysicallyBased = 2
+  Unlit = 1,                        // Unlit, using its surface color 
+  PhysicallyBased = 2,              // PBR using textures (default)
+  PhysicallyBasedScalars = 3        // PBR using scalars instead of textures
 };
 
 struct GraphicsState {
   ShadingModel shading_model = ShadingModel::Unlit;
   ID mesh_id;
   Texture diffuse_texture;
-  Texture metallic_roughness_texture;
+  Texture metallic_roughness_texture; // Used by ShadingModel::PBRTextured
   Texture ambient_occlusion_texture;
   Texture emissive_texture;
   Vec3<float> position;
   float scale = 1.0;
+  Vec3<float> pbr_scalar_parameters; // Used by ShadingModel::PBRScalars
 };
 
 /// Represents the state of the Render, used for ImGUI debug panes

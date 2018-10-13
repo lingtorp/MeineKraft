@@ -92,6 +92,7 @@ public:
   uint32_t gl_depth_vbo;
   uint32_t gl_depth_models_buffer_object;
   uint32_t gl_shading_model_buffer_object;
+  uint32_t gl_pbr_scalar_buffer_object;         // Used by ShadingModel::PBRScalars
 
   ShadingModel shading_model; // Shading model to use with the shader
   Shader depth_shader;        // Shader used to render all the components in this batch

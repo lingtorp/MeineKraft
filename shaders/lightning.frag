@@ -77,34 +77,43 @@ vec3 schlick_brdf(PBRInputs inputs) {
 vec3 schlick_render(vec2 frag_coord, vec3 position, vec3 normal, vec3 diffuse, vec3 ambient_occlusion) {
     PBRInputs pbr_inputs;
 
-    vec3 light_intensities = vec3(23.47, 21.31, 20.79);
-    vec3 light_position = vec3(0.0, 3.0, 0.0);
+    vec3 light_positions[4];
+    light_positions[0] = vec3( 5.0,  5.0,  5.0);
+    light_positions[1] = vec3( 5.0, -5.0, -5.0);
+    light_positions[2] = vec3(-5.0,  5.0,  5.0);
+    light_positions[3] = vec3(-5.0, -5.0, -5.0);
 
-    pbr_inputs.L = normalize(light_position - position);
-    float distance = length(light_position - position);
-    float attenuation = 1.0 / (distance * distance);
-    vec3 radiance = attenuation * light_intensities;
+    vec3 L0 = vec3(0.0);
+    for (int i = 0; i < 4; i++) {
+        vec3 light_intensities = vec3(23.47, 21.31, 20.79);
+        vec3 light_position = light_positions[i];
 
-    // Metallic roughness material model glTF specific 
-    pbr_inputs.V = normalize(camera - position);
-    pbr_inputs.metallic = texture(pbr_parameters_sampler, frag_coord).b;
-    pbr_inputs.roughness = texture(pbr_parameters_sampler, frag_coord).g;  
-    pbr_inputs.N = normalize(normal);
-    pbr_inputs.H = normalize(pbr_inputs.L + pbr_inputs.V);
-    pbr_inputs.base_color = diffuse.rgb;
-    pbr_inputs.NdotL = clamp(dot(pbr_inputs.N, pbr_inputs.L), 0.001, 1.0);
-    pbr_inputs.NdotV = clamp(abs(dot(pbr_inputs.N, pbr_inputs.V)), 0.001, 1.0);
-    pbr_inputs.VdotL = clamp(dot(pbr_inputs.V, pbr_inputs.L), 0.0, 1.0);
-    pbr_inputs.VdotH = clamp(dot(pbr_inputs.V, pbr_inputs.H), 0.0, 1.0);
-    pbr_inputs.NdotH = clamp(dot(pbr_inputs.N, pbr_inputs.H), 0.0, 1.0);
-    pbr_inputs.LdotH = clamp(dot(pbr_inputs.L, pbr_inputs.H), 0.0, 1.0);
+        pbr_inputs.L = normalize(light_position - position);
+        float distance = length(light_position - position);
+        float attenuation = 1.0 / (distance * distance);
+        vec3 radiance = attenuation * light_intensities;
 
-    // TODO: Seperate diffuse and specular terms from the irradiance
-    // TODO: Lookup whether or not the irradiance comes in sRGB 
-    vec3 irradiance = texture(environment_map_sampler, pbr_inputs.N).rgb;
-    vec3 ambient = irradiance * diffuse * ambient_occlusion; 
-    vec3 color = ambient + radiance * schlick_brdf(pbr_inputs) * pbr_inputs.NdotL;
-    return color;
+        // Metallic roughness material model glTF specific 
+        pbr_inputs.V = normalize(camera - position);
+        pbr_inputs.metallic = texture(pbr_parameters_sampler, frag_coord).b;
+        pbr_inputs.roughness = texture(pbr_parameters_sampler, frag_coord).g;  
+        pbr_inputs.N = normalize(normal);
+        pbr_inputs.H = normalize(pbr_inputs.L + pbr_inputs.V);
+        pbr_inputs.base_color = diffuse.rgb;
+        pbr_inputs.NdotL = clamp(dot(pbr_inputs.N, pbr_inputs.L), 0.001, 1.0);
+        pbr_inputs.NdotV = clamp(abs(dot(pbr_inputs.N, pbr_inputs.V)), 0.001, 1.0);
+        pbr_inputs.VdotL = clamp(dot(pbr_inputs.V, pbr_inputs.L), 0.0, 1.0);
+        pbr_inputs.VdotH = clamp(dot(pbr_inputs.V, pbr_inputs.H), 0.0, 1.0);
+        pbr_inputs.NdotH = clamp(dot(pbr_inputs.N, pbr_inputs.H), 0.0, 1.0);
+        pbr_inputs.LdotH = clamp(dot(pbr_inputs.L, pbr_inputs.H), 0.0, 1.0);
+
+        // TODO: Seperate diffuse and specular terms from the irradiance
+        // TODO: Lookup whether or not the irradiance comes in sRGB 
+        vec3 irradiance = texture(environment_map_sampler, pbr_inputs.N).rgb;
+        vec3 ambient = irradiance * diffuse * ambient_occlusion; 
+        L0 += ambient + radiance * schlick_brdf(pbr_inputs) * pbr_inputs.NdotL;
+    }
+    return L0;
 }
 
 vec3 unlit_render(vec3 diffuse) {
@@ -120,13 +129,12 @@ vec3 SRGB_to_linear(vec3 srgb) {
 
 void main() {
     const vec2 frag_coord = vec2(gl_FragCoord.x / screen_width, gl_FragCoord.y / screen_height);
-    
     const vec3 normal = texture(normal_sampler, frag_coord).xyz;
     const vec3 position = texture(position_sampler, frag_coord).xyz;
     const vec3 diffuse = SRGB_to_linear(texture(diffuse_sampler, frag_coord).rgb); // Mandated by glTF 2.0
     const vec3 ambient_occlusion = texture(ambient_occlusion_sampler, frag_coord).rgb;
     const vec3 emissive = texture(emissive_sampler, frag_coord).rgb;
-    int shading_model_id = int(texture(shading_model_id_sampler, frag_coord).r);
+    const int shading_model_id = int(texture(shading_model_id_sampler, frag_coord).r);
 
     vec3 color = vec3(1.0);
     switch (shading_model_id) {
@@ -134,6 +142,7 @@ void main() {
         color = unlit_render(diffuse);
         break;     
         case 2: // Physically based rendering
+        case 3: // Physically based rendering with scalars
         color = schlick_render(frag_coord, position, normal, diffuse, ambient_occlusion);
         // Emissive
         color += emissive; // TODO: Emissive factor missing

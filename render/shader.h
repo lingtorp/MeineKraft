@@ -10,7 +10,9 @@
 struct Shader {
   enum class Defines: uint32_t {
     Diffuse2D, 
-    DiffuseCubemap
+    DiffuseCubemap,
+    PBRTextured, // PBR parameters are fetched from texture
+    PBRScalar    // PBR parameters are fetched from uniform scalars
   };
 
   Shader() = default;

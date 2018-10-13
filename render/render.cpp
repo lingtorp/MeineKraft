@@ -414,8 +414,7 @@ Renderer::Renderer(): graphics_batches{} {
     glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
   }
 
-  glEnable(GL_CULL_FACE);
-  glCullFace(GL_BACK);
+  glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
   /// Camera
   const auto position  = Vec3<float>{0.0f, 0.0f, 3.0f};  
@@ -445,6 +444,7 @@ void Renderer::render(uint32_t delta) {
       std::vector<Mat4<float>> model_buffer{};
       std::vector<uint32_t> diffuse_textures_idx{};
       std::vector<ShadingModel> shading_models{};
+      std::vector<Vec3<float>> pbr_scalar_parameters{};
       for (const auto& component : batch.components) {
         component->update(); // Copy all graphics state
         
@@ -455,6 +455,7 @@ void Renderer::render(uint32_t delta) {
         
         diffuse_textures_idx.push_back(component->graphics_state.diffuse_texture.layer_idx);
         shading_models.push_back(component->graphics_state.shading_model);
+        pbr_scalar_parameters.push_back(component->graphics_state.pbr_scalar_parameters);
       }
       
       glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_models_buffer_object);
@@ -465,6 +466,9 @@ void Renderer::render(uint32_t delta) {
 
       glBindBuffer(GL_ARRAY_BUFFER, batch.gl_shading_model_buffer_object);
       glBufferData(GL_ARRAY_BUFFER, shading_models.size() * sizeof(ShadingModel), shading_models.data(), GL_DYNAMIC_DRAW);
+
+      glBindBuffer(GL_ARRAY_BUFFER, batch.gl_pbr_scalar_buffer_object);
+      glBufferData(GL_ARRAY_BUFFER, pbr_scalar_parameters.size() * sizeof(Vec3<float>), pbr_scalar_parameters.data(), GL_DYNAMIC_DRAW);
 
       glBindVertexArray(batch.gl_depth_vao);
       
@@ -530,10 +534,17 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     auto program = batch.depth_shader.gl_program;
     glUseProgram(program);
     glUniform1i(glGetUniformLocation(program, "diffuse"), batch.gl_diffuse_texture_unit);
-    if (batch.shading_model == ShadingModel::PhysicallyBased) {
+    switch (batch.shading_model) {
+    case ShadingModel::PhysicallyBased:
       glUniform1i(glGetUniformLocation(program, "pbr_parameters"), batch.gl_metallic_roughness_texture_unit);
       glUniform1i(glGetUniformLocation(program, "ambient_occlusion"), batch.gl_ambient_occlusion_texture_unit);
       glUniform1i(glGetUniformLocation(program, "emissive"), batch.gl_emissive_texture_unit);
+      break;
+    case ShadingModel::PhysicallyBasedScalars:
+      // FIXME: PBR scalar parameters buffer needs only to be created here
+      break;
+    case ShadingModel::Unlit:
+      break;
     }
     
     glGenVertexArrays(1, &batch.gl_depth_vao);
@@ -580,6 +591,13 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glEnableVertexAttribArray(glGetAttribLocation(program, "shading_model_id"));
     glVertexAttribDivisor(glGetAttribLocation(program, "shading_model_id"), 1);
 
+    // FIXME: Not all configurations needs this
+    glGenBuffers(1, &batch.gl_pbr_scalar_buffer_object);
+    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_pbr_scalar_buffer_object);
+    glVertexAttribPointer(glGetAttribLocation(program, "pbr_scalar_parameters"), 3, GL_FLOAT, GL_FALSE, sizeof(Vec3<float>), nullptr);
+    glEnableVertexAttribArray(glGetAttribLocation(program, "pbr_scalar_parameters"));
+    glVertexAttribDivisor(glGetAttribLocation(program, "pbr_scalar_parameters"), 1);
+
     GLuint EBO;
     glGenBuffers(1, &EBO);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
@@ -596,27 +614,29 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
     if (batch.mesh_id == mesh_id) {
       batch.components.push_back(comp);
 
-      for (const auto& item : batch.layer_idxs) {
-        const auto id = item.first; // Texture id
-        if (id == g_state.diffuse_texture.id) {
-          g_state.diffuse_texture.layer_idx = batch.layer_idxs[id];
-          return batch.id;
+      if (comp->graphics_state.diffuse_texture.used) {
+        for (const auto& item : batch.layer_idxs) {
+          const auto id = item.first; // Texture id
+          if (id == g_state.diffuse_texture.id) {
+            g_state.diffuse_texture.layer_idx = batch.layer_idxs[id];
+            return batch.id;
+          }
         }
+
+        /// Expand texture buffer if needed
+        if (batch.diffuse_textures_count + 1 > batch.diffuse_textures_capacity) {
+          batch.expand_texture_buffer(&batch.gl_diffuse_texture_array, g_state.diffuse_texture);
+        }
+
+        /// Assign layer index to the latest the texture and increment
+        g_state.diffuse_texture.layer_idx = batch.diffuse_textures_count++;
+
+        /// Update the mapping from texture id to layer idx
+        batch.layer_idxs[g_state.diffuse_texture.id] = g_state.diffuse_texture.layer_idx;
+
+        /// Upload the texture to OpenGL
+        batch.upload(g_state.diffuse_texture, batch.gl_diffuse_texture_unit, batch.gl_diffuse_texture_array);
       }
-
-      /// Expand texture buffer if needed
-      if (batch.diffuse_textures_count + 1 > batch.diffuse_textures_capacity) {
-        batch.expand_texture_buffer(&batch.gl_diffuse_texture_array, g_state.diffuse_texture);
-      }
-
-      /// Assign layer index to the latest the texture and increment
-      g_state.diffuse_texture.layer_idx = batch.diffuse_textures_count++;
-
-      /// Update the mapping from texture id to layer idx
-      batch.layer_idxs[g_state.diffuse_texture.id] = g_state.diffuse_texture.layer_idx;
-
-      /// Upload the texture to OpenGL
-      batch.upload(g_state.diffuse_texture, batch.gl_diffuse_texture_unit, batch.gl_diffuse_texture_array);
 
       return batch.id;
     }
@@ -629,6 +649,19 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
 
   /// Batch shader prepass (depth pass) shader creation process
   batch.depth_shader = Shader{ Filesystem::base + "shaders/geometry.vert", Filesystem::base + "shaders/geometry.frag" };
+  
+  // Handle shading models
+  switch (g_state.shading_model) {
+  case ShadingModel::PhysicallyBased:
+    batch.depth_shader.add(Shader::Defines::PBRTextured);
+    break;
+  case ShadingModel::PhysicallyBasedScalars:
+    batch.depth_shader.add(Shader::Defines::PBRScalar);
+    break;
+  case ShadingModel::Unlit:
+    //
+    break;
+  }
 
   if (g_state.diffuse_texture.used) {
     switch (g_state.diffuse_texture.gl_texture_target) {

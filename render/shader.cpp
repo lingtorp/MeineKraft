@@ -175,6 +175,12 @@ void Shader::add(Shader::Defines define) {
   case Shader::Defines::DiffuseCubemap:
     defines.insert("#define DIFFUSE_CUBEMAP \n");
     break;
+  case Shader::Defines::PBRScalar:
+    defines.insert("#define PBR_SCALAR \n");
+    break;
+  case Shader::Defines::PBRTextured:
+    defines.insert("#define PBR_TEXTURED \n");
+    break;
   default:
     Log::error("Invalid shader define passed");   
   }
