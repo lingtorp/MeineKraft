@@ -620,11 +620,11 @@ void Renderer::add_to_batch(RenderComponent* comp) {
 
         /// Update the mapping from texture id to layer idx and increment count
         batch.layer_idxs[g_state.diffuse_texture.id] = batch.diffuse_textures_count++;
+        batch.objects.diffuse_texture_idxs.push_back(batch.layer_idxs[g_state.diffuse_texture.id]);
 
         /// Upload the texture to OpenGL
         batch.upload(g_state.diffuse_texture, batch.gl_diffuse_texture_unit, batch.gl_diffuse_texture_array);
       }
-      
       batch.add_graphics_state(comp->graphics_state);
       return;
     }
@@ -671,6 +671,7 @@ void Renderer::add_to_batch(RenderComponent* comp) {
 
     /// Update the mapping from texture id to layer idx and increment count
     batch.layer_idxs[g_state.diffuse_texture.id] = batch.diffuse_textures_count++;
+    batch.objects.diffuse_texture_idxs.push_back(batch.layer_idxs[g_state.diffuse_texture.id]);
 
     /// Upload the texture to OpenGL
     batch.upload(g_state.diffuse_texture, batch.gl_diffuse_texture_unit, batch.gl_diffuse_texture_array);
