@@ -63,7 +63,7 @@ void RenderComponent::update() {
 
 void RenderComponent::set_mesh(MeshPrimitive primitive) {
   // TODO: Remove from previous batch - since we are changing mesh and thus geo. data
-  graphics_state.mesh_id = MeshManager::mesh_id_from_primitive(primitive);
+  graphics_state.mesh_id = ID(primitive);
 }
 
 void RenderComponent::set_shading_model(const ShadingModel shading_model) {

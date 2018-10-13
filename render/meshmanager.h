@@ -15,8 +15,6 @@ struct MeshManager {
   load_mesh(const std::string& directory, const std::string& file);
   
   static Mesh mesh_from_id(ID id);
-
-  static ID mesh_id_from_primitive(MeshPrimitive primitive);
 };
 
 #endif // MEINEKRAFT_MESHMANAGER_HPP
