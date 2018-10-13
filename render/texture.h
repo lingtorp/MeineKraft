@@ -96,9 +96,6 @@ struct Texture {
 
   /// OpenGL texture target; CUBE_MAP, CUBE_MAP_ARRAY, TEXTURE_2D, etc
   uint32_t gl_texture_target = 0;
-  
-  /// Layer index for the textures sampler type
-  uint32_t layer_idx = 0;
 
   enum class Type: uint8_t {
     Diffuse, MetallicRoughness, AmbientOcclusion, Emissive

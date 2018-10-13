@@ -442,32 +442,24 @@ void Renderer::render(uint32_t delta) {
       glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, glm::value_ptr(projection_matrix));
 
       std::vector<Mat4<float>> model_buffer{};
-      std::vector<uint32_t> diffuse_textures_idx{};
-      std::vector<ShadingModel> shading_models{};
-      std::vector<Vec3<float>> pbr_scalar_parameters{};
       for (uint32_t i = 0; i < batch.num_objects; i++) {
-        // TODO: Implement TransformSystem and fetch the values there with the Entity ID 
         Mat4<float> model{};
         model = model.translate(batch.objects.positions[i]);
         model = model.scale(batch.objects.scales[i]);
         model_buffer.push_back(model.transpose());
-
-        diffuse_textures_idx.push_back(batch.objects.diffuse_textures[i].layer_idx);
-        shading_models.push_back(batch.objects.shading_models[i]);
-        pbr_scalar_parameters.push_back(batch.objects.pbr_scalar_parameters[i]);
       }
       
       glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_models_buffer_object);
       glBufferData(GL_ARRAY_BUFFER, model_buffer.size() * sizeof(Mat4<float>), model_buffer.data(), GL_DYNAMIC_DRAW);
       
       glBindBuffer(GL_ARRAY_BUFFER, batch.gl_diffuse_textures_layer_idx);
-      glBufferData(GL_ARRAY_BUFFER, diffuse_textures_idx.size() * sizeof(uint32_t), diffuse_textures_idx.data(), GL_DYNAMIC_DRAW);
+      glBufferData(GL_ARRAY_BUFFER, batch.objects.diffuse_texture_idxs.size() * sizeof(uint32_t), batch.objects.diffuse_texture_idxs.data(), GL_DYNAMIC_DRAW);
 
       glBindBuffer(GL_ARRAY_BUFFER, batch.gl_shading_model_buffer_object);
-      glBufferData(GL_ARRAY_BUFFER, shading_models.size() * sizeof(ShadingModel), shading_models.data(), GL_DYNAMIC_DRAW);
+      glBufferData(GL_ARRAY_BUFFER, batch.objects.shading_models.size() * sizeof(ShadingModel), batch.objects.shading_models.data(), GL_DYNAMIC_DRAW);
 
       glBindBuffer(GL_ARRAY_BUFFER, batch.gl_pbr_scalar_buffer_object);
-      glBufferData(GL_ARRAY_BUFFER, pbr_scalar_parameters.size() * sizeof(Vec3<float>), pbr_scalar_parameters.data(), GL_DYNAMIC_DRAW);
+      glBufferData(GL_ARRAY_BUFFER, batch.objects.pbr_scalar_parameters.size() * sizeof(Vec3<float>), batch.objects.pbr_scalar_parameters.data(), GL_DYNAMIC_DRAW);
 
       glBindVertexArray(batch.gl_depth_vao);
       
@@ -604,20 +596,20 @@ void Renderer::link_batch(GraphicsBatch& batch) {
   }
 }
 
-uint64_t Renderer::add_to_batch(RenderComponent* comp) {
+void Renderer::add_to_batch(RenderComponent* comp) {
   auto mesh_id = comp->graphics_state.mesh_id;
   auto& g_state = comp->graphics_state;
 
-  // TODO: Check if g_state/comp matches any existing batch config.
+  // TODO: Check if g_state matches any existing batch config.
   for (auto& batch : graphics_batches) {
     if (batch.mesh_id == mesh_id) {
       if (comp->graphics_state.diffuse_texture.used) {
         for (const auto& item : batch.layer_idxs) {
           const auto id = item.first; // Texture id
           if (id == g_state.diffuse_texture.id) {
-            g_state.diffuse_texture.layer_idx = batch.layer_idxs[id];
+            batch.objects.diffuse_texture_idxs.push_back(batch.layer_idxs[id]);
             batch.add_graphics_state(comp->graphics_state);
-            return batch.id;
+            return;
           }
         }
 
@@ -626,23 +618,19 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
           batch.expand_texture_buffer(&batch.gl_diffuse_texture_array, g_state.diffuse_texture);
         }
 
-        /// Assign layer index to the latest the texture and increment
-        g_state.diffuse_texture.layer_idx = batch.diffuse_textures_count++;
-
-        /// Update the mapping from texture id to layer idx
-        batch.layer_idxs[g_state.diffuse_texture.id] = g_state.diffuse_texture.layer_idx;
+        /// Update the mapping from texture id to layer idx and increment count
+        batch.layer_idxs[g_state.diffuse_texture.id] = batch.diffuse_textures_count++;
 
         /// Upload the texture to OpenGL
         batch.upload(g_state.diffuse_texture, batch.gl_diffuse_texture_unit, batch.gl_diffuse_texture_array);
       }
       
       batch.add_graphics_state(comp->graphics_state);
-      return batch.id;
+      return;
     }
   }
 
   GraphicsBatch batch{mesh_id};
-  batch.id = graphics_batches.size(); // TODO: Return real ID
   batch.mesh = MeshManager::mesh_from_id(mesh_id);
   batch.shading_model = g_state.shading_model;
 
@@ -650,7 +638,7 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
   batch.depth_shader = Shader{ Filesystem::base + "shaders/geometry.vert", Filesystem::base + "shaders/geometry.frag" };
   
   // Handle shading models
-  switch (g_state.shading_model) {
+  switch (batch.shading_model) {
   case ShadingModel::PhysicallyBased:
     batch.depth_shader.add(Shader::Defines::PBRTextured);
     break;
@@ -681,11 +669,8 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
 
     batch.init_buffer(&batch.gl_diffuse_texture_array, batch.gl_diffuse_texture_unit, g_state.diffuse_texture);
 
-    /// Assign layer index to the latest the texture and increment
-    g_state.diffuse_texture.layer_idx = batch.diffuse_textures_count++;
-
-    /// Update the mapping from texture id to layer idx
-    batch.layer_idxs[g_state.diffuse_texture.id] = g_state.diffuse_texture.layer_idx;
+    /// Update the mapping from texture id to layer idx and increment count
+    batch.layer_idxs[g_state.diffuse_texture.id] = batch.diffuse_textures_count++;
 
     /// Upload the texture to OpenGL
     batch.upload(g_state.diffuse_texture, batch.gl_diffuse_texture_unit, batch.gl_diffuse_texture_array);
@@ -732,12 +717,11 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
   std::tie(success, err_msg) = batch.depth_shader.compile();
   if (!success) {
     Log::error("Shader compilation failed; " + err_msg);
+    return;
   }
 
   link_batch(batch);
 
   batch.add_graphics_state(comp->graphics_state);
   graphics_batches.push_back(batch);
-
-  return batch.id;
 }
