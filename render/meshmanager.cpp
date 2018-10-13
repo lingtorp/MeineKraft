@@ -5,7 +5,7 @@
 #include "../util/filesystem.h"
 #include "../util/logging.h"
 
-static std::vector<Mesh> loaded_meshes{Cube()};
+static std::vector<Mesh> loaded_meshes{Cube(), Sphere()};
 
 // Assuming the metallic-roughness material model of models loaded with GLTF.
 std::pair<ID, std::vector<std::pair<Texture::Type, std::string>>>
@@ -41,22 +41,22 @@ MeshManager::load_mesh(const std::string& directory, const std::string& file) {
           
             aiString specular_filepath;
             if (material->GetTexture(aiTextureType_SPECULAR, 0, &specular_filepath) == AI_SUCCESS) {
-              Log::info("Specular texture name: " + std::string(directory.c_str()) + std::string(diffuse_filepath.data));
+              Log::info("Specular texture name: " + std::string(directory.c_str()) + std::string(specular_filepath.data));
             }
 
             aiString ambient_filepath;
             if (material->GetTexture(aiTextureType_AMBIENT, 0, &ambient_filepath) == AI_SUCCESS) {
-              Log::info("Ambient occlusion texture name: " + std::string(directory.c_str()) + std::string(diffuse_filepath.data));
+              Log::info("Ambient occlusion texture name: " + std::string(directory.c_str()) + std::string(ambient_filepath.data));
             }
             
             aiString shininess_filepath;
             if (material->GetTexture(aiTextureType_SHININESS, 0, &shininess_filepath) == AI_SUCCESS) {
-              Log::info("Shininess texture name: " + std::string(directory.c_str()) + std::string(diffuse_filepath.data));
+              Log::info("Shininess texture name: " + std::string(directory.c_str()) + std::string(shininess_filepath.data));
             }
 
             aiString emissive_filepath;
             if (material->GetTexture(aiTextureType_EMISSIVE, 0, &emissive_filepath) == AI_SUCCESS) {
-              Log::info("Emissive texture name: " + std::string(directory.c_str()) + std::string(diffuse_filepath.data));
+              Log::info("Emissive texture name: " + std::string(directory.c_str()) + std::string(emissive_filepath.data));
               std::string texture_filepath(emissive_filepath.data);
               texture_filepath.insert(0, directory);
               texture_info.push_back({Texture::Type::Emissive, texture_filepath});
@@ -65,18 +65,18 @@ MeshManager::load_mesh(const std::string& directory, const std::string& file) {
 
             aiString displacement_filepath;
             if (material->GetTexture(aiTextureType_DISPLACEMENT, 0, &displacement_filepath) == AI_SUCCESS) {
-              Log::info("Displacement texture name: " + std::string(directory.c_str()) + std::string(diffuse_filepath.data));
+              Log::info("Displacement texture name: " + std::string(directory.c_str()) + std::string(displacement_filepath.data));
             }
 
             aiString height_filepath;
             if (material->GetTexture(aiTextureType_HEIGHT, 0, &height_filepath) == AI_SUCCESS) {
-              Log::info("Bumpmap texture name: " + std::string(directory.c_str()) + std::string(diffuse_filepath.data));
+              Log::info("Bumpmap texture name: " + std::string(directory.c_str()) + std::string(height_filepath.data));
             }
 
             // Lightmap is usually the ambient occlusion map ...
             aiString lightmap_filepath;
             if (material->GetTexture(aiTextureType_LIGHTMAP, 0, &lightmap_filepath) == AI_SUCCESS) {
-              Log::info("Lightmap texture name: " + std::string(directory.c_str()) + std::string(diffuse_filepath.data));
+              Log::info("Lightmap texture name: " + std::string(directory.c_str()) + std::string(lightmap_filepath.data));
               std::string texture_filepath(lightmap_filepath.data);
               texture_filepath.insert(0, directory);
               texture_info.push_back({Texture::Type::AmbientOcclusion, texture_filepath});
@@ -84,23 +84,23 @@ MeshManager::load_mesh(const std::string& directory, const std::string& file) {
              
             aiString normals_filepath;
             if (material->GetTexture(aiTextureType_NORMALS, 0, &normals_filepath) == AI_SUCCESS) {
-              Log::info("Normals texture name: " + std::string(directory.c_str()) + std::string(diffuse_filepath.data));
+              Log::info("Normals texture name: " + std::string(directory.c_str()) + std::string(normals_filepath.data));
             }
 
             aiString reflection_filepath;
             if (material->GetTexture(aiTextureType_REFLECTION, 0, &reflection_filepath) == AI_SUCCESS) {
-              Log::info("Reflection texture name: " + std::string(directory.c_str()) + std::string(diffuse_filepath.data));
+              Log::info("Reflection texture name: " + std::string(directory.c_str()) + std::string(reflection_filepath.data));
             }
 
             aiString opacity_filepath;
             if (material->GetTexture(aiTextureType_OPACITY, 0, &opacity_filepath) == AI_SUCCESS) {
-              Log::info("Opacity texture name: " + std::string(directory.c_str()) + std::string(diffuse_filepath.data));
+              Log::info("Opacity texture name: " + std::string(directory.c_str()) + std::string(opacity_filepath.data));
             }
           
             // NOTE: Roughness metallic textures are not detected so here we are assuming this is the unknown texture of the material.
             aiString unknown_filepath;
             if (material->GetTexture(aiTextureType_UNKNOWN, 0, &unknown_filepath) == AI_SUCCESS) {
-              Log::info("Unknown texture name: " + std::string(directory.c_str()) + std::string(diffuse_filepath.data));
+              Log::info("Unknown texture name: " + std::string(directory.c_str()) + std::string(unknown_filepath.data));
               std::string texture_filepath(normals_filepath.data);
               texture_filepath.insert(0, directory);
               texture_info.push_back({Texture::Type::MetallicRoughness, texture_filepath});
@@ -159,14 +159,4 @@ Mesh MeshManager::mesh_from_id(ID id) {
     Log::error("Non existent mesh id provided.");
   }
   return {};
-}
-
-ID MeshManager::mesh_id_from_primitive(MeshPrimitive primitive) {
-  // FIXME: Needs a proper solution ... like the rest of the mesh handling ...
-  if (primitive == MeshPrimitive::Cube) {
-    return 0;
-  } else {
-    Log::error("Loaded unknown primitive");
-  }
-  return 0;
 }
