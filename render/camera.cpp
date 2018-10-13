@@ -2,9 +2,7 @@
 
 #include <algorithm>
 #include "../math/quaternion.h"
-
-// TODO: Move this to something more suitable
-#define M_PI 3.1415926535897932384626433832795
+#include "../render/primitives.h"
 
 /*
 Camera::Camera(Vec3<float> position, Vec3<float> direction, Vec3<float> up):
@@ -41,7 +39,7 @@ void Camera::update() {
 */
 
 /// Clamps a number to between lo and hi, in other words: [lo, hi]
-static double clamp(double x, double lo, double hi) {
+static double clamp(const double x, const double lo, const double hi) {
   return std::min(std::max(x, lo), hi);
 }
 
@@ -76,7 +74,7 @@ void Camera::move_up(bool move) {
 Vec3<float> Camera::recalculate_direction() const {
   const bool euler_angles = true;
   if (euler_angles) {
-    static constexpr float rad = M_PI / 180.0f;
+    static constexpr float rad = PI / 180.0f;
     Vec3<float> result;
     result.x = -sinf(yaw * rad) * cosf(pitch * rad);
     result.y = sinf(pitch * rad);
