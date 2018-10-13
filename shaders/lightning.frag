@@ -136,7 +136,7 @@ void main() {
     const vec3 emissive = texture(emissive_sampler, frag_coord).rgb;
     const int shading_model_id = int(texture(shading_model_id_sampler, frag_coord).r);
 
-    vec3 color = vec3(1.0);
+    vec3 color = vec3(0.0);
     switch (shading_model_id) {
         case 1: // Unlit
         color = unlit_render(diffuse);
