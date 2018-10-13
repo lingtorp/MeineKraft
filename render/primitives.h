@@ -234,9 +234,29 @@ struct Sphere: public Mesh {
   }
 };
 
+/// Fullscreen quad in NDC
 struct Quad: public Mesh {
   Quad(): Mesh() {
-
+    Vertex<float> a;
+    a.position = {-1.0f, -1.0f, 1.0f};
+    a.texCoord = {0.0f, 1.0f};
+    Vertex<float> b;
+    b.position = {-1.0f, -1.0f, 0.0f};
+    b.texCoord = {0.0f, 0.0f};
+    Vertex<float> c;
+    c.position = {1.0f,  1.0f, 0.0f};
+    c.texCoord = {1.0f, 1.0f};
+    Vertex<float> d;
+    d.position = {1.0f, -1.0f, 0.0f};
+    d.texCoord = {1.0f, 0.0f};
+    vertices.push_back(a);
+    vertices.push_back(b);
+    vertices.push_back(c);
+    vertices.push_back(d);
+    indices.push_back(0);
+    indices.push_back(1);
+    indices.push_back(2);
+    indices.push_back(3);
   }
 };
 
