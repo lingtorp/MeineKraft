@@ -22,7 +22,7 @@ class RenderComponent;
 
 class GraphicsBatch {
 public:
-  explicit GraphicsBatch(ID mesh_id): mesh_id(mesh_id), components{}, mesh{}, id(0), layer_idxs{},
+  explicit GraphicsBatch(ID mesh_id): mesh_id(mesh_id), objects{}, mesh{}, id(0), layer_idxs{},
     diffuse_textures_capacity(5), diffuse_textures_count(0) {};
   
   void init_buffer(uint32_t* gl_buffer, const uint32_t gl_texture_unit, const Texture& texture) {
@@ -64,10 +64,33 @@ public:
       texture.data.pixels);  // pointer to data
   }
 
-  ID id;
+  void add_graphics_state(const GraphicsState& g_state) {
+    objects.positions.push_back(g_state.position);
+    objects.scales.push_back(g_state.scale);
+    objects.diffuse_textures.push_back(g_state.diffuse_texture);
+    objects.emissive_textures.push_back(g_state.emissive_texture);
+    objects.metallic_roughness_textures.push_back(g_state.metallic_roughness_texture);
+    objects.ambient_occlusion_textures.push_back(g_state.ambient_occlusion_texture);
+    objects.pbr_scalar_parameters.push_back(g_state.pbr_scalar_parameters);
+    objects.shading_models.push_back(g_state.shading_model);
+    num_objects++;
+  }
+
+  ID id; // FIXME: Remove this?
   ID mesh_id; 
   Mesh mesh; 
-  std::vector<RenderComponent*> components;
+  struct GraphicStateObjects {
+    std::vector<Vec3f> positions;
+    std::vector<float> scales;                        // default 1.0
+    std::vector<ShadingModel> shading_models;         // default ShadingModel::Unlit;
+    std::vector<Texture> diffuse_textures;
+    std::vector<Texture> metallic_roughness_textures; // Used by ShadingModel::PBRTextured
+    std::vector<Texture> ambient_occlusion_textures;
+    std::vector<Texture> emissive_textures;
+    std::vector<Vec3f> pbr_scalar_parameters;         // Used by ShadingModel::PBRScalars
+  };
+  GraphicStateObjects objects{}; // Objects in the batch share the same values
+  uint64_t num_objects = 0; 
   
   /// Textures
   std::map<ID, uint32_t> layer_idxs; // Texture ID to layer index mapping

@@ -90,6 +90,14 @@ struct World {
 
     for (size_t i = 0; i < 10; i++) {
       for (size_t j = 0; j < 10; j++) {
+        /*
+        EntitySystem es;
+        ComponentFlag components = ComponentFlag::GraphicsState | ComponentFlag::Name;
+        Entity entity = es.create_entity_with(components); // Entity == ID
+        es.objects.positions[es.index_of_entity(entity, ComponentFlag::Position)] = Vec3f{-15.0f + 2.5f * j, -15.0f + 2.5f * i, -5.0f};
+        */
+        //
+
         Entity* entity = new Entity();
         entity->position = Vec3<float>{ -15.0f + 2.5f * j, -15.0f + 2.5f * i, -5.0f };
         RenderComponent* comp = new RenderComponent(entity);

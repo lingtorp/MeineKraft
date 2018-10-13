@@ -234,6 +234,7 @@ struct Sphere: public Mesh {
   }
 };
 
+// TODO: Use it, remove Primitive::quad
 /// Fullscreen quad in NDC
 struct Quad: public Mesh {
   Quad(): Mesh() {
@@ -305,7 +306,7 @@ enum class ShadingModel: uint32_t {
 
 struct GraphicsState {
   ShadingModel shading_model = ShadingModel::Unlit;
-  ID mesh_id;
+  ID mesh_id; // TODO: Seperate this from the GState 
   Texture diffuse_texture;
   Texture metallic_roughness_texture; // Used by ShadingModel::PBRTextured
   Texture ambient_occlusion_texture;
@@ -320,5 +321,10 @@ struct RenderState {
   uint64_t entities;
   uint64_t graphic_batches;
 };
+
+using Vec2f = Vec2<float>;
+using Vec3f = Vec3<float>;
+using Vec4f = Vec4<float>;
+using Mat4f = Mat4<float>;
 
 #endif // MEINEKRAFT_PRIMITIVES_H

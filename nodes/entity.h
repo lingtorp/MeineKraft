@@ -6,6 +6,60 @@
 
 struct Camera;
 
+/*
+using Entity = ID; // ... ?
+
+enum class ComponentFlag: uint32_t {
+  GraphicsState = 1 << 0,
+  Name          = 1 << 1,
+  Position      = 1 << 2
+};
+
+struct ComponentData {
+  std::vector<std::string> names;
+  std::vector<Vec3f> positions;
+  std::vector<float> scales;
+  std::vector<Mat4f> transforms;
+  std::vector<GraphicsState> graphics_states;
+  std::vector<ComponentFlag> components;
+};
+
+// Mapping: Entity ID <--> Components
+struct EntitySystem {
+  ComponentData objects;
+
+  EntitySystem(): objects{} {
+
+  }
+
+  // Map entity ID to the right bitflag
+};
+
+struct TransformSystem {
+  struct TransformEntity {
+    Entity entity;
+    bool dirty_bit;
+  };
+  std::vector<TransformEntity> entities;
+
+  void add_entity(Entity entity) {
+
+  }
+
+  void translate(Entity entity, Vec3f translation) {
+    // Mark Entity as dirty
+
+  }
+
+  // Computes the transform of all the dirt Entities
+  void update() {
+    // Sort entities based on dirty bit
+    // Compute
+    // Clear dirty flags
+  }
+};
+*/
+
 class Entity {
 private:
     std::vector<Component*> components;
@@ -18,7 +72,7 @@ private:
 
 public:
     ID entity_id;
-    Vec3<float> position;
+    Vec3f position;
     float scale;
 
     Entity(): entity_id(generate_entity_id()), position{}, scale(1.0f) {}

@@ -445,17 +445,16 @@ void Renderer::render(uint32_t delta) {
       std::vector<uint32_t> diffuse_textures_idx{};
       std::vector<ShadingModel> shading_models{};
       std::vector<Vec3<float>> pbr_scalar_parameters{};
-      for (const auto& component : batch.components) {
-        component->update(); // Copy all graphics state
-        
+      for (uint32_t i = 0; i < batch.num_objects; i++) {
+        // TODO: Implement TransformSystem and fetch the values there with the Entity ID 
         Mat4<float> model{};
-        model = model.translate(component->graphics_state.position);
-        model = model.scale(component->graphics_state.scale);
+        model = model.translate(batch.objects.positions[i]);
+        model = model.scale(batch.objects.scales[i]);
         model_buffer.push_back(model.transpose());
-        
-        diffuse_textures_idx.push_back(component->graphics_state.diffuse_texture.layer_idx);
-        shading_models.push_back(component->graphics_state.shading_model);
-        pbr_scalar_parameters.push_back(component->graphics_state.pbr_scalar_parameters);
+
+        diffuse_textures_idx.push_back(batch.objects.diffuse_textures[i].layer_idx);
+        shading_models.push_back(batch.objects.shading_models[i]);
+        pbr_scalar_parameters.push_back(batch.objects.pbr_scalar_parameters[i]);
       }
       
       glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_models_buffer_object);
@@ -612,13 +611,12 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
   // TODO: Check if g_state/comp matches any existing batch config.
   for (auto& batch : graphics_batches) {
     if (batch.mesh_id == mesh_id) {
-      batch.components.push_back(comp);
-
       if (comp->graphics_state.diffuse_texture.used) {
         for (const auto& item : batch.layer_idxs) {
           const auto id = item.first; // Texture id
           if (id == g_state.diffuse_texture.id) {
             g_state.diffuse_texture.layer_idx = batch.layer_idxs[id];
+            batch.add_graphics_state(comp->graphics_state);
             return batch.id;
           }
         }
@@ -637,7 +635,8 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
         /// Upload the texture to OpenGL
         batch.upload(g_state.diffuse_texture, batch.gl_diffuse_texture_unit, batch.gl_diffuse_texture_array);
       }
-
+      
+      batch.add_graphics_state(comp->graphics_state);
       return batch.id;
     }
   }
@@ -737,7 +736,7 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
 
   link_batch(batch);
 
-  batch.components.push_back(comp);
+  batch.add_graphics_state(comp->graphics_state);
   graphics_batches.push_back(batch);
 
   return batch.id;
