@@ -1,6 +1,8 @@
 #ifndef MEINEKRAFT_VECTOR_H
 #define MEINEKRAFT_VECTOR_H
 
+#include <iostream>
+#include <cmath>
 #include <math.h>
 #include <vector>
 
