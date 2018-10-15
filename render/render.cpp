@@ -235,7 +235,6 @@ void Renderer::load_environment_map(const std::vector<std::string>& faces) {
   texture.data = Texture::load_textures(resource);
   if (texture.data.pixels) {
     texture.gl_texture_target = GL_TEXTURE_CUBE_MAP_ARRAY;
-    texture.used = true;
     texture.id = resource.to_hash();
 
     gl_environment_map_texture_unit = Renderer::get_next_free_texture_unit();
@@ -589,7 +588,7 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
   // TODO: Check if component matches any existing batch config.
   for (auto& batch : graphics_batches) {
     if (batch.mesh_id == comp.mesh_id) {
-      if (comp.diffuse_texture.used) {
+      if (comp.diffuse_texture.data.pixels) {
         for (const auto& item : batch.layer_idxs) {
           const auto id = item.first; // Texture id
           if (id == comp.diffuse_texture.id) {
@@ -636,7 +635,7 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
     break;
   }
 
-  if (comp.diffuse_texture.used) {
+  if (comp.diffuse_texture.data.pixels) {
     switch (comp.diffuse_texture.gl_texture_target) {
     case GL_TEXTURE_2D_ARRAY:
       batch.depth_shader.add(Shader::Defines::Diffuse2D);
@@ -663,7 +662,7 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
     batch.upload(comp.diffuse_texture, batch.gl_diffuse_texture_unit, batch.gl_diffuse_texture_array);
   }
 
-  if (comp.metallic_roughness_texture.used) {
+  if (comp.metallic_roughness_texture.data.pixels) {
     const Texture& texture = comp.metallic_roughness_texture;
     batch.gl_metallic_roughness_texture_unit = Renderer::get_next_free_texture_unit();
     glActiveTexture(GL_TEXTURE0 + batch.gl_metallic_roughness_texture_unit);
@@ -675,7 +674,7 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
     glTexImage2D(texture.gl_texture_target, 0, GL_RGB, texture.data.width, texture.data.height, 0, GL_RGB, GL_UNSIGNED_BYTE, texture.data.pixels);
   }
 
-  if (comp.ambient_occlusion_texture.used) {
+  if (comp.ambient_occlusion_texture.data.pixels) {
     const Texture& texture = comp.ambient_occlusion_texture;
     batch.gl_ambient_occlusion_texture_unit = Renderer::get_next_free_texture_unit();
     glActiveTexture(GL_TEXTURE0 + batch.gl_ambient_occlusion_texture_unit);
@@ -687,7 +686,7 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
     glTexImage2D(texture.gl_texture_target, 0, GL_RGB, texture.data.width, texture.data.height, 0, GL_RGB, GL_UNSIGNED_BYTE, texture.data.pixels);
   }
 
-  if (comp.emissive_texture.used) {
+  if (comp.emissive_texture.data.pixels) {
     const Texture& texture = comp.emissive_texture;
     batch.gl_emissive_texture_unit = Renderer::get_next_free_texture_unit();
     glActiveTexture(GL_TEXTURE0 + batch.gl_emissive_texture_unit);
