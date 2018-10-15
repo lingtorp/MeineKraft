@@ -3,95 +3,79 @@
 
 #include <algorithm>
 #include "../render/rendercomponent.h"
+#include "../render/render.h"
 
 struct Camera;
 
-/*
-using Entity = ID; // ... ?
-
-enum class ComponentFlag: uint32_t {
-  GraphicsState = 1 << 0,
-  Name          = 1 << 1,
-  Position      = 1 << 2
-};
-
-struct ComponentData {
-  std::vector<std::string> names;
-  std::vector<Vec3f> positions;
-  std::vector<float> scales;
-  std::vector<Mat4f> transforms;
-  std::vector<GraphicsState> graphics_states;
-  std::vector<ComponentFlag> components;
-};
-
-// Mapping: Entity ID <--> Components
+// Mapping: Entity ID <--> Alive?
 struct EntitySystem {
-  ComponentData objects;
+private:
+  std::vector<ID> entities;
+  std::unordered_map<ID, ID> lut;
 
-  EntitySystem(): objects{} {
-
+public:
+  EntitySystem() {}
+  ~EntitySystem() {}
+  /// Singleton instance
+  static EntitySystem& instance() {
+    static EntitySystem instance;
+    return instance;
   }
+  
+  /// Generates a new Entity id to be used when identifying this instance of Entity
+  ID new_entity() const {
+    // TODO: Implement something for real
+    static uint64_t e_id = 0;
+    return e_id++;
+  };
 
   // Map entity ID to the right bitflag
+  // lookup ... alive??
+  void destroy_entity(const ID& id) {
+    // TODO: Implement by removing all the components owned by the Entity (again this is mainly a convenicence thing)
+  }
+};
+
+/// Game object 
+struct Entity {
+    ID id;
+
+    Entity(): id(EntitySystem::instance().new_entity()) {}
+    ~Entity() {
+      EntitySystem::instance().destroy_entity(id);
+    }
+
+    /** Component handling for convenience **/
+    void attach_component(const RenderComponent component) {
+        Renderer::instance().add_to_batch(component, id);
+    }
+
+    void deattach_component(const RenderComponent component) {
+        // TODO: Example: Renderer::instance().remove_from_batch(id);
+    }
+};
+
+struct Transform {
+  Vec3f position;
+  float scale;
+  bool dirty_bit; // ?
 };
 
 struct TransformSystem {
-  struct TransformEntity {
-    Entity entity;
-    bool dirty_bit;
-  };
-  std::vector<TransformEntity> entities;
+private:
+  std::vector<Transform> entities;
+  std::vector<ID> lut;
+public:
 
-  void add_entity(Entity entity) {
-
-  }
-
-  void translate(Entity entity, Vec3f translation) {
-    // Mark Entity as dirty
-
+  void add_entity(ID id) {
+    // TODO: Implement
   }
 
   // Computes the transform of all the dirt Entities
   void update() {
-    // Sort entities based on dirty bit
-    // Compute
+    // Compute from dirty bit flag
     // Clear dirty flags
   }
-};
-*/
-
-class Entity {
-private:
-    std::vector<Component*> components;
-
-    /// Generates a new Entity id to be used when identifying this instance of Entity
-    ID generate_entity_id() const {
-        static uint64_t e_id = 0;
-        return e_id++;
-    };
-
-public:
-    ID entity_id;
-    Vec3f position;
-    float scale;
-
-    Entity(): entity_id(generate_entity_id()), position{}, scale(1.0f) {}
-    ~Entity() {
-      for (auto& comp : components) { comp->did_deattach_from_entity(this); }
-    }
-
-    virtual void update(const uint64_t delta, const Camera& camera) {};
-
-    /** Component handling **/
-    void attach_component(Component* comp) {
-        comp->did_attach_to_entity(this);
-        components.push_back(comp);
-    }
-
-    void deattach_component(Component* comp) {
-        comp->did_deattach_from_entity(this);
-        components.erase(std::remove(components.begin(), components.end(), comp), components.end());
-    }
 };
 
 #endif // MEINEKRAFT_ENTITY_H

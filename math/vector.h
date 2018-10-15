@@ -5,6 +5,8 @@
 #include <cmath>
 #include <math.h>
 #include <vector>
+#include <iostream>
+#include <cmath>
 
 /************ Forward declarations ************/
 template<typename T>

@@ -10,7 +10,6 @@
 
 #include "texture.h"
 #include "light.h"
-#include "transform.h"
 #include "shader.h"
 
 #ifdef _WIN32
@@ -41,8 +40,8 @@ public:
   /// Main render function, renders all the graphics batches
   void render(uint32_t delta);
   
-  /// Adds the RenderComponent to a internal batch
-  void add_to_batch(RenderComponent* comp);
+  /// Adds the data of a RenderComponent to a internal batch
+  void add_to_batch(const RenderComponent comp, const ID entity_id);
 
   /// Updates all the shaders projection matrices in order to support resizing of the window
   void update_projection_matrix(const float fov);
@@ -57,7 +56,7 @@ public:
   glm::mat4 projection_matrix; 
   float screen_width;
   float screen_height;
-
+  
 private:
   Renderer();
   std::vector<GraphicsBatch> graphics_batches;
