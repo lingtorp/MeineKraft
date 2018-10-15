@@ -28,14 +28,14 @@ include_directories(include/sdl2-image)
 set(MATH_SRC_FILES "math/noise.h" "math/vector.h" "math/quaternion.h")
 source_group("math" FILES ${MATH_SRC_FILES})
 
-set(NODES_SRC_FILES "nodes/skybox.cpp" "nodes/skybox.h" "nodes/model.cpp" "nodes/model.h" "nodes/entity.cpp" "nodes/entity.h")
+set(NODES_SRC_FILES "nodes/transform.h" "nodes/skybox.cpp" "nodes/skybox.h" "nodes/model.cpp" "nodes/model.h" "nodes/entity.cpp" "nodes/entity.h")
 source_group("nodes" FILES ${NODES_SRC_FILES})
 
 set(RENDER_SRC_FILES "render/shader.cpp" "render/shader.h" "render/texture.cpp" "render/texture.h" 
         "render/rendercomponent.cpp" "render/rendercomponent.h" "render/ray.h" "render/graphicsbatch.h"
         "render/render.cpp" "render/render.h" "render/primitives.h"
         "render/camera.cpp" "render/camera.h" "render/debug_opengl.h"
-        "render/transform.h" "render/light.h" "render/meshmanager.cpp" "render/meshmanager.h")
+        "render/light.h" "render/meshmanager.cpp" "render/meshmanager.h")
 source_group("render" FILES ${RENDER_SRC_FILES})
 
 set(UTIL_SRC_FILES "util/filemonitor.cpp" "util/filemonitor.h" "util/filesystem.h" "util/stb_image.h" "util/logging.h")
