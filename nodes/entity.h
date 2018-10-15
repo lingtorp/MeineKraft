@@ -3,8 +3,8 @@
 
 #include <algorithm>
 #include "../render/rendercomponent.h"
-#include "../render/render.h"
 #include "transform.h"
+#include "../render/render.h"
 
 // Mapping: Entity ID <--> Alive?
 struct EntitySystem {
@@ -29,7 +29,7 @@ public:
   };
 
   /// Lookup if the Entity is alive
-  bool lookup(ID entity) {
+  bool lookup(ID entity) const {
 
   }
 

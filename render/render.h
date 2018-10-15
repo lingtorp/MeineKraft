@@ -21,10 +21,10 @@
 #include <glm/mat4x4.hpp>
 
 struct Camera;
-class RenderComponent;
-class GraphicsBatch;
+struct RenderComponent;
+struct GraphicsBatch;
 struct Shader;
-class RenderPass;
+struct RenderPass;
 
 class Renderer {
 public:

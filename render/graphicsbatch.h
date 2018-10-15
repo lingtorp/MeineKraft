@@ -78,7 +78,6 @@ public:
   };
   std::vector<ID> entity_ids;
   GraphicStateObjects objects{}; // Objects in the batch share the same values
-  uint64_t num_objects = 0; 
   
   /// Textures
   std::map<ID, uint32_t> layer_idxs; // Texture ID to layer index mapping for all texture in batch
