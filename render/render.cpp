@@ -19,9 +19,6 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "../util/stb_image.h"
-
 class RenderPass {
 public:
   Shader shader;
@@ -31,7 +28,7 @@ public:
   virtual bool teardown() = 0;
 };
 
-class BlurPass : RenderPass {
+class BlurPass: public RenderPass {
   uint32_t gl_blur_fbo;
   uint32_t gl_blur_texture_unit;
   uint32_t gl_blur_texture;
@@ -81,11 +78,11 @@ class BlurPass : RenderPass {
   }
 
   bool render() const override final {
-
+    return true;
   }
 };
 
-class SSAOPass : RenderPass {
+class SSAOPass: public RenderPass {
   /// SSAO
   uint32_t ssao_num_samples = 64;
   float ssao_kernel_radius = 1.0;

@@ -10,12 +10,9 @@
 #include <GL/glew.h>
 #endif 
 
-Shader::Shader(std::string vertex_filepath, std::string fragment_filepath): vertex_filepath(vertex_filepath),
-                                                                          fragment_filepath(fragment_filepath),
-                                                                          vertex_shader(0),
-                                                                          fragment_shader(0),
-                                                                          gl_program(0),
-                                                                          defines{} {}
+Shader::Shader(const std::string& vertex_filepath, const std::string& fragment_filepath):
+  vertex_filepath(vertex_filepath), fragment_filepath(fragment_filepath),
+  gl_vertex_shader(0), gl_fragment_shader(0), gl_program(0), defines{} {}
 
 std::pair<bool, std::string> Shader::compile() {
   if (!file_exists(vertex_filepath) || !file_exists(fragment_filepath)) {
@@ -40,55 +37,55 @@ std::pair<bool, std::string> Shader::compile() {
 #endif 
 
   auto raw_str = vertex_src.c_str();
-  vertex_shader = glCreateShader(GL_VERTEX_SHADER);
-  glShaderSource(vertex_shader, 1, &raw_str, nullptr);
+  gl_vertex_shader = glCreateShader(GL_VERTEX_SHADER);
+  glShaderSource(gl_vertex_shader, 1, &raw_str, nullptr);
 
   raw_str = fragment_src.c_str();
-  fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-  glShaderSource(fragment_shader, 1, &raw_str, nullptr);
+  gl_fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
+  glShaderSource(gl_fragment_shader, 1, &raw_str, nullptr);
   
-  GLint shader_program = glCreateProgram();
-  glCompileShader(vertex_shader);
-  glCompileShader(fragment_shader);
-  glAttachShader(shader_program, vertex_shader);
-  glAttachShader(shader_program, fragment_shader);
-  glLinkProgram(shader_program);
+  GLint gl_shader_program = glCreateProgram();
+  glCompileShader(gl_vertex_shader);
+  glCompileShader(gl_fragment_shader);
+  glAttachShader(gl_shader_program, gl_vertex_shader);
+  glAttachShader(gl_shader_program, gl_fragment_shader);
+  glLinkProgram(gl_shader_program);
 
   GLint vertex_shader_status;
-  glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &vertex_shader_status);
+  glGetShaderiv(gl_vertex_shader, GL_COMPILE_STATUS, &vertex_shader_status);
 
   GLint fragment_shader_status;
-  glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &fragment_shader_status);
+  glGetShaderiv(gl_fragment_shader, GL_COMPILE_STATUS, &fragment_shader_status);
 
-  glDetachShader(shader_program, vertex_shader);
-  glDetachShader(shader_program, fragment_shader);
-  glDeleteShader(vertex_shader);
-  glDeleteShader(fragment_shader);
+  glDetachShader(gl_shader_program, gl_vertex_shader);
+  glDetachShader(gl_shader_program, gl_fragment_shader);
+  glDeleteShader(gl_vertex_shader);
+  glDeleteShader(gl_fragment_shader);
 
   if (vertex_shader_status == GL_TRUE && fragment_shader_status == GL_TRUE) {
-      gl_program = shader_program;
+      gl_program = gl_shader_program;
       return {true, ""};
   }
 
   GLint err_size = 1024;
-  glGetShaderiv(vertex_shader, GL_INFO_LOG_LENGTH, &err_size);
+  glGetShaderiv(gl_vertex_shader, GL_INFO_LOG_LENGTH, &err_size);
   char* vert_err_msg = new char[1024];
-  glGetShaderInfoLog(vertex_shader, err_size, nullptr, vert_err_msg);
+  glGetShaderInfoLog(gl_vertex_shader, err_size, nullptr, vert_err_msg);
   Log::info(vert_err_msg);
 
-  glGetShaderiv(fragment_shader, GL_INFO_LOG_LENGTH, &err_size);
+  glGetShaderiv(gl_fragment_shader, GL_INFO_LOG_LENGTH, &err_size);
   char* frag_err_msg = new char[1024];
-  glGetShaderInfoLog(fragment_shader, err_size, nullptr, frag_err_msg);
+  glGetShaderInfoLog(gl_fragment_shader, err_size, nullptr, frag_err_msg);
   Log::info(frag_err_msg);
   
-  glGetProgramiv(shader_program, GL_INFO_LOG_LENGTH, &err_size);
+  glGetProgramiv(gl_shader_program, GL_INFO_LOG_LENGTH, &err_size);
   char* prog_err_msg = new char[1024];
-  glGetProgramInfoLog(shader_program, err_size, nullptr, prog_err_msg);
+  glGetProgramInfoLog(gl_shader_program, err_size, nullptr, prog_err_msg);
   Log::info(prog_err_msg);
   
   log_gl_error();
   
-  glDeleteProgram(shader_program);
+  glDeleteProgram(gl_shader_program);
 
   return {false, std::string(vert_err_msg) + std::string(frag_err_msg) + std::string(prog_err_msg)};
 };
@@ -97,33 +94,33 @@ std::pair<bool, std::string> Shader::recompile() {
   auto vertex_src   = load_shader_source(vertex_filepath);
   auto fragment_src = load_shader_source(fragment_filepath);
 
-  glDetachShader(gl_program, vertex_shader);
-  glDetachShader(gl_program, fragment_shader);
-  glDeleteShader(vertex_shader);
-  glDeleteShader(fragment_shader);
+  glDetachShader(gl_program, gl_vertex_shader);
+  glDetachShader(gl_program, gl_fragment_shader);
+  glDeleteShader(gl_vertex_shader);
+  glDeleteShader(gl_fragment_shader);
 
-  vertex_shader   = glCreateShader(GL_VERTEX_SHADER);
-  fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
+  gl_vertex_shader   = glCreateShader(GL_VERTEX_SHADER);
+  gl_fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
 
   auto raw_str = vertex_src.c_str();
-  glShaderSource(vertex_shader, 1, &raw_str, nullptr);
+  glShaderSource(gl_vertex_shader, 1, &raw_str, nullptr);
 
   raw_str = fragment_src.c_str();
-  glShaderSource(fragment_shader, 1, &raw_str, nullptr);
+  glShaderSource(gl_fragment_shader, 1, &raw_str, nullptr);
 
-  glCompileShader(vertex_shader);
-  glCompileShader(fragment_shader);
+  glCompileShader(gl_vertex_shader);
+  glCompileShader(gl_fragment_shader);
 
   GLint vertex_shader_status;
-  glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &vertex_shader_status);
+  glGetShaderiv(gl_vertex_shader, GL_COMPILE_STATUS, &vertex_shader_status);
 
   GLint fragment_shader_status;
-  glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &fragment_shader_status);
+  glGetShaderiv(gl_fragment_shader, GL_COMPILE_STATUS, &fragment_shader_status);
 
   if (vertex_shader_status == GL_TRUE && fragment_shader_status == GL_TRUE) {
       // Relink shader program
-      glAttachShader(gl_program, vertex_shader);
-      glAttachShader(gl_program, fragment_shader);
+      glAttachShader(gl_program, gl_vertex_shader);
+      glAttachShader(gl_program, gl_fragment_shader);
       glLinkProgram(gl_program);
       GLint is_linked = GL_FALSE;
       glGetProgramiv(gl_program, GL_LINK_STATUS, &is_linked);
@@ -131,10 +128,10 @@ std::pair<bool, std::string> Shader::recompile() {
 
       if (is_linked) {
           // Always detach shaders after a successful link.
-          glDetachShader(gl_program, vertex_shader);
-          glDetachShader(gl_program, fragment_shader);
-          glDeleteShader(vertex_shader);
-          glDeleteShader(fragment_shader);
+          glDetachShader(gl_program, gl_vertex_shader);
+          glDetachShader(gl_program, gl_fragment_shader);
+          glDeleteShader(gl_vertex_shader);
+          glDeleteShader(gl_fragment_shader);
       }
 
       std::string err_log = "";
@@ -152,8 +149,8 @@ std::pair<bool, std::string> Shader::recompile() {
   std::string vert_err_msg;
   frag_err_msg.reserve(err_size);
   vert_err_msg.reserve(err_size);
-  glGetShaderInfoLog(fragment_shader, err_size, nullptr, (char *) frag_err_msg.c_str());
-  glGetShaderInfoLog(vertex_shader  , err_size, nullptr, (char *) vert_err_msg.c_str());
+  glGetShaderInfoLog(gl_fragment_shader, err_size, nullptr, (char *) frag_err_msg.c_str());
+  glGetShaderInfoLog(gl_vertex_shader  , err_size, nullptr, (char *) vert_err_msg.c_str());
   return {false, frag_err_msg + vert_err_msg};
 };
 
