@@ -18,8 +18,6 @@
 #include "sdl2/SDL_opengl.h"
 #endif 
 
-class RenderComponent;
-
 class GraphicsBatch {
 public:
   explicit GraphicsBatch(ID mesh_id): mesh_id(mesh_id), objects{}, mesh{}, layer_idxs{},
@@ -64,23 +62,21 @@ public:
       texture.data.pixels);  // pointer to data
   }
 
-  void add_graphics_state(const GraphicsState& g_state) {
-    objects.positions.push_back(g_state.position);
-    objects.scales.push_back(g_state.scale);
-    objects.diffuse_textures.push_back(g_state.diffuse_texture);
-    objects.emissive_textures.push_back(g_state.emissive_texture);
-    objects.metallic_roughness_textures.push_back(g_state.metallic_roughness_texture);
-    objects.ambient_occlusion_textures.push_back(g_state.ambient_occlusion_texture);
-    objects.pbr_scalar_parameters.push_back(g_state.pbr_scalar_parameters);
-    objects.shading_models.push_back(g_state.shading_model);
+  void add_graphics_state(const RenderComponent& comp, const ID entity_id) {
+    entity_ids.push_back(entity_id);
+    objects.diffuse_textures.push_back(comp.diffuse_texture);
+    objects.emissive_textures.push_back(comp.emissive_texture);
+    objects.metallic_roughness_textures.push_back(comp.metallic_roughness_texture);
+    objects.ambient_occlusion_textures.push_back(comp.ambient_occlusion_texture);
+    objects.pbr_scalar_parameters.push_back(comp.pbr_scalar_parameters);
+    objects.shading_models.push_back(comp.shading_model);
     num_objects++;
   }
 
   ID mesh_id; 
   Mesh mesh; 
   struct GraphicStateObjects {
-    std::vector<Vec3f> positions;
-    std::vector<float> scales;                        // default 1.0
+    std::vector<Transform> transforms;
     std::vector<ShadingModel> shading_models;         // default ShadingModel::Unlit;
     std::vector<Texture> diffuse_textures;
     std::vector<uint32_t> diffuse_texture_idxs;       // Layer index
@@ -89,6 +85,7 @@ public:
     std::vector<Texture> emissive_textures;
     std::vector<Vec3f> pbr_scalar_parameters;         // Used by ShadingModel::PBRScalars
   };
+  std::vector<ID> entity_ids;
   GraphicStateObjects objects{}; // Objects in the batch share the same values
   uint64_t num_objects = 0; 
   

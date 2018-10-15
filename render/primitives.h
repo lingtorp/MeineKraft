@@ -304,18 +304,6 @@ enum class ShadingModel: uint32_t {
   PhysicallyBasedScalars = 3        // PBR using scalars instead of textures
 };
 
-struct GraphicsState {
-  ShadingModel shading_model = ShadingModel::Unlit;
-  ID mesh_id; // TODO: Seperate this from the GState 
-  Texture diffuse_texture;
-  Texture metallic_roughness_texture; // Used by ShadingModel::PBRTextured
-  Texture ambient_occlusion_texture;
-  Texture emissive_texture;
-  Vec3<float> position;
-  float scale = 1.0;
-  Vec3<float> pbr_scalar_parameters; // Used by ShadingModel::PBRScalars
-};
-
 /// Represents the state of the Render, used for ImGUI debug panes
 struct RenderState {
   uint64_t entities;

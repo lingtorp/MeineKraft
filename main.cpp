@@ -8,7 +8,6 @@
 #include "util/filesystem.h"
 #include "scene/world.hpp"
 #include "render/debug_opengl.h"
-#include "render/transform.h"
 #include "nodes/skybox.h"
 #include "scene/world.hpp"
 
@@ -27,7 +26,7 @@ int main() {
   SDL_Init(SDL_INIT_EVERYTHING);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
   SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
   SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
@@ -57,7 +56,7 @@ int main() {
   Skybox skybox;
   
   Model model{ Filesystem::home + "Desktop/", "DamagedHelmet.gltf" };
-  model.scale = 1.0;
+  // model.scale = 1.0;
 
   bool toggle_mouse_capture = true;
   bool DONE = false;

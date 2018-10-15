@@ -440,17 +440,9 @@ void Renderer::render(uint32_t delta) {
       glUseProgram(program);
       glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(camera_transform));
       glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, glm::value_ptr(projection_matrix));
-
-      std::vector<Mat4<float>> model_buffer{};
-      for (uint32_t i = 0; i < batch.num_objects; i++) {
-        Mat4<float> model{};
-        model = model.translate(batch.objects.positions[i]);
-        model = model.scale(batch.objects.scales[i]);
-        model_buffer.push_back(model.transpose());
-      }
       
       glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_models_buffer_object);
-      glBufferData(GL_ARRAY_BUFFER, model_buffer.size() * sizeof(Mat4<float>), model_buffer.data(), GL_DYNAMIC_DRAW);
+      glBufferData(GL_ARRAY_BUFFER, batch.objects.transforms.size() * sizeof(Mat4<float>), batch.objects.transforms.data(), GL_DYNAMIC_DRAW);
       
       glBindBuffer(GL_ARRAY_BUFFER, batch.gl_diffuse_textures_layer_idx);
       glBufferData(GL_ARRAY_BUFFER, batch.objects.diffuse_texture_idxs.size() * sizeof(uint32_t), batch.objects.diffuse_texture_idxs.data(), GL_DYNAMIC_DRAW);
@@ -596,43 +588,40 @@ void Renderer::link_batch(GraphicsBatch& batch) {
   }
 }
 
-void Renderer::add_to_batch(RenderComponent* comp) {
-  auto mesh_id = comp->graphics_state.mesh_id;
-  auto& g_state = comp->graphics_state;
-
-  // TODO: Check if g_state matches any existing batch config.
+void Renderer::add_to_batch(const RenderComponent comp, const ID entity_id) {
+  // TODO: Check if component matches any existing batch config.
   for (auto& batch : graphics_batches) {
-    if (batch.mesh_id == mesh_id) {
-      if (comp->graphics_state.diffuse_texture.used) {
+    if (batch.mesh_id == comp.mesh_id) {
+      if (comp.diffuse_texture.used) {
         for (const auto& item : batch.layer_idxs) {
           const auto id = item.first; // Texture id
-          if (id == g_state.diffuse_texture.id) {
+          if (id == comp.diffuse_texture.id) {
             batch.objects.diffuse_texture_idxs.push_back(batch.layer_idxs[id]);
-            batch.add_graphics_state(comp->graphics_state);
+            batch.add_graphics_state(comp, entity_id);
             return;
           }
         }
 
         /// Expand texture buffer if needed
         if (batch.diffuse_textures_count + 1 > batch.diffuse_textures_capacity) {
-          batch.expand_texture_buffer(&batch.gl_diffuse_texture_array, g_state.diffuse_texture);
+          batch.expand_texture_buffer(&batch.gl_diffuse_texture_array, comp.diffuse_texture);
         }
 
         /// Update the mapping from texture id to layer idx and increment count
-        batch.layer_idxs[g_state.diffuse_texture.id] = batch.diffuse_textures_count++;
-        batch.objects.diffuse_texture_idxs.push_back(batch.layer_idxs[g_state.diffuse_texture.id]);
+        batch.layer_idxs[comp.diffuse_texture.id] = batch.diffuse_textures_count++;
+        batch.objects.diffuse_texture_idxs.push_back(batch.layer_idxs[comp.diffuse_texture.id]);
 
         /// Upload the texture to OpenGL
-        batch.upload(g_state.diffuse_texture, batch.gl_diffuse_texture_unit, batch.gl_diffuse_texture_array);
+        batch.upload(comp.diffuse_texture, batch.gl_diffuse_texture_unit, batch.gl_diffuse_texture_array);
       }
-      batch.add_graphics_state(comp->graphics_state);
+      batch.add_graphics_state(comp, entity_id);
       return;
     }
   }
 
-  GraphicsBatch batch{mesh_id};
-  batch.mesh = MeshManager::mesh_from_id(mesh_id);
-  batch.shading_model = g_state.shading_model;
+  GraphicsBatch batch{comp.mesh_id};
+  batch.mesh = MeshManager::mesh_from_id(comp.mesh_id);
+  batch.shading_model = comp.shading_model;
 
   /// Batch shader prepass (depth pass) shader creation process
   batch.depth_shader = Shader{ Filesystem::base + "shaders/geometry.vert", Filesystem::base + "shaders/geometry.frag" };
@@ -650,8 +639,8 @@ void Renderer::add_to_batch(RenderComponent* comp) {
     break;
   }
 
-  if (g_state.diffuse_texture.used) {
-    switch (g_state.diffuse_texture.gl_texture_target) {
+  if (comp.diffuse_texture.used) {
+    switch (comp.diffuse_texture.gl_texture_target) {
     case GL_TEXTURE_2D_ARRAY:
       batch.depth_shader.add(Shader::Defines::Diffuse2D);
       break;
@@ -665,20 +654,20 @@ void Renderer::add_to_batch(RenderComponent* comp) {
     batch.gl_diffuse_texture_unit = Renderer::get_next_free_texture_unit();
 
     /// Set what type the texture array will hold for the type of texture
-    batch.gl_diffuse_texture_type = g_state.diffuse_texture.gl_texture_target;
+    batch.gl_diffuse_texture_type = comp.diffuse_texture.gl_texture_target;
 
-    batch.init_buffer(&batch.gl_diffuse_texture_array, batch.gl_diffuse_texture_unit, g_state.diffuse_texture);
+    batch.init_buffer(&batch.gl_diffuse_texture_array, batch.gl_diffuse_texture_unit, comp.diffuse_texture);
 
     /// Update the mapping from texture id to layer idx and increment count
-    batch.layer_idxs[g_state.diffuse_texture.id] = batch.diffuse_textures_count++;
-    batch.objects.diffuse_texture_idxs.push_back(batch.layer_idxs[g_state.diffuse_texture.id]);
+    batch.layer_idxs[comp.diffuse_texture.id] = batch.diffuse_textures_count++;
+    batch.objects.diffuse_texture_idxs.push_back(batch.layer_idxs[comp.diffuse_texture.id]);
 
     /// Upload the texture to OpenGL
-    batch.upload(g_state.diffuse_texture, batch.gl_diffuse_texture_unit, batch.gl_diffuse_texture_array);
+    batch.upload(comp.diffuse_texture, batch.gl_diffuse_texture_unit, batch.gl_diffuse_texture_array);
   }
 
-  if (g_state.metallic_roughness_texture.used) {
-    const Texture& texture = g_state.metallic_roughness_texture;
+  if (comp.metallic_roughness_texture.used) {
+    const Texture& texture = comp.metallic_roughness_texture;
     batch.gl_metallic_roughness_texture_unit = Renderer::get_next_free_texture_unit();
     glActiveTexture(GL_TEXTURE0 + batch.gl_metallic_roughness_texture_unit);
     uint32_t gl_metallic_roughness_texture = 0;
@@ -689,8 +678,8 @@ void Renderer::add_to_batch(RenderComponent* comp) {
     glTexImage2D(texture.gl_texture_target, 0, GL_RGB, texture.data.width, texture.data.height, 0, GL_RGB, GL_UNSIGNED_BYTE, texture.data.pixels);
   }
 
-  if (g_state.ambient_occlusion_texture.used) {
-    const Texture& texture = g_state.ambient_occlusion_texture;
+  if (comp.ambient_occlusion_texture.used) {
+    const Texture& texture = comp.ambient_occlusion_texture;
     batch.gl_ambient_occlusion_texture_unit = Renderer::get_next_free_texture_unit();
     glActiveTexture(GL_TEXTURE0 + batch.gl_ambient_occlusion_texture_unit);
     uint32_t gl_ambient_occlusion_texture = 0;
@@ -701,8 +690,8 @@ void Renderer::add_to_batch(RenderComponent* comp) {
     glTexImage2D(texture.gl_texture_target, 0, GL_RGB, texture.data.width, texture.data.height, 0, GL_RGB, GL_UNSIGNED_BYTE, texture.data.pixels);
   }
 
-  if (g_state.emissive_texture.used) {
-    const Texture& texture = g_state.emissive_texture;
+  if (comp.emissive_texture.used) {
+    const Texture& texture = comp.emissive_texture;
     batch.gl_emissive_texture_unit = Renderer::get_next_free_texture_unit();
     glActiveTexture(GL_TEXTURE0 + batch.gl_emissive_texture_unit);
     uint32_t gl_emissive_texture = 0;
@@ -723,6 +712,6 @@ void Renderer::add_to_batch(RenderComponent* comp) {
 
   link_batch(batch);
 
-  batch.add_graphics_state(comp->graphics_state);
+  batch.add_graphics_state(comp, entity_id);
   graphics_batches.push_back(batch);
 }

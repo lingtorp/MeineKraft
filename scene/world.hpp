@@ -24,11 +24,11 @@ class Block: public Entity {
   
   explicit Block(BlockType type = BlockType::AIR): type(type) {
     if (type == BlockType::AIR) { return; }
-    auto render_comp = new RenderComponent(this);
-    render_comp->set_mesh(MeshPrimitive::Cube);
-    render_comp->set_cube_map_texture(textures_for_block(type));
-    render_comp->set_shading_model(ShadingModel::Unlit);
-    attach_component(render_comp);
+    RenderComponent render_comp;
+    render_comp.set_mesh(MeshPrimitive::Cube); // or render_comp.mesh_id = ID(MeshPrimitive::Cube);
+    render_comp.set_cube_map_texture(textures_for_block(type));
+    render_comp.set_shading_model(ShadingModel::Unlit); // or render_comp.shading_model = ShadingModel::Unlit;
+    this->attach_component(render_comp);
   }
   
   static std::vector<std::string> textures_for_block(BlockType type) {
@@ -85,7 +85,9 @@ struct World {
     for (const auto x : X) {
       Block::BlockType block_type = distr(engine) < 0.5 ? Block::BlockType::GRASS : Block::BlockType::DIRT;
       Block* block = new Block(block_type);
-      block->position = Vec3<float>(0, 0, x - 2);
+      // TransformComponent transform;
+      // transform.position = Vec3<float>{ -15.0f + 2.5f * j, -15.0f + 2.5f * i, -5.0f }; 
+      // block->attach_component(transform);
     }
 
     for (size_t i = 0; i < 10; i++) {
@@ -99,12 +101,14 @@ struct World {
         //
 
         Entity* entity = new Entity();
-        entity->position = Vec3<float>{ -15.0f + 2.5f * j, -15.0f + 2.5f * i, -5.0f };
-        RenderComponent* comp = new RenderComponent(entity);
-        comp->set_mesh(MeshPrimitive::Sphere);
-        comp->graphics_state.pbr_scalar_parameters = Vec3<float>(0.1 * i, 0.1, 0.0);
-        comp->set_shading_model(ShadingModel::PhysicallyBasedScalars);
-        entity->attach_component(comp);
+        // TransformComponent transform;
+        // transform.position = Vec3<float>{ -15.0f + 2.5f * j, -15.0f + 2.5f * i, -5.0f }; 
+        // entity->attach_component(transform);
+        RenderComponent render;
+        render.set_mesh(MeshPrimitive::Sphere);
+        render.pbr_scalar_parameters = Vec3<float>(0.1 * i, 0.1, 0.0);
+        render.set_shading_model(ShadingModel::PhysicallyBasedScalars);
+        entity->attach_component(render);
       }
     }
   }
