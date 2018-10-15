@@ -4,6 +4,8 @@
 #include <map>
 #include <cstring>
 
+#include "rendercomponent.h"
+#include "../nodes/transform.h"
 #include "primitives.h"
 #include "shader.h"
 #include "debug_opengl.h"
@@ -60,17 +62,6 @@ public:
       GL_RGB,                // format
       GL_UNSIGNED_BYTE,      // type
       texture.data.pixels);  // pointer to data
-  }
-
-  void add_graphics_state(const RenderComponent& comp, const ID entity_id) {
-    entity_ids.push_back(entity_id);
-    objects.diffuse_textures.push_back(comp.diffuse_texture);
-    objects.emissive_textures.push_back(comp.emissive_texture);
-    objects.metallic_roughness_textures.push_back(comp.metallic_roughness_texture);
-    objects.ambient_occlusion_textures.push_back(comp.ambient_occlusion_texture);
-    objects.pbr_scalar_parameters.push_back(comp.pbr_scalar_parameters);
-    objects.shading_models.push_back(comp.shading_model);
-    num_objects++;
   }
 
   ID mesh_id; 

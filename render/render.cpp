@@ -452,9 +452,9 @@ void Renderer::render(uint32_t delta) {
 
       glBindVertexArray(batch.gl_depth_vao);
       
-      glDrawElementsInstanced(GL_TRIANGLES, batch.mesh.indices.size(), GL_UNSIGNED_INT, nullptr, model_buffer.size());
+      glDrawElementsInstanced(GL_TRIANGLES, batch.mesh.indices.size(), GL_UNSIGNED_INT, nullptr, batch.objects.transforms.size());
       
-      state.entities += model_buffer.size();
+      state.entities += batch.objects.transforms.size();
     }
   }
   pass_ended();
@@ -585,7 +585,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
   }
 }
 
-void Renderer::add_to_batch(const RenderComponent comp, const ID entity_id) {
+void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
   // TODO: Check if component matches any existing batch config.
   for (auto& batch : graphics_batches) {
     if (batch.mesh_id == comp.mesh_id) {
@@ -594,7 +594,7 @@ void Renderer::add_to_batch(const RenderComponent comp, const ID entity_id) {
           const auto id = item.first; // Texture id
           if (id == comp.diffuse_texture.id) {
             batch.objects.diffuse_texture_idxs.push_back(batch.layer_idxs[id]);
-            batch.add_graphics_state(comp, entity_id);
+            add_graphics_state(batch, comp, entity_id);
             return;
           }
         }
@@ -611,7 +611,7 @@ void Renderer::add_to_batch(const RenderComponent comp, const ID entity_id) {
         /// Upload the texture to OpenGL
         batch.upload(comp.diffuse_texture, batch.gl_diffuse_texture_unit, batch.gl_diffuse_texture_array);
       }
-      batch.add_graphics_state(comp, entity_id);
+      add_graphics_state(batch, comp, entity_id);
       return;
     }
   }
@@ -709,6 +709,21 @@ void Renderer::add_to_batch(const RenderComponent comp, const ID entity_id) {
 
   link_batch(batch);
 
-  batch.add_graphics_state(comp, entity_id);
+  add_graphics_state(batch, comp, entity_id);
   graphics_batches.push_back(batch);
+}
+
+void Renderer::remove_component(ID entity_id) {
+  // TODO: Implement
+}
+
+void Renderer::add_graphics_state(GraphicsBatch& batch, const RenderComponent& comp, ID entity_id) {
+  batch.entity_ids.push_back(entity_id);
+  batch.objects.diffuse_textures.push_back(comp.diffuse_texture);
+  batch.objects.emissive_textures.push_back(comp.emissive_texture);
+  batch.objects.metallic_roughness_textures.push_back(comp.metallic_roughness_texture);
+  batch.objects.ambient_occlusion_textures.push_back(comp.ambient_occlusion_texture);
+  batch.objects.pbr_scalar_parameters.push_back(comp.pbr_scalar_parameters);
+  batch.objects.shading_models.push_back(comp.shading_model);
+  batch.num_objects++;
 }

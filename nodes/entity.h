@@ -4,8 +4,7 @@
 #include <algorithm>
 #include "../render/rendercomponent.h"
 #include "../render/render.h"
-
-struct Camera;
+#include "transform.h"
 
 // Mapping: Entity ID <--> Alive?
 struct EntitySystem {
@@ -29,8 +28,12 @@ public:
     return e_id++;
   };
 
+  /// Lookup if the Entity is alive
+  bool lookup(ID entity) {
+
+  }
+
   // Map entity ID to the right bitflag
-  // lookup ... alive??
   void destroy_entity(const ID& id) {
     // TODO: Implement by removing all the components owned by the Entity (again this is mainly a convenicence thing)
   }
@@ -47,35 +50,20 @@ struct Entity {
 
     /** Component handling for convenience **/
     void attach_component(const RenderComponent component) {
-        Renderer::instance().add_to_batch(component, id);
+      Renderer::instance().add_component(component, id);
+    }
+
+    void attach_component(const TransformComponent component) {
+      TransformSystem::instance().add_component(component, id);
     }
 
     void deattach_component(const RenderComponent component) {
-        // TODO: Example: Renderer::instance().remove_from_batch(id);
+      Renderer::instance().remove_component(id);
     }
-};
 
-struct Transform {
-  Vec3f position;
-  float scale;
-  bool dirty_bit; // ?
-};
-
-struct TransformSystem {
-private:
-  std::vector<Transform> entities;
-  std::vector<ID> lut;
-public:
-
-  void add_entity(ID id) {
-    // TODO: Implement
-  }
-
-  // Computes the transform of all the dirt Entities
-  void update() {
-    // Compute from dirty bit flag
-    // Clear dirty flags
-  }
+    void deattach_component(const TransformComponent component) {
+      TransformSystem::instance().remove_component(id);
+    }
 };
 
 #endif // MEINEKRAFT_ENTITY_H

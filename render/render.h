@@ -41,7 +41,9 @@ public:
   void render(uint32_t delta);
   
   /// Adds the data of a RenderComponent to a internal batch
-  void add_to_batch(const RenderComponent comp, const ID entity_id);
+  void add_component(const RenderComponent comp, const ID entity_id);
+
+  void remove_component(ID entity_id);
 
   /// Updates all the shaders projection matrices in order to support resizing of the window
   void update_projection_matrix(const float fov);
@@ -60,6 +62,8 @@ public:
 private:
   Renderer();
   std::vector<GraphicsBatch> graphics_batches;
+  void add_graphics_state(GraphicsBatch& batch, const RenderComponent& comp, ID entity_id);
+  // LUT mapping from Entity id to the right batch and then component inside of it
   void link_batch(GraphicsBatch& batch);
   
   /// Geometry pass related
