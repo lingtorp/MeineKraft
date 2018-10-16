@@ -310,9 +310,4 @@ struct RenderState {
   uint64_t graphic_batches;
 };
 
-using Vec2f = Vec2<float>;
-using Vec3f = Vec3<float>;
-using Vec4f = Vec4<float>;
-using Mat4f = Mat4<float>;
-
 #endif // MEINEKRAFT_PRIMITIVES_H
