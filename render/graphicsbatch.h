@@ -78,10 +78,10 @@ public:
   };
   std::unordered_map<ID, ID> data_idx;                // Entity ID to data position in data (objects struct)
   std::vector<ID> entity_ids;
-  GraphicStateObjects objects{}; // Objects in the batch share the same values
+  GraphicStateObjects objects{};                      // Objects in the batch share the same values
   
   /// Textures
-  std::map<ID, uint32_t> layer_idxs; // Texture ID to layer index mapping for all texture in batch
+  std::map<ID, uint32_t> layer_idxs;  // Texture ID to layer index mapping for all texture in batch
 
   /// Diffuse texture buffer
   uint32_t diffuse_textures_count;    // # texture currently in the GL buffer

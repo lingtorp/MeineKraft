@@ -421,7 +421,11 @@ Renderer::Renderer(): graphics_batches{} {
 
 void Renderer::render(uint32_t delta) {
   /// Reset render stats
-  state = RenderState();
+  state = RenderState(state);
+  state.frame++;
+
+  /// Culls objects in all batches
+  // cull_objects();
 
   /// Renderer caches the transforms of components thus we need to fetch the ones who changed during the last frame 
   update_transforms(); 

@@ -245,7 +245,7 @@ public:
     }
 
     /// Scales the matrix the same over all axis except w
-    inline Mat4<T> scale(T scale) const {
+    inline Mat4<T> scale(const T scale) const {
         Mat4<T> matrix;
         matrix[0] = {scale, 0.0f, 0.0f, 0.0f};
         matrix[1] = {0.0f, scale, 0.0f, 0.0f};
@@ -281,7 +281,7 @@ public:
 
     /************ Operators ************/
     /// Standard matrix multiplication row-column wise; *this * mat
-    inline Mat4<T> operator*(Mat4<T> &mat) const {
+    inline Mat4<T> operator*(Mat4<T>& mat) const {
         Mat4<T> matrix;
         for (int i = 0; i < 4; ++i) {
             auto row = rows[i];

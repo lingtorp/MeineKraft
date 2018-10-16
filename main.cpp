@@ -56,7 +56,6 @@ int main() {
   Skybox skybox;
   
   Model model{ Filesystem::home + "Desktop/", "DamagedHelmet.gltf" };
-  // model.scale = 1.0;
 
   bool toggle_mouse_capture = true;
   bool DONE = false;
@@ -163,6 +162,7 @@ int main() {
       auto io = ImGui::GetIO();
 
       ImGui::Begin("Renderer state");
+      ImGui::Text("Frame: %llu", renderer.state.frame);
       ImGui::Text("Graphics batches: %llu", renderer.state.graphic_batches);
       ImGui::Text("Entities: %llu", renderer.state.entities);
       ImGui::Text("Application average %lld ms / frame (%.1f FPS)", delta, io.Framerate);

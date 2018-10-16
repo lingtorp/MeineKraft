@@ -55,7 +55,7 @@ public:
     data_idxs[id] = data.size() - 1;
   }
 
-  void remove_component(ID id) {}
+  void remove_component(const ID id) {}
 };
 
 #endif // MEINEKRAFT_TRANSFORM_H
