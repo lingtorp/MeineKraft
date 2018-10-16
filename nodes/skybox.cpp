@@ -5,9 +5,9 @@
 #include "../render/render.h"
 
 Skybox::Skybox(): Entity() {
-  // Transform transform;
-  // transform.scale = 50.0;
-  // attach_component(transform);
+  TransformComponent transform;
+  transform.scale = 50.0;
+  attach_component(transform);
   RenderComponent render;
   render.set_mesh(MeshPrimitive::Cube);
   std::vector<std::string> faces = {Filesystem::base + std::string("resources/environmentmaps/garden/negx.bmp"),
