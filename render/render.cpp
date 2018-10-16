@@ -718,7 +718,7 @@ void Renderer::remove_component(ID entity_id) {
 
 void Renderer::add_graphics_state(GraphicsBatch& batch, const RenderComponent& comp, ID entity_id) {
   batch.entity_ids.push_back(entity_id);
-  batch.objects.transforms.push_back(Transform());
+  batch.objects.transforms.push_back(TransformSystem::instance().lookup(entity_id));
   batch.objects.diffuse_textures.push_back(comp.diffuse_texture);
   batch.objects.emissive_textures.push_back(comp.emissive_texture);
   batch.objects.metallic_roughness_textures.push_back(comp.metallic_roughness_texture);
