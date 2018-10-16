@@ -5,12 +5,12 @@
 
 struct RenderComponent {
   ShadingModel shading_model = ShadingModel::Unlit;
-  ID mesh_id; // TODO: Seperate this from the GState 
+  ID mesh_id; 
   Texture diffuse_texture;
   Texture metallic_roughness_texture; // Used by ShadingModel::PBRTextured
   Texture ambient_occlusion_texture;
   Texture emissive_texture;
-  Vec3<float> pbr_scalar_parameters;  // Used by ShadingModel::PBRScalars
+  Vec3f pbr_scalar_parameters;        // Used by ShadingModel::PBRScalars
 
   /// Sets the mesh for the RenderComponent from the .obj file in directory_file
   void set_mesh(const std::string& directory, const std::string& file);

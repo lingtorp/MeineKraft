@@ -423,6 +423,9 @@ void Renderer::render(uint32_t delta) {
   /// Reset render stats
   state = RenderState();
 
+  /// Renderer caches the transforms of components thus we need to fetch the ones who changed during the last frame 
+  // update_transforms(); 
+
   glm::mat4 camera_transform = camera->transform(); 
 
   /// Geometry pass
