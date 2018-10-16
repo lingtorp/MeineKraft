@@ -30,10 +30,8 @@ struct Shader {
   std::string vertex_filepath;
   std::string fragment_filepath;
   uint32_t gl_program;
-#ifdef DEBUG
   std::string vertex_shader_src;
   std::string fragment_shader_src;
-#endif
 
 private:
   uint32_t gl_vertex_shader;
