@@ -6,6 +6,34 @@
 #include "transform.h"
 #include "../render/render.h"
 
+#include <functional>
+struct ActionComponent {
+  std::function<void(uint64_t, uint64_t)> action;
+  ActionComponent(const std::function<void(uint64_t, uint64_t)>& action): action(action) {}
+};
+
+struct ActionSystem {
+  ActionSystem() {}
+  ~ActionSystem() {}
+  /// Singleton instance
+  static ActionSystem& instance() {
+    static ActionSystem instance;
+    return instance;
+  }
+
+  std::vector<ActionComponent> components;
+
+  void add_component(const ActionComponent& component) {
+    components.emplace_back(component);
+  }
+
+  void execute_actions(const uint64_t frame, const uint64_t dt) {
+    for (const auto& component : components) {
+      component.action(frame, dt);
+    }
+  }
+};
+
 // Mapping: Entity ID <--> Alive?
 struct EntitySystem {
 private:
@@ -55,6 +83,10 @@ struct Entity {
 
     void attach_component(const TransformComponent component) {
       TransformSystem::instance().add_component(component, id);
+    }
+
+    void attach_component(const ActionComponent component) {
+      ActionSystem::instance().add_component(component);
     }
 
     void deattach_component(const RenderComponent component) {

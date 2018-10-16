@@ -148,6 +148,12 @@ int main() {
     }
     renderer.camera->position = renderer.camera->update(delta);
 
+    /// Run all actions
+    ActionSystem::instance().execute_actions(renderer.state.frame, delta);
+
+    /// Let the game do its thing
+    world.tick();
+
     /// Render the world
     renderer.render(delta);
 

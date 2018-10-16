@@ -424,7 +424,7 @@ void Renderer::render(uint32_t delta) {
   state = RenderState();
 
   /// Renderer caches the transforms of components thus we need to fetch the ones who changed during the last frame 
-  // update_transforms(); 
+  update_transforms(); 
 
   glm::mat4 camera_transform = camera->transform(); 
 
@@ -721,6 +721,7 @@ void Renderer::remove_component(ID entity_id) {
 
 void Renderer::add_graphics_state(GraphicsBatch& batch, const RenderComponent& comp, ID entity_id) {
   batch.entity_ids.push_back(entity_id);
+  batch.data_idx[entity_id] = batch.entity_ids.size() - 1;
   batch.objects.transforms.push_back(TransformSystem::instance().lookup(entity_id));
   batch.objects.diffuse_textures.push_back(comp.diffuse_texture);
   batch.objects.emissive_textures.push_back(comp.emissive_texture);
@@ -728,4 +729,13 @@ void Renderer::add_graphics_state(GraphicsBatch& batch, const RenderComponent& c
   batch.objects.ambient_occlusion_textures.push_back(comp.ambient_occlusion_texture);
   batch.objects.pbr_scalar_parameters.push_back(comp.pbr_scalar_parameters);
   batch.objects.shading_models.push_back(comp.shading_model);
+}
+
+void Renderer::update_transforms() {
+  for (auto& batch : graphics_batches) {
+    std::vector<ID> t_ids = TransformSystem::instance().get_dirty_transforms_from(batch.entity_ids);
+    for (const auto& t_id : t_ids) {
+      batch.objects.transforms[batch.data_idx[t_id]] = TransformSystem::instance().lookup(t_id);
+    }
+  }
 }

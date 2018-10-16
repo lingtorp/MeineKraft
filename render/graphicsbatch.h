@@ -76,6 +76,7 @@ public:
     std::vector<Texture> emissive_textures;
     std::vector<Vec3f> pbr_scalar_parameters;         // Used by ShadingModel::PBRScalars
   };
+  std::unordered_map<ID, ID> data_idx;                // Entity ID to data position in data (objects struct)
   std::vector<ID> entity_ids;
   GraphicStateObjects objects{}; // Objects in the batch share the same values
   

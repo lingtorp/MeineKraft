@@ -63,6 +63,7 @@ private:
   Renderer();
   std::vector<GraphicsBatch> graphics_batches;
   void add_graphics_state(GraphicsBatch& batch, const RenderComponent& comp, ID entity_id);
+  void update_transforms();
   // LUT mapping from Entity id to the right batch and then component inside of it
   void link_batch(GraphicsBatch& batch);
   

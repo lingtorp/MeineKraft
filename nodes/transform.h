@@ -23,6 +23,7 @@ struct TransformSystem {
 private:
   std::vector<Transform> data;
   std::unordered_map<ID, ID> data_idxs;
+  size_t dirty_index = 0;
 public:
   /// Singleton instance of TransformSystem
   static TransformSystem& instance() {
@@ -30,12 +31,27 @@ public:
     return instance;
   }
 
-  Transform lookup(const ID id) {
-    return data[data_idxs[id]];
+  std::vector<ID> get_dirty_transforms_from(const std::vector<ID>& ids) const {
+    std::vector<ID> dirty_ids;
+    for (const auto& id : ids) {
+      if (data_idxs.find(id) == data_idxs.cend()) { continue; }
+      if (data_idxs.at(id) >= dirty_index) {
+        dirty_ids.emplace_back(id);
+      }
+    }
+    return dirty_ids;
   }
 
-  void add_component(TransformComponent component, ID id) {
-    data.push_back(compute_transform(component));
+  Transform lookup(const ID id) {
+    return data[data_idxs[id]]; // FIXME: Bad behaviour or nice?
+  }
+
+  void set_transform(const Transform& transform, const ID id) {
+    data[data_idxs[id]] = transform;
+  }
+
+  void add_component(const TransformComponent& component, const ID id) {
+    data.emplace_back(compute_transform(component));
     data_idxs[id] = data.size() - 1;
   }
 

@@ -224,8 +224,18 @@ public:
         rows[3] = Vec4<T>{0.0f, 0.0f, 0.0f, 1.0f};
     }
 
+    /// Translation - positions the matrix projection in space ...
+    inline Mat4<T> set_translation(const Vec3<T>& vec) const {
+      Mat4<T> matrix;
+      matrix[0] = { 1.0f, 0.0f, 0.0f, vec.x };
+      matrix[1] = { 0.0f, 1.0f, 0.0f, vec.y };
+      matrix[2] = { 0.0f, 0.0f, 1.0f, vec.z };
+      matrix[3] = { 0.0f, 0.0f, 0.0f, 1.0f };
+      return matrix;
+    }
+
     /// Translation - moves the matrix projection in space ...
-    inline Mat4<T> translate(Vec3<T> vec) const {
+    inline Mat4<T> translate(const Vec3<T>& vec) const {
         Mat4<T> matrix;
         matrix[0] = {1.0f, 0.0f, 0.0f, vec.x};
         matrix[1] = {0.0f, 1.0f, 0.0f, vec.y};

@@ -99,8 +99,15 @@ public:
         RenderComponent render;
         render.set_mesh(MeshPrimitive::Sphere);
         render.pbr_scalar_parameters = Vec3f(0.1 * i, 0.1, 0.0);
-        render.set_shading_model(ShadingModel::PhysicallyBasedScalars);
+        distr(engine) < 0.5 ? render.set_shading_model(ShadingModel::PhysicallyBasedScalars) : render.set_shading_model(ShadingModel::Unlit);
         entity->attach_component(render);
+        ActionComponent action([=](uint64_t frame, uint64_t dt) {
+          Transform t = TransformSystem::instance().lookup(entity->id);
+          Vec3f position(transform.position.x, transform.position.y, 15.0f * std::cos(glm::radians(float(frame * 0.15f))));
+          t.matrix = t.matrix.transpose().set_translation(position).transpose(); // FIXME: Obvious reasons.
+          TransformSystem::instance().set_transform(t, entity->id);
+        });
+        entity->attach_component(action);
       }
     }
   }
