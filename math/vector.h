@@ -309,14 +309,6 @@ public:
         return matrix;
     }
 
-    // TODO: Refactor into Mat3<> ...
-    /// A * v, where v = (rhs, 1.0), v is a Vec4 with w set to 1.0
-    inline Vec3<T> operator*(Vec3<T> rhs) const {
-        auto vec = Vec4<T>{rhs.x, rhs.y, rhs.z, 1.0};
-        auto result = *this * vec;
-        return Vec3<T>{result.x, result.y, result.z};
-    }
-
     /// A * v = b
     inline Vec4<T> operator*(Vec4<T> rhs) const {
         Vec4<T> result;
