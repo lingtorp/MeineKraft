@@ -16,7 +16,7 @@ struct TransformComponent {
 };
 
 static Transform compute_transform(const TransformComponent& comp) {
-  return Transform(Mat4f().translate(comp.position).scale(comp.scale).transpose());
+  return Transform(Mat4f().translate(comp.position).scale(comp.scale));
 }
 
 struct TransformSystem {

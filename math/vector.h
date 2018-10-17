@@ -242,21 +242,21 @@ public:
 
     /// Translation - positions the matrix projection in space ...
     inline Mat4<T> set_translation(const Vec3<T>& vec) const {
-      Mat4<T> matrix;
-      matrix[0] = { 1.0f, 0.0f, 0.0f, vec.x };
-      matrix[1] = { 0.0f, 1.0f, 0.0f, vec.y };
-      matrix[2] = { 0.0f, 0.0f, 1.0f, vec.z };
-      matrix[3] = { 0.0f, 0.0f, 0.0f, 1.0f };
-      return matrix;
+        Mat4<T> matrix;
+        matrix[0] = { 1.0f, 0.0f, 0.0f, 0.0f };
+        matrix[1] = { 0.0f, 1.0f, 0.0f, 0.0f };
+        matrix[2] = { 0.0f, 0.0f, 1.0f, 0.0f };
+        matrix[3] = { vec.x, vec.y, vec.z, 1.0f };
+        return matrix;
     }
 
     /// Translation - moves the matrix projection in space ...
     inline Mat4<T> translate(const Vec3<T>& vec) const {
         Mat4<T> matrix;
-        matrix[0] = {1.0f, 0.0f, 0.0f, vec.x};
-        matrix[1] = {0.0f, 1.0f, 0.0f, vec.y};
-        matrix[2] = {0.0f, 0.0f, 1.0f, vec.z};
-        matrix[3] = {0.0f, 0.0f, 0.0f, 1.0f};
+        matrix[0] = { 1.0f, 0.0f, 0.0f, 0.0f };
+        matrix[1] = { 0.0f, 1.0f, 0.0f, 0.0f };
+        matrix[2] = { 0.0f, 0.0f, 1.0f, 0.0f };
+        matrix[3] = { vec.x, vec.y, vec.z, 1.0f };
         return *this * matrix;
     }
 
@@ -297,11 +297,11 @@ public:
 
     /************ Operators ************/
     /// Standard matrix multiplication row-column wise; *this * mat
-    inline Mat4<T> operator*(Mat4<T>& mat) const {
+    inline Mat4<T> operator*(const Mat4<T>& mat) const {
         Mat4<T> matrix;
-        for (int i = 0; i < 4; ++i) {
-            auto row = rows[i];
-            for (int j = 0; j < 4; ++j) {
+        for (uint8_t i = 0; i < 4; ++i) {
+            const auto row = rows[i];
+            for (uint8_t j = 0; j < 4; ++j) {
                 const Vec4<T> column = Vec4<T>{mat[0][j], mat[1][j], mat[2][j], mat[3][j]};
                 matrix.rows[i][j] = row[0]*column[0] + row[1]*column[1] + row[2]*column[2] + row[3]*column[3];
             }

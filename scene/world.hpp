@@ -104,7 +104,7 @@ public:
         ActionComponent action([=](uint64_t frame, uint64_t dt) {
           Transform t = TransformSystem::instance().lookup(entity->id);
           Vec3f position(transform.position.x, transform.position.y, 15.0f * std::cos(glm::radians(float(frame * 0.15f))));
-          t.matrix = t.matrix.transpose().set_translation(position).transpose(); // FIXME: Obvious reasons.
+          t.matrix = t.matrix.set_translation(position); 
           TransformSystem::instance().set_transform(t, entity->id);
         });
         entity->attach_component(action);
