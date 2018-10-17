@@ -43,6 +43,22 @@ struct Vec4 {
                 return x;
         }
     }
+
+    /// Returns the members x, y, z, w in index order (invalid indexes returns w)
+    const T& operator[] (const int index) const {
+      switch (index) { // Should be a jump table when optimised
+      case 0:
+        return x;
+      case 1:
+        return y;
+      case 2:
+        return z;
+      case 3:
+        return w;
+      default:
+        return x;
+      }
+    }
   
     void operator=(const Vec3<T>& rhs) {
       x = rhs.x; y = rhs.y; z = rhs.z; w = 0.0f;
@@ -286,7 +302,7 @@ public:
         for (int i = 0; i < 4; ++i) {
             auto row = rows[i];
             for (int j = 0; j < 4; ++j) {
-                Vec4<T> column = Vec4<T>{mat[0][j], mat[1][j], mat[2][j], mat[3][j]};
+                const Vec4<T> column = Vec4<T>{mat[0][j], mat[1][j], mat[2][j], mat[3][j]};
                 matrix.rows[i][j] = row[0]*column[0] + row[1]*column[1] + row[2]*column[2] + row[3]*column[3];
             }
         }
@@ -311,7 +327,8 @@ public:
     }
 
     /// matrix[row_i][colum_j]
-    inline Vec4<T> &operator[](const int index) { return rows[index]; }
+    inline Vec4<T>& operator[](const int index) { return rows[index]; }
+    inline const Vec4<T>& operator[](const int index) const { return rows[index]; }
 
     friend std::ostream &operator<<(std::ostream& os, const Mat4 &mat) {
         return os << "\n { \n" << mat.rows[0] << "), \n" << mat.rows[1] << "), \n" << mat.rows[2] << "), \n" << mat.rows[3] << ")\n }";
