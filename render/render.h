@@ -10,7 +10,6 @@
 
 #include "texture.h"
 #include "light.h"
-#include "transform.h"
 #include "shader.h"
 
 #ifdef _WIN32
@@ -22,10 +21,10 @@
 #include <glm/mat4x4.hpp>
 
 struct Camera;
-class RenderComponent;
-class GraphicsBatch;
+struct RenderComponent;
+struct GraphicsBatch;
 struct Shader;
-class RenderPass;
+struct RenderPass;
 
 class Renderer {
 public:
@@ -41,8 +40,10 @@ public:
   /// Main render function, renders all the graphics batches
   void render(uint32_t delta);
   
-  /// Adds the RenderComponent to a internal batch
-  uint64_t add_to_batch(RenderComponent* comp);
+  /// Adds the data of a RenderComponent to a internal batch
+  void add_component(const RenderComponent comp, const ID entity_id);
+
+  void remove_component(ID entity_id);
 
   /// Updates all the shaders projection matrices in order to support resizing of the window
   void update_projection_matrix(const float fov);
@@ -57,10 +58,12 @@ public:
   glm::mat4 projection_matrix; 
   float screen_width;
   float screen_height;
-
+  
 private:
   Renderer();
   std::vector<GraphicsBatch> graphics_batches;
+  void add_graphics_state(GraphicsBatch& batch, const RenderComponent& comp, ID entity_id);
+  void update_transforms();
   void link_batch(GraphicsBatch& batch);
   
   /// Geometry pass related

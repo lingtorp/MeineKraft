@@ -3,40 +3,98 @@
 
 #include <algorithm>
 #include "../render/rendercomponent.h"
+#include "transform.h"
+#include "../render/render.h"
 
-struct Camera;
+#include <functional>
+struct ActionComponent {
+  std::function<void(uint64_t, uint64_t)> action;
+  ActionComponent(const std::function<void(uint64_t, uint64_t)>& action): action(action) {}
+};
 
-class Entity {
+struct ActionSystem {
+  ActionSystem() {}
+  ~ActionSystem() {}
+  /// Singleton instance
+  static ActionSystem& instance() {
+    static ActionSystem instance;
+    return instance;
+  }
+
+  std::vector<ActionComponent> components;
+
+  void add_component(const ActionComponent& component) {
+    components.emplace_back(component);
+  }
+
+  void execute_actions(const uint64_t frame, const uint64_t dt) {
+    for (const auto& component : components) {
+      component.action(frame, dt);
+    }
+  }
+};
+
+// Mapping: Entity ID <--> Alive?
+struct EntitySystem {
 private:
-    std::vector<Component*> components;
-
-    /// Generates a new Entity id to be used when identifying this instance of Entity
-    ID generate_entity_id() const {
-        static uint64_t e_id = 0;
-        return e_id++;
-    };
+  std::vector<ID> entities;
+  std::unordered_map<ID, ID> lut;
 
 public:
-    ID entity_id;
-    Vec3<float> position;
-    float scale;
+  EntitySystem() {}
+  ~EntitySystem() {}
+  /// Singleton instance
+  static EntitySystem& instance() {
+    static EntitySystem instance;
+    return instance;
+  }
+  
+  /// Generates a new Entity id to be used when identifying this instance of Entity
+  ID new_entity() const {
+    // TODO: Implement something for real
+    static uint64_t e_id = 0;
+    return e_id++;
+  };
 
-    Entity(): entity_id(generate_entity_id()), position{}, scale(1.0f) {}
+  /// Lookup if the Entity is alive
+  bool lookup(ID entity) const {
+
+  }
+
+  // Map entity ID to the right bitflag
+  void destroy_entity(const ID& id) {
+    // TODO: Implement by removing all the components owned by the Entity (again this is mainly a convenicence thing)
+  }
+};
+
+/// Game object 
+struct Entity {
+    ID id;
+
+    Entity(): id(EntitySystem::instance().new_entity()) {}
     ~Entity() {
-      for (auto& comp : components) { comp->did_deattach_from_entity(this); }
+      EntitySystem::instance().destroy_entity(id);
     }
 
-    virtual void update(const uint64_t delta, const Camera& camera) {};
-
-    /** Component handling **/
-    void attach_component(Component* comp) {
-        comp->did_attach_to_entity(this);
-        components.push_back(comp);
+    /** Component handling for convenience **/
+    void attach_component(const RenderComponent component) {
+      Renderer::instance().add_component(component, id);
     }
 
-    void deattach_component(Component* comp) {
-        comp->did_deattach_from_entity(this);
-        components.erase(std::remove(components.begin(), components.end(), comp), components.end());
+    void attach_component(const TransformComponent component) {
+      TransformSystem::instance().add_component(component, id);
+    }
+
+    void attach_component(const ActionComponent component) {
+      ActionSystem::instance().add_component(component);
+    }
+
+    void deattach_component(const RenderComponent component) {
+      Renderer::instance().remove_component(id);
+    }
+
+    void deattach_component(const TransformComponent component) {
+      TransformSystem::instance().remove_component(id);
     }
 };
 

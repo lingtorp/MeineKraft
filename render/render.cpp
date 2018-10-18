@@ -235,7 +235,6 @@ void Renderer::load_environment_map(const std::vector<std::string>& faces) {
   texture.data = Texture::load_textures(resource);
   if (texture.data.pixels) {
     texture.gl_texture_target = GL_TEXTURE_CUBE_MAP_ARRAY;
-    texture.used = true;
     texture.id = resource.to_hash();
 
     gl_environment_map_texture_unit = Renderer::get_next_free_texture_unit();
@@ -247,10 +246,10 @@ void Renderer::load_environment_map(const std::vector<std::string>& faces) {
     glTexParameteri(texture.gl_texture_target, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexStorage3D(texture.gl_texture_target, 1, GL_RGB8, texture.data.width, texture.data.height, texture.data.faces);
     glTexSubImage3D(texture.gl_texture_target, 0, 0, 0, 0, texture.data.width, texture.data.height, texture.data.faces, GL_RGB, GL_UNSIGNED_BYTE, texture.data.pixels);
+    environment_map = texture;
   } else {
     Log::warn("Could not load environment map");
   }
-  environment_map = texture;
 }
 
 Renderer::~Renderer() = default;
@@ -422,7 +421,14 @@ Renderer::Renderer(): graphics_batches{} {
 
 void Renderer::render(uint32_t delta) {
   /// Reset render stats
-  state = RenderState();
+  state = RenderState(state);
+  state.frame++;
+
+  /// Culls objects in all batches
+  // cull_objects();
+
+  /// Renderer caches the transforms of components thus we need to fetch the ones who changed during the last frame 
+  update_transforms(); 
 
   glm::mat4 camera_transform = camera->transform(); 
 
@@ -437,41 +443,24 @@ void Renderer::render(uint32_t delta) {
       glUseProgram(program);
       glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(camera_transform));
       glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, glm::value_ptr(projection_matrix));
-
-      std::vector<Mat4<float>> model_buffer{};
-      std::vector<uint32_t> diffuse_textures_idx{};
-      std::vector<ShadingModel> shading_models{};
-      std::vector<Vec3<float>> pbr_scalar_parameters{};
-      for (const auto& component : batch.components) {
-        component->update(); // Copy all graphics state
-        
-        Mat4<float> model{};
-        model = model.translate(component->graphics_state.position);
-        model = model.scale(component->graphics_state.scale);
-        model_buffer.push_back(model.transpose());
-        
-        diffuse_textures_idx.push_back(component->graphics_state.diffuse_texture.layer_idx);
-        shading_models.push_back(component->graphics_state.shading_model);
-        pbr_scalar_parameters.push_back(component->graphics_state.pbr_scalar_parameters);
-      }
       
       glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_models_buffer_object);
-      glBufferData(GL_ARRAY_BUFFER, model_buffer.size() * sizeof(Mat4<float>), model_buffer.data(), GL_DYNAMIC_DRAW);
+      glBufferData(GL_ARRAY_BUFFER, batch.objects.transforms.size() * sizeof(Mat4<float>), batch.objects.transforms.data(), GL_DYNAMIC_DRAW);
       
       glBindBuffer(GL_ARRAY_BUFFER, batch.gl_diffuse_textures_layer_idx);
-      glBufferData(GL_ARRAY_BUFFER, diffuse_textures_idx.size() * sizeof(uint32_t), diffuse_textures_idx.data(), GL_DYNAMIC_DRAW);
+      glBufferData(GL_ARRAY_BUFFER, batch.objects.diffuse_texture_idxs.size() * sizeof(uint32_t), batch.objects.diffuse_texture_idxs.data(), GL_DYNAMIC_DRAW);
 
       glBindBuffer(GL_ARRAY_BUFFER, batch.gl_shading_model_buffer_object);
-      glBufferData(GL_ARRAY_BUFFER, shading_models.size() * sizeof(ShadingModel), shading_models.data(), GL_DYNAMIC_DRAW);
+      glBufferData(GL_ARRAY_BUFFER, batch.objects.shading_models.size() * sizeof(ShadingModel), batch.objects.shading_models.data(), GL_DYNAMIC_DRAW);
 
       glBindBuffer(GL_ARRAY_BUFFER, batch.gl_pbr_scalar_buffer_object);
-      glBufferData(GL_ARRAY_BUFFER, pbr_scalar_parameters.size() * sizeof(Vec3<float>), pbr_scalar_parameters.data(), GL_DYNAMIC_DRAW);
+      glBufferData(GL_ARRAY_BUFFER, batch.objects.pbr_scalar_parameters.size() * sizeof(Vec3<float>), batch.objects.pbr_scalar_parameters.data(), GL_DYNAMIC_DRAW);
 
       glBindVertexArray(batch.gl_depth_vao);
       
-      glDrawElementsInstanced(GL_TRIANGLES, batch.mesh.indices.size(), GL_UNSIGNED_INT, nullptr, model_buffer.size());
+      glDrawElementsInstanced(GL_TRIANGLES, batch.mesh.indices.size(), GL_UNSIGNED_INT, nullptr, batch.objects.transforms.size());
       
-      state.entities += model_buffer.size();
+      state.entities += batch.objects.transforms.size();
     }
   }
   pass_ended();
@@ -602,53 +591,46 @@ void Renderer::link_batch(GraphicsBatch& batch) {
   }
 }
 
-uint64_t Renderer::add_to_batch(RenderComponent* comp) {
-  auto mesh_id = comp->graphics_state.mesh_id;
-  auto& g_state = comp->graphics_state;
-
-  // TODO: Check if g_state/comp matches any existing batch config.
+void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
+  // TODO: Check if component matches any existing batch config.
   for (auto& batch : graphics_batches) {
-    if (batch.mesh_id == mesh_id) {
-      batch.components.push_back(comp);
-
-      if (comp->graphics_state.diffuse_texture.used) {
+    if (batch.mesh_id == comp.mesh_id) {
+      if (comp.diffuse_texture.data.pixels) {
         for (const auto& item : batch.layer_idxs) {
           const auto id = item.first; // Texture id
-          if (id == g_state.diffuse_texture.id) {
-            g_state.diffuse_texture.layer_idx = batch.layer_idxs[id];
-            return batch.id;
+          if (id == comp.diffuse_texture.id) {
+            batch.objects.diffuse_texture_idxs.push_back(batch.layer_idxs[id]);
+            add_graphics_state(batch, comp, entity_id);
+            return;
           }
         }
 
         /// Expand texture buffer if needed
         if (batch.diffuse_textures_count + 1 > batch.diffuse_textures_capacity) {
-          batch.expand_texture_buffer(&batch.gl_diffuse_texture_array, g_state.diffuse_texture);
+          batch.expand_texture_buffer(&batch.gl_diffuse_texture_array, comp.diffuse_texture);
         }
 
-        /// Assign layer index to the latest the texture and increment
-        g_state.diffuse_texture.layer_idx = batch.diffuse_textures_count++;
-
-        /// Update the mapping from texture id to layer idx
-        batch.layer_idxs[g_state.diffuse_texture.id] = g_state.diffuse_texture.layer_idx;
+        /// Update the mapping from texture id to layer idx and increment count
+        batch.layer_idxs[comp.diffuse_texture.id] = batch.diffuse_textures_count++;
+        batch.objects.diffuse_texture_idxs.push_back(batch.layer_idxs[comp.diffuse_texture.id]);
 
         /// Upload the texture to OpenGL
-        batch.upload(g_state.diffuse_texture, batch.gl_diffuse_texture_unit, batch.gl_diffuse_texture_array);
+        batch.upload(comp.diffuse_texture, batch.gl_diffuse_texture_unit, batch.gl_diffuse_texture_array);
       }
-
-      return batch.id;
+      add_graphics_state(batch, comp, entity_id);
+      return;
     }
   }
 
-  GraphicsBatch batch{mesh_id};
-  batch.id = graphics_batches.size(); // TODO: Return real ID
-  batch.mesh = MeshManager::mesh_from_id(mesh_id);
-  batch.shading_model = g_state.shading_model;
+  GraphicsBatch batch{comp.mesh_id};
+  batch.mesh = MeshManager::mesh_from_id(comp.mesh_id);
+  batch.shading_model = comp.shading_model;
 
   /// Batch shader prepass (depth pass) shader creation process
   batch.depth_shader = Shader{ Filesystem::base + "shaders/geometry.vert", Filesystem::base + "shaders/geometry.frag" };
   
   // Handle shading models
-  switch (g_state.shading_model) {
+  switch (batch.shading_model) {
   case ShadingModel::PhysicallyBased:
     batch.depth_shader.add(Shader::Defines::PBRTextured);
     break;
@@ -660,8 +642,8 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
     break;
   }
 
-  if (g_state.diffuse_texture.used) {
-    switch (g_state.diffuse_texture.gl_texture_target) {
+  if (comp.diffuse_texture.data.pixels) {
+    switch (comp.diffuse_texture.gl_texture_target) {
     case GL_TEXTURE_2D_ARRAY:
       batch.depth_shader.add(Shader::Defines::Diffuse2D);
       break;
@@ -675,22 +657,20 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
     batch.gl_diffuse_texture_unit = Renderer::get_next_free_texture_unit();
 
     /// Set what type the texture array will hold for the type of texture
-    batch.gl_diffuse_texture_type = g_state.diffuse_texture.gl_texture_target;
+    batch.gl_diffuse_texture_type = comp.diffuse_texture.gl_texture_target;
 
-    batch.init_buffer(&batch.gl_diffuse_texture_array, batch.gl_diffuse_texture_unit, g_state.diffuse_texture);
+    batch.init_buffer(&batch.gl_diffuse_texture_array, batch.gl_diffuse_texture_unit, comp.diffuse_texture);
 
-    /// Assign layer index to the latest the texture and increment
-    g_state.diffuse_texture.layer_idx = batch.diffuse_textures_count++;
-
-    /// Update the mapping from texture id to layer idx
-    batch.layer_idxs[g_state.diffuse_texture.id] = g_state.diffuse_texture.layer_idx;
+    /// Update the mapping from texture id to layer idx and increment count
+    batch.layer_idxs[comp.diffuse_texture.id] = batch.diffuse_textures_count++;
+    batch.objects.diffuse_texture_idxs.push_back(batch.layer_idxs[comp.diffuse_texture.id]);
 
     /// Upload the texture to OpenGL
-    batch.upload(g_state.diffuse_texture, batch.gl_diffuse_texture_unit, batch.gl_diffuse_texture_array);
+    batch.upload(comp.diffuse_texture, batch.gl_diffuse_texture_unit, batch.gl_diffuse_texture_array);
   }
 
-  if (g_state.metallic_roughness_texture.used) {
-    const Texture& texture = g_state.metallic_roughness_texture;
+  if (comp.metallic_roughness_texture.data.pixels) {
+    const Texture& texture = comp.metallic_roughness_texture;
     batch.gl_metallic_roughness_texture_unit = Renderer::get_next_free_texture_unit();
     glActiveTexture(GL_TEXTURE0 + batch.gl_metallic_roughness_texture_unit);
     uint32_t gl_metallic_roughness_texture = 0;
@@ -701,8 +681,8 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
     glTexImage2D(texture.gl_texture_target, 0, GL_RGB, texture.data.width, texture.data.height, 0, GL_RGB, GL_UNSIGNED_BYTE, texture.data.pixels);
   }
 
-  if (g_state.ambient_occlusion_texture.used) {
-    const Texture& texture = g_state.ambient_occlusion_texture;
+  if (comp.ambient_occlusion_texture.data.pixels) {
+    const Texture& texture = comp.ambient_occlusion_texture;
     batch.gl_ambient_occlusion_texture_unit = Renderer::get_next_free_texture_unit();
     glActiveTexture(GL_TEXTURE0 + batch.gl_ambient_occlusion_texture_unit);
     uint32_t gl_ambient_occlusion_texture = 0;
@@ -713,8 +693,8 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
     glTexImage2D(texture.gl_texture_target, 0, GL_RGB, texture.data.width, texture.data.height, 0, GL_RGB, GL_UNSIGNED_BYTE, texture.data.pixels);
   }
 
-  if (g_state.emissive_texture.used) {
-    const Texture& texture = g_state.emissive_texture;
+  if (comp.emissive_texture.data.pixels) {
+    const Texture& texture = comp.emissive_texture;
     batch.gl_emissive_texture_unit = Renderer::get_next_free_texture_unit();
     glActiveTexture(GL_TEXTURE0 + batch.gl_emissive_texture_unit);
     uint32_t gl_emissive_texture = 0;
@@ -730,12 +710,36 @@ uint64_t Renderer::add_to_batch(RenderComponent* comp) {
   std::tie(success, err_msg) = batch.depth_shader.compile();
   if (!success) {
     Log::error("Shader compilation failed; " + err_msg);
+    return;
   }
 
   link_batch(batch);
 
-  batch.components.push_back(comp);
+  add_graphics_state(batch, comp, entity_id);
   graphics_batches.push_back(batch);
+}
 
-  return batch.id;
+void Renderer::remove_component(ID entity_id) {
+  // TODO: Implement
+}
+
+void Renderer::add_graphics_state(GraphicsBatch& batch, const RenderComponent& comp, ID entity_id) {
+  batch.entity_ids.push_back(entity_id);
+  batch.data_idx[entity_id] = batch.entity_ids.size() - 1;
+  batch.objects.transforms.push_back(TransformSystem::instance().lookup(entity_id));
+  batch.objects.diffuse_textures.push_back(comp.diffuse_texture);
+  batch.objects.emissive_textures.push_back(comp.emissive_texture);
+  batch.objects.metallic_roughness_textures.push_back(comp.metallic_roughness_texture);
+  batch.objects.ambient_occlusion_textures.push_back(comp.ambient_occlusion_texture);
+  batch.objects.pbr_scalar_parameters.push_back(comp.pbr_scalar_parameters);
+  batch.objects.shading_models.push_back(comp.shading_model);
+}
+
+void Renderer::update_transforms() {
+  for (auto& batch : graphics_batches) {
+    std::vector<ID> t_ids = TransformSystem::instance().get_dirty_transforms_from(batch.entity_ids);
+    for (const auto& t_id : t_ids) {
+      batch.objects.transforms[batch.data_idx[t_id]] = TransformSystem::instance().lookup(t_id);
+    }
+  }
 }

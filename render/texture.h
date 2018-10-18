@@ -19,7 +19,7 @@ typedef uint64_t ID;
 
 struct RawTexture {
   uint8_t* pixels = nullptr;
-  size_t size; // Byte size per face
+  uint32_t size; // Byte size per face
   uint32_t width;
   uint32_t height;
   uint32_t faces; // Number of faces, used for cube maps
@@ -90,15 +90,9 @@ struct Texture {
   ID id = 0;
   
   RawTexture data;
-  
-  /// Indicates that this should be loaded by the Renderer and is used by the GState
-  bool used = false;
 
   /// OpenGL texture target; CUBE_MAP, CUBE_MAP_ARRAY, TEXTURE_2D, etc
   uint32_t gl_texture_target = 0;
-  
-  /// Layer index for the textures sampler type
-  uint32_t layer_idx = 0;
 
   enum class Type: uint8_t {
     Diffuse, MetallicRoughness, AmbientOcclusion, Emissive

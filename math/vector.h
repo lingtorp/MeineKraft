@@ -5,6 +5,7 @@
 #include <cmath>
 #include <math.h>
 #include <vector>
+#include <cmath>
 
 /************ Forward declarations ************/
 template<typename T>
@@ -41,6 +42,22 @@ struct Vec4 {
             default:
                 return x;
         }
+    }
+
+    /// Returns the members x, y, z, w in index order (invalid indexes returns w)
+    const T& operator[] (const int index) const {
+      switch (index) { // Should be a jump table when optimised
+      case 0:
+        return x;
+      case 1:
+        return y;
+      case 2:
+        return z;
+      case 3:
+        return w;
+      default:
+        return x;
+      }
     }
   
     void operator=(const Vec3<T>& rhs) {
@@ -223,18 +240,28 @@ public:
         rows[3] = Vec4<T>{0.0f, 0.0f, 0.0f, 1.0f};
     }
 
-    /// Translation - moves the matrix projection in space ...
-    inline Mat4<T> translate(Vec3<T> vec) const {
+    /// Translation - positions the matrix projection in space ...
+    inline Mat4<T> set_translation(const Vec3<T>& vec) const {
         Mat4<T> matrix;
-        matrix[0] = {1.0f, 0.0f, 0.0f, vec.x};
-        matrix[1] = {0.0f, 1.0f, 0.0f, vec.y};
-        matrix[2] = {0.0f, 0.0f, 1.0f, vec.z};
-        matrix[3] = {0.0f, 0.0f, 0.0f, 1.0f};
+        matrix[0] = { 1.0f, 0.0f, 0.0f, 0.0f };
+        matrix[1] = { 0.0f, 1.0f, 0.0f, 0.0f };
+        matrix[2] = { 0.0f, 0.0f, 1.0f, 0.0f };
+        matrix[3] = { vec.x, vec.y, vec.z, 1.0f };
+        return matrix;
+    }
+
+    /// Translation - moves the matrix projection in space ...
+    inline Mat4<T> translate(const Vec3<T>& vec) const {
+        Mat4<T> matrix;
+        matrix[0] = { 1.0f, 0.0f, 0.0f, 0.0f };
+        matrix[1] = { 0.0f, 1.0f, 0.0f, 0.0f };
+        matrix[2] = { 0.0f, 0.0f, 1.0f, 0.0f };
+        matrix[3] = { vec.x, vec.y, vec.z, 1.0f };
         return *this * matrix;
     }
 
     /// Scales the matrix the same over all axis except w
-    inline Mat4<T> scale(T scale) const {
+    inline Mat4<T> scale(const T scale) const {
         Mat4<T> matrix;
         matrix[0] = {scale, 0.0f, 0.0f, 0.0f};
         matrix[1] = {0.0f, scale, 0.0f, 0.0f};
@@ -270,24 +297,16 @@ public:
 
     /************ Operators ************/
     /// Standard matrix multiplication row-column wise; *this * mat
-    inline Mat4<T> operator*(Mat4<T> &mat) const {
+    inline Mat4<T> operator*(const Mat4<T>& mat) const {
         Mat4<T> matrix;
-        for (int i = 0; i < 4; ++i) {
-            auto row = rows[i];
-            for (int j = 0; j < 4; ++j) {
-                Vec4<T> column = Vec4<T>{mat[0][j], mat[1][j], mat[2][j], mat[3][j]};
+        for (uint8_t i = 0; i < 4; ++i) {
+            const auto row = rows[i];
+            for (uint8_t j = 0; j < 4; ++j) {
+                const Vec4<T> column = Vec4<T>{mat[0][j], mat[1][j], mat[2][j], mat[3][j]};
                 matrix.rows[i][j] = row[0]*column[0] + row[1]*column[1] + row[2]*column[2] + row[3]*column[3];
             }
         }
         return matrix;
-    }
-
-    // TODO: Refactor into Mat3<> ...
-    /// A * v, where v = (rhs, 1.0), v is a Vec4 with w set to 1.0
-    inline Vec3<T> operator*(Vec3<T> rhs) const {
-        auto vec = Vec4<T>{rhs.x, rhs.y, rhs.z, 1.0};
-        auto result = *this * vec;
-        return Vec3<T>{result.x, result.y, result.z};
     }
 
     /// A * v = b
@@ -300,11 +319,31 @@ public:
     }
 
     /// matrix[row_i][colum_j]
-    inline Vec4<T> &operator[](const int index) { return rows[index]; }
+    inline Vec4<T>& operator[](const int index) { return rows[index]; }
+    inline const Vec4<T>& operator[](const int index) const { return rows[index]; }
 
     friend std::ostream &operator<<(std::ostream& os, const Mat4 &mat) {
         return os << "\n { \n" << mat.rows[0] << "), \n" << mat.rows[1] << "), \n" << mat.rows[2] << "), \n" << mat.rows[3] << ")\n }";
     }
 };
+
+/// Convenience type declarations
+using Vec2i = Vec2<int32_t>;
+using Vec3i = Vec3<int32_t>;
+using Vec4i = Vec4<int32_t>;
+
+using Vec2u = Vec2<uint32_t>;
+using Vec3u = Vec3<uint32_t>;
+using Vec4u = Vec4<uint32_t>;
+
+using Vec2f = Vec2<float>;
+using Vec3f = Vec3<float>;
+using Vec4f = Vec4<float>;
+using Mat4f = Mat4<float>;
+
+using Vec2d = Vec2<double>;
+using Vec3d = Vec3<double>;
+using Vec4d = Vec4<double>;
+using Mat4d = Mat4<double>;
 
 #endif // MEINEKRAFT_VECTOR_H

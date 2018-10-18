@@ -31,10 +31,8 @@ std::pair<bool, std::string> Shader::compile() {
   vertex_src.insert(0, GLSL_VERSION);
   fragment_src.insert(0, GLSL_VERSION);
 
-#ifdef DEBUG
   vertex_shader_src = vertex_src;
   fragment_shader_src = fragment_src;
-#endif 
 
   auto raw_str = vertex_src.c_str();
   gl_vertex_shader = glCreateShader(GL_VERTEX_SHADER);

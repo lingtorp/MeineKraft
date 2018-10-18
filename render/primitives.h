@@ -234,6 +234,7 @@ struct Sphere: public Mesh {
   }
 };
 
+// TODO: Use it, remove Primitive::quad
 /// Fullscreen quad in NDC
 struct Quad: public Mesh {
   Quad(): Mesh() {
@@ -303,22 +304,13 @@ enum class ShadingModel: uint32_t {
   PhysicallyBasedScalars = 3        // PBR using scalars instead of textures
 };
 
-struct GraphicsState {
-  ShadingModel shading_model = ShadingModel::Unlit;
-  ID mesh_id;
-  Texture diffuse_texture;
-  Texture metallic_roughness_texture; // Used by ShadingModel::PBRTextured
-  Texture ambient_occlusion_texture;
-  Texture emissive_texture;
-  Vec3<float> position;
-  float scale = 1.0;
-  Vec3<float> pbr_scalar_parameters; // Used by ShadingModel::PBRScalars
-};
-
 /// Represents the state of the Render, used for ImGUI debug panes
 struct RenderState {
+  uint64_t frame;
   uint64_t entities;
   uint64_t graphic_batches;
+  RenderState() = default;
+  RenderState(const RenderState& old): frame(old.frame), entities(0), graphic_batches(0) {}
 };
 
 #endif // MEINEKRAFT_PRIMITIVES_H

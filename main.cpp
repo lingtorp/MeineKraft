@@ -8,7 +8,6 @@
 #include "util/filesystem.h"
 #include "scene/world.hpp"
 #include "render/debug_opengl.h"
-#include "render/transform.h"
 #include "nodes/skybox.h"
 #include "scene/world.hpp"
 
@@ -50,14 +49,12 @@ int main() {
   renderer.screen_width = HD.width;
   renderer.screen_height = HD.height;
   renderer.update_projection_matrix(70);
-  
-  // WORKAROUND: Diffuse texture from world overwrites the model if the model is loaded first ...
-  World world;
 
   Skybox skybox;
-  
+
   Model model{ Filesystem::home + "Desktop/", "DamagedHelmet.gltf" };
-  model.scale = 1.0;
+  
+  World world;  
 
   bool toggle_mouse_capture = true;
   bool DONE = false;
@@ -149,6 +146,12 @@ int main() {
     }
     renderer.camera->position = renderer.camera->update(delta);
 
+    /// Run all actions
+    ActionSystem::instance().execute_actions(renderer.state.frame, delta);
+
+    /// Let the game do its thing
+    world.tick();
+
     /// Render the world
     renderer.render(delta);
 
@@ -158,6 +161,7 @@ int main() {
       auto io = ImGui::GetIO();
 
       ImGui::Begin("Renderer state");
+      ImGui::Text("Frame: %llu", renderer.state.frame);
       ImGui::Text("Graphics batches: %llu", renderer.state.graphic_batches);
       ImGui::Text("Entities: %llu", renderer.state.entities);
       ImGui::Text("Application average %lld ms / frame (%.1f FPS)", delta, io.Framerate);

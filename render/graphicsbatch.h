@@ -4,6 +4,8 @@
 #include <map>
 #include <cstring>
 
+#include "rendercomponent.h"
+#include "../nodes/transform.h"
 #include "primitives.h"
 #include "shader.h"
 #include "debug_opengl.h"
@@ -18,11 +20,9 @@
 #include "sdl2/SDL_opengl.h"
 #endif 
 
-class RenderComponent;
-
 class GraphicsBatch {
 public:
-  explicit GraphicsBatch(ID mesh_id): mesh_id(mesh_id), components{}, mesh{}, id(0), layer_idxs{},
+  explicit GraphicsBatch(ID mesh_id): mesh_id(mesh_id), objects{}, mesh{}, layer_idxs{},
     diffuse_textures_capacity(5), diffuse_textures_count(0) {};
   
   void init_buffer(uint32_t* gl_buffer, const uint32_t gl_texture_unit, const Texture& texture) {
@@ -57,20 +57,31 @@ public:
     glBindTexture(texture.gl_texture_target, gl_texture_array);
     glTexSubImage3D(texture.gl_texture_target,
       0,                     // Mipmap number (a.k.a level)
-      0, 0, texture.layer_idx *  texture.data.faces, // xoffset, yoffset, zoffset = layer face
+      0, 0, layer_idxs[texture.id] *  texture.data.faces, // xoffset, yoffset, zoffset = layer face
       texture.data.width, texture.data.height, texture.data.faces, // width, height, depth = faces
       GL_RGB,                // format
       GL_UNSIGNED_BYTE,      // type
       texture.data.pixels);  // pointer to data
   }
 
-  ID id;
   ID mesh_id; 
   Mesh mesh; 
-  std::vector<RenderComponent*> components;
+  struct GraphicStateObjects {
+    std::vector<Transform> transforms;
+    std::vector<ShadingModel> shading_models;         // default ShadingModel::Unlit;
+    std::vector<Texture> diffuse_textures;
+    std::vector<uint32_t> diffuse_texture_idxs;       // Layer index
+    std::vector<Texture> metallic_roughness_textures; // Used by ShadingModel::PBRTextured
+    std::vector<Texture> ambient_occlusion_textures;
+    std::vector<Texture> emissive_textures;
+    std::vector<Vec3f> pbr_scalar_parameters;         // Used by ShadingModel::PBRScalars
+  };
+  std::unordered_map<ID, ID> data_idx;                // Entity ID to data position in data (objects struct)
+  std::vector<ID> entity_ids;
+  GraphicStateObjects objects{};                      // Objects in the batch share the same values
   
   /// Textures
-  std::map<ID, uint32_t> layer_idxs; // Texture ID to layer index mapping
+  std::map<ID, uint32_t> layer_idxs;  // Texture ID to layer index mapping for all texture in batch
 
   /// Diffuse texture buffer
   uint32_t diffuse_textures_count;    // # texture currently in the GL buffer
