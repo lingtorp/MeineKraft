@@ -246,10 +246,10 @@ void Renderer::load_environment_map(const std::vector<std::string>& faces) {
     glTexParameteri(texture.gl_texture_target, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexStorage3D(texture.gl_texture_target, 1, GL_RGB8, texture.data.width, texture.data.height, texture.data.faces);
     glTexSubImage3D(texture.gl_texture_target, 0, 0, 0, 0, texture.data.width, texture.data.height, texture.data.faces, GL_RGB, GL_UNSIGNED_BYTE, texture.data.pixels);
+    environment_map = texture;
   } else {
     Log::warn("Could not load environment map");
   }
-  environment_map = texture;
 }
 
 Renderer::~Renderer() = default;
