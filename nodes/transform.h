@@ -23,7 +23,7 @@ struct TransformSystem {
 private:
   std::vector<Transform> data;
   std::unordered_map<ID, ID> data_idxs;
-  size_t dirty_index = 0;
+  size_t dirty_index = 0; // FIXME: Make use of it
 public:
   /// Singleton instance of TransformSystem
   static TransformSystem& instance() {
@@ -43,7 +43,8 @@ public:
   }
 
   Transform lookup(const ID id) {
-    return data[data_idxs[id]]; // FIXME: Bad behaviour or nice?
+    if (data_idxs.find(id) == data_idxs.cend()) { return Transform(); }
+    return data[data_idxs.at(id)]; 
   }
 
   void set_transform(const Transform& transform, const ID id) {
@@ -55,7 +56,11 @@ public:
     data_idxs[id] = data.size() - 1;
   }
 
-  void remove_component(const ID id) {}
+  void remove_component(const ID id) {
+    if (data_idxs.find(id) == data_idxs.cend()) { return; }
+    data.erase(data.cbegin() + data_idxs[id]);
+    data_idxs.erase(id);
+  }
 };
 
 #endif // MEINEKRAFT_TRANSFORM_H

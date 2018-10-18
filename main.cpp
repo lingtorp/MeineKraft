@@ -49,13 +49,12 @@ int main() {
   renderer.screen_width = HD.width;
   renderer.screen_height = HD.height;
   renderer.update_projection_matrix(70);
-  
-  // WORKAROUND: Diffuse texture from world overwrites the model if the model is loaded first ...
-  World world;
 
   Skybox skybox;
-  
+
   Model model{ Filesystem::home + "Desktop/", "DamagedHelmet.gltf" };
+  
+  World world;  
 
   bool toggle_mouse_capture = true;
   bool DONE = false;
