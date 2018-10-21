@@ -413,8 +413,8 @@ Renderer::Renderer(): graphics_batches{} {
   glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
   /// Camera
-  const auto position  = Vec3<float>{0.0f, 0.0f, 3.0f};  
-  const auto direction = Vec3<float>{0.0f, 0.0f, -1.0f};  
+  const auto position  = Vec3<float>{8.0f, 8.0f, 8.0f};  
+  const auto direction = Vec3<float>{0.0,  0.0, -1.0};
   const auto world_up  = Vec3<float>{0.0f, 1.0f, 0.0f};  
   camera = new Camera(position, direction, world_up);
 }

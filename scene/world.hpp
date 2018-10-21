@@ -87,25 +87,26 @@ public:
     std::iota(X.begin(), X.end(), -10);
     for (const auto x : X) {
       Block::BlockType block_type = distr(engine) < 0.5 ? Block::BlockType::GRASS : Block::BlockType::DIRT;
-      Block* block = new Block(Vec3f(0.0f, 0.0f, 1.0f + 1.0f * x), block_type);
+      // Block* block = new Block(Vec3f(0.0f, 0.0f, 1.0f + 1.0f * x), block_type);
     }
 
-    for (size_t i = 0; i < 10; i++) {
-      for (size_t j = 0; j < 10; j++) {
+    for (size_t i = 0; i < 7; i++) {
+      for (size_t j = 0; j < 7; j++) {
         Entity* entity = new Entity();
         TransformComponent transform;
-        transform.position = Vec3f{ -15.0f + 2.5f * j, -15.0f + 2.5f * i, -5.0f }; 
+        transform.position = Vec3f{ 2.5f * j, 2.5f * i, -5.0f }; 
         entity->attach_component(transform);
         RenderComponent render;
         render.set_mesh(MeshPrimitive::Sphere);
-        distr(engine) < 0.5 ? render.set_shading_model(ShadingModel::PhysicallyBasedScalars) : render.set_shading_model(ShadingModel::Unlit);
         render.pbr_scalar_parameters = Vec3f(0.0, 1.0/6.0  * i, 1.0/6.0 * j);
+        Log::info(render.pbr_scalar_parameters);
+        render.set_shading_model(ShadingModel::PhysicallyBasedScalars);
         entity->attach_component(render);
         ActionComponent action([=](uint64_t frame, uint64_t dt) {
           Transform t = TransformSystem::instance().lookup(entity->id);
-          Vec3f position(transform.position.x, transform.position.y, 15.0f * std::cos(glm::radians(float(frame * 0.15f))));
+          Vec3f position(transform.position.x, transform.position.y, 5.0f * std::cos(glm::radians(float(frame * 0.025f))));
           t.matrix = t.matrix.set_translation(position); 
-          TransformSystem::instance().set_transform(t, entity->id);
+          // TransformSystem::instance().set_transform(t, entity->id);
         });
         entity->attach_component(action);
       }

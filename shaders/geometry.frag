@@ -36,7 +36,7 @@ void main() {
     
     #ifdef PBR_SCALAR
     // gDiffuse texture is usually in sRGB
-    gDiffuse.rgb = pow(vec3(0.0, 1.0, 0.0), vec3(1.0 / 2.2)); // FIXME: Temporary, diffuse scalar colors as a shader config?
+    gDiffuse.rgb = pow(vec3(1.0, 0.0, 0.0), vec3(1.0 / 2.2)); // FIXME: Temporary, diffuse scalar colors as a shader config?
     // Usually (metallic, roughness, unused)
     gPBRParameters = fPbr_scalar_parameters;
     gEmissive = vec3(0.0);
