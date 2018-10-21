@@ -10,7 +10,7 @@ struct RenderComponent {
   Texture metallic_roughness_texture; // Used by ShadingModel::PBRTextured
   Texture ambient_occlusion_texture;
   Texture emissive_texture;
-  Vec3f pbr_scalar_parameters;        // Used by ShadingModel::PBRScalars
+  Vec3f pbr_scalar_parameters;        // Used by ShadingModel::PBRScalars (r,g,b) = (unused, roughness, metallic)
 
   /// Sets the mesh for the RenderComponent from the .obj file in directory_file
   void set_mesh(const std::string& directory, const std::string& file);

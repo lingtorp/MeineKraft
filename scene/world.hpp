@@ -98,8 +98,8 @@ public:
         entity->attach_component(transform);
         RenderComponent render;
         render.set_mesh(MeshPrimitive::Sphere);
-        render.pbr_scalar_parameters = Vec3f(0.1 * i, 0.1, 0.0);
         distr(engine) < 0.5 ? render.set_shading_model(ShadingModel::PhysicallyBasedScalars) : render.set_shading_model(ShadingModel::Unlit);
+        render.pbr_scalar_parameters = Vec3f(0.0, 1.0/6.0  * i, 1.0/6.0 * j);
         entity->attach_component(render);
         ActionComponent action([=](uint64_t frame, uint64_t dt) {
           Transform t = TransformSystem::instance().lookup(entity->id);
