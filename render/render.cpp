@@ -438,11 +438,11 @@ void Renderer::render(uint32_t delta) {
     glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
     glEnable(GL_DEPTH_TEST);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); // Always update the depth buffer with the new values
-    for (const auto& batch : graphics_batches) {
+    for (size_t i = 0; i < graphics_batches.size(); i++) {
+      const auto& batch = graphics_batches[i];
       const auto program = batch.depth_shader.gl_program;
       glUseProgram(program);
       glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(camera_transform));
-      glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, glm::value_ptr(projection_matrix));
       
       glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_models_buffer_object);
       glBufferData(GL_ARRAY_BUFFER, batch.objects.transforms.size() * sizeof(Mat4<float>), batch.objects.transforms.data(), GL_DYNAMIC_DRAW);
@@ -519,6 +519,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     /// Shaderbindings
     auto program = batch.depth_shader.gl_program;
     glUseProgram(program);
+    glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, glm::value_ptr(projection_matrix));
     glUniform1i(glGetUniformLocation(program, "diffuse"), batch.gl_diffuse_texture_unit);
     switch (batch.shading_model) {
     case ShadingModel::PhysicallyBased:
@@ -594,7 +595,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
 void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
   // TODO: Check if component matches any existing batch config.
   for (auto& batch : graphics_batches) {
-    if (batch.mesh_id == comp.mesh_id) {
+    if (batch.mesh_id == comp.mesh_id) { 
       if (comp.diffuse_texture.data.pixels) {
         for (const auto& item : batch.layer_idxs) {
           const auto id = item.first; // Texture id
