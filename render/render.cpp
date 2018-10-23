@@ -461,6 +461,7 @@ void Renderer::render(uint32_t delta) {
       glDrawElementsInstanced(GL_TRIANGLES, batch.mesh.indices.size(), GL_UNSIGNED_INT, nullptr, batch.objects.transforms.size());
       
       state.entities += batch.objects.transforms.size();
+      state.draw_calls++;
     }
   }
   pass_ended();
