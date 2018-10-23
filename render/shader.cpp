@@ -23,8 +23,8 @@ std::pair<bool, std::string> Shader::compile() {
   auto fragment_src = load_shader_source(fragment_filepath);
 
   for (auto &define : defines) {
-      vertex_src.insert(0, define);
-      fragment_src.insert(0, define);
+      vertex_src.insert(0, Shader::shader_define_to_string(define));
+      fragment_src.insert(0, Shader::shader_define_to_string(define));
   }
 
   static const char* GLSL_VERSION = "#version 430 core \n";
@@ -162,23 +162,24 @@ const std::string Shader::load_shader_source(std::string filename) const {
   return std::string((std::istreambuf_iterator<char>(ifs)), (std::istreambuf_iterator<char>()));
 }
 
-void Shader::add(Shader::Defines define) {
+std::string Shader::shader_define_to_string(const Shader::Defines define) {
   switch (define) {
   case Shader::Defines::Diffuse2D:
-    defines.insert("#define DIFFUSE_2D \n");
-    break;
+    return "#define DIFFUSE_2D \n";
   case Shader::Defines::DiffuseCubemap:
-    defines.insert("#define DIFFUSE_CUBEMAP \n");
-    break;
+    return "#define DIFFUSE_CUBEMAP \n";
   case Shader::Defines::PBRScalar:
-    defines.insert("#define PBR_SCALAR \n");
-    break;
+    return "#define PBR_SCALAR \n";
   case Shader::Defines::PBRTextured:
-    defines.insert("#define PBR_TEXTURED \n");
-    break;
+    return "#define PBR_TEXTURED \n";
   default:
-    Log::error("Invalid shader define passed");   
+    Log::error("Invalid shader define passed");
+    return "";
   }
+}
+
+void Shader::add(const Shader::Defines define) {
+  defines.insert(define);
 }
 
 bool Shader::operator==(const Shader &rhs) {
@@ -190,4 +191,3 @@ bool Shader::validate() {
   // TODO: This will check if the defines plays nicely together or not. No point in compiling a faulty shader.
   return true;
 }
-
