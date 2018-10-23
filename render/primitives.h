@@ -123,26 +123,6 @@ struct Mesh {
   Mesh(const Mesh& mesh): vertices(mesh.vertices), indices(mesh.indices) {};
   Mesh(std::vector<Vertex<float>> vertices, std::vector<uint32_t> indices): vertices(vertices), indices(indices) {};
 
-  /// Return a vector of all the vertices data laid out as the Vertex struct
-  std::vector<float> to_floats() const {
-      std::vector<float> floats;
-      for (const auto vertex : vertices) {
-          floats.push_back(vertex.position.x);
-          floats.push_back(vertex.position.y);
-          floats.push_back(vertex.position.z);
-          floats.push_back(vertex.color.r);
-          floats.push_back(vertex.color.g);
-          floats.push_back(vertex.color.b);
-          floats.push_back(vertex.color.a);
-          floats.push_back(vertex.texCoord.x);
-          floats.push_back(vertex.texCoord.y);
-          floats.push_back(vertex.normal.x);
-          floats.push_back(vertex.normal.y);
-          floats.push_back(vertex.normal.z);
-      }
-      return floats;
-  }
-
   /// Byte size of vertices to upload to OpenGL
   size_t byte_size_of_vertices() const {
       return sizeof(Vertex<float>) * vertices.size();

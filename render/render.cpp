@@ -540,8 +540,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
 
     glGenBuffers(1, &batch.gl_depth_vbo);
     glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_vbo);
-    const auto vertices = batch.mesh.to_floats(); 
-    glBufferData(GL_ARRAY_BUFFER, batch.mesh.byte_size_of_vertices(), vertices.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, batch.mesh.byte_size_of_vertices(), batch.mesh.vertices.data(), GL_STATIC_DRAW);
 
     auto position_attrib = glGetAttribLocation(program, "position");
     glVertexAttribPointer(position_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, position));
