@@ -306,11 +306,12 @@ enum class ShadingModel: uint32_t {
 
 /// Represents the state of the Render, used for ImGUI debug panes
 struct RenderState {
-  uint64_t frame;
-  uint64_t entities;
-  uint64_t graphic_batches;
+  uint64_t frame           = 0;
+  uint64_t entities        = 0;
+  uint64_t graphic_batches = 0;
+  uint64_t draw_calls      = 0;
   RenderState() = default;
-  RenderState(const RenderState& old): frame(old.frame), entities(0), graphic_batches(0) {}
+  RenderState(const RenderState& old): frame(old.frame) {}
 };
 
 #endif // MEINEKRAFT_PRIMITIVES_H
