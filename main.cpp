@@ -10,6 +10,7 @@
 #include "render/debug_opengl.h"
 #include "nodes/skybox.h"
 #include "scene/world.hpp"
+#include "render/graphicsbatch.h"
 
 struct Resolution {
   int width, height;
@@ -159,22 +160,40 @@ int main() {
     {
       ImGui_ImplSdlGL3_NewFrame(window);
       auto io = ImGui::GetIO();
+      ImGui::Begin("Information Panel");
 
-      ImGui::Begin("Renderer state");
-      ImGui::Text("Frame: %llu", renderer.state.frame);
-      ImGui::Text("Graphics batches: %llu", renderer.state.graphic_batches);
-      ImGui::Text("Entities: %llu", renderer.state.entities);
-      ImGui::Text("Application average %lld ms / frame (%.1f FPS)", delta, io.Framerate);
-  
-      static size_t i = -1; i = (i + 1) % num_deltas;
-      deltas[i] = float(delta);
-      ImGui::PlotLines("", deltas, num_deltas, 0, "ms / frame", 0.0f, 50.0f, ImVec2(ImGui::GetWindowWidth(), 100));
-      
-      if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
-        ImGui::InputFloat3("Position", &renderer.camera->position.x);
-        ImGui::InputFloat3("Direction", &renderer.camera->direction.x);
+      if (ImGui::CollapsingHeader("Render System", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::Text("Frame: %llu", renderer.state.frame);
+        ImGui::Text("Entities: %llu", renderer.state.entities);
+        ImGui::Text("Application average %lld ms / frame (%.1f FPS)", delta, io.Framerate);
+
+        static size_t i = -1; i = (i + 1) % num_deltas;
+        deltas[i] = float(delta);
+        ImGui::PlotLines("", deltas, num_deltas, 0, "ms / frame", 0.0f, 50.0f, ImVec2(ImGui::GetWindowWidth(), 100));
+
+        if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
+          ImGui::InputFloat3("Position", &renderer.camera->position.x);
+          ImGui::InputFloat3("Direction", &renderer.camera->direction.x);
+        }
+
+        if (ImGui::CollapsingHeader("Graphics batches")) {
+          ImGui::Text("Graphics batches: %llu", renderer.state.graphic_batches);
+          for (size_t batch_num = 0; batch_num < renderer.graphics_batches.size(); batch_num++) {
+            const auto& batch = renderer.graphics_batches[batch_num];
+            std::string batch_title = "Batch #" + std::to_string(batch_num);
+            if (ImGui::CollapsingHeader(batch_title.c_str())) {
+              ImGui::Text("Size: %llu", batch.entity_ids.size());
+              if (ImGui::CollapsingHeader("Members")) {
+                for (const auto& id : batch.entity_ids) {
+                  ImGui::Text("Entity id: %llu", id);
+                }
+              }
+            }
+          }
+        }
+
       }
-      
+
       ImGui::End();
       ImGui::Render();
     }
