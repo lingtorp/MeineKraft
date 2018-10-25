@@ -522,18 +522,9 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glUseProgram(program);
     glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, glm::value_ptr(projection_matrix));
     glUniform1i(glGetUniformLocation(program, "diffuse"), batch.gl_diffuse_texture_unit);
-    switch (batch.shading_model) {
-    case ShadingModel::PhysicallyBased:
-      glUniform1i(glGetUniformLocation(program, "pbr_parameters"), batch.gl_metallic_roughness_texture_unit);
-      glUniform1i(glGetUniformLocation(program, "ambient_occlusion"), batch.gl_ambient_occlusion_texture_unit);
-      glUniform1i(glGetUniformLocation(program, "emissive"), batch.gl_emissive_texture_unit);
-      break;
-    case ShadingModel::PhysicallyBasedScalars:
-      // FIXME: PBR scalar parameters buffer needs only to be created here
-      break;
-    case ShadingModel::Unlit:
-      break;
-    }
+    glUniform1i(glGetUniformLocation(program, "pbr_parameters"), batch.gl_metallic_roughness_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "ambient_occlusion"), batch.gl_ambient_occlusion_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "emissive"), batch.gl_emissive_texture_unit);
     
     glGenVertexArrays(1, &batch.gl_depth_vao);
     glBindVertexArray(batch.gl_depth_vao);
