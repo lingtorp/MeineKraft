@@ -33,18 +33,19 @@ void main() {
     gDiffuse.rgb = texture(diffuse, vec4(normalize(fPosition), fDiffuse_layer_idx)).rgb;
     #endif
     gDiffuse.a = 1.0; // Fetch from texture?
-    
-    #ifdef PBR_SCALAR
-    // gDiffuse texture is usually in sRGB
-    gDiffuse.rgb = pow(vec3(0.0, 1.0, 0.0), vec3(1.0 / 2.2)); // FIXME: Temporary, diffuse scalar colors as a shader config?
-    // Usually (metallic, roughness, unused)
-    gPBRParameters = fPbr_scalar_parameters;
-    gEmissive = vec3(0.0);
-    #elif defined(PBR_TEXTURED)
-    gPBRParameters = texture(pbr_parameters, fTexcoord).rgb;
-    gEmissive = texture(emissive, fTexcoord).rgb;
-    #endif
-    
+
+    switch (fShading_model_id) {
+        case 2: // Physically based rendering with textures 
+        gPBRParameters = texture(pbr_parameters, fTexcoord).rgb; // Usually (unused, metallic, roughness)
+        gEmissive = texture(emissive, fTexcoord).rgb;
+        break;
+        case 3: // Physically based rendering with scalar
+        gDiffuse.rgb = vec3(1.0, 0.0, 0.0); // FIXME: Temporary color for unlit objects
+        gPBRParameters = fPbr_scalar_parameters;
+        gEmissive = vec3(0.0);
+        break;
+    }
+
     gAmbientOcclusion = texture(ambient_occlusion, fTexcoord).rgb;
     gShadingModelID = fShading_model_id;
 }

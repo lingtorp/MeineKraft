@@ -10,9 +10,7 @@
 struct Shader {
   enum class Defines: uint32_t {
     Diffuse2D, 
-    DiffuseCubemap,
-    PBRTextured, // PBR parameters are fetched from texture
-    PBRScalar    // PBR parameters are fetched from uniform scalars
+    DiffuseCubemap
   };
   // Configuration of the shader a la Ubershader
   std::set<Shader::Defines> defines;

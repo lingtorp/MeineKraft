@@ -595,17 +595,6 @@ void Renderer::link_batch(GraphicsBatch& batch) {
 void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
   // Handle the config of the Shader from the component
   std::set<Shader::Defines> comp_shader_config;
-  switch (comp.shading_model) {
-  case ShadingModel::PhysicallyBased:
-    comp_shader_config.insert(Shader::Defines::PBRTextured);
-    break;
-  case ShadingModel::PhysicallyBasedScalars:
-    comp_shader_config.insert(Shader::Defines::PBRScalar);
-    break;
-  case ShadingModel::Unlit:
-    //
-    break;
-  }
 
   if (comp.diffuse_texture.data.pixels) {
     switch (comp.diffuse_texture.gl_texture_target) {

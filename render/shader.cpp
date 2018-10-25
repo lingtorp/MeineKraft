@@ -168,10 +168,6 @@ std::string Shader::shader_define_to_string(const Shader::Defines define) {
     return "#define DIFFUSE_2D \n";
   case Shader::Defines::DiffuseCubemap:
     return "#define DIFFUSE_CUBEMAP \n";
-  case Shader::Defines::PBRScalar:
-    return "#define PBR_SCALAR \n";
-  case Shader::Defines::PBRTextured:
-    return "#define PBR_TEXTURED \n";
   default:
     Log::error("Invalid shader define passed");
     return "";
