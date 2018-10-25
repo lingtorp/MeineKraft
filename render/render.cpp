@@ -636,7 +636,7 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
 
       /// Expand texture buffer if needed
       if (batch.diffuse_textures_count + 1 > batch.diffuse_textures_capacity) {
-        batch.expand_texture_buffer(comp.diffuse_texture, &batch.gl_diffuse_texture_array);
+        batch.expand_texture_buffer(comp.diffuse_texture, &batch.gl_diffuse_texture_array, &batch.diffuse_textures_capacity, batch.gl_diffuse_texture_unit);
       }
 
       /// Update the mapping from texture id to layer idx and increment count
@@ -664,7 +664,7 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
     /// Set what type the texture array will hold for the type of texture
     batch.gl_diffuse_texture_type = comp.diffuse_texture.gl_texture_target;
 
-    batch.init_buffer(comp.diffuse_texture, &batch.gl_diffuse_texture_array, batch.gl_diffuse_texture_unit);
+    batch.init_buffer(comp.diffuse_texture, &batch.gl_diffuse_texture_array, batch.gl_diffuse_texture_unit, &batch.diffuse_textures_capacity);
 
     /// Update the mapping from texture id to layer idx and increment count
     batch.layer_idxs[comp.diffuse_texture.id] = batch.diffuse_textures_count++;

@@ -24,24 +24,25 @@ class GraphicsBatch {
 public:
   explicit GraphicsBatch(ID mesh_id): mesh_id(mesh_id), objects{}, mesh{}, layer_idxs{} {};
   
-  void init_buffer(const Texture& texture, uint32_t* gl_buffer, const uint32_t gl_texture_unit) {
+  void init_buffer(const Texture& texture, uint32_t* gl_buffer, const uint32_t gl_texture_unit, uint32_t* buffer_capacity) {
     glActiveTexture(GL_TEXTURE0 + gl_texture_unit);
     glGenTextures(1, gl_buffer);
     glBindTexture(texture.gl_texture_target, *gl_buffer);
     const int default_buffer_size = 1;
     glTexStorage3D(texture.gl_texture_target, 1, GL_RGB8, texture.data.width, texture.data.height, texture.data.faces * default_buffer_size); // depth = layer faces
+    *buffer_capacity = default_buffer_size;
   }
 
   /// Increases the texture buffer and copies over the old texture buffer (this seems to be the only way to do it)
-  void expand_texture_buffer(const Texture& texture, uint32_t* gl_buffer) {
+  void expand_texture_buffer(const Texture& texture, uint32_t* gl_buffer, uint32_t* texture_array_capacity, const uint32_t texture_unit) {
     // Allocate new memory
     uint32_t gl_new_texture_array;
     glGenTextures(1, &gl_new_texture_array);
-    glActiveTexture(GL_TEXTURE0 + gl_diffuse_texture_unit);
+    glActiveTexture(GL_TEXTURE0 + texture_unit);
     glBindTexture(texture.gl_texture_target, gl_new_texture_array);
-    uint32_t old_capacity = diffuse_textures_capacity;
-    diffuse_textures_capacity = (uint32_t) std::ceil(diffuse_textures_capacity * 1.5f);
-    glTexStorage3D(texture.gl_texture_target, 1, GL_RGB8, texture.data.width, texture.data.height, texture.data.faces * diffuse_textures_capacity);
+    uint32_t old_capacity = *texture_array_capacity;
+    *texture_array_capacity = (uint32_t) std::ceil(*texture_array_capacity * 1.5f);
+    glTexStorage3D(texture.gl_texture_target, 1, GL_RGB8, texture.data.width, texture.data.height, texture.data.faces * *texture_array_capacity);
     
     glCopyImageSubData(*gl_buffer, texture.gl_texture_target, 0, 0, 0, 0, // src parameters
       gl_new_texture_array, texture.gl_texture_target, 0, 0, 0, 0, texture.data.width, texture.data.height, texture.data.faces * old_capacity);
@@ -85,10 +86,10 @@ public:
 
   /// Diffuse texture buffer
   uint32_t diffuse_textures_count    = 0; // # texture currently in the GL buffer
-  uint32_t diffuse_textures_capacity = 1; // # textures the GL buffer can hold
+  uint32_t diffuse_textures_capacity = 0; // # textures the GL buffer can hold
   
   uint32_t gl_diffuse_texture_array = 0;  // OpenGL handle to the texture array buffer (GL_TEXTURE_2D_ARRAY, GL_TEXTURE_CUBE_MAP_ARRAY, etc)
-  uint32_t gl_diffuse_texture_type  = 0;   // GL_TEXTURE_2D, GL_TEXTURE_CUBE_MAP, etc
+  uint32_t gl_diffuse_texture_type  = 0;  // GL_TEXTURE_2D, GL_TEXTURE_CUBE_MAP, etc
   uint32_t gl_diffuse_texture_unit  = 0;
   
   uint32_t gl_diffuse_textures_layer_idx = 0; // Attribute buffer for layer indices
