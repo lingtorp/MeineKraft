@@ -20,8 +20,7 @@
 #include "sdl2/SDL_opengl.h"
 #endif 
 
-class GraphicsBatch {
-public:
+struct GraphicsBatch {
   explicit GraphicsBatch(ID mesh_id): mesh_id(mesh_id), objects{}, mesh{}, layer_idxs{} {};
   
   void init_buffer(const Texture& texture, uint32_t* gl_buffer, const uint32_t gl_texture_unit, uint32_t* buffer_capacity) {
