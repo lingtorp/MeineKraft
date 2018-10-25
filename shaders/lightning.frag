@@ -141,8 +141,8 @@ void main() {
         case 1: // Unlit
         color = unlit_render(diffuse);
         break;     
-        case 2: // Physically based rendering
-        case 3: // Physically based rendering with scalars
+        case 2: // Physically based rendering with parameters sourced from textures
+        case 3: // Physically based rendering with parameters sourced from scalars
         color = schlick_render(frag_coord, position, normal, diffuse, ambient_occlusion);
         // Emissive
         color += emissive; // TODO: Emissive factor missing
