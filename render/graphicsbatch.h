@@ -88,7 +88,6 @@ struct GraphicsBatch {
   uint32_t diffuse_textures_capacity = 0; // # textures the GL buffer can hold
   
   uint32_t gl_diffuse_texture_array = 0;  // OpenGL handle to the texture array buffer (GL_TEXTURE_2D_ARRAY, GL_TEXTURE_CUBE_MAP_ARRAY, etc)
-  uint32_t gl_diffuse_texture_type  = 0;  // GL_TEXTURE_2D, GL_TEXTURE_CUBE_MAP, etc
   uint32_t gl_diffuse_texture_unit  = 0;
   
   uint32_t gl_diffuse_textures_layer_idx = 0; // Attribute buffer for layer indices

@@ -650,9 +650,6 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
   if (comp.diffuse_texture.data.pixels) {
     batch.gl_diffuse_texture_unit = Renderer::get_next_free_texture_unit();
 
-    /// Set what type the texture array will hold for the type of texture
-    batch.gl_diffuse_texture_type = comp.diffuse_texture.gl_texture_target;
-
     batch.init_buffer(comp.diffuse_texture, &batch.gl_diffuse_texture_array, batch.gl_diffuse_texture_unit, &batch.diffuse_textures_capacity);
 
     /// Update the mapping from texture id to layer idx and increment count
