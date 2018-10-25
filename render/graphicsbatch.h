@@ -33,21 +33,22 @@ public:
     glTexStorage3D(texture.gl_texture_target, 1, GL_RGB8, texture.data.width, texture.data.height, texture.data.faces * default_buffer_size); // depth = layer faces
   }
 
-  /// GL buffer type or in GL-speak target rather than type
+  /// Increases the texture buffer and copies over the old texture buffer (this seems to be the only way to do it)
   void expand_texture_buffer(uint32_t* gl_buffer, const Texture& texture) {
-    // TODO: Dealloc the old buffer
     // Allocate new memory
     uint32_t gl_new_texture_array;
     glGenTextures(1, &gl_new_texture_array);
     glActiveTexture(GL_TEXTURE0 + gl_diffuse_texture_unit);
     glBindTexture(texture.gl_texture_target, gl_new_texture_array);
-    
-    // # of new textures to accommodate
-    const float texture_array_growth_factor = 1.5f; 
-    diffuse_textures_capacity = (uint32_t) std::ceil(diffuse_textures_capacity * texture_array_growth_factor);
+    uint32_t old_capacity = diffuse_textures_capacity;
+    diffuse_textures_capacity = (uint32_t) std::ceil(diffuse_textures_capacity * 1.5f);
     glTexStorage3D(texture.gl_texture_target, 1, GL_RGB8, texture.data.width, texture.data.height, texture.data.faces * diffuse_textures_capacity);
     
+    glCopyImageSubData(*gl_buffer, texture.gl_texture_target, 0, 0, 0, 0, // src parameters
+      gl_new_texture_array, texture.gl_texture_target, 0, 0, 0, 0, texture.data.width, texture.data.height, texture.data.faces * old_capacity);
+
     // Update state
+    glDeleteTextures(1, gl_buffer);
     *gl_buffer = gl_new_texture_array;
   }
   
