@@ -22,14 +22,13 @@
 
 class GraphicsBatch {
 public:
-  explicit GraphicsBatch(ID mesh_id): mesh_id(mesh_id), objects{}, mesh{}, layer_idxs{},
-    diffuse_textures_capacity(5), diffuse_textures_count(0) {};
+  explicit GraphicsBatch(ID mesh_id): mesh_id(mesh_id), objects{}, mesh{}, layer_idxs{} {};
   
   void init_buffer(uint32_t* gl_buffer, const uint32_t gl_texture_unit, const Texture& texture) {
     glActiveTexture(GL_TEXTURE0 + gl_texture_unit);
     glGenTextures(1, gl_buffer);
     glBindTexture(texture.gl_texture_target, *gl_buffer);
-    const int default_buffer_size = 3;
+    const int default_buffer_size = 1;
     glTexStorage3D(texture.gl_texture_target, 1, GL_RGB8, texture.data.width, texture.data.height, texture.data.faces * default_buffer_size); // depth = layer faces
   }
 
@@ -85,26 +84,26 @@ public:
   std::map<ID, uint32_t> layer_idxs;  // Texture ID to layer index mapping for all texture in batch
 
   /// Diffuse texture buffer
-  uint32_t diffuse_textures_count;    // # texture currently in the GL buffer
-  uint32_t diffuse_textures_capacity; // # textures the GL buffer can hold
+  uint32_t diffuse_textures_count    = 0; // # texture currently in the GL buffer
+  uint32_t diffuse_textures_capacity = 1; // # textures the GL buffer can hold
   
-  uint32_t gl_diffuse_texture_array;  // OpenGL handle to the texture array buffer (GL_TEXTURE_2D_ARRAY, GL_TEXTURE_CUBE_MAP_ARRAY, etc)
-  uint32_t gl_diffuse_texture_type;   // GL_TEXTURE_2D, GL_TEXTURE_CUBE_MAP, etc
-  uint32_t gl_diffuse_texture_unit;
+  uint32_t gl_diffuse_texture_array = 0;  // OpenGL handle to the texture array buffer (GL_TEXTURE_2D_ARRAY, GL_TEXTURE_CUBE_MAP_ARRAY, etc)
+  uint32_t gl_diffuse_texture_type  = 0;   // GL_TEXTURE_2D, GL_TEXTURE_CUBE_MAP, etc
+  uint32_t gl_diffuse_texture_unit  = 0;
   
-  uint32_t gl_diffuse_textures_layer_idx; // Attribute buffer for layer indices
+  uint32_t gl_diffuse_textures_layer_idx = 0; // Attribute buffer for layer indices
   
   /// Physically based rendering related
-  uint32_t gl_metallic_roughness_texture_unit;  // Metallic roughness texture buffer
-  uint32_t gl_ambient_occlusion_texture_unit;   // Ambient occlusion map
-  uint32_t gl_emissive_texture_unit;            // Emissive map
+  uint32_t gl_metallic_roughness_texture_unit = 0;  // Metallic roughness texture buffer
+  uint32_t gl_ambient_occlusion_texture_unit  = 0;  // Ambient occlusion map
+  uint32_t gl_emissive_texture_unit           = 0;  // Emissive map
     
   /// Depth pass variables
-  uint32_t gl_depth_vao;
-  uint32_t gl_depth_vbo;
-  uint32_t gl_depth_models_buffer_object;
-  uint32_t gl_shading_model_buffer_object;
-  uint32_t gl_pbr_scalar_buffer_object;         // Used by ShadingModel::PBRScalars
+  uint32_t gl_depth_vao = 0;
+  uint32_t gl_depth_vbo = 0;
+  uint32_t gl_depth_models_buffer_object  = 0;
+  uint32_t gl_shading_model_buffer_object = 0;
+  uint32_t gl_pbr_scalar_buffer_object    = 0;         // Used by ShadingModel::PBRScalars
 
   ShadingModel shading_model; // Shading model to use with the shader
   Shader depth_shader;        // Shader used to render all the components in this batch
