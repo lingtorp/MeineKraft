@@ -24,7 +24,7 @@ class GraphicsBatch {
 public:
   explicit GraphicsBatch(ID mesh_id): mesh_id(mesh_id), objects{}, mesh{}, layer_idxs{} {};
   
-  void init_buffer(uint32_t* gl_buffer, const uint32_t gl_texture_unit, const Texture& texture) {
+  void init_buffer(const Texture& texture, uint32_t* gl_buffer, const uint32_t gl_texture_unit) {
     glActiveTexture(GL_TEXTURE0 + gl_texture_unit);
     glGenTextures(1, gl_buffer);
     glBindTexture(texture.gl_texture_target, *gl_buffer);
@@ -33,7 +33,7 @@ public:
   }
 
   /// Increases the texture buffer and copies over the old texture buffer (this seems to be the only way to do it)
-  void expand_texture_buffer(uint32_t* gl_buffer, const Texture& texture) {
+  void expand_texture_buffer(const Texture& texture, uint32_t* gl_buffer) {
     // Allocate new memory
     uint32_t gl_new_texture_array;
     glGenTextures(1, &gl_new_texture_array);
