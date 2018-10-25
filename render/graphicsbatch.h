@@ -102,10 +102,9 @@ struct GraphicsBatch {
   uint32_t gl_depth_vbo = 0;
   uint32_t gl_depth_models_buffer_object  = 0;
   uint32_t gl_shading_model_buffer_object = 0;
-  uint32_t gl_pbr_scalar_buffer_object    = 0;         // Used by ShadingModel::PBRScalars
+  uint32_t gl_pbr_scalar_buffer_object    = 0;  // Used by ShadingModel::PBRScalars
 
-  ShadingModel shading_model; // Shading model to use with the shader
-  Shader depth_shader;        // Shader used to render all the components in this batch
+  Shader depth_shader;  // Shader used to render all the components in this batch
 };
 
 #endif // MEINEKRAFT_GRAPHICSBATCH_H

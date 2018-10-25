@@ -641,7 +641,6 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
 
   GraphicsBatch batch{comp.mesh_id};
   batch.mesh = MeshManager::mesh_from_id(comp.mesh_id);
-  batch.shading_model = comp.shading_model;
 
   /// Batch shader prepass (depth pass) shader creation process
   batch.depth_shader = Shader{ Filesystem::base + "shaders/geometry.vert", Filesystem::base + "shaders/geometry.frag" };
