@@ -136,12 +136,13 @@ vec3 schlick_render(vec2 frag_coord, vec3 position, vec3 normal, vec3 diffuse, v
         pbr_inputs.NdotH = clamp(dot(pbr_inputs.N, pbr_inputs.H), 0.0, 1.0);
         pbr_inputs.LdotH = clamp(dot(pbr_inputs.L, pbr_inputs.H), 0.0, 1.0);
 
-        // TODO: Seperate diffuse and specular terms from the irradiance
-        // TODO: Lookup whether or not the irradiance comes in sRGB 
-        const vec3 irradiance = vec3(0.04); // texture(environment_map_sampler, pbr_inputs.N).rgb;
-        const vec3 ambient = vec3(0.0); // irradiance * diffuse * ambient_occlusion; 
-        L0 += ambient + radiance * schlick_brdf(pbr_inputs) * pbr_inputs.NdotL;
+        L0 += radiance * schlick_brdf(pbr_inputs) * pbr_inputs.NdotL;
     }
+    // TODO: Seperate diffuse and specular terms from the irradiance
+    // TODO: Lookup whether or not the irradiance comes in sRGB 
+    const vec3 irradiance = vec3(0.04); // texture(environment_map_sampler, pbr_inputs.N).rgb;
+    const vec3 ambient = irradiance * diffuse_lambertian(pbr_inputs) * ambient_occlusion; 
+    L0 += ambient;
     return L0;
 }
 
