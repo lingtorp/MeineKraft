@@ -66,11 +66,8 @@ float geometric_occlusion_schlick(PBRInputs inputs) {
 // Follows the distribution function recommended in the SIGGRAPH 2013 course notes from EPIC Games [1], Equation 3.
 // [Unreal Engine PBR] https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf
 float microfaced_distribution_trowbridge_reitz(PBRInputs inputs) {
-    // float a = inputs.roughness;
-    // return a * a / (M_PI * pow(pow(inputs.NdotH, 2) * (a * a - 1.0) + 1.0, 2.0));
-    float roughnessSq = inputs.roughness * inputs.roughness;
-    // float f = (inputs.NdotH * roughnessSq - inputs.NdotH) * inputs.NdotH + 1.0;
-    float f = (inputs.NdotH * inputs.NdotH) * (roughnessSq * roughnessSq - 1.0) + 1.0;
+    float roughnessSq = inputs.roughness * inputs.roughness; // Disney's reparameterization of roughness
+    float f = (inputs.NdotH * inputs.NdotH) * (roughnessSq * roughnessSq - 1.0) + 1.0; // Epic [2013]
     return roughnessSq / (M_PI * f * f);
 }
 
