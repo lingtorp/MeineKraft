@@ -1,5 +1,5 @@
 
-#define M_PI 3.1415926535897932384626433832795
+const float M_PI = 3.141592653589793;
 
 uniform float screen_width;
 uniform float screen_height;
@@ -49,12 +49,6 @@ vec3 fresnel_schlick(vec3 F0, PBRInputs inputs) {
 /// Approximation of geometrical attenuation coefficient: Expresses the ratio of light that is not self-obstrcuted by the surface
 /// https://www.cs.virginia.edu/%7Ejdl/bib/appearance/analytic%20models/schlick94b.pdf : page 8 : equation (19)
 float geometric_occlusion_schlick(PBRInputs inputs) {
-    /*
-    float k = inputs.roughness * sqrt(2.0 / M_PI);
-    float GL = inputs.NdotL / (inputs.NdotL * (1.0 - k) + k);
-    float GV = inputs.NdotV / (inputs.NdotV * (1.0 - k) + k);
-    return GL * GV;
-    */
     const float k = sqrt(2.0 * inputs.roughness * inputs.roughness / M_PI);
     const float GL = inputs.NdotL / (inputs.NdotL - k * inputs.NdotL + k);
     const float GV = inputs.NdotV / (inputs.NdotV - k * inputs.NdotV + k);
