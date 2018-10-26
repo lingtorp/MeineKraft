@@ -43,7 +43,7 @@ struct PBRInputs {
 /// Approximation of the Fresnel factor: Expresses the reflection of light reflected by each microfacet
 /// https://www.cs.virginia.edu/%7Ejdl/bib/appearance/analytic%20models/schlick94b.pdf : page 7 : equation (15)
 vec3 fresnel_schlick(vec3 F0, PBRInputs inputs) {
-    return F0 + (vec3(1.0) - F0) * pow(1.0 - inputs.LdotH, 5.0);
+    return F0 + (vec3(1.0) - F0) * pow(1.0 - inputs.VdotH, 5.0);
 }
 
 /// Approximation of geometrical attenuation coefficient: Expresses the ratio of light that is not self-obstrcuted by the surface
