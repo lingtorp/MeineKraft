@@ -438,11 +438,11 @@ void Renderer::render(uint32_t delta) {
     glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
     glEnable(GL_DEPTH_TEST);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); // Always update the depth buffer with the new values
-    for (const auto& batch : graphics_batches) {
+    for (size_t i = 0; i < graphics_batches.size(); i++) {
+      const auto& batch = graphics_batches[i];
       const auto program = batch.depth_shader.gl_program;
       glUseProgram(program);
       glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(camera_transform));
-      glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, glm::value_ptr(projection_matrix));
       
       glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_models_buffer_object);
       glBufferData(GL_ARRAY_BUFFER, batch.objects.transforms.size() * sizeof(Mat4<float>), batch.objects.transforms.data(), GL_DYNAMIC_DRAW);
@@ -461,6 +461,7 @@ void Renderer::render(uint32_t delta) {
       glDrawElementsInstanced(GL_TRIANGLES, batch.mesh.indices.size(), GL_UNSIGNED_INT, nullptr, batch.objects.transforms.size());
       
       state.entities += batch.objects.transforms.size();
+      state.draw_calls++;
     }
   }
   pass_ended();
@@ -519,27 +520,18 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     /// Shaderbindings
     auto program = batch.depth_shader.gl_program;
     glUseProgram(program);
+    glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, glm::value_ptr(projection_matrix));
     glUniform1i(glGetUniformLocation(program, "diffuse"), batch.gl_diffuse_texture_unit);
-    switch (batch.shading_model) {
-    case ShadingModel::PhysicallyBased:
-      glUniform1i(glGetUniformLocation(program, "pbr_parameters"), batch.gl_metallic_roughness_texture_unit);
-      glUniform1i(glGetUniformLocation(program, "ambient_occlusion"), batch.gl_ambient_occlusion_texture_unit);
-      glUniform1i(glGetUniformLocation(program, "emissive"), batch.gl_emissive_texture_unit);
-      break;
-    case ShadingModel::PhysicallyBasedScalars:
-      // FIXME: PBR scalar parameters buffer needs only to be created here
-      break;
-    case ShadingModel::Unlit:
-      break;
-    }
+    glUniform1i(glGetUniformLocation(program, "pbr_parameters"), batch.gl_metallic_roughness_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "ambient_occlusion"), batch.gl_ambient_occlusion_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "emissive"), batch.gl_emissive_texture_unit);
     
     glGenVertexArrays(1, &batch.gl_depth_vao);
     glBindVertexArray(batch.gl_depth_vao);
 
     glGenBuffers(1, &batch.gl_depth_vbo);
     glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_vbo);
-    const auto vertices = batch.mesh.to_floats(); 
-    glBufferData(GL_ARRAY_BUFFER, batch.mesh.byte_size_of_vertices(), vertices.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, batch.mesh.byte_size_of_vertices(), batch.mesh.vertices.data(), GL_STATIC_DRAW);
 
     auto position_attrib = glGetAttribLocation(program, "position");
     glVertexAttribPointer(position_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, position));
@@ -592,74 +584,63 @@ void Renderer::link_batch(GraphicsBatch& batch) {
 }
 
 void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
-  // TODO: Check if component matches any existing batch config.
-  for (auto& batch : graphics_batches) {
-    if (batch.mesh_id == comp.mesh_id) {
-      if (comp.diffuse_texture.data.pixels) {
-        for (const auto& item : batch.layer_idxs) {
-          const auto id = item.first; // Texture id
-          if (id == comp.diffuse_texture.id) {
-            batch.objects.diffuse_texture_idxs.push_back(batch.layer_idxs[id]);
-            add_graphics_state(batch, comp, entity_id);
-            return;
-          }
-        }
-
-        /// Expand texture buffer if needed
-        if (batch.diffuse_textures_count + 1 > batch.diffuse_textures_capacity) {
-          batch.expand_texture_buffer(&batch.gl_diffuse_texture_array, comp.diffuse_texture);
-        }
-
-        /// Update the mapping from texture id to layer idx and increment count
-        batch.layer_idxs[comp.diffuse_texture.id] = batch.diffuse_textures_count++;
-        batch.objects.diffuse_texture_idxs.push_back(batch.layer_idxs[comp.diffuse_texture.id]);
-
-        /// Upload the texture to OpenGL
-        batch.upload(comp.diffuse_texture, batch.gl_diffuse_texture_unit, batch.gl_diffuse_texture_array);
-      }
-      add_graphics_state(batch, comp, entity_id);
-      return;
-    }
-  }
-
-  GraphicsBatch batch{comp.mesh_id};
-  batch.mesh = MeshManager::mesh_from_id(comp.mesh_id);
-  batch.shading_model = comp.shading_model;
-
-  /// Batch shader prepass (depth pass) shader creation process
-  batch.depth_shader = Shader{ Filesystem::base + "shaders/geometry.vert", Filesystem::base + "shaders/geometry.frag" };
-  
-  // Handle shading models
-  switch (batch.shading_model) {
-  case ShadingModel::PhysicallyBased:
-    batch.depth_shader.add(Shader::Defines::PBRTextured);
-    break;
-  case ShadingModel::PhysicallyBasedScalars:
-    batch.depth_shader.add(Shader::Defines::PBRScalar);
-    break;
-  case ShadingModel::Unlit:
-    //
-    break;
-  }
+  // Handle the config of the Shader from the component
+  std::set<Shader::Defines> comp_shader_config;
 
   if (comp.diffuse_texture.data.pixels) {
     switch (comp.diffuse_texture.gl_texture_target) {
     case GL_TEXTURE_2D_ARRAY:
-      batch.depth_shader.add(Shader::Defines::Diffuse2D);
+      comp_shader_config.insert(Shader::Defines::Diffuse2D);
       break;
     case GL_TEXTURE_CUBE_MAP_ARRAY:
-      batch.depth_shader.add(Shader::Defines::DiffuseCubemap);
+      comp_shader_config.insert(Shader::Defines::DiffuseCubemap);
       break;
     default:
       Log::error("Depth shader diffuse texture type not handled.");
     }
+  }
 
+  // Shader configuration and mesh id defines the uniqueness of a GBatch
+  for (auto& batch : graphics_batches) {
+    if (batch.mesh_id != comp.mesh_id) { continue; }
+    if (comp_shader_config != batch.depth_shader.defines) { continue; }
+    if (comp.diffuse_texture.data.pixels) {
+      for (const auto& item : batch.layer_idxs) {
+        const auto id = item.first; // Texture id
+        if (id == comp.diffuse_texture.id) {
+          batch.objects.diffuse_texture_idxs.push_back(batch.layer_idxs[id]);
+          add_graphics_state(batch, comp, entity_id);
+          return;
+        }
+      }
+
+      /// Expand texture buffer if needed
+      if (batch.diffuse_textures_count + 1 > batch.diffuse_textures_capacity) {
+        batch.expand_texture_buffer(comp.diffuse_texture, &batch.gl_diffuse_texture_array, &batch.diffuse_textures_capacity, batch.gl_diffuse_texture_unit);
+      }
+
+      /// Update the mapping from texture id to layer idx and increment count
+      batch.layer_idxs[comp.diffuse_texture.id] = batch.diffuse_textures_count++;
+      batch.objects.diffuse_texture_idxs.push_back(batch.layer_idxs[comp.diffuse_texture.id]);
+
+      /// Upload the texture to OpenGL
+      batch.upload(comp.diffuse_texture, batch.gl_diffuse_texture_unit, batch.gl_diffuse_texture_array);
+    }
+    add_graphics_state(batch, comp, entity_id);
+    return;
+  }
+
+  GraphicsBatch batch{comp.mesh_id};
+  batch.mesh = MeshManager::mesh_from_id(comp.mesh_id);
+
+  /// Batch shader prepass (depth pass) shader creation process
+  batch.depth_shader = Shader{ Filesystem::base + "shaders/geometry.vert", Filesystem::base + "shaders/geometry.frag" };
+  batch.depth_shader.defines = comp_shader_config;
+
+  if (comp.diffuse_texture.data.pixels) {
     batch.gl_diffuse_texture_unit = Renderer::get_next_free_texture_unit();
 
-    /// Set what type the texture array will hold for the type of texture
-    batch.gl_diffuse_texture_type = comp.diffuse_texture.gl_texture_target;
-
-    batch.init_buffer(&batch.gl_diffuse_texture_array, batch.gl_diffuse_texture_unit, comp.diffuse_texture);
+    batch.init_buffer(comp.diffuse_texture, &batch.gl_diffuse_texture_array, batch.gl_diffuse_texture_unit, &batch.diffuse_textures_capacity);
 
     /// Update the mapping from texture id to layer idx and increment count
     batch.layer_idxs[comp.diffuse_texture.id] = batch.diffuse_textures_count++;
@@ -727,10 +708,18 @@ void Renderer::add_graphics_state(GraphicsBatch& batch, const RenderComponent& c
   batch.entity_ids.push_back(entity_id);
   batch.data_idx[entity_id] = batch.entity_ids.size() - 1;
   batch.objects.transforms.push_back(TransformSystem::instance().lookup(entity_id));
-  batch.objects.diffuse_textures.push_back(comp.diffuse_texture);
-  batch.objects.emissive_textures.push_back(comp.emissive_texture);
-  batch.objects.metallic_roughness_textures.push_back(comp.metallic_roughness_texture);
-  batch.objects.ambient_occlusion_textures.push_back(comp.ambient_occlusion_texture);
+  if (comp.diffuse_texture.data.pixels) {
+    batch.objects.diffuse_textures.push_back(comp.diffuse_texture);
+  }
+  if (comp.emissive_texture.data.pixels) {
+    batch.objects.emissive_textures.push_back(comp.emissive_texture);
+  }
+  if (comp.metallic_roughness_texture.data.pixels) {
+    batch.objects.metallic_roughness_textures.push_back(comp.metallic_roughness_texture);
+  }
+  if (comp.ambient_occlusion_texture.data.pixels) {
+    batch.objects.ambient_occlusion_textures.push_back(comp.ambient_occlusion_texture);
+  }
   batch.objects.pbr_scalar_parameters.push_back(comp.pbr_scalar_parameters);
   batch.objects.shading_models.push_back(comp.shading_model);
 }

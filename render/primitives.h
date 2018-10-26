@@ -123,26 +123,6 @@ struct Mesh {
   Mesh(const Mesh& mesh): vertices(mesh.vertices), indices(mesh.indices) {};
   Mesh(std::vector<Vertex<float>> vertices, std::vector<uint32_t> indices): vertices(vertices), indices(indices) {};
 
-  /// Return a vector of all the vertices data laid out as the Vertex struct
-  std::vector<float> to_floats() const {
-      std::vector<float> floats;
-      for (const auto vertex : vertices) {
-          floats.push_back(vertex.position.x);
-          floats.push_back(vertex.position.y);
-          floats.push_back(vertex.position.z);
-          floats.push_back(vertex.color.r);
-          floats.push_back(vertex.color.g);
-          floats.push_back(vertex.color.b);
-          floats.push_back(vertex.color.a);
-          floats.push_back(vertex.texCoord.x);
-          floats.push_back(vertex.texCoord.y);
-          floats.push_back(vertex.normal.x);
-          floats.push_back(vertex.normal.y);
-          floats.push_back(vertex.normal.z);
-      }
-      return floats;
-  }
-
   /// Byte size of vertices to upload to OpenGL
   size_t byte_size_of_vertices() const {
       return sizeof(Vertex<float>) * vertices.size();
@@ -306,11 +286,12 @@ enum class ShadingModel: uint32_t {
 
 /// Represents the state of the Render, used for ImGUI debug panes
 struct RenderState {
-  uint64_t frame;
-  uint64_t entities;
-  uint64_t graphic_batches;
+  uint64_t frame           = 0;
+  uint64_t entities        = 0;
+  uint64_t graphic_batches = 0;
+  uint64_t draw_calls      = 0;
   RenderState() = default;
-  RenderState(const RenderState& old): frame(old.frame), entities(0), graphic_batches(0) {}
+  RenderState(const RenderState& old): frame(old.frame) {}
 };
 
 #endif // MEINEKRAFT_PRIMITIVES_H

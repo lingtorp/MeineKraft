@@ -20,34 +20,34 @@
 #include "sdl2/SDL_opengl.h"
 #endif 
 
-class GraphicsBatch {
-public:
-  explicit GraphicsBatch(ID mesh_id): mesh_id(mesh_id), objects{}, mesh{}, layer_idxs{},
-    diffuse_textures_capacity(5), diffuse_textures_count(0) {};
+struct GraphicsBatch {
+  explicit GraphicsBatch(ID mesh_id): mesh_id(mesh_id), objects{}, mesh{}, layer_idxs{} {};
   
-  void init_buffer(uint32_t* gl_buffer, const uint32_t gl_texture_unit, const Texture& texture) {
+  void init_buffer(const Texture& texture, uint32_t* gl_buffer, const uint32_t gl_texture_unit, uint32_t* buffer_capacity) {
     glActiveTexture(GL_TEXTURE0 + gl_texture_unit);
     glGenTextures(1, gl_buffer);
     glBindTexture(texture.gl_texture_target, *gl_buffer);
-    const int default_buffer_size = 3;
+    const int default_buffer_size = 1;
     glTexStorage3D(texture.gl_texture_target, 1, GL_RGB8, texture.data.width, texture.data.height, texture.data.faces * default_buffer_size); // depth = layer faces
+    *buffer_capacity = default_buffer_size;
   }
 
-  /// GL buffer type or in GL-speak target rather than type
-  void expand_texture_buffer(uint32_t* gl_buffer, const Texture& texture) {
-    // TODO: Dealloc the old buffer
+  /// Increases the texture buffer and copies over the old texture buffer (this seems to be the only way to do it)
+  void expand_texture_buffer(const Texture& texture, uint32_t* gl_buffer, uint32_t* texture_array_capacity, const uint32_t texture_unit) {
     // Allocate new memory
     uint32_t gl_new_texture_array;
     glGenTextures(1, &gl_new_texture_array);
-    glActiveTexture(GL_TEXTURE0 + gl_diffuse_texture_unit);
+    glActiveTexture(GL_TEXTURE0 + texture_unit);
     glBindTexture(texture.gl_texture_target, gl_new_texture_array);
+    uint32_t old_capacity = *texture_array_capacity;
+    *texture_array_capacity = (uint32_t) std::ceil(*texture_array_capacity * 1.5f);
+    glTexStorage3D(texture.gl_texture_target, 1, GL_RGB8, texture.data.width, texture.data.height, texture.data.faces * *texture_array_capacity);
     
-    // # of new textures to accommodate
-    const float texture_array_growth_factor = 1.5f; 
-    diffuse_textures_capacity = (uint32_t) std::ceil(diffuse_textures_capacity * texture_array_growth_factor);
-    glTexStorage3D(texture.gl_texture_target, 1, GL_RGB8, texture.data.width, texture.data.height, texture.data.faces * diffuse_textures_capacity);
-    
+    glCopyImageSubData(*gl_buffer, texture.gl_texture_target, 0, 0, 0, 0, // src parameters
+      gl_new_texture_array, texture.gl_texture_target, 0, 0, 0, 0, texture.data.width, texture.data.height, texture.data.faces * old_capacity);
+
     // Update state
+    glDeleteTextures(1, gl_buffer);
     *gl_buffer = gl_new_texture_array;
   }
   
@@ -84,29 +84,27 @@ public:
   std::map<ID, uint32_t> layer_idxs;  // Texture ID to layer index mapping for all texture in batch
 
   /// Diffuse texture buffer
-  uint32_t diffuse_textures_count;    // # texture currently in the GL buffer
-  uint32_t diffuse_textures_capacity; // # textures the GL buffer can hold
+  uint32_t diffuse_textures_count    = 0; // # texture currently in the GL buffer
+  uint32_t diffuse_textures_capacity = 0; // # textures the GL buffer can hold
   
-  uint32_t gl_diffuse_texture_array;  // OpenGL handle to the texture array buffer (GL_TEXTURE_2D_ARRAY, GL_TEXTURE_CUBE_MAP_ARRAY, etc)
-  uint32_t gl_diffuse_texture_type;   // GL_TEXTURE_2D, GL_TEXTURE_CUBE_MAP, etc
-  uint32_t gl_diffuse_texture_unit;
+  uint32_t gl_diffuse_texture_array = 0;  // OpenGL handle to the texture array buffer (GL_TEXTURE_2D_ARRAY, GL_TEXTURE_CUBE_MAP_ARRAY, etc)
+  uint32_t gl_diffuse_texture_unit  = 0;
   
-  uint32_t gl_diffuse_textures_layer_idx; // Attribute buffer for layer indices
+  uint32_t gl_diffuse_textures_layer_idx = 0; // Attribute buffer for layer indices
   
   /// Physically based rendering related
-  uint32_t gl_metallic_roughness_texture_unit;  // Metallic roughness texture buffer
-  uint32_t gl_ambient_occlusion_texture_unit;   // Ambient occlusion map
-  uint32_t gl_emissive_texture_unit;            // Emissive map
+  uint32_t gl_metallic_roughness_texture_unit = 0;  // Metallic roughness texture buffer
+  uint32_t gl_ambient_occlusion_texture_unit  = 0;  // Ambient occlusion map
+  uint32_t gl_emissive_texture_unit           = 0;  // Emissive map
     
   /// Depth pass variables
-  uint32_t gl_depth_vao;
-  uint32_t gl_depth_vbo;
-  uint32_t gl_depth_models_buffer_object;
-  uint32_t gl_shading_model_buffer_object;
-  uint32_t gl_pbr_scalar_buffer_object;         // Used by ShadingModel::PBRScalars
+  uint32_t gl_depth_vao = 0;
+  uint32_t gl_depth_vbo = 0;
+  uint32_t gl_depth_models_buffer_object  = 0;
+  uint32_t gl_shading_model_buffer_object = 0;
+  uint32_t gl_pbr_scalar_buffer_object    = 0;  // Used by ShadingModel::PBRScalars
 
-  ShadingModel shading_model; // Shading model to use with the shader
-  Shader depth_shader;        // Shader used to render all the components in this batch
+  Shader depth_shader;  // Shader used to render all the components in this batch
 };
 
 #endif // MEINEKRAFT_GRAPHICSBATCH_H

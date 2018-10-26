@@ -10,10 +10,10 @@
 struct Shader {
   enum class Defines: uint32_t {
     Diffuse2D, 
-    DiffuseCubemap,
-    PBRTextured, // PBR parameters are fetched from texture
-    PBRScalar    // PBR parameters are fetched from uniform scalars
+    DiffuseCubemap
   };
+  // Configuration of the shader a la Ubershader
+  std::set<Shader::Defines> defines;
 
   Shader() = default;
   Shader(const std::string& vertex_filepath, const std::string& fragment_filepath);
@@ -25,6 +25,7 @@ struct Shader {
   /// Loads and recompiles both shaders
   std::pair<bool, std::string> recompile();
 
+  static std::string shader_define_to_string(Shader::Defines define);
   void add(Shader::Defines define);
 
   std::string vertex_filepath;
@@ -33,12 +34,9 @@ struct Shader {
   std::string vertex_shader_src;
   std::string fragment_shader_src;
 
-private:
   uint32_t gl_vertex_shader;
   uint32_t gl_fragment_shader;
 
-  std::set<std::string> defines;
-  
   /// Validates that all of the defines work together
   bool validate();
 
