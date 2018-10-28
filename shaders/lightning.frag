@@ -12,7 +12,7 @@ uniform sampler2D pbr_parameters_sampler;
 uniform sampler2D ambient_occlusion_sampler;
 uniform sampler2D emissive_sampler;
 uniform usampler2D shading_model_id_sampler;
-uniform samplerCube environment_map_sampler;
+uniform samplerCubeArray environment_map_sampler;
 
 uniform vec3 camera; // TEST
 
@@ -131,7 +131,7 @@ vec3 schlick_render(vec2 frag_coord, vec3 position, vec3 normal, vec3 diffuse, v
     }
     // TODO: Seperate diffuse and specular terms from the irradiance
     // TODO: Lookup whether or not the irradiance comes in sRGB 
-    const vec3 irradiance = vec3(0.04); // texture(environment_map_sampler, pbr_inputs.N).rgb;
+    const vec3 irradiance = texture(environment_map_sampler, vec4(pbr_inputs.N, 0)).rgb;
     const vec3 ambient = irradiance * diffuse_lambertian(pbr_inputs) * ambient_occlusion; 
     L0 += ambient;
     return L0;
