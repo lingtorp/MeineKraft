@@ -19,10 +19,10 @@ typedef uint64_t ID;
 
 struct RawTexture {
   uint8_t* pixels = nullptr;
-  uint32_t size; // Byte size per face
-  uint32_t width;
-  uint32_t height;
-  uint32_t faces; // Number of faces, used for cube maps
+  uint32_t size   = 0; // Byte size per face
+  uint32_t width  = 0; // Measured in pixels
+  uint32_t height = 0; 
+  uint32_t faces  = 0; // Number of faces, used for cube maps
   RawTexture() = default;
 };
 
