@@ -27,6 +27,10 @@ struct ActionSystem {
     components.emplace_back(component);
   }
 
+  void remove_component(const ID id) {
+    // TODO: Implement
+  }
+
   void execute_actions(const uint64_t frame, const uint64_t dt) {
     for (const auto& component : components) {
       component.action(frame, dt);
@@ -95,6 +99,10 @@ struct Entity {
 
     void deattach_component(const TransformComponent component) {
       TransformSystem::instance().remove_component(id);
+    }
+
+    void deattach_component(const ActionComponent component) {
+      ActionSystem::instance().remove_component(id);
     }
 };
 
