@@ -605,26 +605,22 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
     if (batch.mesh_id != comp.mesh_id) { continue; }
     if (comp_shader_config != batch.depth_shader.defines) { continue; }
     if (comp.diffuse_texture.data.pixels) {
-      for (const auto& item : batch.layer_idxs) {
-        const auto id = item.first; // Texture id
-        if (id == comp.diffuse_texture.id) {
-          batch.objects.diffuse_texture_idxs.push_back(batch.layer_idxs[id]);
-          add_graphics_state(batch, comp, entity_id);
-          return;
+      bool batch_contains_texture = batch.layer_idxs.count(comp.diffuse_texture.id) == 0;
+      if (!batch_contains_texture) {
+        batch.objects.diffuse_texture_idxs.push_back(batch.layer_idxs[comp.diffuse_texture.id]);
+      } else {
+        /// Expand texture buffer if needed
+        if (batch.diffuse_textures_count + 1 > batch.diffuse_textures_capacity) {
+          batch.expand_texture_buffer(comp.diffuse_texture, &batch.gl_diffuse_texture_array, &batch.diffuse_textures_capacity, batch.gl_diffuse_texture_unit);
         }
+
+        /// Update the mapping from texture id to layer idx and increment count
+        batch.layer_idxs[comp.diffuse_texture.id] = batch.diffuse_textures_count++;
+        batch.objects.diffuse_texture_idxs.push_back(batch.layer_idxs[comp.diffuse_texture.id]);
+
+        /// Upload the texture to OpenGL
+        batch.upload(comp.diffuse_texture, batch.gl_diffuse_texture_unit, batch.gl_diffuse_texture_array);
       }
-
-      /// Expand texture buffer if needed
-      if (batch.diffuse_textures_count + 1 > batch.diffuse_textures_capacity) {
-        batch.expand_texture_buffer(comp.diffuse_texture, &batch.gl_diffuse_texture_array, &batch.diffuse_textures_capacity, batch.gl_diffuse_texture_unit);
-      }
-
-      /// Update the mapping from texture id to layer idx and increment count
-      batch.layer_idxs[comp.diffuse_texture.id] = batch.diffuse_textures_count++;
-      batch.objects.diffuse_texture_idxs.push_back(batch.layer_idxs[comp.diffuse_texture.id]);
-
-      /// Upload the texture to OpenGL
-      batch.upload(comp.diffuse_texture, batch.gl_diffuse_texture_unit, batch.gl_diffuse_texture_array);
     }
     add_graphics_state(batch, comp, entity_id);
     return;
