@@ -20,8 +20,7 @@ flat out vec3 fPbr_scalar_parameters;
 void main() {
     gl_Position = projection * camera_view * model * vec4(position, 1.0);
 
-    mat3 normal_matrix = mat3(camera_view * model);
-    fNormal = normal_matrix * normal;
+    fNormal = normal;
     fPosition = vec3(model * vec4(position, 1.0));
     #if defined(DIFFUSE_CUBEMAP)
     fPosition = vec3(vec4(position, 1.0));
