@@ -69,11 +69,7 @@ struct GraphicsBatch {
   struct GraphicStateObjects {
     std::vector<Transform> transforms;
     std::vector<ShadingModel> shading_models;         // default ShadingModel::Unlit;
-    std::vector<Texture> diffuse_textures;
     std::vector<uint32_t> diffuse_texture_idxs;       // Layer index
-    std::vector<Texture> metallic_roughness_textures; // Used by ShadingModel::PBRTextured
-    std::vector<Texture> ambient_occlusion_textures;
-    std::vector<Texture> emissive_textures;
     std::vector<Vec3f> pbr_scalar_parameters;         // Used by ShadingModel::PBRScalars
   };
   std::unordered_map<ID, ID> data_idx;                // Entity ID to data position in data (objects struct)

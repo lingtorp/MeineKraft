@@ -707,18 +707,6 @@ void Renderer::add_graphics_state(GraphicsBatch& batch, const RenderComponent& c
   batch.entity_ids.push_back(entity_id);
   batch.data_idx[entity_id] = batch.entity_ids.size() - 1;
   batch.objects.transforms.push_back(TransformSystem::instance().lookup(entity_id));
-  if (comp.diffuse_texture.data.pixels) {
-    batch.objects.diffuse_textures.push_back(comp.diffuse_texture);
-  }
-  if (comp.emissive_texture.data.pixels) {
-    batch.objects.emissive_textures.push_back(comp.emissive_texture);
-  }
-  if (comp.metallic_roughness_texture.data.pixels) {
-    batch.objects.metallic_roughness_textures.push_back(comp.metallic_roughness_texture);
-  }
-  if (comp.ambient_occlusion_texture.data.pixels) {
-    batch.objects.ambient_occlusion_textures.push_back(comp.ambient_occlusion_texture);
-  }
   batch.objects.pbr_scalar_parameters.push_back(comp.pbr_scalar_parameters);
   batch.objects.shading_models.push_back(comp.shading_model);
 }
