@@ -14,6 +14,7 @@
 #include "debug_opengl.h"
 #include "rendercomponent.h"
 #include "meshmanager.h"
+#include "../nodes/entity.h"
 
 #include <glm/common.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -723,10 +724,16 @@ void Renderer::add_graphics_state(GraphicsBatch& batch, const RenderComponent& c
 }
 
 void Renderer::update_transforms() {
+  std::vector<ID> job_ids;
   for (auto& batch : graphics_batches) {
-    std::vector<ID> t_ids = TransformSystem::instance().get_dirty_transforms_from(batch.entity_ids);
-    for (const auto& t_id : t_ids) {
-      batch.objects.transforms[batch.data_idx[t_id]] = TransformSystem::instance().lookup(t_id);
-    }
+    ID job_id = JobSystem::instance().execute([&](){
+      std::vector<ID> t_ids = TransformSystem::instance().get_dirty_transforms_from(batch.entity_ids);
+      for (const auto& t_id : t_ids) {
+        batch.objects.transforms[batch.data_idx[t_id]] = TransformSystem::instance().lookup(t_id);
+      }
+    });
+    job_ids.push_back(job_id);
   }
+
+  JobSystem::instance().wait_on(job_ids);
 }

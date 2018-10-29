@@ -5,8 +5,124 @@
 #include "../render/rendercomponent.h"
 #include "transform.h"
 #include "../render/render.h"
-
 #include <functional>
+#include <future>
+
+/// Semaphore
+struct Semaphore {
+private:
+  size_t value = 0;
+  std::mutex mut;
+
+public:
+  explicit Semaphore(size_t val) : value(val) {}
+
+  void post(size_t val = 1) {
+    std::unique_lock<std::mutex> lk(mut);
+    value += val;
+  }
+
+  size_t get_value() {
+    std::unique_lock<std::mutex> lk(mut);
+    return value;
+  }
+
+  bool peek() {
+    std::unique_lock<std::mutex> lk(mut);
+    return value != 0;
+  }
+
+  /// PEek EQuals 
+  bool peeq(size_t i) {
+    std::unique_lock<std::mutex> lk(mut);
+    return value == i;
+  }
+
+  bool try_wait() {
+    std::unique_lock<std::mutex> lk(mut);
+    if (value == 0) {
+      return false;
+    } else {
+      value--;
+      return true;
+    }
+  }
+};
+
+struct JobSystem {
+  /// Singleton instance
+  static JobSystem& instance() {
+    static JobSystem instance;
+    return instance;
+  }
+
+  struct Worker {
+    Semaphore sem; // 0 working, 1 ready, 2 done/idle, 3 exit
+    std::function<void()> workload;
+    std::thread t;
+
+    Worker(): sem(2), t(&Worker::execute, this) {}
+    ~Worker() { t.join(); }
+
+    void execute() {
+      while (!sem.peeq(3)) {
+        if (sem.peeq(1)) {
+          sem.try_wait();
+          workload();
+          sem.post(2);
+        } else {
+          std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+      }
+    }
+  };
+
+  std::vector<Worker> thread_pool;
+
+  JobSystem() {
+    const size_t num_threads = std::thread::hardware_concurrency() == 0 ? 4 : std::thread::hardware_concurrency();
+    thread_pool = std::vector<Worker>(num_threads);
+  }
+  ~JobSystem() {
+    for (int i = 0; i < thread_pool.size(); i++) {
+      thread_pool[i].sem.post(3);
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(2));
+  }
+
+  // Async
+  ID execute(const std::function<void()>& func) {
+    uint32_t i = 0;
+    while (true) {
+      if (thread_pool[i].sem.peeq(2)) {
+        thread_pool[i].workload = func;
+        thread_pool[i].sem.try_wait();
+        return i;
+      }
+      i = (i + 1) % thread_pool.size();
+    }
+  }
+
+  // Blocking
+  void wait_on(const std::vector<ID>& ids) {
+    for (int i = 0; i < ids.size(); i++) {
+      while (thread_pool[ids[i]].sem.peeq(0)) {
+        std::this_thread::sleep_for(std::chrono::microseconds(1));
+      }
+    }
+  }
+
+  // Blocking
+  void wait_on_all() {
+    for (int i = 0; i < thread_pool.size(); i++) {
+      while (thread_pool[i].sem.peeq(0)) {}
+    }
+  }
+};
+  
+
+/*********************************************************************************/
+
 struct ActionComponent {
   std::function<void(uint64_t, uint64_t)> action;
   ActionComponent(const std::function<void(uint64_t, uint64_t)>& action): action(action) {}
@@ -37,6 +153,8 @@ struct ActionSystem {
     }
   }
 };
+
+/*********************************************************************************/
 
 // Mapping: Entity ID <--> Alive?
 struct EntitySystem {
