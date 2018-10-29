@@ -87,7 +87,7 @@ public:
     std::iota(X.begin(), X.end(), -10);
     for (const auto x : X) {
       Block::BlockType block_type = distr(engine) < 0.5 ? Block::BlockType::GRASS : Block::BlockType::DIRT;
-      // Block* block = new Block(Vec3f(0.0f, 0.0f, 1.0f + 1.0f * x), block_type);
+      Block* block = new Block(Vec3f(0.0f, 0.0f, 1.0f + 1.0f * x), block_type);
     }
 
     for (size_t i = 0; i < 7; i++) {
@@ -98,14 +98,14 @@ public:
         entity->attach_component(transform);
         RenderComponent render;
         render.set_mesh(MeshPrimitive::Sphere);
-        render.pbr_scalar_parameters = Vec3f(0.0, 1.0 / 7.0 * i, 1.0 / 7.0 * j);
+        render.pbr_scalar_parameters = Vec3f(0.0, 1.0 / 6.0 * i, 1.0 / 6.0 * j);
         render.set_shading_model(ShadingModel::PhysicallyBasedScalars);
         entity->attach_component(render);
         ActionComponent action([=](uint64_t frame, uint64_t dt) {
           Transform t = TransformSystem::instance().lookup(entity->id);
           Vec3f position(transform.position.x, transform.position.y, 5.0f * std::cos(glm::radians(float(frame * 0.025f))));
           t.matrix = t.matrix.set_translation(position); 
-          // TransformSystem::instance().set_transform(t, entity->id);
+          TransformSystem::instance().set_transform(t, entity->id);
         });
         entity->attach_component(action);
       }
