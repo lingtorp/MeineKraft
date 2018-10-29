@@ -165,7 +165,7 @@ int main() {
       if (ImGui::CollapsingHeader("Render System", ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::Text("Frame: %llu", renderer.state.frame);
         ImGui::Text("Entities: %llu", renderer.state.entities);
-        ImGui::Text("Application average %lld ms / frame (%.1f FPS)", delta, io.Framerate);
+        ImGui::Text("Average %lld ms / frame (%.1f FPS)", delta, io.Framerate);
 
         static size_t i = -1; i = (i + 1) % num_deltas;
         deltas[i] = float(delta);
