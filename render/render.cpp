@@ -414,6 +414,8 @@ Renderer::Renderer(): graphics_batches{} {
   }
 
   glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+  glEnable(GL_CULL_FACE);
+  glCullFace(GL_BACK);
 
   /// Camera
   const auto position  = Vec3<float>{8.0f, 8.0f, 8.0f};  
