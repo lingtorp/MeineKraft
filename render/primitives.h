@@ -190,22 +190,22 @@ struct Sphere: public Mesh {
         float y = std::cos(y_segment * PI);
         float z = std::sin(x_segment * 2.0f * PI) * std::sin(y_segment * PI);
         Vertex<float> vertex;
-        vertex.position = Vec3<float>{x, y, z} * radius;
-        vertex.normal = Vec3<float>{x, y, z} * radius;
+        vertex.position = Vec3f{x, y, z} * radius;
+        vertex.normal = Vec3f{x, y, z} * radius;
         vertices.emplace_back(vertex);
 
-        if (j < Y_SEGMENTS - 1) {
+        if (j <= Y_SEGMENTS) {
           const int curRow  = j * X_SEGMENTS;
           const int nextRow = (j + 1) * X_SEGMENTS;
           const int nextS   = (i + 1) % X_SEGMENTS;
 
-          indices.push_back(curRow + i);
+          indices.push_back(nextRow + nextS);
           indices.push_back(nextRow + i);
-          indices.push_back(nextRow + nextS);
-
           indices.push_back(curRow + i);
-          indices.push_back(nextRow + nextS);
+
           indices.push_back(curRow + nextS);
+          indices.push_back(nextRow + nextS);
+          indices.push_back(curRow + i);
         }
       }
     }
