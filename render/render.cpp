@@ -545,7 +545,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glEnableVertexAttribArray(normal_attrib);
 
     auto texcoord_attrib = glGetAttribLocation(program, "texcoord");
-    glVertexAttribPointer(texcoord_attrib, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, texCoord));
+    glVertexAttribPointer(texcoord_attrib, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, tex_coord));
     glEnableVertexAttribArray(texcoord_attrib);
 
     // Buffer for all the model matrices

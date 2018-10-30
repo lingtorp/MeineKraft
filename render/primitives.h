@@ -28,7 +28,6 @@ public:
   }
 };
 
-// TODO: Template metaprogram these?
 template<typename T>
 class Color3 {
 public:
@@ -40,16 +39,15 @@ public:
 
 template<typename T>
 struct Vertex {
-  Vec3<T>   position = {};
-  Color4<T> color    = {};
-  Vec2<T>   texCoord = {};
-  Vec3<T>   normal   = {};
+  Vec3<T>   position  = {};
+  Vec2<T>   tex_coord = {};
+  Vec3<T>   normal    = {};
   Vertex() = default;
-  explicit Vertex(Vec3<T> position): position(position), texCoord{}, color{}, normal{} {};
-  Vertex(Vec3<T> position, Vec2<T> texCoord): position(position), color{}, texCoord(texCoord), normal{} {};
+  explicit Vertex(Vec3<T> position): position(position), tex_coord{}, normal{} {};
+  Vertex(Vec3<T> position, Vec2<T> tex_coord): position(position), tex_coord(tex_coord), normal{} {};
 
   bool operator==(const Vertex<T> &rhs) const {
-      return position == rhs.position && color == rhs.color && texCoord == rhs.texCoord && normal == rhs.normal;
+      return position == rhs.position && tex_coord == rhs.tex_coord && normal == rhs.normal;
   }
 };
 
@@ -66,8 +64,8 @@ namespace std {
           auto hashed_x = hasher(vertex.position.x);
           auto hashed_y = hasher(vertex.position.y);
           auto hashed_z = hasher(vertex.position.z);
-          auto hashed_texcoord_x = hasher(vertex.texCoord.x);
-          auto hashed_texcoord_y = hasher(vertex.texCoord.y);
+          auto hashed_texcoord_x = hasher(vertex.tex_coord.x);
+          auto hashed_texcoord_y = hasher(vertex.tex_coord.y);
           auto hashed_normal_x = hasher(vertex.normal.x);
           auto hashed_normal_y = hasher(vertex.normal.y);
           auto hashed_normal_z = hasher(vertex.normal.z);
@@ -124,12 +122,12 @@ struct Mesh {
   Mesh(std::vector<Vertex<float>> vertices, std::vector<uint32_t> indices): vertices(vertices), indices(indices) {};
 
   /// Byte size of vertices to upload to OpenGL
-  size_t byte_size_of_vertices() const {
+  inline size_t byte_size_of_vertices() const {
       return sizeof(Vertex<float>) * vertices.size();
   }
 
   /// Byte size of indices to upload to OpenGL
-  size_t byte_size_of_indices() const {
+  inline size_t byte_size_of_indices() const {
       return sizeof(uint32_t) * indices.size();
   }
 };
@@ -220,16 +218,16 @@ struct Quad: public Mesh {
   Quad(): Mesh() {
     Vertex<float> a;
     a.position = {-1.0f, -1.0f, 1.0f};
-    a.texCoord = {0.0f, 1.0f};
+    a.tex_coord = {0.0f, 1.0f};
     Vertex<float> b;
     b.position = {-1.0f, -1.0f, 0.0f};
-    b.texCoord = {0.0f, 0.0f};
+    b.tex_coord = {0.0f, 0.0f};
     Vertex<float> c;
     c.position = {1.0f,  1.0f, 0.0f};
-    c.texCoord = {1.0f, 1.0f};
+    c.tex_coord = {1.0f, 1.0f};
     Vertex<float> d;
     d.position = {1.0f, -1.0f, 0.0f};
-    d.texCoord = {1.0f, 0.0f};
+    d.tex_coord = {1.0f, 0.0f};
     vertices.push_back(a);
     vertices.push_back(b);
     vertices.push_back(c);

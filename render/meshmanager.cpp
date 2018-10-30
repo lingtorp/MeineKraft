@@ -122,8 +122,8 @@ MeshManager::load_mesh(const std::string& directory, const std::string& file) {
                 vertex.position = {pos.x, pos.y, pos.z};
 
                 if (mesh->HasTextureCoords(0)) {
-                    auto texCoord = mesh->mTextureCoords[0][j];
-                    vertex.texCoord = {texCoord.x, -texCoord.y}; // glTF (& .obj) has a flipped texture coordinate system compared to OpenGL 
+                    auto tex_coord = mesh->mTextureCoords[0][j];
+                    vertex.tex_coord = {tex_coord.x, -tex_coord.y}; // glTF (& .obj) has a flipped texture coordinate system compared to OpenGL 
                 }
 
                 if (mesh->HasNormals()) {
