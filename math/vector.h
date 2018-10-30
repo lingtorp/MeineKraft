@@ -77,10 +77,10 @@ template<typename T>
 struct Vec3 {
     T x, y, z;
 
-    Vec3(T x, T y, T z): x(x), y(y), z(z) {};
-    explicit Vec3(const Vec4<T>& v): x(v.x), y(v.y), z(v.z) {};
-    explicit Vec3(T val): x(val), y(val), z(val) {};
-    Vec3(): x{}, y{}, z{} {};
+    constexpr Vec3(T x, T y, T z): x(x), y(y), z(z) {};
+    constexpr explicit Vec3(const Vec4<T>& v): x(v.x), y(v.y), z(v.z) {};
+    constexpr explicit Vec3(T val): x(val), y(val), z(val) {};
+    constexpr Vec3(): x{}, y{}, z{} {};
 
     inline static Vec3 zero() { return Vec3(0.0, 0.0, 0.0); }
 
