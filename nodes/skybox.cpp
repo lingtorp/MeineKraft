@@ -9,7 +9,7 @@ Skybox::Skybox(): Entity() {
   transform.scale = 50.0;
   attach_component(transform);
   RenderComponent render;
-  render.set_mesh(MeshPrimitive::Cube);
+  render.set_mesh(MeshPrimitive::CubeCounterClockWinding);
   std::vector<std::string> faces = {Filesystem::base + std::string("resources/environmentmaps/garden/negx.bmp"),
                                     Filesystem::base + std::string("resources/environmentmaps/garden/posx.bmp"),
                                     Filesystem::base + std::string("resources/environmentmaps/garden/posy.bmp"),

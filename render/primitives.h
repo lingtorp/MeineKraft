@@ -110,7 +110,7 @@ namespace std {
 /// Represents primitive types of meshes supported
 /// MeshPrimitives are their own mesh IDs
 enum class MeshPrimitive: uint32_t {
-  Cube, Sphere, Quad
+  Cube, CubeCounterClockWinding, Sphere, Quad
 };
 
 struct Mesh {
@@ -134,7 +134,7 @@ struct Mesh {
 
 /// Unit cube
 struct Cube: public Mesh {
-  Cube(): Mesh() {
+  Cube(bool counter_clock_winding = false): Mesh() {
       auto a = Vec3<float>(-0.5f, -0.5f, 0.5f);
       auto b = Vec3<float>(0.5f, -0.5f, 0.5f);
       auto c = Vec3<float>(0.5f, 0.5f, 0.5f);
@@ -161,18 +161,33 @@ struct Cube: public Mesh {
       vertices.emplace_back(Vertex<float>(g, tex_g));
       vertices.emplace_back(Vertex<float>(h, tex_h));
 
-      indices =  { // front
-                  0, 1, 2, 2, 3, 0,
-                  // right
-                  1, 5, 6, 6, 2, 1,
-                  // back
-                  7, 6, 5, 5, 4, 7,
-                  // left
-                  4, 0, 3, 3, 7, 4,
-                  // bot
-                  4, 5, 1, 1, 0, 4,
-                  // top
-                  3, 2, 6, 6, 7, 3};
+      if (counter_clock_winding) {
+        indices = { // front
+            2, 1, 0, 0, 3, 2,
+            // right
+            6, 5, 1, 1, 2, 6,
+            // back
+            5, 6, 7, 7, 4, 5,
+            // left
+            3, 0, 4, 4, 7, 3,
+            // bot
+            1, 5, 4, 4, 0, 1,
+            // top
+            6, 2, 3, 3, 7, 6 };
+      } else {
+        indices = { // front
+            0, 1, 2, 2, 3, 0,
+            // right
+            1, 5, 6, 6, 2, 1,
+            // back
+            7, 6, 5, 5, 4, 7,
+            // left
+            4, 0, 3, 3, 7, 4,
+            // bot
+            4, 5, 1, 1, 0, 4,
+            // top
+            3, 2, 6, 6, 7, 3 };
+      }
   }
 };
 

@@ -5,7 +5,7 @@
 #include "../util/filesystem.h"
 #include "../util/logging.h"
 
-static std::vector<Mesh> loaded_meshes{Cube(), Sphere()};
+static std::vector<Mesh> loaded_meshes{Cube(), Cube(true), Sphere()};
 
 // Assuming the metallic-roughness material model of models loaded with GLTF.
 std::pair<ID, std::vector<std::pair<Texture::Type, std::string>>>
