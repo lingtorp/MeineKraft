@@ -4,6 +4,7 @@
 #include "../nodes/entity.h"
 #include "../render/camera.h"
 #include "../util/filesystem.h"
+#include "../math/noise.h"
 
 #include <array>
 #include <set>
@@ -90,11 +91,27 @@ public:
       Block* block = new Block(Vec3f(0.0f, 0.0f, 1.0f + 1.0f * x), block_type);
     }
 
+    Perlin noise(1337);
+    int32_t start = -50;
+    int32_t end = -start;
+    for (int32_t x = start; x < end; x++) {
+      for (int32_t z = start; z < end; z++) {
+        Block::BlockType block_type = distr(engine) < 0.5 ? Block::BlockType::GRASS : Block::BlockType::DIRT;
+        Block* block = new Block(Vec3f(x, 0, z), block_type);
+
+        const int32_t y_max = 20 * noise.fbm(Vec2d(x, z), 64);
+        for (int32_t y = 1; y < y_max; y++) {
+          Vec3f position = { Vec3f(x, y, z) };
+          Block* block = new Block(position, block_type);
+        }
+      }
+    }
+
     for (size_t i = 0; i < 7; i++) {
       for (size_t j = 0; j < 7; j++) {
         Entity* entity = new Entity();
         TransformComponent transform;
-        transform.position = Vec3f{ 2.5f * j, 2.5f * i, -5.0f }; 
+        transform.position = Vec3f{ 2.5f * j, 2.5f + 2.5f * i, -5.0f }; 
         entity->attach_component(transform);
         RenderComponent render;
         render.set_mesh(MeshPrimitive::Sphere);
