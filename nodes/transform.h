@@ -22,10 +22,10 @@ static Transform compute_transform(const TransformComponent& comp) {
 
 struct TransformSystem {
 private:
-  std::vector<ID> data_ids;
-  std::vector<Transform> data;
-  std::unordered_map<ID, ID> data_idxs;
-  size_t dirty_idx = 0; 
+  std::vector<ID> data_ids;             // Entity ID for each Transform in data
+  std::vector<Transform> data;          // Raw data storage
+  std::unordered_map<ID, ID> data_idxs; // Entity ID to index into data
+  size_t dirty_idx = 0;                 // Number of modified Transforms
 public:
   /// Singleton instance of TransformSystem
   static TransformSystem& instance() {
@@ -63,7 +63,7 @@ public:
       const ID old_idx = data_idxs[id];
       data_idxs[id] = dirty_idx;
       data_idxs[data_ids[dirty_idx]] = old_idx;
-      // Swap 
+      // Swap Entity IDs
       std::swap(data_ids[dirty_idx], data_ids[old_idx]);
     } 
   }
