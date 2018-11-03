@@ -22,16 +22,6 @@ static Transform compute_transform(const TransformComponent& comp) {
 
 struct TransformSystem {
 private:
-  /*
-  Use as something like 
-  uint32_t INDEX_MASK = 0x0000FFFF;
-  in order to create a key-value pair in the data_idxs to support reverse lookup from the data position
-  index to the Entity ID in the data_idxs 
-  uint32_t ENTITY_MASK = 0xFFFF0000;
-  uint32_t index = id & ENTITY_MASK;
-  index += data_index_of_entity & INDEX_MASK;
-  
-  */
   std::vector<ID> data_ids;
   std::vector<Transform> data;
   std::unordered_map<ID, ID> data_idxs;
@@ -54,12 +44,6 @@ public:
         dirty_ids.emplace_back(id);
       }
     }
-    /*
-    for (const auto& id : ids) {
-      if (data_idxs.find(id) == data_idxs.cend()) { continue; }
-      dirty_ids.emplace_back(id);
-    }
-    */
     return dirty_ids;
   }
 
@@ -69,7 +53,6 @@ public:
   }
 
   void set_transform(const Transform& transform, const ID id) {
-    // data[data_idxs[id]] = transform;
     if (dirty_idx < data.size() - 1) {
       dirty_idx++;
     }
