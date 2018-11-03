@@ -82,8 +82,8 @@ struct JobSystem {
 
   JobSystem() {
     const size_t num_threads = std::thread::hardware_concurrency() == 0 ? 4 : std::thread::hardware_concurrency();
-    Log::info("JobSystem using " + std::to_string(1) + " workers");
-    thread_pool = std::vector<Worker>(2);
+    Log::info("JobSystem using " + std::to_string(num_threads) + " workers");
+    thread_pool = std::vector<Worker>(num_threads);
   }
   ~JobSystem() {
     for (int i = 0; i < thread_pool.size(); i++) {
