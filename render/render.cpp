@@ -433,7 +433,10 @@ void Renderer::render(uint32_t delta) {
   // cull_objects();
 
   /// Renderer caches the transforms of components thus we need to fetch the ones who changed during the last frame 
-  update_transforms(); 
+  if (state.frame % 10 == 0) { 
+    Log::info("CLEARING");
+  }
+  update_transforms();  
 
   glm::mat4 camera_transform = camera->transform(); 
 
@@ -515,7 +518,7 @@ void Renderer::render(uint32_t delta) {
 void Renderer::update_projection_matrix(const float fov) {
   // TODO: Adjust all the passes textures sizes & all the global texture buffers
   const float aspect = (float) screen_width / (float) screen_height;
-  this->projection_matrix = glm::perspective(glm::radians(fov), aspect, 0.1f, 100.0f);
+  this->projection_matrix = glm::perspective(glm::radians(fov), aspect, 0.1f, 1000.0f);
   glViewport(0, 0, screen_width, screen_height); 
 }
 
@@ -717,7 +720,8 @@ void Renderer::update_transforms() {
   std::vector<ID> job_ids;
   for (auto& batch : graphics_batches) {
     ID job_id = JobSystem::instance().execute([&](){
-      std::vector<ID> t_ids = TransformSystem::instance().get_dirty_transforms_from(batch.entity_ids);
+      const std::vector<ID> t_ids = TransformSystem::instance().get_dirty_transforms_from(batch.entity_ids);
+      Log::info("Entity ids: " + std::to_string(batch.entity_ids.size()) + " , dirty ids: " + std::to_string(t_ids.size()));
       for (const auto& t_id : t_ids) {
         batch.objects.transforms[batch.data_idx[t_id]] = TransformSystem::instance().lookup(t_id);
       }
@@ -725,5 +729,5 @@ void Renderer::update_transforms() {
     job_ids.push_back(job_id);
   }
 
-  JobSystem::instance().wait_on(job_ids);
+  JobSystem::instance().wait_on_all();
 }
