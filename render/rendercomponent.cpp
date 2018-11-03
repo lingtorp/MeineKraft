@@ -5,6 +5,10 @@
 #include "../nodes/entity.h"
 #include "meshmanager.h"
 
+namespace TextureManager {
+  static std::unordered_map<ID, RawTexture> textures{};
+};
+
 void RenderComponent::set_mesh(const std::string& directory, const std::string& file) {
   std::vector<std::pair<Texture::Type, std::string>> texture_info;
   std::tie(mesh_id, texture_info) = MeshManager::load_mesh(directory, file);
@@ -42,10 +46,11 @@ void RenderComponent::set_mesh(const std::string& directory, const std::string& 
 void RenderComponent::set_cube_map_texture(const std::vector<std::string>& faces) {
   // FIXME: Assumes the diffuse texture?
   const auto resource = TextureResource{faces};
-  diffuse_texture.data = Texture::load_textures(resource);
-  diffuse_texture.gl_texture_target = GL_TEXTURE_CUBE_MAP_ARRAY;
   diffuse_texture.id = resource.to_hash();
+  diffuse_texture.data = TextureManager::textures[diffuse_texture.id];
+  diffuse_texture.gl_texture_target = GL_TEXTURE_CUBE_MAP_ARRAY;
   if (!diffuse_texture.data.pixels) {
-    Log::warn("Failed to load cube map textures");
+    TextureManager::textures[diffuse_texture.id] = Texture::load_textures(resource);
+    Log::info("Loading new cube map textures with id:" + std::to_string(diffuse_texture.id));
   }
 }
