@@ -57,9 +57,8 @@ public:
       dirty_idx++;
     }
     if (data.size() >= 2) {
-      const Transform temp = data[dirty_idx];
+      data[data_idxs[id]] = data[dirty_idx];
       data[dirty_idx] = transform;
-      data[data_idxs[id]] = temp;
       // Swap idxs
       const ID old_idx = data_idxs[id];
       data_idxs[id] = dirty_idx;
