@@ -1,11 +1,13 @@
 #ifndef NOISE_H
 #define NOISE_H
 
+#include "vector.h"
+
 #include <random>
 #include <algorithm>
-#include "vector.h"
 #include <stdint.h>
 #include <array>
+#include <numeric>
 
 /**
  * Base class for noise generating classes
@@ -167,11 +169,11 @@ protected:
 class Simplex_Patent : public Noise {
     // Implementation details
     /// Bit patterns for the creation of the gradients
-    std::vector<u_char> bit_patterns;
+    std::vector<uint8_t> bit_patterns;
 
     /// Returns the n'th bit of num
-    inline u_char bit(int num, int n) const {
-        return (u_char) ((num >> n) & 0b1);
+    inline uint8_t bit(int num, int n) const {
+        return (uint8_t) ((num >> n) & 0b1);
     }
 
 public:
@@ -194,7 +196,7 @@ public:
     }
 
     /// Given a coordinate (i, j) selects the B'th bit
-    u_char b(int i, int j, int B) const {
+    uint8_t b(int i, int j, int B) const {
         auto bit_index = 2*(i & (0b1 << B)) + (j & (0b1 << B));
         return bit_patterns[bit_index];
     }
@@ -268,8 +270,8 @@ public:
     /********************************** Simplex 3D Noise **********************************/
 
     /// Hashes a coordinate (i, j, k) then selects one of the bit patterns
-    u_char b(int i, int j, int k, int B) const {
-        u_char bit_index = bit(i, B) << 2 | bit(j, B) << 2 | bit(k, B);
+    uint8_t b(int i, int j, int k, int B) const {
+        uint8_t bit_index = bit(i, B) << 2 | bit(j, B) << 2 | bit(k, B);
         return bit_patterns[bit_index];
     }
 
@@ -423,7 +425,7 @@ class Simplex_Tables : public Noise {
     std::vector<Vec3<double>> grads3;
 
     /// Permutation table for indices to the gradients
-    std::vector<u_char> perms;
+    std::vector<uint8_t> perms;
 public:
     /// Perms size is double that of grad to avoid index wrapping
     Simplex_Tables(uint64_t seed): engine(seed), grads2(256), grads3(256), distr(-1.0, 1.0), perms(256) {
@@ -522,10 +524,10 @@ class Perlin_Improved : public Noise {
     std::vector<Vec3<double>> grads3;
 
     /// Permutation table for indices to the gradients (2D)
-    std::vector<u_char> perms;
+    std::vector<uint8_t> perms;
 
     /// Permutation table for indices to the gradients (3D)
-    std::vector<u_char> perms3;
+    std::vector<uint8_t> perms3;
 
 public:
     Perlin_Improved(uint64_t seed): engine(seed), grads(4), grads3(16), distr(-1.0, 1.0), perms(256), perms3(256) {
@@ -694,7 +696,7 @@ class Perlin : public Noise {
     std::vector<Vec3<double>> grads3;
 
     /// Permutation table for indices to the gradients
-    std::vector<u_char> perms;
+    std::vector<uint8_t> perms;
 
 public:
     Perlin(uint64_t seed): engine(seed), grads(256), grads3(256), distr(-1.0, 1.0), perms(256) {
