@@ -74,8 +74,12 @@ struct Texture {
         // Convert it to OpenGL friendly format
         const auto desired_img_format = bytes_per_pixel == 3 ? SDL_PIXELFORMAT_RGB24 : SDL_PIXELFORMAT_RGBA32;
         SDL_Surface* conv = SDL_ConvertSurfaceFormat(image, desired_img_format, 0);
-        std::memcpy(texture.pixels + texture.size * i, conv->pixels, texture.size);
-        SDL_FreeSurface(image);
+        if (conv) {
+          std::memcpy(texture.pixels + texture.size * i, conv->pixels, texture.size);
+          SDL_FreeSurface(image);
+        } else {
+          Log::error(SDL_GetError());
+        }
 
         texture.faces++;
       }
