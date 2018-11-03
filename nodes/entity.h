@@ -17,7 +17,7 @@ private:
 public:
   explicit Semaphore(size_t val) : value(val) {}
 
-  void post(size_t val = 1) {
+  void post(const size_t val = 1) {
     std::unique_lock<std::mutex> lk(mut);
     value += val;
   }
@@ -33,7 +33,7 @@ public:
   }
 
   /// PEek EQuals 
-  bool peeq(size_t i) {
+  bool peeq(const size_t i) {
     std::unique_lock<std::mutex> lk(mut);
     return value == i;
   }
@@ -57,6 +57,7 @@ struct JobSystem {
   }
 
   struct Worker {
+    enum class WorkerState: uint8_t { Working = 0, Ready = 1, Idle = 2, Exit = 3 };
     Semaphore sem; // 0 working, 1 ready, 2 done/idle, 3 exit
     std::function<void()> workload;
     std::thread t;
@@ -81,7 +82,8 @@ struct JobSystem {
 
   JobSystem() {
     const size_t num_threads = std::thread::hardware_concurrency() == 0 ? 4 : std::thread::hardware_concurrency();
-    thread_pool = std::vector<Worker>(num_threads);
+    Log::info("JobSystem using " + std::to_string(1) + " workers");
+    thread_pool = std::vector<Worker>(2);
   }
   ~JobSystem() {
     for (int i = 0; i < thread_pool.size(); i++) {
@@ -92,10 +94,10 @@ struct JobSystem {
 
   // Async
   ID execute(const std::function<void()>& func) {
-    uint32_t i = 0;
+    uint64_t i = 0;
     while (true) {
       if (thread_pool[i].sem.peeq(2)) {
-        thread_pool[i].workload = func;
+        thread_pool[i].workload = std::move(func);
         thread_pool[i].sem.try_wait();
         return i;
       }
@@ -115,7 +117,9 @@ struct JobSystem {
   // Blocking
   void wait_on_all() {
     for (int i = 0; i < thread_pool.size(); i++) {
-      while (thread_pool[i].sem.peeq(0)) {}
+      while (thread_pool[i].sem.peeq(0)) {
+        std::this_thread::sleep_for(std::chrono::microseconds(1));
+      }
     }
   }
 };
@@ -174,7 +178,7 @@ public:
   /// Generates a new Entity id to be used when identifying this instance of Entity
   ID new_entity() const {
     // TODO: Implement something for real
-    static uint64_t e_id = 0;
+    static uint64_t e_id = 1; // 0 ID is usually (default value for ints..) used for invalid IDs in systems
     return e_id++;
   };
 
@@ -199,27 +203,27 @@ struct Entity {
     }
 
     /** Component handling for convenience **/
-    void attach_component(const RenderComponent component) {
+    inline void attach_component(const RenderComponent& component) {
       Renderer::instance().add_component(component, id);
     }
 
-    void attach_component(const TransformComponent component) {
+    inline void attach_component(const TransformComponent& component) {
       TransformSystem::instance().add_component(component, id);
     }
 
-    void attach_component(const ActionComponent component) {
+    inline void attach_component(const ActionComponent& component) {
       ActionSystem::instance().add_component(component);
     }
 
-    void deattach_component(const RenderComponent component) {
+    inline void deattach_component(const RenderComponent& component) {
       Renderer::instance().remove_component(id);
     }
 
-    void deattach_component(const TransformComponent component) {
+    inline void deattach_component(const TransformComponent& component) {
       TransformSystem::instance().remove_component(id);
     }
 
-    void deattach_component(const ActionComponent component) {
+    inline void deattach_component(const ActionComponent& component) {
       ActionSystem::instance().remove_component(id);
     }
 };
