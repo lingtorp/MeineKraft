@@ -35,7 +35,7 @@ set(RENDER_SRC_FILES "render/shader.cpp" "render/shader.h" "render/texture.cpp" 
         "render/rendercomponent.cpp" "render/rendercomponent.h" "render/ray.h" "render/graphicsbatch.h"
         "render/render.cpp" "render/render.h" "render/primitives.h"
         "render/camera.cpp" "render/camera.h" "render/debug_opengl.h"
-        "render/light.h" "render/meshmanager.cpp" "render/meshmanager.h")
+        "render/light.h" "render/meshmanager.cpp" "render/meshmanager.h" "render/texturemanager.h")
 source_group("render" FILES ${RENDER_SRC_FILES})
 
 set(UTIL_SRC_FILES "util/filemonitor.cpp" "util/filemonitor.h" "util/filesystem.h" "util/stb_image.h" "util/logging.h")
