@@ -2,7 +2,6 @@
 
 ![](/screenshots/pbr-1.png)
 
-
 **MeineKraft** is a **physically based rendering engine** written in **C++11** & **OpenGL 4.6**.
 My intent is to follow up the implementation of the most interesting parts with some articles relating to my learning experience,
 these articles can be found on my personal [site](http://lingtorp.com) with the tag *MeineKraft*.
@@ -12,7 +11,10 @@ these articles can be found on my personal [site](http://lingtorp.com) with the 
 | Perlin noise ![Perlin Noise generated terrain](/screenshots/perlin-hills.gif) | Linear fog![Linear fog](/screenshots/linear-fog.gif) |
 | Dynamic shader reloading![Dynamic shader editing, with reloading!](/screenshots/dynamic-shader-editing.gif) | Phong reflection model ![Basic lighting](/screenshots/moving-lights.gif) |
 
-It does include some game engine related tech as well.
+It does include some game engine related tech as well such as a Entity-Component-System
+architecture. The main game object in the engine is a object-oriented layer
+on top of the ECS architecture in order to make it slightly easier to write
+gameplay code while keeping the performance and data-oriented architecture intact.
 
 ## Dependencies
 All of the dependencies are bundled within the folder /include, /bin, /lib.
@@ -22,7 +24,8 @@ All of the dependencies are bundled within the folder /include, /bin, /lib.
 * [SDL-image](https://www.libsdl.org/projects/SDL_image/) - image loading and conversion
 * [GLEW](https://duckduckgo.com/?q=GLEW&t=ffab&ia=web) - OpenGL function loader
 
-Platforms supported: Windows and Linux.
+Platforms supported: Windows and Linux, macOS support is not possible due to
+unsupported OpenGL version.
 
 # License
 The MIT License (MIT)
