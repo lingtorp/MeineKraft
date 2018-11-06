@@ -1,65 +1,28 @@
 # MeineKraft
 
+![](/screenshots/pbr-1.png)
+
+
+**MeineKraft** is a **physically based rendering engine** written in **C++11** & **OpenGL 4.6**.
+My intent is to follow up the implementation of the most interesting parts with some articles relating to my learning experience,
+these articles can be found on my personal [site](http://lingtorp.com) with the tag *MeineKraft*.
+
 | Various | GIFs |
 | ------------- | ------------- |
 | Perlin noise ![Perlin Noise generated terrain](/screenshots/perlin-hills.gif) | Linear fog![Linear fog](/screenshots/linear-fog.gif) |
 | Dynamic shader reloading![Dynamic shader editing, with reloading!](/screenshots/dynamic-shader-editing.gif) | Phong reflection model ![Basic lighting](/screenshots/moving-lights.gif) |
 
+It does include some game engine related tech as well.
 
-**MeineKraft** is a **rendering engine** written in **C++14** & **OpenGL 4.1**.
-My intent is to follow up the implementation of the most interesting parts with some articles relating to my learning experience,
-these articles can be found on my personal [site](http://lingtorp.com).
+## Dependencies
+All of the dependencies are bundled within the folder /include, /bin, /lib.
+* [dear imgui](https://github.com/ocornut/imgui) - debug GUI.
+* [assimp](https://github.com/syoyo/assimp) - model importing.
+* [SDL2](https://www.libsdl.org/) - window creation
+* [SDL-image](https://www.libsdl.org/projects/SDL_image/) - image loading and conversion
+* [GLEW](https://duckduckgo.com/?q=GLEW&t=ffab&ia=web) - OpenGL function loader
 
-# Build
-All the dependencies are bundled within the folder /include.
-
-# Dependencies
-* [dear imgui](https://github.com/ocornut/imgui) for debug GUI.
-* [assimp](https://github.com/syoyo/assimp) for model importing.
-
-# TODO
-- [ ] Procedural generation
-    - [ ] Perlin Noise
-    - [ ] Simplex Noise
-
-Lightning
-- [x] Phong lightning 
-
-Rendering
-- [x] Merge all model matrices into a single matrix
-- [x] Use instanced rendering
-- [x] Line of sight distance
-- [x] View frustrum culling (geometric approach)
-- [ ] Ray tracing for entity selection
-- [ ] Merge all 3 transformation matrices into one
-- [ ] Frustrum cull checks against parent Nodes (nodes with children)
-- [x] Resolution independence
-- []  Watch shader files for changes (auto) reload them. It broked.
-- [x] Importing Meshes (tinyobjloader)
-- [x] Deduplication of imported Meshes
-- [x] Immediate mode GUI (imgui)
-- [ ] Use quaterions for transformations
-- [ ] Implement a job system
-- [ ] Scene graph - with transforms and node parents
-- [ ]  Hit point cursor
-- [ ] Smoother movement
-- [ ] Avoid costly matrix multiplications somehow (scale, rotate_XYZ, etc)
-- [x] Add atomics to the FileMonitoring
-- [ ] Add move constructors and move assignment operators to all Vector types, measure the performance increase!
-- [ ] Make Vector types for-range-able
-- [x] Import .obj with texture data and more
-- [ ] Normal mapping!
-- [x] Diffuse textures
-- [ ] Console with lua or something to apply translations/transforms
-- [x] Multiple lights - uniform buffers
-- [ ] Per object diffuse texture - texture buffers (?)
-- [ ] Translate normals and trnasform them if object moves
-- [ ] Blinn-Phong shading
-- [ ] Light material: light power, light color,
-
-Code hygiene
-- [ ] Prefix all functions that touch OpenGL with "gl_"
-- [ ] Change all OpenGL specific location from uint64_t to uint32_t since OpenGL maps it's indices to int (32 bits).
+Platforms supported: Windows and Linux.
 
 # License
 The MIT License (MIT)
