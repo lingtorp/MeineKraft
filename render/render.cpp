@@ -434,7 +434,7 @@ void Renderer::render(uint32_t delta) {
 
   /// Renderer caches the transforms of components thus we need to fetch the ones who changed during the last frame 
   if (state.frame % 10 == 0) { 
-    Log::info("CLEARING");
+    TransformSystem::instance().reset_dirty();
   }
   update_transforms();  
 
