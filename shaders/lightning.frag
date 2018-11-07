@@ -55,6 +55,24 @@ vec3 fresnel_schlick(vec3 F0, PBRInputs inputs) {
     return F0 + (vec3(1.0) - F0) * pow(1.0 - inputs.VdotH, 5.0);
 }
 
+/// Importance sampling based on specular normal distribution function (D)
+/// Xi: i'th Hammersley 2D point, N: normal vector 
+vec3 importance_sample_ggx(vec2 Xi, float roughness, vec3 N) {
+    const float a = roughness * roughness;
+    // Uniform sphere mapping with importance sampling 
+    const float phi = 2 * M_PI * Xi.x;
+    const float cos_theta = sqrt((1.0 - Xi.y) / (1.0 + (a * a - 1.0) * Xi.y)); // FIXME: Wtf is going on here?
+    const float sin_theta = sqrt(1.0 - cos_theta * cos_theta);
+    // Spherical coordinates to cartesian
+    vec3 H = vec3(sin_theta * cos(phi), sin_theta * sin(phi), cos_theta);
+    // Tangent space basis vectors
+    vec3 UP = abs(N.z) < 0.999 ? vec3(0, 0, 1) : vec3(1, 0, 0);
+    vec3 TX = normalize(cross(UP, N));
+    vec3 TY = cross(N, TX); // normalize?
+    //  Tangent space to world space transform
+    return TX * H.x + TY * H.y + N * H.z;
+}
+
 /// Approximation of geometrical attenuation coefficient: Expresses the ratio of light that is not self-obstrcuted by the surface
 /// https://www.cs.virginia.edu/%7Ejdl/bib/appearance/analytic%20models/schlick94b.pdf : page 8 : equation (19)
 float geometric_occlusion_schlick(PBRInputs inputs) {
