@@ -34,11 +34,6 @@ struct PBRInputs {
     vec3 base_color;
 };
 
-// The following equation models the Fresnel reflectance term of the spec equation (aka F())
-// Implementation of fresnel from [4], Equation 15
-//vec3 specularReflection(PBRInputs inputs) {
- //   return inputs.r0 + (inputs.r90 - inputs.r0) * pow(clamp(1.0 - inputs.VdotH, 0.0, 1.0), 5.0);
-//}
 
 /// Approximation of the Fresnel factor: Expresses the reflection of light reflected by each microfacet
 /// https://www.cs.virginia.edu/%7Ejdl/bib/appearance/analytic%20models/schlick94b.pdf : page 7 : equation (15)
