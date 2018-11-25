@@ -401,7 +401,7 @@ Renderer::Renderer(): graphics_batches{} {
 
   /// Point light pass setup
   {
-    auto program = lightning_shader->gl_program;
+    const auto program = lightning_shader->gl_program;
     glGenVertexArrays(1, &gl_lightning_vao);
     glBindVertexArray(gl_lightning_vao);
 
@@ -440,9 +440,9 @@ Renderer::Renderer(): graphics_batches{} {
   glCullFace(GL_BACK);
 
   /// Camera
-  const auto position  = Vec3<float>{8.0f, 8.0f, 8.0f};  
-  const auto direction = Vec3<float>{0.0,  0.0, -1.0};
-  const auto world_up  = Vec3<float>{0.0f, 1.0f, 0.0f};  
+  const auto position  = Vec3f{8.0f, 8.0f, 8.0f};  
+  const auto direction = Vec3f{0.0,  0.0, -1.0};
+  const auto world_up  = Vec3f{0.0f, 1.0f, 0.0f};  
   camera = new Camera(position, direction, world_up);
 }
 
@@ -451,14 +451,14 @@ void Renderer::render(uint32_t delta) {
   state = RenderState(state);
   state.frame++;
 
-  /// Culls objects in all batches
-  // cull_objects();
-
   /// Renderer caches the transforms of components thus we need to fetch the ones who changed during the last frame 
   if (state.frame % 10 == 0) { 
     TransformSystem::instance().reset_dirty();
   }
   update_transforms();  
+
+  /// Culls objects in all batches
+  // cull_objects();
 
   glm::mat4 camera_transform = camera->transform(); 
 
@@ -548,7 +548,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
   /// Geometry pass setup
   {    
     /// Shaderbindings
-    auto program = batch.depth_shader.gl_program;
+    const auto program = batch.depth_shader.gl_program;
     glUseProgram(program);
     glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, glm::value_ptr(projection_matrix));
     glUniform1i(glGetUniformLocation(program, "diffuse"), batch.gl_diffuse_texture_unit);
@@ -739,7 +739,7 @@ void Renderer::add_graphics_state(GraphicsBatch& batch, const RenderComponent& c
 }
 
 void Renderer::update_transforms() {
-  std::vector<ID> job_ids;
+  std::vector<ID> job_ids(graphics_batches.size());
   for (auto& batch : graphics_batches) {
     ID job_id = JobSystem::instance().execute([&](){
       const std::vector<ID> t_ids = TransformSystem::instance().get_dirty_transforms_from(batch.entity_ids);
