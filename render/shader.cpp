@@ -27,7 +27,7 @@ std::pair<bool, std::string> Shader::compile() {
       fragment_src.insert(0, Shader::shader_define_to_string(define));
   }
 
-  static const char* GLSL_VERSION = "#version 430 core \n";
+  static const char* GLSL_VERSION = "#version 460 core \n";
   vertex_src.insert(0, GLSL_VERSION);
   fragment_src.insert(0, GLSL_VERSION);
 
