@@ -34,43 +34,21 @@ struct PBRInputs {
     vec3 base_color;
 };
 
-/// Src: http://holger.dammertz.org/stuff/notes_HammersleyOnHemisphere.html
-float radical_inverse_VdC(uint bits) {
-    bits = (bits << 16u) | (bits >> 16u);
-    bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
-    bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
-    bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
-    bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
-    return float(bits) * 2.3283064365386963e-10; // / 0x100000000
-}
+struct PointLight {
+    vec4 position;  // (X, Y, Z, padding)
+    vec4 intensity; // (R, G, B, padding)
+};
 
-/// Src: http://holger.dammertz.org/stuff/notes_HammersleyOnHemisphere.html
-vec2 hammersley_2d(uint i, uint N) {
-   return vec2(float(i) / float(N), radical_inverse_VdC(i));
-}
+layout(std140) buffer PointLightBlock {
+    PointLight lights[];
+};
+
+// uniform PointLight lights[MAX_NUM_POINTLIGHTS];
 
 /// Approximation of the Fresnel factor: Expresses the reflection of light reflected by each microfacet
 /// https://www.cs.virginia.edu/%7Ejdl/bib/appearance/analytic%20models/schlick94b.pdf : page 7 : equation (15)
 vec3 fresnel_schlick(vec3 F0, PBRInputs inputs) {
     return F0 + (vec3(1.0) - F0) * pow(1.0 - inputs.VdotH, 5.0);
-}
-
-/// Importance sampling based on specular normal distribution function (D)
-/// Xi: i'th Hammersley 2D point, N: normal vector 
-vec3 importance_sample_ggx(vec2 Xi, float roughness, vec3 N) {
-    const float a = roughness * roughness;
-    // Uniform sphere mapping with importance sampling 
-    const float phi = 2 * M_PI * Xi.x;
-    const float cos_theta = sqrt((1.0 - Xi.y) / (1.0 + (a * a - 1.0) * Xi.y)); // FIXME: Wtf is going on here?
-    const float sin_theta = sqrt(1.0 - cos_theta * cos_theta);
-    // Spherical coordinates to cartesian
-    vec3 H = vec3(sin_theta * cos(phi), sin_theta * sin(phi), cos_theta);
-    // Tangent space basis vectors
-    vec3 UP = abs(N.z) < 0.999 ? vec3(0, 0, 1) : vec3(1, 0, 0);
-    vec3 TX = normalize(cross(UP, N));
-    vec3 TY = cross(N, TX); // normalize?
-    //  Tangent space to world space transform
-    return TX * H.x + TY * H.y + N * H.z;
 }
 
 /// Approximation of geometrical attenuation coefficient: Expresses the ratio of light that is not self-obstrcuted by the surface
@@ -128,21 +106,14 @@ vec3 schlick_render(vec2 frag_coord, vec3 position, vec3 normal, vec3 diffuse, v
     pbr_inputs.base_color = diffuse.rgb;  
     pbr_inputs.N = normalize(normal);
 
-    vec3 light_intensities = vec3(23.47, 21.31, 20.79);
-    vec3 light_positions[4];
-    light_positions[0] = vec3( 0.0,  0.0,  5.0) * 1.0;
-    light_positions[1] = vec3( 10.0,  10.0,  5.0) * 1.0;
-    light_positions[2] = vec3( 0.0,  10.0,  5.0) * 1.0;
-    light_positions[3] = vec3( 10.0,  0.0,  5.0) * 1.0;
-
     vec3 L0 = vec3(0.0);
-    for (int i = 0; i < 4; i++) {
-        const vec3 light_position = light_positions[i];
+    for (int i = 0; i < lights.length(); i++) {
+        const PointLight light = lights[i];
 
-        pbr_inputs.L = normalize(light_position - position);
-        const float distance = length(light_position - position);
+        pbr_inputs.L = normalize(light.position.xyz - position);
+        const float distance = length(light.position.xyz - position);
         const float attenuation = 1.0 / (distance * distance);
-        const vec3 radiance = attenuation * light_intensities;
+        const vec3 radiance = attenuation * light.intensity.rgb;
 
         // Metallic roughness material model glTF specific 
         pbr_inputs.V = normalize(camera - position);

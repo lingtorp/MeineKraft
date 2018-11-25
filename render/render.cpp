@@ -411,7 +411,29 @@ Renderer::Renderer(): graphics_batches{} {
     glBufferData(GL_ARRAY_BUFFER, sizeof(Primitive::quad), &Primitive::quad, GL_STATIC_DRAW);
     glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
     glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
+  
+    /// Shader storage buffer object for PointLights: bind it to the SSBO
+    GLuint gl_ssbo_block_idx = glGetProgramResourceIndex(program, GL_SHADER_STORAGE_BLOCK, "PointLightBlock");
+    std::cerr << gl_ssbo_block_idx << std::endl;
+    glShaderStorageBlockBinding(program, gl_ssbo_block_idx, gl_pointlight_ssbo_binding_point_idx);
   }
+
+  pointlights.emplace_back(PointLight(Vec3f(0.0, 0.0, 5.0)));
+  pointlights.emplace_back(PointLight(Vec3f(10.0, 10.0, 5.0)));
+  pointlights.emplace_back(PointLight(Vec3f(0.0, 10.0, 5.0)));
+  pointlights.emplace_back(PointLight(Vec3f(10.0, 0.0, 5.0)));
+
+  /// Create SSBO for the PointLights
+  glGenBuffers(1, &gl_pointlight_ssbo);
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, gl_pointlight_ssbo);
+  glBufferData(GL_SHADER_STORAGE_BUFFER, pointlights.size() * sizeof(PointLight), pointlights.data(), GL_DYNAMIC_COPY);
+  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_pointlight_ssbo_binding_point_idx, gl_pointlight_ssbo);
+
+  /// Update
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, gl_pointlight_ssbo);
+  GLvoid* ssbo = glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, pointlights.size() * sizeof(PointLight), GL_MAP_WRITE_BIT);
+  std::memcpy(ssbo, pointlights.data(), pointlights.size() * sizeof(PointLight)); 
+  glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 
   glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
   glEnable(GL_CULL_FACE);

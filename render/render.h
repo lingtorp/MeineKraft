@@ -59,6 +59,7 @@ public:
   float screen_width;
   float screen_height;
   std::vector<GraphicsBatch> graphics_batches;
+  std::vector<PointLight> pointlights;
 
 private:
   Renderer();
@@ -78,6 +79,9 @@ private:
   uint32_t gl_lightning_fbo;
   uint32_t gl_lightning_texture_unit;
   uint32_t gl_lightning_vao;
+
+  uint32_t gl_pointlight_ssbo_binding_point_idx = 0;
+  uint32_t gl_pointlight_ssbo;
 
   /// Global buffers
   // Normals
