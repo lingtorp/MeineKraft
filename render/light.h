@@ -4,28 +4,14 @@
 #include "../math/vector.h"
 #include "../render/primitives.h"
 
+/// Padded in order to fit with the shader declaration
 struct PointLight {
-  float radius = 1.0f;
-  
-  // Attenuation values (http://www.ogre3d.org/tikiwiki/tiki-index.php?page=-Point+Light+Attenuation)
-  float constant = 1.0f;
-  float linear = 0.7f;
-  float quadratic = 1.8f;
-  
-  Vec3<float> position;
-  
-  // Intensities over RGB
-  Vec3<float> ambient_intensity;
-  Vec3<float> diffuse_intensity;
-  Vec3<float> specular_intensity;
-  Color3<float> color;
+  Vec4f position;   // (X, Y, X, padding)
+  Vec4f intensity;  // (R, G, B, padding)
 
-  explicit PointLight(Vec3<float> position): position(position), color{1.0}, ambient_intensity{1.0},
-                                             diffuse_intensity{1.0}, specular_intensity{1.0} {};
+  explicit PointLight(Vec3f position): position(position), intensity(23.47, 21.31, 20.79) {};
 
-  friend std::ostream &operator<<(std::ostream &os, const PointLight &light) {
-      return os << light.position;
-  }
+  friend std::ostream &operator<<(std::ostream &os, const PointLight &light) { return os << light.position; }
 };
 
 #endif // MEINEKRAFT_LIGHT_H
