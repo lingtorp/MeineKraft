@@ -38,9 +38,9 @@ public:
   }
 
   std::vector<ID> get_dirty_transforms() const {
-    std::vector<ID> dirty_ids;
+    std::vector<ID> dirty_ids(dirty_idx);
     for (size_t i = 0; i < dirty_idx; i++) {
-      dirty_ids.push_back(data_ids[i]);
+      dirty_ids[i] = data_ids[i];
     }
     return dirty_ids;
   }
