@@ -61,6 +61,10 @@ public:
   }
 
   void set_transform(const Transform& transform, const ID id) {
+    if (data_idxs[id] <= dirty_idx) { // If transform is already dirty
+      data[data_idxs[id]] = transform;
+      return;
+    }
     if (dirty_idx < data.size() - 1) {
       dirty_idx++;
     }
