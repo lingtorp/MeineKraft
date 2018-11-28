@@ -740,12 +740,15 @@ void Renderer::add_graphics_state(GraphicsBatch& batch, const RenderComponent& c
 
 void Renderer::update_transforms() {
   std::vector<ID> job_ids(graphics_batches.size());
-  for (auto& batch : graphics_batches) {
-    ID job_id = JobSystem::instance().execute([&](){
-      const std::vector<ID> t_ids = TransformSystem::instance().get_dirty_transforms_from(batch.entity_ids);
-      Log::info("Entity ids: " + std::to_string(batch.entity_ids.size()) + " , dirty ids: " + std::to_string(t_ids.size()));
+  const std::vector<ID> t_ids = TransformSystem::instance().get_dirty_transforms();
+  Log::info("Dirty ids: " + std::to_string(t_ids.size()));
+  for (size_t i = 0; i < graphics_batches.size(); i++) {
+    ID job_id = JobSystem::instance().execute([=](){ // FIXME: Remove the copy of t_ids
+      auto& batch = graphics_batches[i];
       for (const auto& t_id : t_ids) {
-        batch.objects.transforms[batch.data_idx[t_id]] = TransformSystem::instance().lookup(t_id);
+        const auto idx = batch.data_idx.find(t_id);
+        if (idx == batch.data_idx.cend()) { continue; }
+        batch.objects.transforms[idx->second] = TransformSystem::instance().lookup(t_id);
       }
     });
     job_ids.push_back(job_id);
