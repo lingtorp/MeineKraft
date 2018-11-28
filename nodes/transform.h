@@ -57,7 +57,7 @@ public:
       dirty_idx++;
     }
     if (data.size() >= 2) {
-      data[data_idxs[id]] = data[dirty_idx];
+      data[data_idxs[id]] = data[dirty_idx]; // Move clean data to previous location
       data[dirty_idx] = transform;
       // Swap idxs
       const ID old_idx = data_idxs[id];
