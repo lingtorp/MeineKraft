@@ -43,8 +43,6 @@ layout(std140) buffer PointLightBlock {
     PointLight lights[];
 };
 
-// uniform PointLight lights[MAX_NUM_POINTLIGHTS];
-
 /// Approximation of the Fresnel factor: Expresses the reflection of light reflected by each microfacet
 /// https://www.cs.virginia.edu/%7Ejdl/bib/appearance/analytic%20models/schlick94b.pdf : page 7 : equation (15)
 vec3 fresnel_schlick(vec3 F0, PBRInputs inputs) {
