@@ -109,8 +109,6 @@ private:
   // Environment map
   Texture environment_map; 
   uint32_t gl_environment_map_texture_unit;
-
-  std::vector<RenderPass> render_passes;
 };
 
 #endif // MEINEKRAFT_RENDER_H
