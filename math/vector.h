@@ -250,6 +250,11 @@ public:
         return matrix;
     }
 
+    /// Gets the translation vector (if that makes sense depends on the matrix) from the matrix
+    inline Vec3<T> get_translation() const {
+      return Vec3<T>{rows[3][0], rows[3][1], rows[3][2]};
+    }
+
     /// Translation - moves the matrix projection in space ...
     inline Mat4<T> translate(const Vec3<T>& vec) const {
         Mat4<T> matrix;
