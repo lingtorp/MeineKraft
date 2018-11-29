@@ -186,6 +186,8 @@ int main() {
               if (ImGui::CollapsingHeader("Members")) {
                 for (const auto& id : batch.entity_ids) {
                   ImGui::Text("Entity id: %llu", id);
+                  Vec3f position = TransformSystem::instance().lookup(id).matrix.get_translation();
+                  ImGui::InputFloat3("Position", &position.x);
                 }
               }
             }
