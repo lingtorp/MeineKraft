@@ -61,12 +61,12 @@ void FileMonitor::start_monitor() {
 }
 
 uint64_t FileMonitor::get_time_modified(struct stat &stats) {
-#ifdef __APPLE__
+#if defined(__APPLE__)
     return (uint64_t) stats.st_mtimespec.tv_sec;
-#elif __linux__
+#elif defined(__linux__)
     return (uint64_t) stats.st_mtim.tv_sec;
 #elif defined(WIN32) 
-	return 0; // TODO
+	return 0; // TODO: Implement
 #else
 #error Unknown platform.
 #endif
