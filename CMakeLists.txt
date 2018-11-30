@@ -9,10 +9,10 @@ endif(UNIX)
 set(CMAKE_CXX_STANDARD 11)
 
 if(WIN32)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
-else(WIN32)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions")
+        # Measure the LTCG incremental setting
+        # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /LTCG:{INCREMENTAL}") # Incremental link-time code generation (LTCG)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4") # Enable warning level 4
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Bt") # Output compile time stats
 endif(WIN32)
 
 file(GLOB IMGUI_SRC "include/imgui/*.cpp" "include/imgui/*.h") # Adds all imgui related files into the application
