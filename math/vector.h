@@ -94,7 +94,7 @@ struct Vec3 {
     inline static Vec3 Z() { return Vec3(0.0, 0.0, 1.0); }
 
     /// Length of the vector
-    inline double length() const { return std::sqrt(std::pow(x, 2) + std::pow(y, 2) + std::pow(z, 2)); }
+    inline float length() const { return std::sqrt(std::pow(x, 2) + std::pow(y, 2) + std::pow(z, 2)); }
 
     /// Normalizes a copy of this vector and returns it
     inline Vec3<T> normalize() const {
