@@ -86,7 +86,7 @@ struct JobSystem {
     thread_pool = std::vector<Worker>(num_threads);
   }
   ~JobSystem() {
-    for (int i = 0; i < thread_pool.size(); i++) {
+    for (size_t i = 0; i < thread_pool.size(); i++) {
       thread_pool[i].sem.post(3);
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(2));
@@ -107,7 +107,7 @@ struct JobSystem {
 
   // Blocking
   void wait_on(const std::vector<ID>& ids) {
-    for (int i = 0; i < ids.size(); i++) {
+    for (size_t i = 0; i < ids.size(); i++) {
       while (thread_pool[ids[i]].sem.peeq(0)) {
         std::this_thread::sleep_for(std::chrono::microseconds(1));
       }
@@ -116,7 +116,7 @@ struct JobSystem {
 
   // Blocking
   void wait_on_all() {
-    for (int i = 0; i < thread_pool.size(); i++) {
+    for (size_t i = 0; i < thread_pool.size(); i++) {
       while (thread_pool[i].sem.peeq(0)) {
         std::this_thread::sleep_for(std::chrono::microseconds(1));
       }

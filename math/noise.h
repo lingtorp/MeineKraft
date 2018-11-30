@@ -560,8 +560,8 @@ public:
         };
 
         /// Fill gradient lookup array with random indices to the gradients list
-        for (int i = 0; i < perms.size(); i++) { perms[i] = i % grads.size(); }
-        for (int i = 0; i < perms3.size(); i++) { perms3[i] = i % grads3.size(); }
+        for (size_t i = 0; i < perms.size(); i++)  { perms[i]  = i % grads.size(); }
+        for (size_t i = 0; i < perms3.size(); i++) { perms3[i] = i % grads3.size(); }
 
         /// Randomize the order of the indices
         std::shuffle(perms.begin(), perms.end(), engine);
@@ -701,7 +701,7 @@ class Perlin : public Noise {
 public:
     Perlin(uint64_t seed): engine(seed), grads(256), grads3(256), distr(-1.0, 1.0), perms(256) {
         /// Fill the gradients list with random normalized vectors
-        for (int i = 0; i < grads.size(); i++) {
+        for (size_t i = 0; i < grads.size(); i++) {
             double x = distr(engine);
             double y = distr(engine);
             double z = distr(engine);

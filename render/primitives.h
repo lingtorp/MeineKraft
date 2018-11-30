@@ -197,8 +197,8 @@ struct Sphere: public Mesh {
     const uint32_t X_SEGMENTS = 64;
     const uint32_t Y_SEGMENTS = X_SEGMENTS;
 
-    for (size_t j = 0; j <= Y_SEGMENTS; ++j) {
-      for (size_t i = 0; i <= X_SEGMENTS; ++i) {
+    for (uint32_t j = 0; j <= Y_SEGMENTS; ++j) {
+      for (uint32_t i = 0; i <= X_SEGMENTS; ++i) {
         float x_segment = (float)i / (float)X_SEGMENTS;
         float y_segment = (float)j / (float)Y_SEGMENTS;
         float x = std::cos(x_segment * 2.0f * PI) * std::sin(y_segment * PI);
@@ -210,9 +210,9 @@ struct Sphere: public Mesh {
         vertices.emplace_back(vertex);
 
         if (j <= Y_SEGMENTS) {
-          const int curRow  = j * X_SEGMENTS;
-          const int nextRow = (j + 1) * X_SEGMENTS;
-          const int nextS   = (i + 1) % X_SEGMENTS;
+          const uint32_t curRow  = j * X_SEGMENTS;
+          const uint32_t nextRow = (j + 1) * X_SEGMENTS;
+          const uint32_t nextS   = (i + 1) % X_SEGMENTS;
 
           indices.push_back(nextRow + nextS);
           indices.push_back(nextRow + i);
