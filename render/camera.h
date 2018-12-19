@@ -1,3 +1,4 @@
+#pragma once
 #ifndef MEINEKRAFT_CAMERA_H
 #define MEINEKRAFT_CAMERA_H
 

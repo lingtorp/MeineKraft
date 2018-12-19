@@ -1,3 +1,4 @@
+#pragma once
 #ifndef MEINEKRAFT_WORLD_HPP
 #define MEINEKRAFT_WORLD_HPP
 

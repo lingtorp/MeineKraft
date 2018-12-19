@@ -1,10 +1,10 @@
+#pragma once
 #ifndef MEINEKRAFT_PRIMITIVES_H
 #define MEINEKRAFT_PRIMITIVES_H
 
-#include <cstdlib>
 #include <vector>
+
 #include "../math/vector.h"
-#include "texture.h"
 
 /// Mathematical constants
 constexpr double PI = 3.1415926535897932384626433832795;

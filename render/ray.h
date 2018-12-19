@@ -1,3 +1,4 @@
+#pragma once
 #ifndef MEINEKRAFT_RAY_H
 #define MEINEKRAFT_RAY_H
 

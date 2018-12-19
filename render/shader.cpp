@@ -49,10 +49,10 @@ std::pair<bool, std::string> Shader::compile() {
   glAttachShader(gl_shader_program, gl_fragment_shader);
   glLinkProgram(gl_shader_program);
 
-  GLint vertex_shader_status;
+  GLint vertex_shader_status = 0;
   glGetShaderiv(gl_vertex_shader, GL_COMPILE_STATUS, &vertex_shader_status);
 
-  GLint fragment_shader_status;
+  GLint fragment_shader_status = 0;
   glGetShaderiv(gl_fragment_shader, GL_COMPILE_STATUS, &fragment_shader_status);
 
   glDetachShader(gl_shader_program, gl_vertex_shader);

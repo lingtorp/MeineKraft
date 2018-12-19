@@ -1,3 +1,4 @@
+#pragma once
 #ifndef MEINEKRAFT_QUATERNION_H
 #define MEINEKRAFT_QUATERNION_H
 

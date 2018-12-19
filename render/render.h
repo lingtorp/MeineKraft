@@ -1,3 +1,4 @@
+#pragma once
 #ifndef MEINEKRAFT_RENDER_H
 #define MEINEKRAFT_RENDER_H
 
@@ -10,13 +11,6 @@
 
 #include "texture.h"
 #include "light.h"
-#include "shader.h"
-
-#ifdef _WIN32
-#include <SDL_video.h>
-#else
-#include <sdl2/SDL_video.h>
-#endif 
 
 #include <glm/mat4x4.hpp>
 

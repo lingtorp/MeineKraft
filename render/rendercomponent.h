@@ -1,7 +1,9 @@
+#pragma once
 #ifndef MEINEKRAFT_RENDERCOMPONENT_H
 #define MEINEKRAFT_RENDERCOMPONENT_H
 
 #include "primitives.h"
+#include "texture.h"
 
 struct RenderComponent {
   ShadingModel shading_model = ShadingModel::Unlit;

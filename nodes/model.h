@@ -1,3 +1,4 @@
+#pragma once
 #ifndef MEINEKRAFT_TEAPOT_H
 #define MEINEKRAFT_TEAPOT_H
 

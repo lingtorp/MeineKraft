@@ -1,10 +1,12 @@
+#pragma once
 #ifndef MEINEKRAFT_ENTITY_H
 #define MEINEKRAFT_ENTITY_H
 
-#include <algorithm>
 #include "../render/rendercomponent.h"
 #include "transform.h"
 #include "../render/render.h"
+
+#include <algorithm>
 #include <functional>
 #include <future>
 

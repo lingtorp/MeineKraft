@@ -1,3 +1,4 @@
+#pragma once
 #ifndef MEINEKRAFT_LOGGING_H
 #define MEINEKRAFT_LOGGING_H
 

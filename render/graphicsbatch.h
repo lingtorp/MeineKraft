@@ -1,3 +1,4 @@
+#pragma once
 #ifndef MEINEKRAFT_GRAPHICSBATCH_H
 #define MEINEKRAFT_GRAPHICSBATCH_H
 

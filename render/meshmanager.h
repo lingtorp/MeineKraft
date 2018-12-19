@@ -1,7 +1,9 @@
+#pragma once
 #ifndef MEINEKRAFT_MESHMANAGER_HPP
 #define MEINEKRAFT_MESHMANAGER_HPP
 
 #include "primitives.h"
+#include "texture.h"
 
 #include <vector>
 

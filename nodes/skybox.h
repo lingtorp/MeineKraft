@@ -1,3 +1,4 @@
+#pragma once
 #ifndef MEINEKRAFT_SKYBOX_H
 #define MEINEKRAFT_SKYBOX_H
 

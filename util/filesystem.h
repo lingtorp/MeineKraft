@@ -1,3 +1,4 @@
+#pragma once
 #ifndef MEINEKRAFT_FILESYSTEM_H
 #define MEINEKRAFT_FILESYSTEM_H
 

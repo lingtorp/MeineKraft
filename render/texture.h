@@ -1,3 +1,4 @@
+#pragma once
 #ifndef MEINEKRAFT_TEXTURE_H
 #define MEINEKRAFT_TEXTURE_H
 

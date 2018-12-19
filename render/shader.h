@@ -1,3 +1,4 @@
+#pragma once
 #ifndef MEINEKRAFT_SHADER_H
 #define MEINEKRAFT_SHADER_H
 

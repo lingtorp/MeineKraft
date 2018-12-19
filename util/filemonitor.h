@@ -1,3 +1,4 @@
+#pragma once
 #ifndef MEINEKRAFT_FILEMONITOR_H
 #define MEINEKRAFT_FILEMONITOR_H
 

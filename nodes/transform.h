@@ -1,3 +1,4 @@
+#pragma once
 #ifndef MEINEKRAFT_TRANSFORM_H
 #define MEINEKRAFT_TRANSFORM_H
 

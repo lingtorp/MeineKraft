@@ -1,3 +1,4 @@
+#pragma once
 #ifndef MEINEKRAFT_LIGHT_H
 #define MEINEKRAFT_LIGHT_H
 
