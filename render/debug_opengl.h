@@ -1,3 +1,4 @@
+#pragma once
 #ifndef MEINEKRAFT_DEBUG_OPENGL_H
 #define MEINEKRAFT_DEBUG_OPENGL_H
 
@@ -11,12 +12,18 @@
 
 /// Gathers information about the OpenGL context 
 struct OpenGLContextInfo {
+  // TODO: Document each of the member variables??
   int max_texture_units;
   int max_color_attachments;
   int max_draw_buffers;
   int max_texture_array_layers;
 
   OpenGLContextInfo() {
+    Log::info("OpenGL version: " + std::string(reinterpret_cast<const char*>(glGetString(GL_VERSION))));
+    Log::info("GLSL: " + std::string(reinterpret_cast<const char*>(glGetString(GL_SHADING_LANGUAGE_VERSION))));
+    Log::info("Vendor: " + std::string(reinterpret_cast<const char*>(glGetString(GL_VENDOR))));
+    Log::info("Renderer: " + std::string(reinterpret_cast<const char*>(glGetString(GL_RENDERER))));
+
     glGetIntegerv(GL_MAX_DRAW_BUFFERS, &max_draw_buffers);
     Log::info("Max draw buffers: " + std::to_string(max_draw_buffers));
 
@@ -25,6 +32,8 @@ struct OpenGLContextInfo {
 
     glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &max_texture_array_layers);
     Log::info("Max texture array layers/elements: " + std::to_string(max_texture_array_layers));
+
+    Log::info("\n");
   }
 };
 
