@@ -378,15 +378,15 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_vbo);
     glBufferData(GL_ARRAY_BUFFER, batch.mesh.byte_size_of_vertices(), batch.mesh.vertices.data(), GL_STATIC_DRAW);
 
-    auto position_attrib = glGetAttribLocation(program, "position");
+    const auto position_attrib = glGetAttribLocation(program, "position");
     glVertexAttribPointer(position_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, position));
     glEnableVertexAttribArray(position_attrib);
 
-    auto normal_attrib = glGetAttribLocation(program, "normal");
+    const auto normal_attrib = glGetAttribLocation(program, "normal");
     glVertexAttribPointer(normal_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, normal));
     glEnableVertexAttribArray(normal_attrib);
 
-    auto texcoord_attrib = glGetAttribLocation(program, "texcoord");
+    const auto texcoord_attrib = glGetAttribLocation(program, "texcoord");
     glVertexAttribPointer(texcoord_attrib, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, tex_coord));
     glEnableVertexAttribArray(texcoord_attrib);
 
@@ -394,7 +394,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glGenBuffers(1, &batch.gl_depth_models_buffer_object);
     glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_models_buffer_object);
 
-    auto model_attrib = glGetAttribLocation(program, "model");
+    const auto model_attrib = glGetAttribLocation(program, "model");
     for (int i = 0; i < 4; i++) {
       glVertexAttribPointer(model_attrib + i, 4, GL_FLOAT, GL_FALSE, sizeof(Mat4<float>), (const void *) (sizeof(float) * i * 4));
       glEnableVertexAttribArray(model_attrib + i);
