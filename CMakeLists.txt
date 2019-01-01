@@ -44,7 +44,7 @@ source_group("scene" FILES ${SCENE_SRC_FILES})
 
 set(SHADER_SRC_FILES "shaders/blur-fragment.glsl" "shaders/blur-vertex.glsl" "shaders/geometry-fragment.glsl"
         "shaders/geometry-vertex.glsl" "shaders/lightning-fragment.glsl" "shaders/lightning-vertex.glsl"
-        "shaders/ssao-fragment.glsl" "shaders/ssao-vertex.glsl")
+        "shaders/ssao-fragment.glsl" "shaders/ssao-vertex.glsl" "shaders/culling.comp.glsl")
 source_group("shaders" FILES ${SHADER_SRC_FILES})
 
 set(SOURCE_FILES main.cpp ${MATH_SRC_FILES} ${NODES_SRC_FILES} ${RENDER_SRC_FILES} ${UTIL_SRC_FILES} ${SCENE_SRC_FILES} ${IMGUI_SRC})
