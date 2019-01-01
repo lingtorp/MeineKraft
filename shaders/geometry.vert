@@ -2,10 +2,11 @@
 uniform mat4 projection;
 uniform mat4 camera_view;
 
-in mat4 model;
 in vec3 position;
 in vec3 normal;
 in vec2 texcoord;
+
+in mat4 model;
 in int diffuse_layer_idx;
 in int shading_model_id;
 in vec3 pbr_scalar_parameters;
