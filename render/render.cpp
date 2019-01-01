@@ -250,6 +250,9 @@ Renderer::Renderer(): graphics_batches{} {
   std::memcpy(ssbo, pointlights.data(), pointlights.size() * sizeof(PointLight)); 
   glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 
+  // View frustum culling shader
+  auto cull_shader = ComputeShader{Filesystem::base + "shaders/culling.comp.glsl"};
+
   glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
   glEnable(GL_CULL_FACE);
   glCullFace(GL_BACK);
@@ -260,6 +263,18 @@ Renderer::Renderer(): graphics_batches{} {
   const auto world_up  = Vec3f{0.0f, 1.0f, 0.0f};  
   camera = new Camera(position, direction, world_up);
 }
+
+/// Draw struct taken from OpenGL (see: glMultiDrawElementsIndirect)
+struct DrawElementsIndirectCommand {
+  uint32_t count = 0; // # elements (i.e indices)
+  uint32_t instanceCount = 0; // # instances (kind of drawcalls)
+  uint32_t firstIndex = 0; // index of the first element in the EBO
+  uint32_t baseVertex = 0; // indices[i] + baseVertex 
+  uint32_t baseInstance = 0; // [gl_InstanceID / divisor] + baseInstance 
+  uint32_t padding0 = 0;
+  uint32_t padding1 = 0;
+  uint32_t padding2 = 0;
+};
 
 void Renderer::render(uint32_t delta) {
   /// Reset render stats
@@ -273,7 +288,10 @@ void Renderer::render(uint32_t delta) {
   update_transforms();  
 
   /// Culls objects in all batches
-  // cull_objects();
+  {
+    // Extract frustum planes
+
+  }
 
   glm::mat4 camera_transform = camera->transform(); 
 
@@ -290,7 +308,7 @@ void Renderer::render(uint32_t delta) {
       glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(camera_transform));
       
       glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_models_buffer_object);
-      glBufferData(GL_ARRAY_BUFFER, batch.objects.transforms.size() * sizeof(Mat4<float>), batch.objects.transforms.data(), GL_DYNAMIC_DRAW);
+      glBufferData(GL_ARRAY_BUFFER, batch.objects.transforms.size() * sizeof(Mat4f), batch.objects.transforms.data(), GL_DYNAMIC_DRAW);
       
       glBindBuffer(GL_ARRAY_BUFFER, batch.gl_diffuse_textures_layer_idx);
       glBufferData(GL_ARRAY_BUFFER, batch.objects.diffuse_texture_idxs.size() * sizeof(uint32_t), batch.objects.diffuse_texture_idxs.data(), GL_DYNAMIC_DRAW);
@@ -299,14 +317,24 @@ void Renderer::render(uint32_t delta) {
       glBufferData(GL_ARRAY_BUFFER, batch.objects.shading_models.size() * sizeof(ShadingModel), batch.objects.shading_models.data(), GL_DYNAMIC_DRAW);
 
       glBindBuffer(GL_ARRAY_BUFFER, batch.gl_pbr_scalar_buffer_object);
-      glBufferData(GL_ARRAY_BUFFER, batch.objects.pbr_scalar_parameters.size() * sizeof(Vec3<float>), batch.objects.pbr_scalar_parameters.data(), GL_DYNAMIC_DRAW);
+      glBufferData(GL_ARRAY_BUFFER, batch.objects.pbr_scalar_parameters.size() * sizeof(Vec3f), batch.objects.pbr_scalar_parameters.data(), GL_DYNAMIC_DRAW);
+    }
 
+    static std::vector<DrawElementsIndirectCommand> cmds(graphics_batches.size());
+    for (size_t i = 0; i < graphics_batches.size(); i++) {
+      const auto& batch = graphics_batches[i];
+      const auto program = batch.depth_shader.gl_program;
+
+      cmds[i].count = batch.mesh.indices.size();
+      cmds[i].instanceCount = batch.objects.transforms.size();
+      cmds[i].firstIndex = 0;
+      cmds[i].baseInstance = 0; 
+      cmds[i].baseVertex = 0;
+
+      glUseProgram(program);
       glBindVertexArray(batch.gl_depth_vao);
-      
-      glDrawElementsInstanced(GL_TRIANGLES, batch.mesh.indices.size(), GL_UNSIGNED_INT, nullptr, batch.objects.transforms.size());
-      
-      state.entities += batch.objects.transforms.size();
-      state.draw_calls++;
+      glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, &cmds[i], 1, sizeof(DrawElementsIndirectCommand));
+      // glDrawElementsInstancedBaseVertexBaseInstance(GL_TRIANGLES, batch.mesh.indices.size(), GL_UNSIGNED_INT, nullptr, cmds[i].instanceCount, cmds[i].baseVertex, cmds[i].baseInstance);
     }
   }
   pass_ended();
@@ -424,7 +452,11 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     GLuint EBO;
     glGenBuffers(1, &EBO);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, batch.mesh.byte_size_of_indices(), batch.mesh.indices.data(), GL_STATIC_DRAW);
+    auto flags = GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT | GL_MAP_WRITE_BIT;
+    glBufferStorage(GL_ELEMENT_ARRAY_BUFFER, batch.mesh.byte_size_of_indices(), nullptr, flags);
+    batch.ebo_ptr = (uint8_t*) glMapBufferRange(GL_ELEMENT_ARRAY_BUFFER, 0, batch.mesh.byte_size_of_indices(), flags);
+    std::memcpy(batch.ebo_ptr, batch.mesh.indices.data(), batch.mesh.byte_size_of_indices());
+    // glBufferData(GL_ELEMENT_ARRAY_BUFFER, batch.mesh.byte_size_of_indices(), batch.mesh.indices.data(), GL_STATIC_DRAW);
   }
 }
 
