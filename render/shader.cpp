@@ -57,8 +57,8 @@ std::pair<bool, std::string> Shader::compile() {
       return {false, "File(s) do not exists: " + vertex_filepath + " and/or " + fragment_filepath};
   }
 
-  auto vertex_src   = load_shader_source(vertex_filepath);
-  auto fragment_src = load_shader_source(fragment_filepath);
+  vertex_src   = load_shader_source(vertex_filepath);
+  fragment_src = load_shader_source(fragment_filepath);
 
   for (const auto& define : defines) {
       vertex_src.insert(0, Shader::shader_define_to_string(define));

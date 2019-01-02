@@ -28,8 +28,8 @@ struct Shader {
 
   std::string vertex_filepath;
   std::string fragment_filepath;
-  std::string vertex_shader_src;
-  std::string fragment_shader_src;
+  std::string vertex_src;
+  std::string fragment_src;
   
   uint32_t gl_program = 0;
   uint32_t gl_vertex_shader   = 0;
