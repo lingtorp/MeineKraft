@@ -36,7 +36,7 @@ inline void pass_ended() {
 uint32_t get_next_free_SSBO_binding_point() {
   int32_t max_ssbo_bindings;
   glGetIntegerv(GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS, &max_ssbo_bindings);
-  static int32_t next_ssbo_binding = 0; // -1 to get all of them (see culling shader ...)
+  static int32_t next_ssbo_binding = 1; // -1 to get all of them (see culling shader where 2 binding points are used)
   next_ssbo_binding++;
   if (next_ssbo_binding >= max_ssbo_bindings) {
     Log::error("Reached max texture units: " + std::to_string(max_ssbo_bindings));
@@ -348,6 +348,12 @@ void Renderer::render(uint32_t delta) {
     const glm::mat4 proj_view = projection_matrix * camera_transform;
     const std::array<glm::vec4, 6> frustum = extract_planes(glm::transpose(proj_view));
 
+    // Reset the draw commands
+    for (size_t i = 0; i < graphics_batches.size(); i++) {
+      const auto& batch = graphics_batches[i];
+      // *batch.gl_ibo_ptr = {}; 
+    }
+
     glUseProgram(cull_shader->gl_program);
     glUniform4fv(glGetUniformLocation(cull_shader->gl_program, "frustum_planes"), 6, glm::value_ptr(frustum[0]));
     for (size_t i = 0; i < graphics_batches.size(); i++) {
@@ -356,6 +362,9 @@ void Renderer::render(uint32_t delta) {
       // Rebind the draw cmd SSBO for the compute shader to the current batch
       const uint32_t gl_draw_cmd_binding_point = 0; // Default to 0 in the culling compute shader
       glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_draw_cmd_binding_point, batch.gl_ibo);
+
+      const uint32_t gl_instance_idx_binding_point = 1; // Default to 1 in the culling compute shader 
+      glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_instance_idx_binding_point, batch.gl_instance_idx_buffer);
 
       glUniform1ui(glGetUniformLocation(cull_shader->gl_program, "NUM_INDICES"), batch.mesh.indices.size());
       glUniform1ui(glGetUniformLocation(cull_shader->gl_program, "NUM_ITEMS"), batch.objects.transforms.size());
@@ -397,8 +406,8 @@ void Renderer::render(uint32_t delta) {
       const auto program = batch.depth_shader.gl_program;
       glUseProgram(program);
       glBindVertexArray(batch.gl_depth_vao);
-      // glMultiDrawElementsIndirectCount(mode, type, indirect, drawcount, maxdrawcount, stride);
-      glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, GraphicsBatch::MAX_OBJECTS, sizeof(DrawElementsIndirectCommand));
+      glBindBuffer(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo); // GL_DRAW_INDIRECT_BUFFER is global context state
+      glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, 1, sizeof(DrawElementsIndirectCommand));
     }
   }
   pass_ended();
@@ -524,7 +533,17 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     // Setup GL_DRAW_INDIRECT_BUFFER for indirect drawing (basically a command buffer)
     glGenBuffers(1, &batch.gl_ibo);
     glBindBuffer(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo);
-    glBufferStorage(GL_DRAW_INDIRECT_BUFFER, GraphicsBatch::MAX_OBJECTS * sizeof(DrawElementsIndirectCommand), nullptr, GL_MAP_READ_BIT);
+    glBufferStorage(GL_DRAW_INDIRECT_BUFFER, 1 * sizeof(DrawElementsIndirectCommand), nullptr, 0); 
+
+    // Batch instance idx buffer
+    glGenBuffers(1, &batch.gl_instance_idx_buffer);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, batch.gl_instance_idx_buffer);
+    glBufferStorage(GL_SHADER_STORAGE_BUFFER, GraphicsBatch::MAX_OBJECTS * sizeof(GLuint), nullptr, 0);
+    
+    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_instance_idx_buffer);
+    glVertexAttribIPointer(glGetAttribLocation(program, "instance_idx"), 1, GL_UNSIGNED_INT, sizeof(GLuint), nullptr);
+    glEnableVertexAttribArray(glGetAttribLocation(program, "instance_idx"));
+    glVertexAttribDivisor(glGetAttribLocation(program, "instance_idx"), 1);
   }
 }
 

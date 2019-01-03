@@ -37,10 +37,18 @@ layout(std140, binding = 0) writeonly buffer DrawCommandsBlock {
     DrawCommand draw_commands[];
 };
 
-// Number of items to be processed 
+// Index of the currently created draw command (into draw_commands)
+uniform uint DRAW_CMD_IDX = 0; // Will be used in the future when all multi draw cmds are one
+
+// Object index which gives shader data later in the pipeline 
+layout(std140, binding = 1) writeonly buffer ShaderDataIndexBlock {
+    uint index_buffer[];
+};
+
+// Number of items to be processed of the currently created draw command (into draw_commands)
 uniform uint NUM_ITEMS;
 
-// Number of indices (a.k.a elements)
+// Number of indices (a.k.a elements) of the currently created draw command (into draw_commands)
 uniform uint NUM_INDICES;
 
 void main() {
@@ -54,11 +62,17 @@ void main() {
 
     const uint INSIDE_ALL_PLANES = 63; // = 0b111111;
     const bool visible = inside == INSIDE_ALL_PLANES;
-    draw_commands[idx].count = NUM_INDICES;
-    draw_commands[idx].instanceCount = visible ? 1 : 0; // This is the trick right here
-    draw_commands[idx].baseInstance = 0;
-    draw_commands[idx].baseVertex = 0;
-    draw_commands[idx].padding0 = 0; // Avoid optimisation 
-    draw_commands[idx].padding1 = 0;
-    draw_commands[idx].padding2 = 0;
+    if (visible) {
+        draw_commands[DRAW_CMD_IDX].count = NUM_INDICES;
+        draw_commands[DRAW_CMD_IDX].baseInstance = 0;
+        draw_commands[DRAW_CMD_IDX].baseVertex = 0;
+        draw_commands[DRAW_CMD_IDX].padding0 = 0; // Avoid optimisation 
+        draw_commands[DRAW_CMD_IDX].padding1 = 0;
+        draw_commands[DRAW_CMD_IDX].padding2 = 0;
+
+        // 
+
+        const uint INSTANCE_IDX = atomicAdd(draw_commands[DRAW_CMD_IDX].instanceCount, 1);
+        index_buffer[INSTANCE_IDX] = idx; // Shader data index (idx) for objects
+    }
 }
