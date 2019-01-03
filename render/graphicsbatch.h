@@ -21,6 +21,12 @@
 #include "sdl2/SDL_opengl.h"
 #endif 
 
+/// Bounding volume in the shape of a sphere
+struct BoundingVolume {
+  Vec3f position;      // Center position of the sphere         
+  float radius = 1.0f; // Calculated somehow somewhere 
+};
+
 struct GraphicsBatch {
   explicit GraphicsBatch(ID mesh_id): mesh_id(mesh_id), objects{}, mesh{}, layer_idxs{} {};
   
@@ -69,6 +75,7 @@ struct GraphicsBatch {
   Mesh mesh; 
   struct GraphicStateObjects {
     std::vector<Transform> transforms;
+    std::vector<BoundingVolume> bounding_volumes;     // Bounding volumes (Spheres for now)
     std::vector<ShadingModel> shading_models;         // default ShadingModel::Unlit;
     std::vector<uint32_t> diffuse_texture_idxs;       // Layer index
     std::vector<Vec3f> pbr_scalar_parameters;         // Used by ShadingModel::PBRScalars
@@ -94,10 +101,19 @@ struct GraphicsBatch {
   uint32_t gl_ambient_occlusion_texture_unit  = 0;  // Ambient occlusion map
   uint32_t gl_emissive_texture_unit           = 0;  // Emissive map
     
+  /// General?
+  static const uint32_t MAX_OBJECTS = 1'000; // Max # draw cmds (one per objects) for the IBO
+
+  uint32_t gl_ebo = 0; // Elements b.o
+  uint8_t* gl_ebo_ptr = nullptr; // Ptr to mapped GL_ELEMENTS_ARRAY_BUFFER
+  uint32_t gl_ibo = 0; // (Draw) Indirect b.o (holds all draw commands)
+  uint32_t gl_bvb = 0; // Bounding Volume Buffer (holds the bounding volume representation)
+
   /// Depth pass variables
   uint32_t gl_depth_vao = 0;
   uint32_t gl_depth_vbo = 0;
-  uint32_t gl_depth_models_buffer_object  = 0;
+  uint32_t gl_depth_models_buffer_object  = 0;  // Models b.o (holds all objects model matrices)
+  uint8_t* gl_depth_model_buffer_object_ptr = nullptr; // Model b.o ptr
   uint32_t gl_shading_model_buffer_object = 0;
   uint32_t gl_pbr_scalar_buffer_object    = 0;  // Used by ShadingModel::PBRScalars
 

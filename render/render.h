@@ -18,6 +18,7 @@ struct Camera;
 struct RenderComponent;
 struct GraphicsBatch;
 struct Shader;
+struct ComputeShader;
 struct RenderPass;
 
 class Renderer {
@@ -60,6 +61,9 @@ private:
   void add_graphics_state(GraphicsBatch& batch, const RenderComponent& comp, ID entity_id);
   void update_transforms();
   void link_batch(GraphicsBatch& batch);
+
+  /// View frustum culling shader
+  ComputeShader* cull_shader;
   
   /// Geometry pass related
   uint32_t gl_depth_fbo;
