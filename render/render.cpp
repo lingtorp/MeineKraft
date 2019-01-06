@@ -334,9 +334,7 @@ void Renderer::render(uint32_t delta) {
   if (syncs[state.frame % 3]) {
     while (true) {
       GLenum wait_result = glClientWaitSync(syncs[state.frame % 3], GL_SYNC_FLUSH_COMMANDS_BIT, 1);
-      if (wait_result == GL_CONDITION_SATISFIED || wait_result == GL_ALREADY_SIGNALED) {
-        break;
-      }
+      if (wait_result == GL_CONDITION_SATISFIED || wait_result == GL_ALREADY_SIGNALED) { break; }
     }
   }
 
