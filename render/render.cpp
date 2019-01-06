@@ -512,7 +512,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glGenBuffers(1, &batch.gl_depth_models_buffer_object);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, batch.gl_depth_models_buffer_object);
     glBufferStorage(GL_SHADER_STORAGE_BUFFER, GraphicsBatch::MAX_OBJECTS * sizeof(Mat4f), nullptr, flags);
-    batch.gl_depth_model_buffer_object_ptr = (uint8_t*)glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, GraphicsBatch::MAX_OBJECTS * sizeof(Mat4f), flags);
+    batch.gl_depth_model_buffer_object_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, GraphicsBatch::MAX_OBJECTS * sizeof(Mat4f), flags);
 
     // Buffer for all the diffuse texture indices
     glGenBuffers(1, &batch.gl_diffuse_textures_layer_idx);
@@ -544,7 +544,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glGenBuffers(1, &batch.gl_ibo);
     glBindBuffer(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo);
     glBufferStorage(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo_count * sizeof(DrawElementsIndirectCommand), nullptr, flags);
-    batch.gl_ibo_ptr = (uint8_t*)glMapBufferRange(GL_DRAW_INDIRECT_BUFFER, 0, batch.gl_ibo_count * sizeof(DrawElementsIndirectCommand), flags);
+    batch.gl_ibo_ptr = (uint8_t*) glMapBufferRange(GL_DRAW_INDIRECT_BUFFER, 0, batch.gl_ibo_count * sizeof(DrawElementsIndirectCommand), flags);
 
     // Batch instance idx buffer
     glGenBuffers(1, &batch.gl_instance_idx_buffer);
