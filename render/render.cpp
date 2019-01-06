@@ -334,22 +334,6 @@ void Renderer::render(uint32_t delta) {
   if (syncs[state.frame % 3]) {
     while (true) {
       GLenum wait_result = glClientWaitSync(syncs[state.frame % 3], GL_SYNC_FLUSH_COMMANDS_BIT, 1);
-      /*
-      switch (wait_result) {
-        case GL_ALREADY_SIGNALED:
-          std::cerr << "GL_ALREADY_SIGNALED" << std::endl;
-          break;
-        case GL_TIMEOUT_EXPIRED:
-          std::cerr << "GL_TIMEOUT_EXPIRED" << std::endl;
-          break;
-        case GL_CONDITION_SATISFIED:
-          std::cerr << "GL_CONDITION_SATISFIED" << std::endl;
-          break;
-        case GL_WAIT_FAILED:
-          std::cerr << "GL_WAIT_FAILED" << std::endl;
-          break;
-      }
-      */
       if (wait_result == GL_CONDITION_SATISFIED || wait_result == GL_ALREADY_SIGNALED) {
         break;
       }
@@ -365,17 +349,7 @@ void Renderer::render(uint32_t delta) {
   // Reset the draw commands
   for (size_t i = 0; i < graphics_batches.size(); i++) {
     const auto& batch = graphics_batches[i];
-
-    DrawElementsIndirectCommand* ptr = (DrawElementsIndirectCommand*)batch.gl_ibo_ptr;
-    const DrawElementsIndirectCommand& cmd0 = ptr[0];
-    const DrawElementsIndirectCommand& cmd1 = ptr[1];
-    const DrawElementsIndirectCommand& cmd2 = ptr[2];
-
-    const auto cmd_A = (ptr)[batch.gl_curr_ibo_idx];
-    (ptr)[batch.gl_curr_ibo_idx].instanceCount = 0;
-    const auto cmd_B = (ptr)[batch.gl_curr_ibo_idx];
-    
-    std::cerr << cmd_A.instanceCount << " " << cmd_B.instanceCount << std::endl;
+    ((DrawElementsIndirectCommand*)batch.gl_ibo_ptr)[batch.gl_curr_ibo_idx].instanceCount = 0;
   }
 
   pass_started("Culling pass");
