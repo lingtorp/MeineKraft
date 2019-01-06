@@ -7,7 +7,7 @@ in vec3 position;
 in vec3 normal;
 in vec2 texcoord;
 
-layout(std140) readonly buffer ModelsBlock {
+layout(std140, binding = 2) readonly buffer ModelsBlock {
     mat4 models[];
 };
 

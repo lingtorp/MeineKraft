@@ -104,10 +104,14 @@ struct GraphicsBatch {
   /// General?
   static const uint32_t MAX_OBJECTS = 1'000; // Max # draw cmds (one per objects) for the IBO
 
-  uint32_t gl_ebo = 0; // Elements b.o
-  uint8_t* gl_ebo_ptr = nullptr; // Ptr to mapped GL_ELEMENTS_ARRAY_BUFFER
-  uint32_t gl_ibo = 0; // (Draw) Indirect b.o (holds all draw commands)
-  uint8_t* gl_ibo_ptr = nullptr; // Ptr to mapped GL_DRAW_INDIRECT_BUFFER
+  uint32_t gl_ebo = 0;            // Elements b.o
+  uint8_t* gl_ebo_ptr = nullptr;  // Ptr to mapped GL_ELEMENTS_ARRAY_BUFFER
+
+  const uint8_t gl_ibo_count = 3; // Number of partition of the buffer
+  uint32_t gl_ibo = 0;            // (Draw) Indirect b.o (holds all draw commands)
+  uint8_t* gl_ibo_ptr = nullptr;  // Ptr to mapped GL_DRAW_INDIRECT_BUFFER
+  uint32_t gl_curr_ibo_idx = 0;   // Currently used partition of the buffer 
+
   uint32_t gl_bvb = 0; // Bounding Volume Buffer (holds the bounding volume representation)
   uint32_t gl_instance_idx_buffer = 0; // Instance indices passed along the shader pipeline for fetching per instance data from various buffers
 

@@ -33,18 +33,6 @@ inline void pass_ended() {
 #endif
 }
 
-uint32_t get_next_free_SSBO_binding_point() {
-  int32_t max_ssbo_bindings;
-  glGetIntegerv(GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS, &max_ssbo_bindings);
-  static int32_t next_ssbo_binding = 1; // -1 to get all of them (see culling shader where 2 binding points are used)
-  next_ssbo_binding++;
-  if (next_ssbo_binding >= max_ssbo_bindings) {
-    Log::error("Reached max texture units: " + std::to_string(max_ssbo_bindings));
-    exit(1);
-  }
-  return next_ssbo_binding;
-}
-
 uint32_t Renderer::get_next_free_texture_unit() {
   int32_t max_texture_units;
   glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max_texture_units);
@@ -341,6 +329,55 @@ void Renderer::render(uint32_t delta) {
   }
   update_transforms();  
 
+  static GLsync syncs[3] = {nullptr, nullptr, nullptr};
+
+  if (syncs[state.frame % 3]) {
+    while (true) {
+      GLenum wait_result = glClientWaitSync(syncs[state.frame % 3], GL_SYNC_FLUSH_COMMANDS_BIT, 1);
+      /*
+      switch (wait_result) {
+        case GL_ALREADY_SIGNALED:
+          std::cerr << "GL_ALREADY_SIGNALED" << std::endl;
+          break;
+        case GL_TIMEOUT_EXPIRED:
+          std::cerr << "GL_TIMEOUT_EXPIRED" << std::endl;
+          break;
+        case GL_CONDITION_SATISFIED:
+          std::cerr << "GL_CONDITION_SATISFIED" << std::endl;
+          break;
+        case GL_WAIT_FAILED:
+          std::cerr << "GL_WAIT_FAILED" << std::endl;
+          break;
+      }
+      */
+      if (wait_result == GL_CONDITION_SATISFIED || wait_result == GL_ALREADY_SIGNALED) {
+        break;
+      }
+    }
+  }
+
+  // Update all ptr indices in all of the batches
+  for (size_t i = 0; i < graphics_batches.size(); i++) {
+    auto& batch = graphics_batches[i];
+    batch.gl_curr_ibo_idx = state.frame % batch.gl_ibo_count;
+  } 
+
+  // Reset the draw commands
+  for (size_t i = 0; i < graphics_batches.size(); i++) {
+    const auto& batch = graphics_batches[i];
+
+    DrawElementsIndirectCommand* ptr = (DrawElementsIndirectCommand*)batch.gl_ibo_ptr;
+    const DrawElementsIndirectCommand& cmd0 = ptr[0];
+    const DrawElementsIndirectCommand& cmd1 = ptr[1];
+    const DrawElementsIndirectCommand& cmd2 = ptr[2];
+
+    const auto cmd_A = (ptr)[batch.gl_curr_ibo_idx];
+    (ptr)[batch.gl_curr_ibo_idx].instanceCount = 0;
+    const auto cmd_B = (ptr)[batch.gl_curr_ibo_idx];
+    
+    std::cerr << cmd_A.instanceCount << " " << cmd_B.instanceCount << std::endl;
+  }
+
   pass_started("Culling pass");
   {
     // NOTE: Extraction of frustum planes are performed on the transpose (because of column/row-major difference).
@@ -348,30 +385,26 @@ void Renderer::render(uint32_t delta) {
     const glm::mat4 proj_view = projection_matrix * camera_transform;
     const std::array<glm::vec4, 6> frustum = extract_planes(glm::transpose(proj_view));
 
-    // Reset the draw commands
-    for (size_t i = 0; i < graphics_batches.size(); i++) {
-      const auto& batch = graphics_batches[i];
-      // *batch.gl_ibo_ptr = {}; 
-    }
-
     glUseProgram(cull_shader->gl_program);
     glUniform4fv(glGetUniformLocation(cull_shader->gl_program, "frustum_planes"), 6, glm::value_ptr(frustum[0]));
     for (size_t i = 0; i < graphics_batches.size(); i++) {
       const auto& batch = graphics_batches[i];
 
       // Rebind the draw cmd SSBO for the compute shader to the current batch
-      const uint32_t gl_draw_cmd_binding_point = 0; // Default to 0 in the culling compute shader
+      const uint32_t gl_draw_cmd_binding_point = 0; // Defaults to 0 in the culling compute shader
       glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_draw_cmd_binding_point, batch.gl_ibo);
 
-      const uint32_t gl_instance_idx_binding_point = 1; // Default to 1 in the culling compute shader 
+      const uint32_t gl_instance_idx_binding_point = 1; // Defaults to 1 in the culling compute shader 
       glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_instance_idx_binding_point, batch.gl_instance_idx_buffer);
 
       glUniform1ui(glGetUniformLocation(cull_shader->gl_program, "NUM_INDICES"), batch.mesh.indices.size());
       glUniform1ui(glGetUniformLocation(cull_shader->gl_program, "NUM_ITEMS"), batch.objects.transforms.size());
       glUniform4fv(glGetUniformLocation(cull_shader->gl_program, "spheres"), batch.objects.bounding_volumes.size(), (const float*) batch.objects.bounding_volumes.data());
+      glUniform1ui(glGetUniformLocation(cull_shader->gl_program, "DRAW_CMD_IDX"), batch.gl_curr_ibo_idx);
 
       glDispatchCompute(batch.objects.transforms.size(), 1, 1);
     }
+    // TODO: Is this barrier required?
     glMemoryBarrier(GL_COMMAND_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT); // Buffer objects affected by this bit are derived from the GL_DRAW_INDIRECT_BUFFER binding. 
   }
   pass_ended();
@@ -407,7 +440,12 @@ void Renderer::render(uint32_t delta) {
       glUseProgram(program);
       glBindVertexArray(batch.gl_depth_vao);
       glBindBuffer(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo); // GL_DRAW_INDIRECT_BUFFER is global context state
-      glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, 1, sizeof(DrawElementsIndirectCommand));
+
+      const uint32_t gl_models_binding_point = 2; // Default to 2 in geometry.vert shader
+      glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_models_binding_point, batch.gl_depth_models_buffer_object);
+      
+      const uint32_t draw_cmd_offset = batch.gl_curr_ibo_idx * sizeof(DrawElementsIndirectCommand);
+      glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (const void*) draw_cmd_offset, 1, sizeof(DrawElementsIndirectCommand));
     }
   }
   pass_ended();
@@ -451,6 +489,9 @@ void Renderer::render(uint32_t delta) {
 
   log_gl_error();
   state.graphic_batches = graphics_batches.size();
+
+  if (syncs[state.frame % 3]) glDeleteSync(syncs[state.frame % 3]);
+  syncs[state.frame % 3] = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
 }
 
 void Renderer::update_projection_matrix(const float fov) {
@@ -499,11 +540,6 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glBufferStorage(GL_SHADER_STORAGE_BUFFER, GraphicsBatch::MAX_OBJECTS * sizeof(Mat4f), nullptr, flags);
     batch.gl_depth_model_buffer_object_ptr = (uint8_t*)glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, GraphicsBatch::MAX_OBJECTS * sizeof(Mat4f), flags);
 
-    const uint32_t gl_models_binding_point = get_next_free_SSBO_binding_point();
-    const int32_t gl_models_block_idx = glGetProgramResourceIndex(program, GL_SHADER_STORAGE_BLOCK, "ModelsBlock");
-    glShaderStorageBlockBinding(program, gl_models_block_idx, gl_models_binding_point);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_models_binding_point, batch.gl_depth_models_buffer_object);
-
     // Buffer for all the diffuse texture indices
     glGenBuffers(1, &batch.gl_diffuse_textures_layer_idx);
     glBindBuffer(GL_ARRAY_BUFFER, batch.gl_diffuse_textures_layer_idx);
@@ -533,7 +569,8 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     // Setup GL_DRAW_INDIRECT_BUFFER for indirect drawing (basically a command buffer)
     glGenBuffers(1, &batch.gl_ibo);
     glBindBuffer(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo);
-    glBufferStorage(GL_DRAW_INDIRECT_BUFFER, 1 * sizeof(DrawElementsIndirectCommand), nullptr, 0); 
+    glBufferStorage(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo_count * sizeof(DrawElementsIndirectCommand), nullptr, flags);
+    batch.gl_ibo_ptr = (uint8_t*)glMapBufferRange(GL_DRAW_INDIRECT_BUFFER, 0, batch.gl_ibo_count * sizeof(DrawElementsIndirectCommand), flags);
 
     // Batch instance idx buffer
     glGenBuffers(1, &batch.gl_instance_idx_buffer);
