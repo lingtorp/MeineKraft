@@ -1,6 +1,6 @@
 #include "render.h"
 
-#include <random>
+#include <array>
 
 #ifdef WIN32
 #include <glew.h>

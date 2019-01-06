@@ -3,7 +3,6 @@
 #define MEINEKRAFT_LIGHT_H
 
 #include "../math/vector.h"
-#include "../render/primitives.h"
 
 /// Padded in order to fit with the shader declaration
 struct PointLight {

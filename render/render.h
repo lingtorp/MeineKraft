@@ -5,12 +5,10 @@
 #include <cstdint>
 #include <string>
 #include <vector>
-#include <unordered_map>
-#include <array>
-#include <memory>
 
 #include "texture.h"
 #include "light.h"
+#include "../render/primitives.h"
 
 #include <glm/mat4x4.hpp>
 
