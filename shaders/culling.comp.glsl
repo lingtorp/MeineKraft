@@ -31,9 +31,8 @@ struct DrawCommand {
     // 32 bytes (multiple of 16)
 };
 
-// One draw command per object 
 // Command buffer backed by Shader Storage Object Buffer (SSBO)
-layout(std140, binding = 0) writeonly buffer DrawCommandsBlock {
+layout(std140, binding = 0) buffer DrawCommandsBlock {
     DrawCommand draw_commands[];
 };
 
@@ -41,7 +40,8 @@ layout(std140, binding = 0) writeonly buffer DrawCommandsBlock {
 uniform uint DRAW_CMD_IDX = 0; // Will be used in the future when all multi draw cmds are one
 
 // Object index which gives shader data later in the pipeline 
-layout(std140, binding = 1) writeonly buffer ShaderDataIndexBlock {
+// Note: Using std430 to suppress 16 byte aligned writes 
+layout(std430, binding = 1) writeonly buffer ShaderDataIndexBlock {
     uint index_buffer[];
 };
 
