@@ -370,7 +370,6 @@ void Renderer::render(uint32_t delta) {
       glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_instance_idx_binding_point, batch.gl_instance_idx_buffer);
 
       glUniform1ui(glGetUniformLocation(cull_shader->gl_program, "NUM_INDICES"), batch.mesh.indices.size());
-      glUniform1ui(glGetUniformLocation(cull_shader->gl_program, "NUM_ITEMS"), batch.objects.transforms.size());
       glUniform4fv(glGetUniformLocation(cull_shader->gl_program, "spheres"), batch.objects.bounding_volumes.size(), (const float*) batch.objects.bounding_volumes.data());
       glUniform1ui(glGetUniformLocation(cull_shader->gl_program, "DRAW_CMD_IDX"), batch.gl_curr_ibo_idx);
 

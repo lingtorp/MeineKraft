@@ -45,15 +45,11 @@ layout(std430, binding = 1) writeonly buffer ShaderDataIndexBlock {
     uint index_buffer[];
 };
 
-// Number of items to be processed of the currently created draw command (into draw_commands)
-uniform uint NUM_ITEMS;
-
 // Number of indices (a.k.a elements) of the currently created draw command (into draw_commands)
 uniform uint NUM_INDICES;
 
 void main() {
     const uint idx = gl_GlobalInvocationID.y * gl_NumWorkGroups.x + gl_GlobalInvocationID.x; 
-    if (idx >= NUM_ITEMS) { return; }
 
     uint inside = 0; 
     for (int i = 0; i < 6; i++) {
