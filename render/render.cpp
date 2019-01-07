@@ -383,19 +383,10 @@ void Renderer::render(uint32_t delta) {
       const auto& batch = graphics_batches[i];
       const auto program = batch.depth_shader.gl_program;
       glUseProgram(program);
-      glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(camera_transform));
-      
-      // FIXME: These copies should happen outside of the render loop
-      std::memcpy(batch.gl_depth_model_buffer_object_ptr, batch.objects.transforms.data(), batch.objects.transforms.size() * sizeof(Mat4f));
-      std::memcpy(batch.gl_mbo_ptr, batch.objects.materials.data(), batch.objects.materials.size() * sizeof(Material));
-    }
-
-    for (size_t i = 0; i < graphics_batches.size(); i++) {
-      const auto& batch = graphics_batches[i];
-      const auto program = batch.depth_shader.gl_program;
-      glUseProgram(program);
       glBindVertexArray(batch.gl_depth_vao);
       glBindBuffer(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo); // GL_DRAW_INDIRECT_BUFFER is global context state
+
+      glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(camera_transform));
 
       const uint32_t gl_models_binding_point = 2; // Defaults to 2 in geometry.vert shader
       glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_models_binding_point, batch.gl_depth_models_buffer_object);
@@ -665,6 +656,8 @@ void Renderer::add_graphics_state(GraphicsBatch& batch, const RenderComponent& c
   material.pbr_scalar_parameters = Vec2f(comp.pbr_scalar_parameters.y, comp.pbr_scalar_parameters.z);
   material.shading_model = comp.shading_model;
   batch.objects.materials.push_back(material);
+
+  std::memcpy(batch.gl_mbo_ptr, batch.objects.materials.data(), batch.objects.materials.size() * sizeof(Material));
 }
 
 void Renderer::update_transforms() {
@@ -687,6 +680,7 @@ void Renderer::update_transforms() {
 
         batch.objects.transforms[idx->second] = transform;
       }
+      std::memcpy(batch.gl_depth_model_buffer_object_ptr, batch.objects.transforms.data(), batch.objects.transforms.size() * sizeof(Mat4f));
     });
     job_ids.push_back(job_id);
   }
