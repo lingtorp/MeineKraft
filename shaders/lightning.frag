@@ -39,7 +39,7 @@ struct PointLight {
     vec4 intensity; // (R, G, B, padding)
 };
 
-layout(std140) buffer PointLightBlock {
+layout(std140, binding = 4) buffer PointLightBlock {
     PointLight lights[];
 };
 

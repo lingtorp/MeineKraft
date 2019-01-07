@@ -77,8 +77,8 @@ private:
   uint32_t gl_lightning_texture_unit;
   uint32_t gl_lightning_vao;
 
-  uint32_t gl_pointlight_ssbo_binding_point_idx = 0;
-  uint32_t gl_pointlight_ssbo;
+  uint32_t gl_pointlights_ssbo;
+  uint8_t* gl_pointlights_ssbo_ptr = nullptr;
 
   /// Global buffers
   // Normals
