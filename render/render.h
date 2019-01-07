@@ -18,6 +18,7 @@ struct GraphicsBatch;
 struct Shader;
 struct ComputeShader;
 struct RenderPass;
+struct Material;
 
 class Renderer {
 public:
@@ -56,7 +57,7 @@ public:
 
 private:
   Renderer();
-  void add_graphics_state(GraphicsBatch& batch, const RenderComponent& comp, ID entity_id);
+  void add_graphics_state(GraphicsBatch& batch, const RenderComponent& comp, Material material, ID entity_id);
   void update_transforms();
   void link_batch(GraphicsBatch& batch);
 

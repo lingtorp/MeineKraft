@@ -27,6 +27,13 @@ struct BoundingVolume {
   float radius = 1.0f; // Calculated somehow somewhere 
 };
 
+/// Material 
+struct Material {
+  uint32_t diffuse_layer_idx  = 0;
+  ShadingModel shading_model  = ShadingModel::Unlit; // uint32_t
+  Vec2f pbr_scalar_parameters = {}; // (roughness, metallic)
+};
+
 struct GraphicsBatch {
   explicit GraphicsBatch(ID mesh_id): mesh_id(mesh_id), objects{}, mesh{}, layer_idxs{} {};
   
@@ -76,9 +83,7 @@ struct GraphicsBatch {
   struct GraphicStateObjects {
     std::vector<Transform> transforms;
     std::vector<BoundingVolume> bounding_volumes;     // Bounding volumes (Spheres for now)
-    std::vector<ShadingModel> shading_models;         // default ShadingModel::Unlit;
-    std::vector<uint32_t> diffuse_texture_idxs;       // Layer index
-    std::vector<Vec3f> pbr_scalar_parameters;         // Used by ShadingModel::PBRScalars
+    std::vector<Material> materials;
   };
   std::unordered_map<ID, ID> data_idx;                // Entity ID to data position in data (objects struct)
   std::vector<ID> entity_ids;
@@ -93,8 +98,6 @@ struct GraphicsBatch {
   
   uint32_t gl_diffuse_texture_array = 0;  // OpenGL handle to the texture array buffer (GL_TEXTURE_2D_ARRAY, GL_TEXTURE_CUBE_MAP_ARRAY, etc)
   uint32_t gl_diffuse_texture_unit  = 0;
-  
-  uint32_t gl_diffuse_textures_layer_idx = 0; // Attribute buffer for layer indices
   
   /// Physically based rendering related
   uint32_t gl_metallic_roughness_texture_unit = 0;  // Metallic roughness texture buffer
@@ -115,13 +118,14 @@ struct GraphicsBatch {
   uint32_t gl_bvb = 0; // Bounding Volume Buffer (holds the bounding volume representation)
   uint32_t gl_instance_idx_buffer = 0; // Instance indices passed along the shader pipeline for fetching per instance data from various buffers
 
+  uint32_t gl_mbo = 0;           // Material b.o
+  uint8_t* gl_mbo_ptr = nullptr; // Ptr to mapped material buffer
+
   /// Depth pass variables
   uint32_t gl_depth_vao = 0;
   uint32_t gl_depth_vbo = 0;
   uint32_t gl_depth_models_buffer_object  = 0;  // Models b.o (holds all objects model matrices)
   uint8_t* gl_depth_model_buffer_object_ptr = nullptr; // Model b.o ptr
-  uint32_t gl_shading_model_buffer_object = 0;
-  uint32_t gl_pbr_scalar_buffer_object    = 0;  // Used by ShadingModel::PBRScalars
 
   Shader depth_shader;  // Shader used to render all the components in this batch
 };

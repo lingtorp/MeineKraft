@@ -393,16 +393,9 @@ void Renderer::render(uint32_t delta) {
 
       glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(camera_transform));
       
+      // FIXME: These copies should happen outside of the render loop
       std::memcpy(batch.gl_depth_model_buffer_object_ptr, batch.objects.transforms.data(), batch.objects.transforms.size() * sizeof(Mat4f));
-
-      glBindBuffer(GL_ARRAY_BUFFER, batch.gl_diffuse_textures_layer_idx);
-      glBufferData(GL_ARRAY_BUFFER, batch.objects.diffuse_texture_idxs.size() * sizeof(uint32_t), batch.objects.diffuse_texture_idxs.data(), GL_DYNAMIC_DRAW);
-
-      glBindBuffer(GL_ARRAY_BUFFER, batch.gl_shading_model_buffer_object);
-      glBufferData(GL_ARRAY_BUFFER, batch.objects.shading_models.size() * sizeof(ShadingModel), batch.objects.shading_models.data(), GL_DYNAMIC_DRAW);
-
-      glBindBuffer(GL_ARRAY_BUFFER, batch.gl_pbr_scalar_buffer_object);
-      glBufferData(GL_ARRAY_BUFFER, batch.objects.pbr_scalar_parameters.size() * sizeof(Vec3f), batch.objects.pbr_scalar_parameters.data(), GL_DYNAMIC_DRAW);
+      std::memcpy(batch.gl_mbo_ptr, batch.objects.materials.data(), batch.objects.materials.size() * sizeof(Material));
     }
 
     for (size_t i = 0; i < graphics_batches.size(); i++) {
@@ -412,9 +405,12 @@ void Renderer::render(uint32_t delta) {
       glBindVertexArray(batch.gl_depth_vao);
       glBindBuffer(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo); // GL_DRAW_INDIRECT_BUFFER is global context state
 
-      const uint32_t gl_models_binding_point = 2; // Default to 2 in geometry.vert shader
+      const uint32_t gl_models_binding_point = 2; // Defaults to 2 in geometry.vert shader
       glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_models_binding_point, batch.gl_depth_models_buffer_object);
-      
+
+      const uint32_t gl_material_binding_point = 3; // Defaults to 3 in geometry.frag shader
+      glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_material_binding_point, batch.gl_mbo);
+
       const uint32_t draw_cmd_offset = batch.gl_curr_ibo_idx * sizeof(DrawElementsIndirectCommand);
       glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (const void*) draw_cmd_offset, 1, sizeof(DrawElementsIndirectCommand));
     }
@@ -511,26 +507,13 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glBufferStorage(GL_SHADER_STORAGE_BUFFER, GraphicsBatch::MAX_OBJECTS * sizeof(Mat4f), nullptr, flags);
     batch.gl_depth_model_buffer_object_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, GraphicsBatch::MAX_OBJECTS * sizeof(Mat4f), flags);
 
-    // Buffer for all the diffuse texture indices
-    glGenBuffers(1, &batch.gl_diffuse_textures_layer_idx);
-    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_diffuse_textures_layer_idx);
-    glVertexAttribIPointer(glGetAttribLocation(program, "diffuse_layer_idx"), 1, GL_UNSIGNED_INT, sizeof(GLint), nullptr);
-    glEnableVertexAttribArray(glGetAttribLocation(program, "diffuse_layer_idx"));
-    glVertexAttribDivisor(glGetAttribLocation(program, "diffuse_layer_idx"), 1);
+    // Material buffer
+    glGenBuffers(1, &batch.gl_mbo);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, batch.gl_mbo);
+    glBufferStorage(GL_SHADER_STORAGE_BUFFER, GraphicsBatch::MAX_OBJECTS * sizeof(Material), nullptr, flags);
+    batch.gl_mbo_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, GraphicsBatch::MAX_OBJECTS * sizeof(Material), flags);
 
-    glGenBuffers(1, &batch.gl_shading_model_buffer_object);
-    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_shading_model_buffer_object);
-    glVertexAttribIPointer(glGetAttribLocation(program, "shading_model_id"), 1, GL_UNSIGNED_INT, sizeof(GLuint), nullptr);
-    glEnableVertexAttribArray(glGetAttribLocation(program, "shading_model_id"));
-    glVertexAttribDivisor(glGetAttribLocation(program, "shading_model_id"), 1);
-
-    // FIXME: Not all configurations needs this
-    glGenBuffers(1, &batch.gl_pbr_scalar_buffer_object);
-    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_pbr_scalar_buffer_object);
-    glVertexAttribPointer(glGetAttribLocation(program, "pbr_scalar_parameters"), 3, GL_FLOAT, GL_FALSE, sizeof(Vec3<float>), nullptr);
-    glEnableVertexAttribArray(glGetAttribLocation(program, "pbr_scalar_parameters"));
-    glVertexAttribDivisor(glGetAttribLocation(program, "pbr_scalar_parameters"), 1);
-
+    // Element buffer
     glGenBuffers(1, &batch.gl_ebo);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, batch.gl_ebo);
     glBufferStorage(GL_ELEMENT_ARRAY_BUFFER, batch.mesh.byte_size_of_indices(), nullptr, flags);
@@ -572,6 +555,8 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
     }
   }
 
+  Material material;
+
   // Shader configuration and mesh id defines the uniqueness of a GBatch
   for (auto& batch : graphics_batches) {
     if (batch.mesh_id != comp.mesh_id) { continue; }
@@ -579,7 +564,7 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
     if (comp.diffuse_texture.data.pixels) {
       bool batch_contains_texture = batch.layer_idxs.count(comp.diffuse_texture.id) == 0;
       if (!batch_contains_texture) {
-        batch.objects.diffuse_texture_idxs.push_back(batch.layer_idxs[comp.diffuse_texture.id]);
+        material.diffuse_layer_idx = batch.layer_idxs[comp.diffuse_texture.id];
       } else {
         /// Expand texture buffer if needed
         if (batch.diffuse_textures_count + 1 > batch.diffuse_textures_capacity) {
@@ -588,13 +573,13 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
 
         /// Update the mapping from texture id to layer idx and increment count
         batch.layer_idxs[comp.diffuse_texture.id] = batch.diffuse_textures_count++;
-        batch.objects.diffuse_texture_idxs.push_back(batch.layer_idxs[comp.diffuse_texture.id]);
+        material.diffuse_layer_idx = batch.layer_idxs[comp.diffuse_texture.id];
 
         /// Upload the texture to OpenGL
         batch.upload(comp.diffuse_texture, batch.gl_diffuse_texture_unit, batch.gl_diffuse_texture_array);
       }
     }
-    add_graphics_state(batch, comp, entity_id);
+    add_graphics_state(batch, comp, material, entity_id);
     return;
   }
 
@@ -612,7 +597,7 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
 
     /// Update the mapping from texture id to layer idx and increment count
     batch.layer_idxs[comp.diffuse_texture.id] = batch.diffuse_textures_count++;
-    batch.objects.diffuse_texture_idxs.push_back(batch.layer_idxs[comp.diffuse_texture.id]);
+    material.diffuse_layer_idx = batch.layer_idxs[comp.diffuse_texture.id];
 
     /// Upload the texture to OpenGL
     batch.upload(comp.diffuse_texture, batch.gl_diffuse_texture_unit, batch.gl_diffuse_texture_array);
@@ -664,7 +649,7 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
 
   link_batch(batch);
 
-  add_graphics_state(batch, comp, entity_id);
+  add_graphics_state(batch, comp, material, entity_id);
   graphics_batches.push_back(batch);
 }
 
@@ -672,7 +657,7 @@ void Renderer::remove_component(ID entity_id) {
   // TODO: Implement
 }
 
-void Renderer::add_graphics_state(GraphicsBatch& batch, const RenderComponent& comp, ID entity_id) {
+void Renderer::add_graphics_state(GraphicsBatch& batch, const RenderComponent& comp, Material material, ID entity_id) {
   batch.entity_ids.push_back(entity_id);
   batch.data_idx[entity_id] = batch.entity_ids.size() - 1;
 
@@ -685,8 +670,9 @@ void Renderer::add_graphics_state(GraphicsBatch& batch, const RenderComponent& c
   batch.objects.bounding_volumes.push_back(bounding_volume);
   // NOTE: Does not calculate the radius of the bounding volume ...
 
-  batch.objects.pbr_scalar_parameters.push_back(comp.pbr_scalar_parameters);
-  batch.objects.shading_models.push_back(comp.shading_model);
+  material.pbr_scalar_parameters = Vec2f(comp.pbr_scalar_parameters.y, comp.pbr_scalar_parameters.z);
+  material.shading_model = comp.shading_model;
+  batch.objects.materials.push_back(material);
 }
 
 void Renderer::update_transforms() {
