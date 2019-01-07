@@ -301,11 +301,11 @@ Renderer::Renderer(): graphics_batches{} {
 
 /// Draw struct taken from OpenGL (see: glMultiDrawElementsIndirect)
 struct DrawElementsIndirectCommand {
-  uint32_t count = 0; // # elements (i.e indices)
+  uint32_t count = 0;         // # elements (i.e indices)
   uint32_t instanceCount = 0; // # instances (kind of drawcalls)
-  uint32_t firstIndex = 0; // index of the first element in the EBO
-  uint32_t baseVertex = 0; // indices[i] + baseVertex 
-  uint32_t baseInstance = 0; // [gl_InstanceID / divisor] + baseInstance 
+  uint32_t firstIndex = 0;    // index of the first element in the EBO
+  uint32_t baseVertex = 0;    // indices[i] + baseVertex 
+  uint32_t baseInstance = 0;  // [gl_InstanceID / divisor] + baseInstance 
   uint32_t padding0 = 0;
   uint32_t padding1 = 0;
   uint32_t padding2 = 0;
