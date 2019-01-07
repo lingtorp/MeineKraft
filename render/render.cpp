@@ -670,7 +670,7 @@ void Renderer::add_graphics_state(GraphicsBatch& batch, const RenderComponent& c
 
 void Renderer::update_transforms() {
   std::vector<ID> job_ids(graphics_batches.size());
-  const std::vector<ID> t_ids = TransformSystem::instance().get_dirty_transforms();
+  const std::vector<ID> t_ids = TransformSystem::instance().get_dirty_transform_ids();
   // Log::info("Dirty ids: " + std::to_string(t_ids.size()));
   for (size_t i = 0; i < graphics_batches.size(); i++) {
     ID job_id = JobSystem::instance().execute([=](){ // FIXME: Remove the copy of t_ids
