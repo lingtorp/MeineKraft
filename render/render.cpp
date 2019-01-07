@@ -383,8 +383,6 @@ void Renderer::render(uint32_t delta) {
       const auto& batch = graphics_batches[i];
       const auto program = batch.depth_shader.gl_program;
       glUseProgram(program);
-      glBindVertexArray(batch.gl_depth_vao);
-
       glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(camera_transform));
       
       // FIXME: These copies should happen outside of the render loop
