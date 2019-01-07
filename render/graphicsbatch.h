@@ -115,7 +115,9 @@ struct GraphicsBatch {
   uint8_t* gl_ibo_ptr = nullptr;  // Ptr to mapped GL_DRAW_INDIRECT_BUFFER
   uint32_t gl_curr_ibo_idx = 0;   // Currently used partition of the buffer 
 
-  uint32_t gl_bvb = 0; // Bounding Volume Buffer (holds the bounding volume representation)
+  uint32_t gl_bounding_volume_buffer = 0;           // Bounding volume buffer
+  uint8_t* gl_bounding_volume_buffer_ptr = nullptr; // Ptr to the mapped bounding volume buffer
+
   uint32_t gl_instance_idx_buffer = 0; // Instance indices passed along the shader pipeline for fetching per instance data from various buffers
 
   uint32_t gl_mbo = 0;           // Material b.o

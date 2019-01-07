@@ -363,8 +363,10 @@ void Renderer::render(uint32_t delta) {
       const uint32_t gl_instance_idx_binding_point = 1; // Defaults to 1 in the culling compute shader 
       glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_instance_idx_binding_point, batch.gl_instance_idx_buffer);
 
+      const uint32_t gl_bounding_volume_binding_point = 5; // Defaults to 5 in the culling compute shader
+      glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_bounding_volume_binding_point, batch.gl_bounding_volume_buffer);
+
       glUniform1ui(glGetUniformLocation(cull_shader->gl_program, "NUM_INDICES"), batch.mesh.indices.size());
-      glUniform4fv(glGetUniformLocation(cull_shader->gl_program, "spheres"), batch.objects.bounding_volumes.size(), (const float*) batch.objects.bounding_volumes.data());
       glUniform1ui(glGetUniformLocation(cull_shader->gl_program, "DRAW_CMD_IDX"), batch.gl_curr_ibo_idx);
 
       glDispatchCompute(batch.objects.transforms.size(), 1, 1);
@@ -483,6 +485,12 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glEnableVertexAttribArray(texcoord_attrib);
 
     const auto flags = GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT | GL_MAP_WRITE_BIT;
+
+    // Bounding volume buffer
+    glGenBuffers(1, &batch.gl_bounding_volume_buffer);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, batch.gl_bounding_volume_buffer);
+    glBufferStorage(GL_SHADER_STORAGE_BUFFER, GraphicsBatch::MAX_OBJECTS * sizeof(BoundingVolume), nullptr, flags);
+    batch.gl_bounding_volume_buffer_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, GraphicsBatch::MAX_OBJECTS * sizeof(BoundingVolume), flags);
 
     // Buffer for all the model matrices
     glGenBuffers(1, &batch.gl_depth_models_buffer_object);
@@ -681,6 +689,7 @@ void Renderer::update_transforms() {
         batch.objects.transforms[idx->second] = transform;
       }
       std::memcpy(batch.gl_depth_model_buffer_object_ptr, batch.objects.transforms.data(), batch.objects.transforms.size() * sizeof(Mat4f));
+      std::memcpy(batch.gl_bounding_volume_buffer_ptr, batch.objects.bounding_volumes.data(), batch.objects.bounding_volumes.size() * sizeof(BoundingVolume));
     });
     job_ids.push_back(job_id);
   }

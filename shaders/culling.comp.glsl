@@ -2,9 +2,9 @@
 // Process one object per shader invocation (optimisation?)
 layout (local_size_x = 1) in;
 
-// TODO: Turn into SSBO
-const uint MAX_OBJECTS = 1000;
-uniform vec4 spheres[MAX_OBJECTS]; // vec4 = (center.xyz, radius)
+layout(std140, binding = 5) readonly buffer BoundingVolumeBlock {
+    vec4 spheres[]; // vec4 = (center.xyz, radius)
+};
 
 // Plane defined as: Ax + By + Cz = D
 uniform vec4 frustum_planes[6];
