@@ -315,7 +315,7 @@ void Renderer::render(uint32_t delta) {
   state = RenderState(state);
   state.frame++;
 
-  glm::mat4 camera_transform = camera->transform(); // TODO: Camera handling needs to be reworked
+  const glm::mat4 camera_transform = camera->transform(); // TODO: Camera handling needs to be reworked
 
   /// Renderer caches the transforms of components thus we need to fetch the ones who changed during the last frame 
   if (state.frame % 10 == 0) { 
