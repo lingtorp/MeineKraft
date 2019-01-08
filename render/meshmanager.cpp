@@ -116,7 +116,7 @@ MeshManager::load_mesh(const std::string& directory, const std::string& file) {
             Log::info("Loading mesh with name: " + std::string(mesh->mName.data));
 
             for (size_t j = 0; j < mesh->mNumVertices; j++) {
-                Vertex<float> vertex;
+                Vertex vertex;
 
                 auto pos = mesh->mVertices[j];
                 vertex.position = {pos.x, pos.y, pos.z};
