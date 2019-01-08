@@ -94,7 +94,7 @@ Vec3<float> Camera::recalculate_direction() const {
   }
 }
 
-Vec3<float> Camera::update(uint32_t delta) {
+Vec3<float> Camera::update(const uint32_t delta) {
   /// Perform acceleration and de-acceleration calculations for each direction on each axis.
   if (acceleration.x.x) {
     // If accelerating along positive x-axis, increase the velocity along the positive axis
