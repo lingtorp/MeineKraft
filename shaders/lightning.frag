@@ -39,7 +39,7 @@ struct PointLight {
     vec4 intensity; // (R, G, B, padding)
 };
 
-layout(std140) buffer PointLightBlock {
+layout(std140, binding = 4) buffer PointLightBlock {
     PointLight lights[];
 };
 
@@ -98,8 +98,8 @@ vec3 schlick_brdf(PBRInputs inputs) {
 
 vec3 schlick_render(vec2 frag_coord, vec3 position, vec3 normal, vec3 diffuse, vec3 ambient_occlusion) {
     PBRInputs pbr_inputs;
-    pbr_inputs.metallic = texture(pbr_parameters_sampler, frag_coord).b;
     pbr_inputs.roughness = texture(pbr_parameters_sampler, frag_coord).g;
+    pbr_inputs.metallic = texture(pbr_parameters_sampler, frag_coord).b;
     pbr_inputs.roughness *= pbr_inputs.roughness; // Convert to material roughness from perceptual roughness
     pbr_inputs.base_color = diffuse.rgb;  
     pbr_inputs.N = normalize(normal);

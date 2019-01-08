@@ -93,8 +93,8 @@ public:
     }
 
     Perlin noise(1337);
-    int32_t start = -50;
-    int32_t end = -start;
+    const int32_t start = -11; // FIXME: Does not render correctly when larger than 11
+    const int32_t end = -start;
     for (int32_t x = start; x < end; x++) {
       for (int32_t z = start; z < end; z++) {
         Block::BlockType block_type = distr(engine) < 0.5 ? Block::BlockType::GRASS : Block::BlockType::DIRT;
@@ -108,15 +108,16 @@ public:
       }
     }
 
-    for (size_t i = 0; i < 7; i++) {
-      for (size_t j = 0; j < 7; j++) {
+    const size_t SIZE = 7;
+    for (size_t i = 0; i < SIZE; i++) {
+      for (size_t j = 0; j < SIZE; j++) {
         Entity* entity = new Entity();
         TransformComponent transform;
         transform.position = Vec3f{ 2.5f * j, 2.5f + 2.5f * i, -5.0f }; 
         entity->attach_component(transform);
         RenderComponent render;
         render.set_mesh(MeshPrimitive::Sphere);
-        render.pbr_scalar_parameters = Vec3f(0.0, 1.0 / 6.0 * i, 1.0 / 6.0 * j);
+        render.pbr_scalar_parameters = Vec3f(0.0, 1.0 / (double)(SIZE - 1) * i, (1.0 / (double)(SIZE - 1)) * j);
         render.set_shading_model(ShadingModel::PhysicallyBasedScalars);
         entity->attach_component(render);
         ActionComponent action([=](uint64_t frame, uint64_t dt) {

@@ -38,7 +38,7 @@ public:
     dirty_idx = 0;
   }
 
-  std::vector<ID> get_dirty_transforms() const {
+  std::vector<ID> get_dirty_transform_ids() const {
     std::vector<ID> dirty_ids(dirty_idx);
     for (size_t i = 0; i < dirty_idx; i++) {
       dirty_ids[i] = data_ids[i];
@@ -46,7 +46,7 @@ public:
     return dirty_ids;
   }
 
-  std::vector<ID> get_dirty_transforms_from(const std::vector<ID>& ids) const {
+  std::vector<ID> get_dirty_transform_ids_from(const std::vector<ID>& ids) const {
     std::vector<ID> dirty_ids;
     for (const auto& id : ids) {
       if (data_idxs.at(id) <= dirty_idx) {

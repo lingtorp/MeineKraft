@@ -5,12 +5,10 @@
 #include <cstdint>
 #include <string>
 #include <vector>
-#include <unordered_map>
-#include <array>
-#include <memory>
 
 #include "texture.h"
 #include "light.h"
+#include "../render/primitives.h"
 
 #include <glm/mat4x4.hpp>
 
@@ -18,7 +16,9 @@ struct Camera;
 struct RenderComponent;
 struct GraphicsBatch;
 struct Shader;
+struct ComputeShader;
 struct RenderPass;
+struct Material;
 
 class Renderer {
 public:
@@ -57,9 +57,12 @@ public:
 
 private:
   Renderer();
-  void add_graphics_state(GraphicsBatch& batch, const RenderComponent& comp, ID entity_id);
+  void add_graphics_state(GraphicsBatch& batch, const RenderComponent& comp, Material material, ID entity_id);
   void update_transforms();
   void link_batch(GraphicsBatch& batch);
+
+  /// View frustum culling shader
+  ComputeShader* cull_shader;
   
   /// Geometry pass related
   uint32_t gl_depth_fbo;
@@ -74,8 +77,8 @@ private:
   uint32_t gl_lightning_texture_unit;
   uint32_t gl_lightning_vao;
 
-  uint32_t gl_pointlight_ssbo_binding_point_idx = 0;
-  uint32_t gl_pointlight_ssbo;
+  uint32_t gl_pointlights_ssbo;
+  uint8_t* gl_pointlights_ssbo_ptr = nullptr;
 
   /// Global buffers
   // Normals

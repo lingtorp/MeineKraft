@@ -21,6 +21,19 @@
 #include "sdl2/SDL_opengl.h"
 #endif 
 
+/// Bounding volume in the shape of a sphere
+struct BoundingVolume {
+  Vec3f position;      // Center position of the sphere         
+  float radius = 1.0f; // Calculated somehow somewhere 
+};
+
+/// Material 
+struct Material {
+  uint32_t diffuse_layer_idx  = 0;
+  ShadingModel shading_model  = ShadingModel::Unlit; // uint32_t
+  Vec2f pbr_scalar_parameters = {}; // (roughness, metallic)
+};
+
 struct GraphicsBatch {
   explicit GraphicsBatch(ID mesh_id): mesh_id(mesh_id), objects{}, mesh{}, layer_idxs{} {};
   
@@ -69,9 +82,8 @@ struct GraphicsBatch {
   Mesh mesh; 
   struct GraphicStateObjects {
     std::vector<Transform> transforms;
-    std::vector<ShadingModel> shading_models;         // default ShadingModel::Unlit;
-    std::vector<uint32_t> diffuse_texture_idxs;       // Layer index
-    std::vector<Vec3f> pbr_scalar_parameters;         // Used by ShadingModel::PBRScalars
+    std::vector<BoundingVolume> bounding_volumes;     // Bounding volumes (Spheres for now)
+    std::vector<Material> materials;
   };
   std::unordered_map<ID, ID> data_idx;                // Entity ID to data position in data (objects struct)
   std::vector<ID> entity_ids;
@@ -87,19 +99,35 @@ struct GraphicsBatch {
   uint32_t gl_diffuse_texture_array = 0;  // OpenGL handle to the texture array buffer (GL_TEXTURE_2D_ARRAY, GL_TEXTURE_CUBE_MAP_ARRAY, etc)
   uint32_t gl_diffuse_texture_unit  = 0;
   
-  uint32_t gl_diffuse_textures_layer_idx = 0; // Attribute buffer for layer indices
-  
   /// Physically based rendering related
   uint32_t gl_metallic_roughness_texture_unit = 0;  // Metallic roughness texture buffer
   uint32_t gl_ambient_occlusion_texture_unit  = 0;  // Ambient occlusion map
   uint32_t gl_emissive_texture_unit           = 0;  // Emissive map
     
+  /// General?
+  static const uint32_t MAX_OBJECTS = 1'000; // Max # draw cmds (one per objects) for the IBO
+
+  uint32_t gl_ebo = 0;            // Elements b.o
+  uint8_t* gl_ebo_ptr = nullptr;  // Ptr to mapped GL_ELEMENTS_ARRAY_BUFFER
+
+  const uint8_t gl_ibo_count = 3; // Number of partition of the buffer
+  uint32_t gl_ibo = 0;            // (Draw) Indirect b.o (holds all draw commands)
+  uint8_t* gl_ibo_ptr = nullptr;  // Ptr to mapped GL_DRAW_INDIRECT_BUFFER
+  uint32_t gl_curr_ibo_idx = 0;   // Currently used partition of the buffer 
+
+  uint32_t gl_bounding_volume_buffer = 0;           // Bounding volume buffer
+  uint8_t* gl_bounding_volume_buffer_ptr = nullptr; // Ptr to the mapped bounding volume buffer
+
+  uint32_t gl_instance_idx_buffer = 0; // Instance indices passed along the shader pipeline for fetching per instance data from various buffers
+
+  uint32_t gl_mbo = 0;           // Material b.o
+  uint8_t* gl_mbo_ptr = nullptr; // Ptr to mapped material buffer
+
   /// Depth pass variables
   uint32_t gl_depth_vao = 0;
   uint32_t gl_depth_vbo = 0;
-  uint32_t gl_depth_models_buffer_object  = 0;
-  uint32_t gl_shading_model_buffer_object = 0;
-  uint32_t gl_pbr_scalar_buffer_object    = 0;  // Used by ShadingModel::PBRScalars
+  uint32_t gl_depth_models_buffer_object  = 0;  // Models b.o (holds all objects model matrices)
+  uint8_t* gl_depth_model_buffer_object_ptr = nullptr; // Model b.o ptr
 
   Shader depth_shader;  // Shader used to render all the components in this batch
 };

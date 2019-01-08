@@ -10,6 +10,44 @@
 #include <GL/glew.h>
 #endif 
 
+static const char* GLSL_VERSION = "#version 460 core \n";
+
+/// Check whether a file exists or not
+bool file_exists(std::string filename) {
+  std::ifstream ifs(filename);
+  return ifs.good();
+}
+
+/// Reads the entire contents of the file and returns it
+const std::string load_shader_source(const std::string& filename) {
+  std::ifstream ifs(filename);
+  return std::string((std::istreambuf_iterator<char>(ifs)), (std::istreambuf_iterator<char>()));
+}
+
+ComputeShader::ComputeShader(const std::string& compute_filepath) {
+  GLuint gl_comp_shader = glCreateShader(GL_COMPUTE_SHADER);
+  std::string comp_src = load_shader_source(compute_filepath);
+
+  // Insert the define into the shader src
+  comp_src.insert(0, GLSL_VERSION);
+
+  const char* raw_str_ptr = comp_src.c_str();
+  glShaderSource(gl_comp_shader, 1, &raw_str_ptr, nullptr);
+  glCompileShader(gl_comp_shader);
+
+  gl_program = glCreateProgram();
+  glAttachShader(gl_program, gl_comp_shader);
+  glLinkProgram(gl_program);
+
+  GLint compute_shader_status = 0;
+  glGetShaderiv(gl_comp_shader, GL_COMPILE_STATUS, &compute_shader_status);
+
+  glDetachShader(gl_program, gl_comp_shader);
+  glDeleteShader(gl_comp_shader);
+
+  if (!compute_shader_status) { std::cerr << "Could not compile compute shader, aborting ... " << std::endl; exit(-1); }
+}
+
 Shader::Shader(const std::string& vertex_filepath, const std::string& fragment_filepath):
   vertex_filepath(vertex_filepath), fragment_filepath(fragment_filepath),
   gl_vertex_shader(0), gl_fragment_shader(0), gl_program(0), defines{} {}
@@ -19,20 +57,16 @@ std::pair<bool, std::string> Shader::compile() {
       return {false, "File(s) do not exists: " + vertex_filepath + " and/or " + fragment_filepath};
   }
 
-  auto vertex_src   = load_shader_source(vertex_filepath);
-  auto fragment_src = load_shader_source(fragment_filepath);
+  vertex_src   = load_shader_source(vertex_filepath);
+  fragment_src = load_shader_source(fragment_filepath);
 
-  for (auto &define : defines) {
+  for (const auto& define : defines) {
       vertex_src.insert(0, Shader::shader_define_to_string(define));
       fragment_src.insert(0, Shader::shader_define_to_string(define));
   }
 
-  static const char* GLSL_VERSION = "#version 460 core \n";
   vertex_src.insert(0, GLSL_VERSION);
   fragment_src.insert(0, GLSL_VERSION);
-
-  vertex_shader_src = vertex_src;
-  fragment_shader_src = fragment_src;
 
   auto raw_str = vertex_src.c_str();
   gl_vertex_shader = glCreateShader(GL_VERTEX_SHADER);
@@ -88,80 +122,6 @@ std::pair<bool, std::string> Shader::compile() {
   return {false, std::string(vert_err_msg) + std::string(frag_err_msg) + std::string(prog_err_msg)};
 };
 
-std::pair<bool, std::string> Shader::recompile() {
-  auto vertex_src   = load_shader_source(vertex_filepath);
-  auto fragment_src = load_shader_source(fragment_filepath);
-
-  glDetachShader(gl_program, gl_vertex_shader);
-  glDetachShader(gl_program, gl_fragment_shader);
-  glDeleteShader(gl_vertex_shader);
-  glDeleteShader(gl_fragment_shader);
-
-  gl_vertex_shader   = glCreateShader(GL_VERTEX_SHADER);
-  gl_fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-
-  auto raw_str = vertex_src.c_str();
-  glShaderSource(gl_vertex_shader, 1, &raw_str, nullptr);
-
-  raw_str = fragment_src.c_str();
-  glShaderSource(gl_fragment_shader, 1, &raw_str, nullptr);
-
-  glCompileShader(gl_vertex_shader);
-  glCompileShader(gl_fragment_shader);
-
-  GLint vertex_shader_status;
-  glGetShaderiv(gl_vertex_shader, GL_COMPILE_STATUS, &vertex_shader_status);
-
-  GLint fragment_shader_status;
-  glGetShaderiv(gl_fragment_shader, GL_COMPILE_STATUS, &fragment_shader_status);
-
-  if (vertex_shader_status == GL_TRUE && fragment_shader_status == GL_TRUE) {
-      // Relink shader program
-      glAttachShader(gl_program, gl_vertex_shader);
-      glAttachShader(gl_program, gl_fragment_shader);
-      glLinkProgram(gl_program);
-      GLint is_linked = GL_FALSE;
-      glGetProgramiv(gl_program, GL_LINK_STATUS, &is_linked);
-      Log::info("Shader relinking is success: " + std::to_string(is_linked == GL_TRUE));
-
-      if (is_linked) {
-          // Always detach shaders after a successful link.
-          glDetachShader(gl_program, gl_vertex_shader);
-          glDetachShader(gl_program, gl_fragment_shader);
-          glDeleteShader(gl_vertex_shader);
-          glDeleteShader(gl_fragment_shader);
-      }
-
-      std::string err_log = "";
-      GLint max_log_lng = 0;
-      glGetProgramiv(gl_program, GL_INFO_LOG_LENGTH, &max_log_lng);
-      err_log.reserve(max_log_lng);
-      glGetProgramInfoLog(gl_program, max_log_lng, nullptr, (char *) err_log.c_str());
-      Log::info(err_log);
-
-      return {true, ""};
-  }
-
-  uint32_t err_size = 512;
-  std::string frag_err_msg;
-  std::string vert_err_msg;
-  frag_err_msg.reserve(err_size);
-  vert_err_msg.reserve(err_size);
-  glGetShaderInfoLog(gl_fragment_shader, err_size, nullptr, (char *) frag_err_msg.c_str());
-  glGetShaderInfoLog(gl_vertex_shader  , err_size, nullptr, (char *) vert_err_msg.c_str());
-  return {false, frag_err_msg + vert_err_msg};
-};
-
-bool Shader::file_exists(std::string filename) const {
-  std::ifstream ifs(filename);
-  return ifs.good();
-}
-
-const std::string Shader::load_shader_source(std::string filename) const {
-  std::ifstream ifs(filename);
-  return std::string((std::istreambuf_iterator<char>(ifs)), (std::istreambuf_iterator<char>()));
-}
-
 std::string Shader::shader_define_to_string(const Shader::Defines define) {
   switch (define) {
   case Shader::Defines::Diffuse2D:
@@ -180,10 +140,4 @@ void Shader::add(const Shader::Defines define) {
 
 bool Shader::operator==(const Shader &rhs) {
  return defines == rhs.defines;
-}
-
-bool Shader::validate() {
-  // Might need to model the dependencies of the defines in a graph at compile time which speeds the validation along
-  // TODO: This will check if the defines plays nicely together or not. No point in compiling a faulty shader.
-  return true;
 }

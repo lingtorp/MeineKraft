@@ -1,6 +1,6 @@
 #include "render.h"
 
-#include <random>
+#include <array>
 
 #ifdef WIN32
 #include <glew.h>
@@ -68,6 +68,47 @@ void Renderer::load_environment_map(const std::vector<std::string>& faces) {
   } else {
     Log::warn("Could not load environment map");
   }
+}
+
+/// Normalizes the plane's equation and returns it
+inline glm::vec4 normalize(const glm::vec4& p) {
+  const float mag = std::sqrt(p.x * p.x + p.y * p.y + p.z * p.z);
+  return glm::vec4(p.x / mag, p.y / mag, p.z / mag, p.w / mag);
+}
+
+/// Returns the planes from the frustrum matrix in order; {left, right, bottom, top, near, far} (MV = world space with normal poiting to positive halfspace)
+/// See: http://gamedevs.org/uploads/fast-extraction-viewing-frustum-planes-from-world-view-projection-matrix.pdf
+std::array<glm::vec4, 6> extract_planes(const glm::mat4& mat) {
+  const auto left_plane = glm::vec4(mat[3][0] + mat[0][0],
+    mat[3][1] + mat[0][1],
+    mat[3][2] + mat[0][2],
+    mat[3][3] + mat[0][3]);
+
+  const auto right_plane = glm::vec4(mat[3][0] - mat[0][0],
+    mat[3][1] - mat[0][1],
+    mat[3][2] - mat[0][2],
+    mat[3][3] - mat[0][3]);
+
+  const auto bot_plane = glm::vec4(mat[3][0] + mat[1][0],
+    mat[3][1] + mat[1][1],
+    mat[3][2] + mat[1][2],
+    mat[3][3] + mat[1][3]);
+
+  const auto top_plane = glm::vec4(mat[3][0] - mat[1][0],
+    mat[3][1] - mat[1][1],
+    mat[3][2] - mat[1][2],
+    mat[3][3] - mat[1][3]);
+
+  const auto near_plane = glm::vec4(mat[3][0] + mat[2][0],
+    mat[3][1] + mat[2][1],
+    mat[3][2] + mat[2][2],
+    mat[3][3] + mat[2][3]);
+
+  const auto far_plane = glm::vec4(mat[3][0] - mat[2][0],
+    mat[3][1] - mat[2][1],
+    mat[3][2] - mat[2][2],
+    mat[3][3] - mat[2][3]);
+  return { normalize(left_plane), normalize(right_plane), normalize(bot_plane), normalize(top_plane), normalize(near_plane), normalize(far_plane) };
 }
 
 Renderer::~Renderer() = default;
@@ -226,11 +267,6 @@ Renderer::Renderer(): graphics_batches{} {
     glBufferData(GL_ARRAY_BUFFER, sizeof(Primitive::quad), &Primitive::quad, GL_STATIC_DRAW);
     glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
     glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
-  
-    /// Shader storage buffer object for PointLights: bind it to the SSBO
-    GLuint gl_ssbo_block_idx = glGetProgramResourceIndex(program, GL_SHADER_STORAGE_BLOCK, "PointLightBlock");
-    std::cerr << gl_ssbo_block_idx << std::endl;
-    glShaderStorageBlockBinding(program, gl_ssbo_block_idx, gl_pointlight_ssbo_binding_point_idx);
   }
 
   pointlights.emplace_back(PointLight(Vec3f(0.0, 0.0, 5.0)));
@@ -239,16 +275,18 @@ Renderer::Renderer(): graphics_batches{} {
   pointlights.emplace_back(PointLight(Vec3f(10.0, 0.0, 5.0)));
 
   /// Create SSBO for the PointLights
-  glGenBuffers(1, &gl_pointlight_ssbo);
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, gl_pointlight_ssbo);
-  glBufferData(GL_SHADER_STORAGE_BUFFER, pointlights.size() * sizeof(PointLight), pointlights.data(), GL_DYNAMIC_COPY);
-  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_pointlight_ssbo_binding_point_idx, gl_pointlight_ssbo);
+  glGenBuffers(1, &gl_pointlights_ssbo);
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, gl_pointlights_ssbo);
+  const auto flags = GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT | GL_MAP_WRITE_BIT;
+  glBufferStorage(GL_SHADER_STORAGE_BUFFER, pointlights.size() * sizeof(PointLight), nullptr, flags);
+  gl_pointlights_ssbo_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, pointlights.size() * sizeof(PointLight), flags);
 
-  /// Update
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, gl_pointlight_ssbo);
-  GLvoid* ssbo = glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, pointlights.size() * sizeof(PointLight), GL_MAP_WRITE_BIT);
-  std::memcpy(ssbo, pointlights.data(), pointlights.size() * sizeof(PointLight)); 
-  glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+  const uint32_t gl_pointlight_ssbo_binding_point_idx = 4; // Default value in lightning.frag
+  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_pointlight_ssbo_binding_point_idx, gl_pointlights_ssbo);
+  std::memcpy(gl_pointlights_ssbo_ptr, pointlights.data(), pointlights.size() * sizeof(PointLight));
+
+  // View frustum culling shader
+  cull_shader = new ComputeShader{Filesystem::base + "shaders/culling.comp.glsl"};
 
   glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
   glEnable(GL_CULL_FACE);
@@ -261,10 +299,23 @@ Renderer::Renderer(): graphics_batches{} {
   camera = new Camera(position, direction, world_up);
 }
 
+/// Draw struct taken from OpenGL (see: glMultiDrawElementsIndirect)
+struct DrawElementsIndirectCommand {
+  uint32_t count = 0;         // # elements (i.e indices)
+  uint32_t instanceCount = 0; // # instances (kind of drawcalls)
+  uint32_t firstIndex = 0;    // index of the first element in the EBO
+  uint32_t baseVertex = 0;    // indices[i] + baseVertex 
+  uint32_t baseInstance = 0;  // [gl_InstanceID / divisor] + baseInstance 
+  uint32_t padding0 = 0;
+  uint32_t padding1 = 0;
+  uint32_t padding2 = 0;
+};
+
 void Renderer::render(uint32_t delta) {
-  /// Reset render stats
   state = RenderState(state);
   state.frame++;
+
+  glm::mat4 camera_transform = camera->transform(); // TODO: Camera handling needs to be reworked
 
   /// Renderer caches the transforms of components thus we need to fetch the ones who changed during the last frame 
   if (state.frame % 10 == 0) { 
@@ -272,12 +323,59 @@ void Renderer::render(uint32_t delta) {
   }
   update_transforms();  
 
-  /// Culls objects in all batches
-  // cull_objects();
+  static GLsync syncs[3] = {nullptr, nullptr, nullptr};
 
-  glm::mat4 camera_transform = camera->transform(); 
+  if (syncs[state.frame % 3]) {
+    while (true) {
+      GLenum wait_result = glClientWaitSync(syncs[state.frame % 3], GL_SYNC_FLUSH_COMMANDS_BIT, 1);
+      if (wait_result == GL_CONDITION_SATISFIED || wait_result == GL_ALREADY_SIGNALED) { break; }
+    }
+  }
 
-  /// Geometry pass
+  // Update all ptr indices in all of the batches
+  for (size_t i = 0; i < graphics_batches.size(); i++) {
+    auto& batch = graphics_batches[i];
+    batch.gl_curr_ibo_idx = state.frame % batch.gl_ibo_count;
+  } 
+
+  // Reset the draw commands
+  for (size_t i = 0; i < graphics_batches.size(); i++) {
+    const auto& batch = graphics_batches[i];
+    ((DrawElementsIndirectCommand*)batch.gl_ibo_ptr)[batch.gl_curr_ibo_idx].instanceCount = 0;
+  }
+
+  pass_started("Culling pass");
+  {
+    // NOTE: Extraction of frustum planes are performed on the transpose (because of column/row-major difference).
+    // FIXME: Use the Direct3D way of extraction instead since GLM appears to store the matrix in a row-major way.
+    const glm::mat4 proj_view = projection_matrix * camera_transform;
+    const std::array<glm::vec4, 6> frustum = extract_planes(glm::transpose(proj_view));
+
+    glUseProgram(cull_shader->gl_program);
+    glUniform4fv(glGetUniformLocation(cull_shader->gl_program, "frustum_planes"), 6, glm::value_ptr(frustum[0]));
+    for (size_t i = 0; i < graphics_batches.size(); i++) {
+      const auto& batch = graphics_batches[i];
+
+      // Rebind the draw cmd SSBO for the compute shader to the current batch
+      const uint32_t gl_draw_cmd_binding_point = 0; // Defaults to 0 in the culling compute shader
+      glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_draw_cmd_binding_point, batch.gl_ibo);
+
+      const uint32_t gl_instance_idx_binding_point = 1; // Defaults to 1 in the culling compute shader 
+      glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_instance_idx_binding_point, batch.gl_instance_idx_buffer);
+
+      const uint32_t gl_bounding_volume_binding_point = 5; // Defaults to 5 in the culling compute shader
+      glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_bounding_volume_binding_point, batch.gl_bounding_volume_buffer);
+
+      glUniform1ui(glGetUniformLocation(cull_shader->gl_program, "NUM_INDICES"), batch.mesh.indices.size());
+      glUniform1ui(glGetUniformLocation(cull_shader->gl_program, "DRAW_CMD_IDX"), batch.gl_curr_ibo_idx);
+
+      glDispatchCompute(batch.objects.transforms.size(), 1, 1);
+    }
+    // TODO: Is this barrier required?
+    glMemoryBarrier(GL_COMMAND_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT); // Buffer objects affected by this bit are derived from the GL_DRAW_INDIRECT_BUFFER binding. 
+  }
+  pass_ended();
+
   pass_started("Geometry pass");
   {
     glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
@@ -287,26 +385,19 @@ void Renderer::render(uint32_t delta) {
       const auto& batch = graphics_batches[i];
       const auto program = batch.depth_shader.gl_program;
       glUseProgram(program);
-      glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(camera_transform));
-      
-      glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_models_buffer_object);
-      glBufferData(GL_ARRAY_BUFFER, batch.objects.transforms.size() * sizeof(Mat4<float>), batch.objects.transforms.data(), GL_DYNAMIC_DRAW);
-      
-      glBindBuffer(GL_ARRAY_BUFFER, batch.gl_diffuse_textures_layer_idx);
-      glBufferData(GL_ARRAY_BUFFER, batch.objects.diffuse_texture_idxs.size() * sizeof(uint32_t), batch.objects.diffuse_texture_idxs.data(), GL_DYNAMIC_DRAW);
-
-      glBindBuffer(GL_ARRAY_BUFFER, batch.gl_shading_model_buffer_object);
-      glBufferData(GL_ARRAY_BUFFER, batch.objects.shading_models.size() * sizeof(ShadingModel), batch.objects.shading_models.data(), GL_DYNAMIC_DRAW);
-
-      glBindBuffer(GL_ARRAY_BUFFER, batch.gl_pbr_scalar_buffer_object);
-      glBufferData(GL_ARRAY_BUFFER, batch.objects.pbr_scalar_parameters.size() * sizeof(Vec3<float>), batch.objects.pbr_scalar_parameters.data(), GL_DYNAMIC_DRAW);
-
       glBindVertexArray(batch.gl_depth_vao);
-      
-      glDrawElementsInstanced(GL_TRIANGLES, batch.mesh.indices.size(), GL_UNSIGNED_INT, nullptr, batch.objects.transforms.size());
-      
-      state.entities += batch.objects.transforms.size();
-      state.draw_calls++;
+      glBindBuffer(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo); // GL_DRAW_INDIRECT_BUFFER is global context state
+
+      glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(camera_transform));
+
+      const uint32_t gl_models_binding_point = 2; // Defaults to 2 in geometry.vert shader
+      glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_models_binding_point, batch.gl_depth_models_buffer_object);
+
+      const uint32_t gl_material_binding_point = 3; // Defaults to 3 in geometry.frag shader
+      glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_material_binding_point, batch.gl_mbo);
+
+      const uint32_t draw_cmd_offset = batch.gl_curr_ibo_idx * sizeof(DrawElementsIndirectCommand);
+      glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (const void*) draw_cmd_offset, 1, sizeof(DrawElementsIndirectCommand));
     }
   }
   pass_ended();
@@ -350,6 +441,9 @@ void Renderer::render(uint32_t delta) {
 
   log_gl_error();
   state.graphic_batches = graphics_batches.size();
+
+  if (syncs[state.frame % 3]) glDeleteSync(syncs[state.frame % 3]);
+  syncs[state.frame % 3] = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
 }
 
 void Renderer::update_projection_matrix(const float fov) {
@@ -390,41 +484,48 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glVertexAttribPointer(texcoord_attrib, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex<float>), (const void *) offsetof(Vertex<float>, tex_coord));
     glEnableVertexAttribArray(texcoord_attrib);
 
+    const auto flags = GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT | GL_MAP_WRITE_BIT;
+
+    // Bounding volume buffer
+    glGenBuffers(1, &batch.gl_bounding_volume_buffer);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, batch.gl_bounding_volume_buffer);
+    glBufferStorage(GL_SHADER_STORAGE_BUFFER, GraphicsBatch::MAX_OBJECTS * sizeof(BoundingVolume), nullptr, flags);
+    batch.gl_bounding_volume_buffer_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, GraphicsBatch::MAX_OBJECTS * sizeof(BoundingVolume), flags);
+
     // Buffer for all the model matrices
     glGenBuffers(1, &batch.gl_depth_models_buffer_object);
-    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_models_buffer_object);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, batch.gl_depth_models_buffer_object);
+    glBufferStorage(GL_SHADER_STORAGE_BUFFER, GraphicsBatch::MAX_OBJECTS * sizeof(Mat4f), nullptr, flags);
+    batch.gl_depth_model_buffer_object_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, GraphicsBatch::MAX_OBJECTS * sizeof(Mat4f), flags);
 
-    const auto model_attrib = glGetAttribLocation(program, "model");
-    for (int i = 0; i < 4; i++) {
-      glVertexAttribPointer(model_attrib + i, 4, GL_FLOAT, GL_FALSE, sizeof(Mat4<float>), (const void *) (sizeof(float) * i * 4));
-      glEnableVertexAttribArray(model_attrib + i);
-      glVertexAttribDivisor(model_attrib + i, 1);
-    }
+    // Material buffer
+    glGenBuffers(1, &batch.gl_mbo);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, batch.gl_mbo);
+    glBufferStorage(GL_SHADER_STORAGE_BUFFER, GraphicsBatch::MAX_OBJECTS * sizeof(Material), nullptr, flags);
+    batch.gl_mbo_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, GraphicsBatch::MAX_OBJECTS * sizeof(Material), flags);
 
-    // Buffer for all the diffuse texture indices
-    glGenBuffers(1, &batch.gl_diffuse_textures_layer_idx);
-    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_diffuse_textures_layer_idx);
-    glVertexAttribIPointer(glGetAttribLocation(program, "diffuse_layer_idx"), 1, GL_UNSIGNED_INT, sizeof(GLint), nullptr);
-    glEnableVertexAttribArray(glGetAttribLocation(program, "diffuse_layer_idx"));
-    glVertexAttribDivisor(glGetAttribLocation(program, "diffuse_layer_idx"), 1);
+    // Element buffer
+    glGenBuffers(1, &batch.gl_ebo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, batch.gl_ebo);
+    glBufferStorage(GL_ELEMENT_ARRAY_BUFFER, batch.mesh.byte_size_of_indices(), nullptr, flags);
+    batch.gl_ebo_ptr = (uint8_t*) glMapBufferRange(GL_ELEMENT_ARRAY_BUFFER, 0, batch.mesh.byte_size_of_indices(), flags);
+    std::memcpy(batch.gl_ebo_ptr, batch.mesh.indices.data(), batch.mesh.byte_size_of_indices());
 
-    glGenBuffers(1, &batch.gl_shading_model_buffer_object);
-    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_shading_model_buffer_object);
-    glVertexAttribIPointer(glGetAttribLocation(program, "shading_model_id"), 1, GL_UNSIGNED_INT, sizeof(GLuint), nullptr);
-    glEnableVertexAttribArray(glGetAttribLocation(program, "shading_model_id"));
-    glVertexAttribDivisor(glGetAttribLocation(program, "shading_model_id"), 1);
+    // Setup GL_DRAW_INDIRECT_BUFFER for indirect drawing (basically a command buffer)
+    glGenBuffers(1, &batch.gl_ibo);
+    glBindBuffer(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo);
+    glBufferStorage(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo_count * sizeof(DrawElementsIndirectCommand), nullptr, flags);
+    batch.gl_ibo_ptr = (uint8_t*) glMapBufferRange(GL_DRAW_INDIRECT_BUFFER, 0, batch.gl_ibo_count * sizeof(DrawElementsIndirectCommand), flags);
 
-    // FIXME: Not all configurations needs this
-    glGenBuffers(1, &batch.gl_pbr_scalar_buffer_object);
-    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_pbr_scalar_buffer_object);
-    glVertexAttribPointer(glGetAttribLocation(program, "pbr_scalar_parameters"), 3, GL_FLOAT, GL_FALSE, sizeof(Vec3<float>), nullptr);
-    glEnableVertexAttribArray(glGetAttribLocation(program, "pbr_scalar_parameters"));
-    glVertexAttribDivisor(glGetAttribLocation(program, "pbr_scalar_parameters"), 1);
-
-    GLuint EBO;
-    glGenBuffers(1, &EBO);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, batch.mesh.byte_size_of_indices(), batch.mesh.indices.data(), GL_STATIC_DRAW);
+    // Batch instance idx buffer
+    glGenBuffers(1, &batch.gl_instance_idx_buffer);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, batch.gl_instance_idx_buffer);
+    glBufferStorage(GL_SHADER_STORAGE_BUFFER, GraphicsBatch::MAX_OBJECTS * sizeof(GLuint), nullptr, 0);
+    
+    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_instance_idx_buffer);
+    glVertexAttribIPointer(glGetAttribLocation(program, "instance_idx"), 1, GL_UNSIGNED_INT, sizeof(GLuint), nullptr);
+    glEnableVertexAttribArray(glGetAttribLocation(program, "instance_idx"));
+    glVertexAttribDivisor(glGetAttribLocation(program, "instance_idx"), 1);
   }
 }
 
@@ -445,6 +546,8 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
     }
   }
 
+  Material material;
+
   // Shader configuration and mesh id defines the uniqueness of a GBatch
   for (auto& batch : graphics_batches) {
     if (batch.mesh_id != comp.mesh_id) { continue; }
@@ -452,7 +555,7 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
     if (comp.diffuse_texture.data.pixels) {
       bool batch_contains_texture = batch.layer_idxs.count(comp.diffuse_texture.id) == 0;
       if (!batch_contains_texture) {
-        batch.objects.diffuse_texture_idxs.push_back(batch.layer_idxs[comp.diffuse_texture.id]);
+        material.diffuse_layer_idx = batch.layer_idxs[comp.diffuse_texture.id];
       } else {
         /// Expand texture buffer if needed
         if (batch.diffuse_textures_count + 1 > batch.diffuse_textures_capacity) {
@@ -461,13 +564,13 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
 
         /// Update the mapping from texture id to layer idx and increment count
         batch.layer_idxs[comp.diffuse_texture.id] = batch.diffuse_textures_count++;
-        batch.objects.diffuse_texture_idxs.push_back(batch.layer_idxs[comp.diffuse_texture.id]);
+        material.diffuse_layer_idx = batch.layer_idxs[comp.diffuse_texture.id];
 
         /// Upload the texture to OpenGL
         batch.upload(comp.diffuse_texture, batch.gl_diffuse_texture_unit, batch.gl_diffuse_texture_array);
       }
     }
-    add_graphics_state(batch, comp, entity_id);
+    add_graphics_state(batch, comp, material, entity_id);
     return;
   }
 
@@ -485,7 +588,7 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
 
     /// Update the mapping from texture id to layer idx and increment count
     batch.layer_idxs[comp.diffuse_texture.id] = batch.diffuse_textures_count++;
-    batch.objects.diffuse_texture_idxs.push_back(batch.layer_idxs[comp.diffuse_texture.id]);
+    material.diffuse_layer_idx = batch.layer_idxs[comp.diffuse_texture.id];
 
     /// Upload the texture to OpenGL
     batch.upload(comp.diffuse_texture, batch.gl_diffuse_texture_unit, batch.gl_diffuse_texture_array);
@@ -537,7 +640,7 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
 
   link_batch(batch);
 
-  add_graphics_state(batch, comp, entity_id);
+  add_graphics_state(batch, comp, material, entity_id);
   graphics_batches.push_back(batch);
 }
 
@@ -545,17 +648,29 @@ void Renderer::remove_component(ID entity_id) {
   // TODO: Implement
 }
 
-void Renderer::add_graphics_state(GraphicsBatch& batch, const RenderComponent& comp, ID entity_id) {
+void Renderer::add_graphics_state(GraphicsBatch& batch, const RenderComponent& comp, Material material, ID entity_id) {
   batch.entity_ids.push_back(entity_id);
   batch.data_idx[entity_id] = batch.entity_ids.size() - 1;
-  batch.objects.transforms.push_back(TransformSystem::instance().lookup(entity_id));
-  batch.objects.pbr_scalar_parameters.push_back(comp.pbr_scalar_parameters);
-  batch.objects.shading_models.push_back(comp.shading_model);
+
+  const Transform transform = TransformSystem::instance().lookup(entity_id);
+  batch.objects.transforms.push_back(transform);
+
+  // Calculate a bounding volume for the object
+  BoundingVolume bounding_volume;
+  bounding_volume.position = transform.matrix.get_translation();
+  batch.objects.bounding_volumes.push_back(bounding_volume);
+  // NOTE: Does not calculate the radius of the bounding volume ...
+
+  material.pbr_scalar_parameters = Vec2f(comp.pbr_scalar_parameters.y, comp.pbr_scalar_parameters.z);
+  material.shading_model = comp.shading_model;
+  batch.objects.materials.push_back(material);
+
+  std::memcpy(batch.gl_mbo_ptr, batch.objects.materials.data(), batch.objects.materials.size() * sizeof(Material));
 }
 
 void Renderer::update_transforms() {
   std::vector<ID> job_ids(graphics_batches.size());
-  const std::vector<ID> t_ids = TransformSystem::instance().get_dirty_transforms();
+  const std::vector<ID> t_ids = TransformSystem::instance().get_dirty_transform_ids();
   // Log::info("Dirty ids: " + std::to_string(t_ids.size()));
   for (size_t i = 0; i < graphics_batches.size(); i++) {
     ID job_id = JobSystem::instance().execute([=](){ // FIXME: Remove the copy of t_ids
@@ -563,8 +678,18 @@ void Renderer::update_transforms() {
       for (const auto& t_id : t_ids) {
         const auto idx = batch.data_idx.find(t_id);
         if (idx == batch.data_idx.cend()) { continue; }
-        batch.objects.transforms[idx->second] = TransformSystem::instance().lookup(t_id);
+
+        // Update a bounding volume for the object
+        const Transform transform = TransformSystem::instance().lookup(t_id);
+        BoundingVolume bounding_volume;
+        bounding_volume.position = transform.matrix.get_translation();
+        batch.objects.bounding_volumes[idx->second] = bounding_volume;
+        // NOTE: Does not calculate the radius of the bounding volume ...
+
+        batch.objects.transforms[idx->second] = transform;
       }
+      std::memcpy(batch.gl_depth_model_buffer_object_ptr, batch.objects.transforms.data(), batch.objects.transforms.size() * sizeof(Mat4f));
+      std::memcpy(batch.gl_bounding_volume_buffer_ptr, batch.objects.bounding_volumes.data(), batch.objects.bounding_volumes.size() * sizeof(BoundingVolume));
     });
     job_ids.push_back(job_id);
   }
