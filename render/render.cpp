@@ -306,7 +306,7 @@ struct DrawElementsIndirectCommand {
   uint32_t firstIndex = 0;    // index of the first element in the EBO
   uint32_t baseVertex = 0;    // indices[i] + baseVertex 
   uint32_t baseInstance = 0;  // [gl_InstanceID / divisor] + baseInstance 
-  uint32_t padding0 = 0;
+  uint32_t padding0 = 0;      // Padding due to GLSL layout std140 16B alignment rule
   uint32_t padding1 = 0;
   uint32_t padding2 = 0;
 };
