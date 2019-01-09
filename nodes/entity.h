@@ -41,6 +41,12 @@ public:
     return value == i;
   }
 
+  bool try_peeq(const size_t i) {
+    std::unique_lock<std::mutex> lk(mut, std::try_to_lock);
+    if (lk.owns_lock()) { return value == i; }
+    return false;
+  }
+
   bool try_wait() {
     std::lock_guard<std::mutex> lk(mut);
     if (value == 0) {
@@ -69,13 +75,13 @@ struct JobSystem {
     ~Worker() { t.join(); }
 
     void execute() {
-      while (!sem.peeq(3)) {
-        if (sem.peeq(1)) {
+      while (!sem.try_peeq(3)) {
+        if (sem.try_peeq(1)) {
           sem.try_wait();
           workload();
           sem.post(2);
         } else {
-          std::this_thread::sleep_for(std::chrono::milliseconds(1));
+          std::this_thread::sleep_for(std::chrono::microseconds(1));
         }
       }
     }
@@ -92,7 +98,7 @@ struct JobSystem {
     for (size_t i = 0; i < thread_pool.size(); i++) {
       thread_pool[i].sem.post(3);
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    wait_on_all();
   }
 
   // Async
@@ -119,9 +125,13 @@ struct JobSystem {
 
   // Blocking
   void wait_on_all() {
-    for (size_t i = 0; i < thread_pool.size(); i++) {
-      while (thread_pool[i].sem.peeq(0)) {
-        std::this_thread::sleep_for(std::chrono::microseconds(1));
+    uint64_t done = 0; 
+    while (done == thread_pool.size()) {
+      done = 0;
+      for (uint64_t i = 0; i < thread_pool.size(); i++) {
+        if (thread_pool[i].sem.try_peeq(0)) {
+          done++;
+        }
       }
     }
   }
