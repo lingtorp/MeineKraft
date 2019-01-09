@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <functional>
 #include <future>
+#include <mutex>
 
 /// Semaphore
 struct Semaphore {
@@ -20,28 +21,28 @@ public:
   explicit Semaphore(size_t val) : value(val) {}
 
   void post(const size_t val = 1) {
-    std::unique_lock<std::mutex> lk(mut);
+    std::lock_guard<std::mutex> lk(mut);
     value += val;
   }
 
   size_t get_value() {
-    std::unique_lock<std::mutex> lk(mut);
+    std::lock_guard<std::mutex> lk(mut);
     return value;
   }
 
   bool peek() {
-    std::unique_lock<std::mutex> lk(mut);
+    std::lock_guard<std::mutex> lk(mut);
     return value != 0;
   }
 
   /// PEek EQuals 
   bool peeq(const size_t i) {
-    std::unique_lock<std::mutex> lk(mut);
+    std::lock_guard<std::mutex> lk(mut);
     return value == i;
   }
 
   bool try_wait() {
-    std::unique_lock<std::mutex> lk(mut);
+    std::lock_guard<std::mutex> lk(mut);
     if (value == 0) {
       return false;
     } else {
