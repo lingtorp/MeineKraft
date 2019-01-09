@@ -116,9 +116,13 @@ struct JobSystem {
 
   // Blocking
   void wait_on(const std::vector<ID>& ids) {
-    for (size_t i = 0; i < ids.size(); i++) {
-      while (thread_pool[ids[i]].sem.peeq(0)) {
-        std::this_thread::sleep_for(std::chrono::microseconds(1));
+    uint64_t done = 0;
+    while (done == ids.size()) {
+      done = 0;
+      for (uint64_t i = 0; i < ids.size(); i++) {
+        if (thread_pool[ids[i]].sem.try_peeq(0)) {
+          done++;
+        }
       }
     }
   }
