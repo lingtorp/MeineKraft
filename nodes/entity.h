@@ -105,7 +105,7 @@ struct JobSystem {
   ID execute(const std::function<void()>& func) {
     uint64_t i = 0;
     while (true) {
-      if (thread_pool[i].sem.peeq(2)) {
+      if (thread_pool[i].sem.try_peeq(2)) {
         thread_pool[i].workload = std::move(func);
         thread_pool[i].sem.try_wait();
         return i;
