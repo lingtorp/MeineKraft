@@ -130,10 +130,10 @@ struct JobSystem {
   // Blocking
   void wait_on_all() {
     uint64_t done = 0; 
-    while (done == thread_pool.size()) {
+    while (done != thread_pool.size()) {
       done = 0;
       for (uint64_t i = 0; i < thread_pool.size(); i++) {
-        if (thread_pool[i].sem.try_peeq(0)) {
+        if (thread_pool[i].sem.try_peeq(2)) {
           done++;
         }
       }
