@@ -163,6 +163,10 @@ struct Vec3 {
         return (x == rhs.x) && (y == rhs.y) && (z == rhs.z);
     }
 
+    inline Vec3 operator/(const float& rhs) const {
+      return Vec3(x / rhs, y / rhs, z / rhs);
+    }
+
     friend std::ostream &operator<<(std::ostream& os, const Vec3 &vec) {
         return os << "(x:" << vec.x << " y:" << vec.y << " z:" << vec.z << ")";
     }
