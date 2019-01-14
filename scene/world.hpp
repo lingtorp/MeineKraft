@@ -25,6 +25,7 @@ public:
   BlockType type;
   
   explicit Block(const Vec3f position, BlockType type): type(type) {
+    NameSystem::instance().add_name_to_entity("Block", id);
     TransformComponent transform;
     transform.position = position;
     transform.scale = 1.0f;

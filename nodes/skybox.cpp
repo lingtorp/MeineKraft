@@ -5,6 +5,7 @@
 #include "../render/render.h"
 
 Skybox::Skybox(): Entity() {
+  NameSystem::instance().add_name_to_entity("Skybox", this->id);
   TransformComponent transform;
   transform.scale = 50.0;
   attach_component(transform);

@@ -5,10 +5,27 @@
 #include <unordered_map>
 #include "../render/primitives.h"
 
-struct Transform {
-  Mat4f matrix;
-  Transform() = default;
-  Transform(const Mat4f& mat): matrix(mat) {}
+struct NameSystem {
+private:
+  std::unordered_map<ID, std::string> data; // Raw data storage
+public:
+  /// Singleton instance of TransformSystem
+  static NameSystem& instance() {
+    static NameSystem instance;
+    return instance;
+  }
+
+  void add_name_to_entity(const std::string& name, const ID id) {
+    data[id] = name;
+  }
+
+  std::string get_name_from_entity(const ID id) {
+    return data[id];
+  }
+
+  std::string* get_name_from_entity_referenced(const ID id) {
+    return &data[id];
+  }
 };
 
 struct TransformComponent {
