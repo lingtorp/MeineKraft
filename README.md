@@ -1,5 +1,8 @@
 # MeineKraft
 
+[![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](https://lbesson.mit-license.org/)
+[![](https://img.shields.io/badge/twitter-follow-blue.svg)](https://twitter.com/ALingtorp)
+
 ![](/screenshots/pbr-1.png)
 
 **MeineKraft** is a **physically based rendering engine** written in **C++11** & **OpenGL 4.6**.
