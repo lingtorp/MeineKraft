@@ -647,6 +647,12 @@ void Renderer::remove_component(ID entity_id) {
 }
 
 void Renderer::add_graphics_state(GraphicsBatch& batch, const RenderComponent& comp, Material material, ID entity_id) {
+  if (batch.entity_ids.size() + 1 >= GraphicsBatch::MAX_OBJECTS) {
+    Log::error("GraphicsBatch MAX_OBJECTS REACHED.");
+    // TODO: Resize the buffers in order to fit more items 
+    return;
+  }
+
   batch.entity_ids.push_back(entity_id);
   batch.data_idx[entity_id] = batch.entity_ids.size() - 1;
 
@@ -654,6 +660,9 @@ void Renderer::add_graphics_state(GraphicsBatch& batch, const RenderComponent& c
   batch.objects.transforms.push_back(compute_transform(transform));
 
   // Calculate a bounding volume for the object
+  // TODO: Bounding geometry should be the same for all objects (the radius as well)
+  // The bounding volume position is dependent on the actual position of the object as well
+  // since we are want to not use simple origin based spheres anymore
   BoundingVolume bounding_volume;
   bounding_volume.position = transform.position;
   batch.objects.bounding_volumes.push_back(bounding_volume);
