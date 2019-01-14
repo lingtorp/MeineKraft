@@ -167,7 +167,7 @@ struct Vec3 {
       return Vec3(x / rhs, y / rhs, z / rhs);
     }
 
-    friend std::ostream &operator<<(std::ostream& os, const Vec3 &vec) {
+    friend std::ostream& operator<<(std::ostream& os, const Vec3 &vec) {
         return os << "(x:" << vec.x << " y:" << vec.y << " z:" << vec.z << ")";
     }
 
