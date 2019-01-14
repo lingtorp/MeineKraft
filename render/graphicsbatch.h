@@ -80,14 +80,13 @@ struct GraphicsBatch {
 
   ID mesh_id; 
   Mesh mesh; 
-  struct GraphicStateObjects {
-    std::vector<Transform> transforms;
+  struct {
+    std::vector<Mat4f> transforms;
     std::vector<BoundingVolume> bounding_volumes;     // Bounding volumes (Spheres for now)
-    std::vector<Material> materials;
-  };
+    std::vector<Material> materials;                  
+  } objects;
   std::unordered_map<ID, ID> data_idx;                // Entity ID to data position in data (objects struct)
-  std::vector<ID> entity_ids;
-  GraphicStateObjects objects{};                      // Objects in the batch share the same values
+  std::vector<ID> entity_ids;                         // Entities in the batch
   
   /// Textures
   std::map<ID, uint32_t> layer_idxs;  // Texture ID to layer index mapping for all texture in batch

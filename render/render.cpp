@@ -652,14 +652,14 @@ void Renderer::add_graphics_state(GraphicsBatch& batch, const RenderComponent& c
   batch.entity_ids.push_back(entity_id);
   batch.data_idx[entity_id] = batch.entity_ids.size() - 1;
 
-  const Transform transform = TransformSystem::instance().lookup(entity_id);
-  batch.objects.transforms.push_back(transform);
+  const TransformComponent transform = TransformSystem::instance().lookup(entity_id);
+  batch.objects.transforms.push_back(compute_transform(transform));
 
   // Calculate a bounding volume for the object
   BoundingVolume bounding_volume;
-  bounding_volume.position = transform.matrix.get_translation();
+  bounding_volume.position = transform.position;
   batch.objects.bounding_volumes.push_back(bounding_volume);
-  // NOTE: Does not calculate the radius of the bounding volume ...
+  // NOTE: Does not calculate the radius of the bounding volume ... BV should not be at the origin of the model ...
 
   material.pbr_scalar_parameters = Vec2f(comp.pbr_scalar_parameters.y, comp.pbr_scalar_parameters.z);
   material.shading_model = comp.shading_model;
@@ -669,32 +669,24 @@ void Renderer::add_graphics_state(GraphicsBatch& batch, const RenderComponent& c
 }
 
 void Renderer::update_transforms() {
-  std::vector<ID> job_ids(graphics_batches.size());
   const std::vector<ID> t_ids = TransformSystem::instance().get_dirty_transform_ids();
-  // ID job_id = JobSystem::instance().execute([=](){ // FIXME: Remove the copy of t_ids
   for (size_t i = 0; i < graphics_batches.size(); i++) {
-    // ID job_id = JobSystem::instance().execute([=]() { // FIXME: Remove the copy of t_ids
       auto& batch = graphics_batches[i];
       for (const auto& t_id : t_ids) {
         const auto idx = batch.data_idx.find(t_id);
         if (idx == batch.data_idx.cend()) { continue; }
 
-        // Update a bounding volume for the object
-        const Transform transform = TransformSystem::instance().lookup(t_id);
+        // Update the bounding volume for the object
+        const TransformComponent transform = TransformSystem::instance().lookup(t_id);
         BoundingVolume bounding_volume;
-        bounding_volume.position = transform.matrix.get_translation();
+        bounding_volume.radius = batch.bounding_volume_radius * transform.scale;
+        bounding_volume.position = transform.position;
         batch.objects.bounding_volumes[idx->second] = bounding_volume;
-        // NOTE: Does not calculate the radius of the bounding volume ...
+        // NOTE: Does not calculate the radius of the bounding volume ... BV should not be at the origin of the model ...
 
-        batch.objects.transforms[idx->second] = transform;
+        batch.objects.transforms[idx->second] = compute_transform(transform);
       }
       std::memcpy(batch.gl_depth_model_buffer_object_ptr, batch.objects.transforms.data(), batch.objects.transforms.size() * sizeof(Mat4f));
       std::memcpy(batch.gl_bounding_volume_buffer_ptr, batch.objects.bounding_volumes.data(), batch.objects.bounding_volumes.size() * sizeof(BoundingVolume));
-  // });
-  // job_ids.push_back(job_id);
   }
-  // });
-  // job_ids.push_back(job_id);
-
-  // JobSystem::instance().wait_on_all();
 }

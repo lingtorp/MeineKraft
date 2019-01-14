@@ -34,14 +34,14 @@ struct TransformComponent {
   float scale = 1.0f;
 };
 
-static Transform compute_transform(const TransformComponent& comp) {
-  return Transform(Mat4f().translate(comp.position).scale(comp.scale));
+inline static Mat4f compute_transform(const TransformComponent& comp) {
+  return Mat4f().translate(comp.position).scale(comp.scale);
 }
 
 struct TransformSystem {
 private:
   std::vector<ID> data_ids;             // Entity ID for each Transform in data
-  std::vector<Transform> data;          // Raw data storage
+  std::vector<TransformComponent> data; // Raw data storage
   std::unordered_map<ID, ID> data_idxs; // Entity ID to index into data
   size_t dirty_idx = 0;                 // Number of modified Transforms
 public:
@@ -74,11 +74,17 @@ public:
   }
 
   /// Looking up with a non-existant ID returns the first element in the data
-  Transform lookup(const ID id) {
+  TransformComponent lookup(const ID id) {
     return data[data_idxs[id]]; 
   }
 
-  void set_transform(const Transform& transform, const ID id) {
+  /// Marks the data as dirty and returns a ptr to it
+  TransformComponent* lookup_referenced(const ID id) {
+    set_transform(data[data_idxs[id]], id); // Marks the data as dirty
+    return &data[data_idxs[id]];
+  }
+
+  void set_transform(const TransformComponent& transform, const ID id) {
     if (data_idxs[id] <= dirty_idx) { // If transform is already dirty
       data[data_idxs[id]] = transform;
       return;
@@ -99,7 +105,7 @@ public:
   }
 
   void add_component(const TransformComponent& component, const ID id) {
-    data.emplace_back(compute_transform(component));
+    data.emplace_back(component);
     data_idxs[id] = data.size() - 1;
     data_ids.emplace_back(id);
   }

@@ -122,10 +122,10 @@ public:
         render.set_shading_model(ShadingModel::PhysicallyBasedScalars);
         entity->attach_component(render);
         ActionComponent action([=](uint64_t frame, uint64_t dt) {
-          Transform t = TransformSystem::instance().lookup(entity->id); 
-          Vec3f position(transform.position.x, transform.position.y, 5.0f * std::cos(glm::radians(float(frame * 0.025f))));
-          t.matrix = t.matrix.set_translation(position); // FIXME: Add translation, avoid copy
-          TransformSystem::instance().set_transform(t, entity->id); 
+          TransformComponent transform = TransformSystem::instance().lookup(entity->id);
+          const Vec3f position(transform.position.x, transform.position.y, 5.0f * std::cos(glm::radians(float(frame * 0.025f))));
+          transform.position = position; 
+          TransformSystem::instance().set_transform(transform, entity->id);
         });
         entity->attach_component(action);
       }
