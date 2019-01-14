@@ -180,24 +180,30 @@ int main() {
           ImGui::Text("Graphics batches: %llu", renderer.state.graphic_batches);
           for (size_t batch_num = 0; batch_num < renderer.graphics_batches.size(); batch_num++) {
             const auto& batch = renderer.graphics_batches[batch_num];
-            std::string batch_title = "Batch #" + std::to_string(batch_num);
+            const std::string batch_title = "Batch #" + std::to_string(batch_num);
+            
             if (ImGui::CollapsingHeader(batch_title.c_str())) {
               ImGui::Text("Size: %llu", batch.entity_ids.size());
-              if (ImGui::CollapsingHeader("Members")) {
+              const std::string member_title = "Members##" + batch_title;
+            
+              if (ImGui::CollapsingHeader(member_title.c_str())) {
                 for (const auto& id : batch.entity_ids) {
-                  ImGui::Text("Entity id: %llu", id);
-                  Vec3f position = TransformSystem::instance().lookup(id).matrix.get_translation();
-                  ImGui::InputFloat3("Position", &position.x);
+                  const std::string* name = NameSystem::instance().get_name_from_entity_referenced(id);
+                  ImGui::Text("Entity id: %llu, Name: %s", id, name->c_str());
+                  TransformComponent* transform = TransformSystem::instance().lookup_referenced(id);
+                  ImGui::PushID(transform);
+                  ImGui::InputFloat3("Position", &transform->position.x);
+                  ImGui::PopID();
                 }
               }
             }
           }
         }
 
+        ImGui::End();
+        ImGui::Render();
       }
 
-      ImGui::End();
-      ImGui::Render();
     }
     SDL_GL_SwapWindow(window);
   }
