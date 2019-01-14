@@ -10,6 +10,7 @@
 #include "primitives.h"
 #include "shader.h"
 #include "debug_opengl.h"
+#include "meshmanager.h"
 
 #ifdef _WIN32
 #include <glew.h>
@@ -34,8 +35,60 @@ struct Material {
   Vec2f pbr_scalar_parameters = {}; // (roughness, metallic)
 };
 
+/// Computes the largest sphere radius fully containing the mesh [Ritter's algorithm]
+static float compute_bounding_volume_radius(const Mesh& mesh) {
+  // Compute extreme values along the axis
+  float min_x = std::numeric_limits<float>::max();
+  float min_y = std::numeric_limits<float>::max();
+  float min_z = std::numeric_limits<float>::max();
+  float max_x = std::numeric_limits<float>::min();
+  float max_y = std::numeric_limits<float>::min();
+  float max_z = std::numeric_limits<float>::min();
+  std::array<Vec3f, 6> extremes = {}; // (minx, miny, minz, maxx, maxy, maxz)
+  for (const Vertex& vert : mesh.vertices) {
+    if (vert.position.x < min_x) { min_x = vert.position.x; extremes[0] = vert.position; }
+    if (vert.position.y < min_y) { min_y = vert.position.y; extremes[1] = vert.position; }
+    if (vert.position.z < min_z) { min_z = vert.position.z; extremes[2] = vert.position; }
+    if (vert.position.x > max_x) { max_x = vert.position.x; extremes[3] = vert.position; }
+    if (vert.position.y > max_x) { max_y = vert.position.y; extremes[4] = vert.position; }
+    if (vert.position.z > max_x) { max_z = vert.position.z; extremes[5] = vert.position; }
+  }
+
+  // Find pair with the maximum distance between them
+  float max_distance = std::numeric_limits<float>::min();
+  std::array<Vec3f, 2> initial_sphere_points = {};
+  for (const Vec3f& vert0 : extremes) {
+    for (const Vec3f& vert1 : extremes) {
+      if (vert0 == vert1) { continue; }
+      const float distance = (vert0 - vert1).sqr_length();
+      if (distance > max_distance) { 
+        max_distance = distance; 
+        initial_sphere_points[0] = vert0;
+        initial_sphere_points[1] = vert1;
+      }
+    }
+  }
+
+  // Place sphere at the midpoint between them with radius as the distance between them
+  BoundingVolume sphere;
+  sphere.position = (initial_sphere_points[0] + initial_sphere_points[1]) / 2.0;
+  sphere.radius = (initial_sphere_points[0] - initial_sphere_points[1]).length();
+
+  // Adjust initial sphere in order to cover all vertices
+  for (const Vertex& vert : mesh.vertices) {
+    const float d = (sphere.position - vert.position).length();
+    if (d > sphere.radius) {
+      sphere.position = sphere.position + (d - sphere.radius) / 2.0f;
+      sphere.radius = (d + sphere.radius) / 2.0f;
+    }
+  }
+  std::cerr << "Bounding Volume sphere position: " << sphere.position << std::endl;
+  return sphere.radius;
+}
+
 struct GraphicsBatch {
-  explicit GraphicsBatch(ID mesh_id): mesh_id(mesh_id), objects{}, mesh{}, layer_idxs{} {};
+  explicit GraphicsBatch(const ID mesh_id): mesh_id(mesh_id), objects{}, mesh{MeshManager::mesh_from_id(mesh_id)}, 
+    layer_idxs{}, bounding_volume_radius(compute_bounding_volume_radius(mesh)) {};
   
   void init_buffer(const Texture& texture, uint32_t* gl_buffer, const uint32_t gl_texture_unit, uint32_t* buffer_capacity) {
     glActiveTexture(GL_TEXTURE0 + gl_texture_unit);
@@ -116,6 +169,9 @@ struct GraphicsBatch {
 
   uint32_t gl_bounding_volume_buffer = 0;           // Bounding volume buffer
   uint8_t* gl_bounding_volume_buffer_ptr = nullptr; // Ptr to the mapped bounding volume buffer
+  
+  // FIXME: Bounding volume geometry is the same across the batch, share this geometry instead
+  float bounding_volume_radius = 0.0f; // Computed based on the batch geometry at batch creation 
 
   uint32_t gl_instance_idx_buffer = 0; // Instance indices passed along the shader pipeline for fetching per instance data from various buffers
 
