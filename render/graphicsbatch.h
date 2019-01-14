@@ -82,7 +82,7 @@ static float compute_bounding_volume_radius(const Mesh& mesh) {
       sphere.radius = (d + sphere.radius) / 2.0f;
     }
   }
-  std::cerr << "Bounding Volume sphere position: " << sphere.position << std::endl;
+  Log::info("Bounding Volume sphere position: " + sphere.position.to_string());
   return sphere.radius;
 }
 
