@@ -134,6 +134,10 @@ struct Vec3 {
       hash_combine(seed, z);
       return seed;
     }
+
+    inline std::string to_string() const {
+      return "(x:" + std::to_string(x) + " y:" + std::to_string(y) + " z:" + std::to_string(z) + ")";
+    }
     
     inline bool operator<(const Vec3& rhs) const {
         return (x < rhs.x) && (y < rhs.y) && (z < rhs.z);
