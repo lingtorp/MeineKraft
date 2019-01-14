@@ -197,7 +197,7 @@ public:
   }
 };
 
-/// Game object 
+/// Minimal object-oriented wrapper for a collection of components a.k.a a game object 
 struct Entity {
     ID id;
 
