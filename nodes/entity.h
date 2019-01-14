@@ -188,7 +188,8 @@ public:
 
   /// Lookup if the Entity is alive
   bool lookup(ID entity) const {
-
+    // TODO: Implement
+    return false;
   }
 
   // Map entity ID to the right bitflag

@@ -5,8 +5,12 @@
 #include <iostream>
 #include <vector>
 
+#if defined(__APPLE__)
+#include <cmath>
+#endif
+
 /************ Forward declarations ************/
-template<typename T>
+template<typename T> 
 struct Vec2;
 
 template<typename T>

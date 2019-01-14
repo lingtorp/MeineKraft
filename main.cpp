@@ -20,6 +20,12 @@ static auto HD      = Resolution{1280, 720};
 static auto FULL_HD = Resolution{1920, 1080};
 
 #ifdef WIN32
+#define OPENGL_MINOR_VERSION 6
+#elif defined(__APPLE__)
+#define OPENGL_MINOR_VERSION 1 
+#endif
+
+#ifdef WIN32
 int wmain() {
 #else
 int main() {
@@ -27,16 +33,17 @@ int main() {
   SDL_Init(SDL_INIT_EVERYTHING);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, OPENGL_MINOR_VERSION);
   SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
   SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
   auto window_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_MOUSE_CAPTURE;
   SDL_Window* window = SDL_CreateWindow("MeineKraft", 100, 100, HD.width, HD.height, window_flags);
   SDL_GLContext context = SDL_GL_CreateContext(window);
+  if (!context) { Log::error(std::string(SDL_GetError())); }
   SDL_GL_SetSwapInterval(0); // Disables vsync
 
-  OpenGLContextInfo gl_context_info;
+  OpenGLContextInfo gl_context_info(4, OPENGL_MINOR_VERSION);
 
   // Init sdl2_image
   atexit(IMG_Quit);
@@ -183,7 +190,7 @@ int main() {
             const std::string batch_title = "Batch #" + std::to_string(batch_num);
             
             if (ImGui::CollapsingHeader(batch_title.c_str())) {
-              ImGui::Text("Size: %llu", batch.entity_ids.size());
+              ImGui::Text("Size: %lu", batch.entity_ids.size());
               const std::string member_title = "Members##" + batch_title;
             
               if (ImGui::CollapsingHeader(member_title.c_str())) {

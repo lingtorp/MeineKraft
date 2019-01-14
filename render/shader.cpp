@@ -10,7 +10,11 @@
 #include <GL/glew.h>
 #endif 
 
+#if defined(__APPLE__)
+static const char* GLSL_VERSION = "#version 410 core \n";
+#else
 static const char* GLSL_VERSION = "#version 460 core \n";
+#endif
 
 /// Check whether a file exists or not
 bool file_exists(std::string filename) {
