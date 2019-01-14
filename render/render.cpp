@@ -521,7 +521,6 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glGenBuffers(1, &batch.gl_instance_idx_buffer);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, batch.gl_instance_idx_buffer);
     glBufferStorage(GL_SHADER_STORAGE_BUFFER, GraphicsBatch::MAX_OBJECTS * sizeof(GLuint), nullptr, 0);
-    
     glBindBuffer(GL_ARRAY_BUFFER, batch.gl_instance_idx_buffer);
     glVertexAttribIPointer(glGetAttribLocation(program, "instance_idx"), 1, GL_UNSIGNED_INT, sizeof(GLuint), nullptr);
     glEnableVertexAttribArray(glGetAttribLocation(program, "instance_idx"));
@@ -575,7 +574,6 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
   }
 
   GraphicsBatch batch{comp.mesh_id};
-  batch.mesh = MeshManager::mesh_from_id(comp.mesh_id);
 
   /// Batch shader prepass (depth pass) shader creation process
   batch.depth_shader = Shader{ Filesystem::base + "shaders/geometry.vert", Filesystem::base + "shaders/geometry.frag" };
