@@ -113,6 +113,7 @@ public:
     for (size_t i = 0; i < SIZE; i++) {
       for (size_t j = 0; j < SIZE; j++) {
         Entity* entity = new Entity();
+        NameSystem::instance().add_name_to_entity("Sphere " + std::to_string(i * SIZE + j), entity->id);
         TransformComponent transform;
         transform.position = Vec3f{ 2.5f * j, 2.5f + 2.5f * i, -5.0f }; 
         entity->attach_component(transform);
