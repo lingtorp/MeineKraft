@@ -157,7 +157,7 @@ struct GraphicsBatch {
   uint32_t gl_emissive_texture_unit           = 0;  // Emissive map
     
   /// General?
-  static const uint32_t MAX_OBJECTS = 1'000; // Max # draw cmds (one per objects) for the IBO
+  static const uint32_t MAX_OBJECTS = 1'00; // Initialze size for various buffers
 
   uint32_t gl_ebo = 0;            // Elements b.o
   uint8_t* gl_ebo_ptr = nullptr;  // Ptr to mapped GL_ELEMENTS_ARRAY_BUFFER

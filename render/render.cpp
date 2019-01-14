@@ -311,7 +311,7 @@ struct DrawElementsIndirectCommand {
   uint32_t padding2 = 0;
 };
 
-void Renderer::render(uint32_t delta) {
+void Renderer::render(const uint32_t delta) {
   state = RenderState(state);
   state.frame++;
 

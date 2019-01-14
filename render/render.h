@@ -32,7 +32,7 @@ public:
   }
 
   /// Main render function, renders all the graphics batches
-  void render(uint32_t delta);
+  void render(const uint32_t delta);
   
   /// Adds the data of a RenderComponent to a internal batch
   void add_component(const RenderComponent comp, const ID entity_id);
