@@ -670,9 +670,10 @@ void Renderer::add_graphics_state(GraphicsBatch& batch, const RenderComponent& c
 
   material.pbr_scalar_parameters = Vec2f(comp.pbr_scalar_parameters.y, comp.pbr_scalar_parameters.z);
   material.shading_model = comp.shading_model;
-  batch.objects.materials.push_back(material);
 
-  std::memcpy(batch.gl_mbo_ptr, batch.objects.materials.data(), batch.objects.materials.size() * sizeof(Material));
+  batch.objects.materials.push_back(material);
+  uint8_t* dest = batch.gl_mbo_ptr + (batch.objects.materials.size() - 1) * sizeof(Material);
+  std::memcpy(dest, &batch.objects.materials.back(), sizeof(Material));
 }
 
 void Renderer::update_transforms() {
