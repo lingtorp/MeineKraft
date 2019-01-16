@@ -5,8 +5,12 @@
 #include <iostream>
 #include <vector>
 
-#if defined(__APPLE__)
+#if defined(__APPLE__)  
 #include <cmath>
+#endif
+
+#if defined(__linux__)
+#include <math.h> 
 #endif
 
 /************ Forward declarations ************/

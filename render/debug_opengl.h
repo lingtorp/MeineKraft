@@ -2,13 +2,8 @@
 #ifndef MEINEKRAFT_DEBUG_OPENGL_H
 #define MEINEKRAFT_DEBUG_OPENGL_H
 
-#ifdef WIN32 
 #include <glew.h>
-#include <SDL_opengl.h>
-#else
-#include <glew.h>
-#include <SDL_opengl.h>
-#endif
+#include <SDL_opengl.h> 
 
 /// Gathers information about the OpenGL context 
 struct OpenGLContextInfo {

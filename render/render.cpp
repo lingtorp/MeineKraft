@@ -6,7 +6,7 @@
 #include <glew.h>
 #else
 #include <GL/glew.h>
-#endif 
+#endif
 
 #include "camera.h"
 #include "graphicsbatch.h"
@@ -55,7 +55,7 @@ void Renderer::load_environment_map(const std::vector<std::string>& faces) {
 
     gl_environment_map_texture_unit = Renderer::get_next_free_texture_unit();
     glActiveTexture(GL_TEXTURE0 + gl_environment_map_texture_unit);
-    uint32_t gl_environment_map_texture = 0; 
+    uint32_t gl_environment_map_texture = 0;
     glGenTextures(1, &gl_environment_map_texture);
     glBindTexture(texture.gl_texture_target, gl_environment_map_texture);
     glTexParameteri(texture.gl_texture_target, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -124,7 +124,7 @@ Renderer::Renderer(): graphics_batches{} {
   glDebugMessageCallback(gl_debug_callback, 0);
   glDebugMessageControl(GL_DEBUG_SOURCE_APPLICATION, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_FALSE);
 #endif
-  
+
   const int screen_width = 1280; // TODO: Remove after singleton is removed
   const int screen_height = 720;
 
@@ -193,7 +193,7 @@ Renderer::Renderer(): graphics_batches{} {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, gl_ambient_occlusion_texture, 0);
 
-  // Global emissive map 
+  // Global emissive map
   gl_emissive_texture_unit = Renderer::get_next_free_texture_unit();
   glActiveTexture(GL_TEXTURE0 + gl_emissive_texture_unit);
   glGenTextures(1, &gl_emissive_texture);
@@ -203,7 +203,7 @@ Renderer::Renderer(): graphics_batches{} {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT5, gl_emissive_texture, 0);
 
-  // Global shading model id 
+  // Global shading model id
   gl_shading_model_texture_unit = Renderer::get_next_free_texture_unit();
   glActiveTexture(GL_TEXTURE0 + gl_shading_model_texture_unit);
   glGenTextures(1, &gl_shading_model_texture);
@@ -293,9 +293,9 @@ Renderer::Renderer(): graphics_batches{} {
   glCullFace(GL_BACK);
 
   /// Camera
-  const auto position  = Vec3f{8.0f, 8.0f, 8.0f};  
+  const auto position  = Vec3f{8.0f, 8.0f, 8.0f};
   const auto direction = Vec3f{0.0,  0.0, -1.0};
-  const auto world_up  = Vec3f{0.0f, 1.0f, 0.0f};  
+  const auto world_up  = Vec3f{0.0f, 1.0f, 0.0f};
   camera = new Camera(position, direction, world_up);
 }
 
@@ -304,8 +304,8 @@ struct DrawElementsIndirectCommand {
   uint32_t count = 0;         // # elements (i.e indices)
   uint32_t instanceCount = 0; // # instances (kind of drawcalls)
   uint32_t firstIndex = 0;    // index of the first element in the EBO
-  uint32_t baseVertex = 0;    // indices[i] + baseVertex 
-  uint32_t baseInstance = 0;  // [gl_InstanceID / divisor] + baseInstance 
+  uint32_t baseVertex = 0;    // indices[i] + baseVertex
+  uint32_t baseInstance = 0;  // [gl_InstanceID / divisor] + baseInstance
   uint32_t padding0 = 0;      // Padding due to GLSL layout std140 16B alignment rule
   uint32_t padding1 = 0;
   uint32_t padding2 = 0;
@@ -317,11 +317,11 @@ void Renderer::render(const uint32_t delta) {
 
   const glm::mat4 camera_transform = camera->transform(); // TODO: Camera handling needs to be reworked
 
-  /// Renderer caches the transforms of components thus we need to fetch the ones who changed during the last frame 
-  if (state.frame % 10 == 0) { 
+  /// Renderer caches the transforms of components thus we need to fetch the ones who changed during the last frame
+  if (state.frame % 10 == 0) {
     TransformSystem::instance().reset_dirty();
   }
-  update_transforms();  
+  update_transforms();
 
   static GLsync syncs[3] = {nullptr, nullptr, nullptr};
 
@@ -336,7 +336,7 @@ void Renderer::render(const uint32_t delta) {
   for (size_t i = 0; i < graphics_batches.size(); i++) {
     auto& batch = graphics_batches[i];
     batch.gl_curr_ibo_idx = state.frame % batch.gl_ibo_count;
-  } 
+  }
 
   // Reset the draw commands
   for (size_t i = 0; i < graphics_batches.size(); i++) {
@@ -360,7 +360,7 @@ void Renderer::render(const uint32_t delta) {
       const uint32_t gl_draw_cmd_binding_point = 0; // Defaults to 0 in the culling compute shader
       glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_draw_cmd_binding_point, batch.gl_ibo);
 
-      const uint32_t gl_instance_idx_binding_point = 1; // Defaults to 1 in the culling compute shader 
+      const uint32_t gl_instance_idx_binding_point = 1; // Defaults to 1 in the culling compute shader
       glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_instance_idx_binding_point, batch.gl_instance_idx_buffer);
 
       const uint32_t gl_bounding_volume_binding_point = 5; // Defaults to 5 in the culling compute shader
@@ -372,7 +372,7 @@ void Renderer::render(const uint32_t delta) {
       glDispatchCompute(batch.objects.transforms.size(), 1, 1);
     }
     // TODO: Is this barrier required?
-    glMemoryBarrier(GL_COMMAND_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT); // Buffer objects affected by this bit are derived from the GL_DRAW_INDIRECT_BUFFER binding. 
+    glMemoryBarrier(GL_COMMAND_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT); // Buffer objects affected by this bit are derived from the GL_DRAW_INDIRECT_BUFFER binding.
   }
   pass_ended();
 
@@ -450,12 +450,12 @@ void Renderer::update_projection_matrix(const float fov) {
   // TODO: Adjust all the passes textures sizes & all the global texture buffers
   const float aspect = (float) screen_width / (float) screen_height;
   this->projection_matrix = glm::perspective(glm::radians(fov), aspect, 0.1f, 1000.0f);
-  glViewport(0, 0, screen_width, screen_height); 
+  glViewport(0, 0, screen_width, screen_height);
 }
 
 void Renderer::link_batch(GraphicsBatch& batch) {
   /// Geometry pass setup
-  {    
+  {
     /// Shaderbindings
     const auto program = batch.depth_shader.gl_program;
     glUseProgram(program);
@@ -464,7 +464,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glUniform1i(glGetUniformLocation(program, "pbr_parameters"), batch.gl_metallic_roughness_texture_unit);
     glUniform1i(glGetUniformLocation(program, "ambient_occlusion"), batch.gl_ambient_occlusion_texture_unit);
     glUniform1i(glGetUniformLocation(program, "emissive"), batch.gl_emissive_texture_unit);
-    
+
     glGenVertexArrays(1, &batch.gl_depth_vao);
     glBindVertexArray(batch.gl_depth_vao);
 
@@ -649,7 +649,8 @@ void Renderer::remove_component(ID entity_id) {
 void Renderer::add_graphics_state(GraphicsBatch& batch, const RenderComponent& comp, Material material, ID entity_id) {
   if (batch.entity_ids.size() + 1 >= GraphicsBatch::MAX_OBJECTS) {
     Log::error("GraphicsBatch MAX_OBJECTS REACHED.");
-    // TODO: Resize the buffers in order to fit more items 
+    // TODO: Resize the buffers in order to fit more items
+    
     return;
   }
 

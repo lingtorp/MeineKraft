@@ -12,7 +12,9 @@
 
 #if defined(__APPLE__)
 static const char* GLSL_VERSION = "#version 410 core \n";
-#else
+#elif defined(__linux__)
+static const char* GLSL_VERSION = "#version 450 core \n";
+#elif defined(WIN32)
 static const char* GLSL_VERSION = "#version 460 core \n";
 #endif
 

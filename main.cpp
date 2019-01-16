@@ -19,10 +19,12 @@ struct Resolution {
 static auto HD      = Resolution{1280, 720};
 static auto FULL_HD = Resolution{1920, 1080};
 
-#ifdef WIN32
-#define OPENGL_MINOR_VERSION 6
+#if defined(WIN32)
+#define OPENGL_MINOR_VERSION 6 // Windows 10
+#elif defined(__linux__)
+#define OPENGL_MINOR_VERSION 5 // Ubuntu 18.10 (default)
 #elif defined(__APPLE__)
-#define OPENGL_MINOR_VERSION 1 
+#define OPENGL_MINOR_VERSION 1 // macOS (deprecated)
 #endif
 
 #ifdef WIN32
@@ -40,7 +42,7 @@ int main() {
   auto window_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_MOUSE_CAPTURE;
   SDL_Window* window = SDL_CreateWindow("MeineKraft", 100, 100, HD.width, HD.height, window_flags);
   SDL_GLContext context = SDL_GL_CreateContext(window);
-  if (!context) { Log::error(std::string(SDL_GetError())); }
+  if (!context) { Log::error(std::string(SDL_GetError())); return 1; }
   SDL_GL_SetSwapInterval(0); // Disables vsync
 
   OpenGLContextInfo gl_context_info(4, OPENGL_MINOR_VERSION);
@@ -51,7 +53,7 @@ int main() {
 
   // Init ImGui
   ImGui_ImplSdlGL3_Init(window);
-  
+
   // Inits GLEW
   Renderer& renderer = Renderer::instance();
   renderer.screen_width = HD.width;
@@ -61,19 +63,19 @@ int main() {
   Skybox skybox;
 
   Model model{ Filesystem::home + "Desktop/", "DamagedHelmet.gltf" };
-  
-  World world;  
+
+  World world;
 
   bool toggle_mouse_capture = true;
   bool DONE = false;
   auto last_tick = std::chrono::high_resolution_clock::now();
   auto current_tick = last_tick;
   int64_t delta = 0;
-  
+
   /// Delta values
   const int num_deltas = 100;
   float deltas[num_deltas];
-  
+
   while (!DONE) {
       current_tick = std::chrono::high_resolution_clock::now();
       delta = std::chrono::duration_cast<std::chrono::milliseconds>(current_tick - last_tick).count();
@@ -86,7 +88,7 @@ int main() {
         switch (event.type) {
         case SDL_MOUSEMOTION:
           if (toggle_mouse_capture) { break; }
-          // renderer.camera->pitch = 0; 
+          // renderer.camera->pitch = 0;
           // renderer.camera->yaw = 0;
           renderer.camera->pitch += event.motion.yrel;
           renderer.camera->yaw += event.motion.xrel;
@@ -170,9 +172,9 @@ int main() {
       ImGui::Begin("Information Panel");
 
       if (ImGui::CollapsingHeader("Render System", ImGuiTreeNodeFlags_DefaultOpen)) {
-        ImGui::Text("Frame: %llu", renderer.state.frame);
-        ImGui::Text("Entities: %llu", renderer.state.entities);
-        ImGui::Text("Average %lld ms / frame (%.1f FPS)", delta, io.Framerate);
+        ImGui::Text("Frame: %lu", renderer.state.frame);
+        ImGui::Text("Entities: %lu", renderer.state.entities);
+        ImGui::Text("Average %lu ms / frame (%.1f FPS)", delta, io.Framerate);
 
         static size_t i = -1; i = (i + 1) % num_deltas;
         deltas[i] = float(delta);
@@ -184,19 +186,19 @@ int main() {
         }
 
         if (ImGui::CollapsingHeader("Graphics batches")) {
-          ImGui::Text("Graphics batches: %llu", renderer.state.graphic_batches);
+          ImGui::Text("Graphics batches: %lu", renderer.state.graphic_batches);
           for (size_t batch_num = 0; batch_num < renderer.graphics_batches.size(); batch_num++) {
             const auto& batch = renderer.graphics_batches[batch_num];
             const std::string batch_title = "Batch #" + std::to_string(batch_num);
-            
+
             if (ImGui::CollapsingHeader(batch_title.c_str())) {
               ImGui::Text("Size: %lu", batch.entity_ids.size());
               const std::string member_title = "Members##" + batch_title;
-            
+
               if (ImGui::CollapsingHeader(member_title.c_str())) {
                 for (const auto& id : batch.entity_ids) {
                   const std::string* name = NameSystem::instance().get_name_from_entity_referenced(id);
-                  ImGui::Text("Entity id: %llu, Name: %s", id, name->c_str());
+                  ImGui::Text("Entity id: %lu, Name: %s", id, name->c_str());
                   TransformComponent* transform = TransformSystem::instance().lookup_referenced(id);
                   ImGui::PushID(transform);
                   ImGui::InputFloat3("Position", &transform->position.x);
