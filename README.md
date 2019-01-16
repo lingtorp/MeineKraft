@@ -30,6 +30,27 @@ All of the dependencies are bundled within the folder /include, /bin, /lib.
 Platforms supported: Windows and Linux, macOS support is not possible due to
 unsupported OpenGL version.
 
+## Build
+Before continueing go to the file filesystem.h and adjust the filepaths so that they match your system.
+### Linux (Ubuntu)
+```bash
+sudo apt install libsdl2-dev libsdl2-image-dev libassimp-dev libglew-dev
+cmake --build .
+cmake .
+./MeineKraft
+```
+### Windows
+Launch CMake-GUI and select repository root directory and then the build directory.
+Generate the Visual Studio 2017 solution and simply build it via Visual Studio.
+### macOS
+Since OpenGL is deprecated on macOS this will probably not work in the future.
+```bash
+sudo brew install glew sdl2 assimp
+cmake --build .
+cmake . 
+./MeineKraft
+```
+
 # License
 The MIT License (MIT)
 Copyright (c) 2017 Alexander Lingtorp
