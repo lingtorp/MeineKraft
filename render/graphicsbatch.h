@@ -243,7 +243,7 @@ struct GraphicsBatch {
   /// Depth pass variables
   uint32_t gl_depth_vao = 0;
   uint32_t gl_depth_vbo = 0;
-  uint32_t gl_depth_models_buffer_object  = 0;  // Models b.o (holds all objects model matrices)
+  uint32_t gl_depth_models_buffer_object  = 0;  // Models b.o (holds all objects model matrices / transforms)
   uint8_t* gl_depth_model_buffer_object_ptr = nullptr; // Model b.o ptr
 
   Shader depth_shader;  // Shader used to render all the components in this batch
