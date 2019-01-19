@@ -657,21 +657,25 @@ void Renderer::add_graphics_state(GraphicsBatch& batch, const RenderComponent& c
 
   const TransformComponent transform = TransformSystem::instance().lookup(entity_id);
   batch.objects.transforms.push_back(compute_transform(transform));
+  uint8_t* dest = batch.gl_depth_model_buffer_object_ptr + (batch.objects.transforms.size() - 1) * sizeof(Mat4f);
+  std::memcpy(dest, &batch.objects.transforms.back(), sizeof(Mat4f));
 
   // Calculate a bounding volume for the object
   // TODO: Bounding geometry should be the same for all objects (the radius as well)
-  // The bounding volume position is dependent on the actual position of the object as well
+  // FIXME: The bounding volume position is dependent on the actual position of the object as well
   // since we are want to not use simple origin based spheres anymore
   BoundingVolume bounding_volume;
   bounding_volume.position = transform.position;
   batch.objects.bounding_volumes.push_back(bounding_volume);
+  dest = batch.gl_bounding_volume_buffer_ptr + (batch.objects.bounding_volumes.size() - 1) * sizeof(BoundingVolume);
+  std::memcpy(dest, &batch.objects.bounding_volumes.back(), sizeof(BoundingVolume));
   // NOTE: Does not calculate the radius of the bounding volume ... BV should not be at the origin of the model ...
 
   material.pbr_scalar_parameters = Vec2f(comp.pbr_scalar_parameters.y, comp.pbr_scalar_parameters.z);
   material.shading_model = comp.shading_model;
 
   batch.objects.materials.push_back(material);
-  uint8_t* dest = batch.gl_mbo_ptr + (batch.objects.materials.size() - 1) * sizeof(Material);
+  dest = batch.gl_mbo_ptr + (batch.objects.materials.size() - 1) * sizeof(Material);
   std::memcpy(dest, &batch.objects.materials.back(), sizeof(Material));
 }
 
@@ -693,6 +697,7 @@ void Renderer::update_transforms() {
 
         batch.objects.transforms[idx->second] = compute_transform(transform);
       }
+      // FIXME: Copying large chunks of memory here, might be better to just copy the modifed elements
       std::memcpy(batch.gl_depth_model_buffer_object_ptr, batch.objects.transforms.data(), batch.objects.transforms.size() * sizeof(Mat4f));
       std::memcpy(batch.gl_bounding_volume_buffer_ptr, batch.objects.bounding_volumes.data(), batch.objects.bounding_volumes.size() * sizeof(BoundingVolume));
   }
