@@ -579,6 +579,14 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
   batch.depth_shader = Shader{ Filesystem::base + "shaders/geometry.vert", Filesystem::base + "shaders/geometry.frag" };
   batch.depth_shader.defines = comp_shader_config;
 
+  std::string err_msg;
+  bool success;
+  std::tie(success, err_msg) = batch.depth_shader.compile();
+  if (!success) {
+    Log::error("Shader compilation failed; " + err_msg);
+    return;
+  }
+
   if (comp.diffuse_texture.data.pixels) {
     batch.gl_diffuse_texture_unit = Renderer::get_next_free_texture_unit();
 
@@ -626,14 +634,6 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexImage2D(texture.gl_texture_target, 0, GL_RGB, texture.data.width, texture.data.height, 0, GL_RGB, GL_UNSIGNED_BYTE, texture.data.pixels);
-  }
-
-  std::string err_msg;
-  bool success;
-  std::tie(success, err_msg) = batch.depth_shader.compile();
-  if (!success) {
-    Log::error("Shader compilation failed; " + err_msg);
-    return;
   }
 
   link_batch(batch);
