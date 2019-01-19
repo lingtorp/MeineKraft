@@ -489,20 +489,20 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     // Bounding volume buffer
     glGenBuffers(1, &batch.gl_bounding_volume_buffer);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, batch.gl_bounding_volume_buffer);
-    glBufferStorage(GL_SHADER_STORAGE_BUFFER, GraphicsBatch::MAX_OBJECTS * sizeof(BoundingVolume), nullptr, flags);
-    batch.gl_bounding_volume_buffer_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, GraphicsBatch::MAX_OBJECTS * sizeof(BoundingVolume), flags);
+    glBufferStorage(GL_SHADER_STORAGE_BUFFER, GraphicsBatch::INIT_BUFFER_SIZE * sizeof(BoundingVolume), nullptr, flags);
+    batch.gl_bounding_volume_buffer_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, GraphicsBatch::INIT_BUFFER_SIZE * sizeof(BoundingVolume), flags);
 
     // Buffer for all the model matrices
     glGenBuffers(1, &batch.gl_depth_models_buffer_object);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, batch.gl_depth_models_buffer_object);
-    glBufferStorage(GL_SHADER_STORAGE_BUFFER, GraphicsBatch::MAX_OBJECTS * sizeof(Mat4f), nullptr, flags);
-    batch.gl_depth_model_buffer_object_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, GraphicsBatch::MAX_OBJECTS * sizeof(Mat4f), flags);
+    glBufferStorage(GL_SHADER_STORAGE_BUFFER, GraphicsBatch::INIT_BUFFER_SIZE * sizeof(Mat4f), nullptr, flags);
+    batch.gl_depth_model_buffer_object_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, GraphicsBatch::INIT_BUFFER_SIZE * sizeof(Mat4f), flags);
 
     // Material buffer
     glGenBuffers(1, &batch.gl_mbo);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, batch.gl_mbo);
-    glBufferStorage(GL_SHADER_STORAGE_BUFFER, GraphicsBatch::MAX_OBJECTS * sizeof(Material), nullptr, flags);
-    batch.gl_mbo_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, GraphicsBatch::MAX_OBJECTS * sizeof(Material), flags);
+    glBufferStorage(GL_SHADER_STORAGE_BUFFER, GraphicsBatch::INIT_BUFFER_SIZE * sizeof(Material), nullptr, flags);
+    batch.gl_mbo_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, GraphicsBatch::INIT_BUFFER_SIZE * sizeof(Material), flags);
 
     // Element buffer
     glGenBuffers(1, &batch.gl_ebo);
@@ -520,7 +520,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     // Batch instance idx buffer
     glGenBuffers(1, &batch.gl_instance_idx_buffer);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, batch.gl_instance_idx_buffer);
-    glBufferStorage(GL_SHADER_STORAGE_BUFFER, GraphicsBatch::MAX_OBJECTS * sizeof(GLuint), nullptr, 0);
+    glBufferStorage(GL_SHADER_STORAGE_BUFFER, GraphicsBatch::INIT_BUFFER_SIZE * sizeof(GLuint), nullptr, 0);
     glBindBuffer(GL_ARRAY_BUFFER, batch.gl_instance_idx_buffer);
     glVertexAttribIPointer(glGetAttribLocation(program, "instance_idx"), 1, GL_UNSIGNED_INT, sizeof(GLuint), nullptr);
     glEnableVertexAttribArray(glGetAttribLocation(program, "instance_idx"));
@@ -647,11 +647,9 @@ void Renderer::remove_component(ID entity_id) {
 }
 
 void Renderer::add_graphics_state(GraphicsBatch& batch, const RenderComponent& comp, Material material, ID entity_id) {
-  if (batch.entity_ids.size() + 1 >= GraphicsBatch::MAX_OBJECTS) {
-    Log::error("GraphicsBatch MAX_OBJECTS REACHED.");
-    // TODO: Resize the buffers in order to fit more items
-    
-    return;
+  if (batch.entity_ids.size() + 1 >= batch.buffer_size) {
+    Log::warn("GraphicsBatch MAX_OBJECTS REACHED");
+    batch.increase_entity_buffers();
   }
 
   batch.entity_ids.push_back(entity_id);

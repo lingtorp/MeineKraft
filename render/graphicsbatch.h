@@ -131,6 +131,67 @@ struct GraphicsBatch {
       texture.data.pixels);  // pointer to data
   }
 
+  void increase_entity_buffers() {
+    // FOR EACH BUFFER
+    // 1. Create new larger buffer
+    // 2. Map it
+    // 3. Copy the old data
+    // 4. Invalidate the old buffer
+    // 5. Delete the old buffer object
+    // 6. Update the GraphicsBatch state 
+    const auto flags = GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT | GL_MAP_WRITE_BIT;
+    const uint32_t new_buffer_size = std::ceil(buffer_size * 2.0f);
+
+    // Bounding volume buffer
+    uint32_t new_gl_bounding_volume_buffer = 0;
+    glGenBuffers(1, &new_gl_bounding_volume_buffer);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, new_gl_bounding_volume_buffer);
+    glBufferStorage(GL_SHADER_STORAGE_BUFFER, new_buffer_size * sizeof(BoundingVolume), nullptr, flags);
+    gl_bounding_volume_buffer_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, new_buffer_size * sizeof(BoundingVolume), flags);
+    glCopyNamedBufferSubData(gl_bounding_volume_buffer, new_gl_bounding_volume_buffer, 0, 0, buffer_size * sizeof(BoundingVolume));
+    glInvalidateBufferData(gl_bounding_volume_buffer);
+    glDeleteBuffers(1, &gl_bounding_volume_buffer);
+
+    // Buffer for all the model matrices
+    uint32_t new_gl_depth_models_buffer_object = 0;
+    glGenBuffers(1, &new_gl_depth_models_buffer_object);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, new_gl_depth_models_buffer_object);
+    glBufferStorage(GL_SHADER_STORAGE_BUFFER, new_buffer_size * sizeof(Mat4f), nullptr, flags);
+    gl_depth_model_buffer_object_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, new_buffer_size * sizeof(Mat4f), flags);
+    glCopyNamedBufferSubData(gl_depth_models_buffer_object, new_gl_depth_models_buffer_object, 0, 0, buffer_size * sizeof(Mat4f));
+    glInvalidateBufferData(gl_depth_models_buffer_object);
+    glDeleteBuffers(1, &gl_depth_models_buffer_object);
+    // Material buffer
+    uint32_t new_gl_mbo = 0;
+    glGenBuffers(1, &new_gl_mbo);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, new_gl_mbo);
+    glBufferStorage(GL_SHADER_STORAGE_BUFFER, new_buffer_size * sizeof(Material), nullptr, flags);
+    gl_mbo_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, new_buffer_size * sizeof(Material), flags);
+    glCopyNamedBufferSubData(gl_mbo, new_gl_mbo, 0, 0, buffer_size * sizeof(Material));
+    glInvalidateBufferData(gl_mbo);
+    glDeleteBuffers(1, &gl_mbo);
+
+    // Batch instance idx buffer
+    uint32_t new_gl_instance_idx_buffer = 0;
+    glGenBuffers(1, &new_gl_instance_idx_buffer);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, new_gl_instance_idx_buffer);
+    glBufferStorage(GL_SHADER_STORAGE_BUFFER, new_buffer_size * sizeof(GLuint), nullptr, 0);
+    glBindBuffer(GL_ARRAY_BUFFER, new_gl_instance_idx_buffer);
+    glVertexAttribIPointer(glGetAttribLocation(depth_shader.gl_program, "instance_idx"), 1, GL_UNSIGNED_INT, sizeof(GLuint), nullptr);
+    glEnableVertexAttribArray(glGetAttribLocation(depth_shader.gl_program, "instance_idx"));
+    glVertexAttribDivisor(glGetAttribLocation(depth_shader.gl_program, "instance_idx"), 1);
+    glCopyNamedBufferSubData(gl_instance_idx_buffer, new_gl_instance_idx_buffer, 0, 0, buffer_size);
+    glInvalidateBufferData(gl_instance_idx_buffer);
+    glDeleteBuffers(1, &gl_instance_idx_buffer);
+
+    // Update state
+    gl_bounding_volume_buffer = new_gl_bounding_volume_buffer;
+    gl_mbo = new_gl_mbo;
+    gl_depth_models_buffer_object = new_gl_depth_models_buffer_object;
+    gl_instance_idx_buffer = new_gl_instance_idx_buffer;
+    buffer_size = new_buffer_size;
+  }
+
   ID mesh_id; 
   Mesh mesh; 
   struct {
@@ -156,8 +217,9 @@ struct GraphicsBatch {
   uint32_t gl_ambient_occlusion_texture_unit  = 0;  // Ambient occlusion map
   uint32_t gl_emissive_texture_unit           = 0;  // Emissive map
     
-  /// General?
-  static const uint32_t MAX_OBJECTS = 100; // Initialze size for various buffers
+  /// General
+  static const uint32_t INIT_BUFFER_SIZE = 100;  // In # of elements 
+  uint32_t buffer_size = INIT_BUFFER_SIZE;       // Current buffer size (of ALL buffers) for the batch 
 
   uint32_t gl_ebo = 0;            // Elements b.o
   uint8_t* gl_ebo_ptr = nullptr;  // Ptr to mapped GL_ELEMENTS_ARRAY_BUFFER
