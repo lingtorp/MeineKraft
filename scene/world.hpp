@@ -94,7 +94,7 @@ public:
     }
 
     Perlin noise(1337);
-    const int32_t start = -11; // FIXME: Does not render correctly when larger than 11
+    const int32_t start = -70; // FIXME: Does not render correctly when larger than 70
     const int32_t end = -start;
     for (int32_t x = start; x < end; x++) {
       for (int32_t z = start; z < end; z++) {
