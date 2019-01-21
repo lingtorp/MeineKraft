@@ -47,7 +47,7 @@ public:
 
   void load_environment_map(const std::vector<std::string>& faces);
 
-  Camera* camera;
+  Camera* camera = nullptr;
   RenderState state;
   glm::mat4 projection_matrix; 
   float screen_width;
@@ -62,12 +62,20 @@ private:
   void link_batch(GraphicsBatch& batch);
 
   /// View frustum culling shader
-  ComputeShader* cull_shader;
+  ComputeShader* cull_shader = nullptr;
   
   /// Geometry pass related
   uint32_t gl_depth_fbo;
   uint32_t gl_depth_texture;
   uint32_t gl_depth_texture_unit;
+
+  /// Directional shadow mapping related
+  uint32_t gl_shadowmapping_fbo = 0;
+  uint32_t gl_shadowmapping_texture = 0;
+  uint32_t gl_shadowmapping_texture_unit = 0;
+  Shader* shadowmapping_shader = nullptr;
+  const uint32_t SHADOWMAP_W = 1024; // Shadowmap texture dimensions
+  const uint32_t SHADOWMAP_H = 1024;
 
   /// Lightning pass related
   Shader* lightning_shader;

@@ -288,6 +288,37 @@ Renderer::Renderer(): graphics_batches{} {
   // View frustum culling shader
   cull_shader = new ComputeShader{Filesystem::base + "shaders/culling.comp.glsl"};
 
+  // Directional shadow mapping setup
+  {
+    glGenFramebuffers(1, &gl_shadowmapping_fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, gl_shadowmapping_fbo);
+    gl_shadowmapping_texture_unit = Renderer::get_next_free_texture_unit();
+    glActiveTexture(GL_TEXTURE0 + gl_shadowmapping_texture_unit);
+    glGenTextures(1, &gl_shadowmapping_texture);
+    glBindTexture(GL_TEXTURE_2D, gl_shadowmapping_texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, SHADOWMAP_W, SHADOWMAP_H, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, gl_shading_model_texture, 0);
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+      Log::error("Directional shadow mapping FBO not complete"); exit(1);
+    }
+
+    // Shaders
+    std::string err_msg;
+    bool success = false;
+    shadowmapping_shader = new Shader(Filesystem::base + "shaders/shadowmapping.vert", Filesystem::base + "shaders/shadowmapping.frag");
+    std::tie(success, err_msg) = shadowmapping_shader->compile();
+    if (!success) {
+      Log::error("Could not compile directional shadow mapping shaders"); exit(1);
+    }
+  }
+
   glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
   glEnable(GL_CULL_FACE);
   glCullFace(GL_BACK);
@@ -373,6 +404,36 @@ void Renderer::render(const uint32_t delta) {
     }
     // TODO: Is this barrier required?
     glMemoryBarrier(GL_COMMAND_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT); // Buffer objects affected by this bit are derived from the GL_DRAW_INDIRECT_BUFFER binding.
+  }
+  pass_ended();
+
+  pass_started("Directional shadow mapping pass");
+  {
+    // TODO: 1. Compute bounding sphere for the culled objects
+    // BoundingVolume scene_bv = bounding_volume(indices, vertices);
+    // TODO: 2. Get direction vector from sphere center to the directional light source
+
+    const glm::mat4 directional_light_transform; // TODO
+
+    glViewport(0, 0, SHADOWMAP_W, SHADOWMAP_H);
+    glBindFramebuffer(GL_FRAMEBUFFER, gl_shadowmapping_fbo);
+    glClear(GL_DEPTH_COMPONENT);
+    const uint32_t program = shadowmapping_shader->gl_program;
+    glUseProgram(program);
+    glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(directional_light_transform));
+    for (size_t i = 0; i < graphics_batches.size(); i++) {
+      const auto& batch = graphics_batches[i];
+      glBindVertexArray(batch.gl_depth_vao);
+      glBindBuffer(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo); // GL_DRAW_INDIRECT_BUFFER is global context state
+
+      const uint32_t gl_models_binding_point = 2; // Defaults to 2 in geometry.vert shader
+      glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_models_binding_point, batch.gl_depth_models_buffer_object);
+
+      const uint32_t draw_cmd_offset = batch.gl_curr_ibo_idx * sizeof(DrawElementsIndirectCommand);
+      glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (const void*)draw_cmd_offset, 1, sizeof(DrawElementsIndirectCommand));
+    }
+
+    glViewport(0, 0, screen_width, screen_height);
   }
   pass_ended();
 
