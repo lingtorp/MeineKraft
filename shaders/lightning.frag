@@ -13,6 +13,7 @@ uniform sampler2D ambient_occlusion_sampler;
 uniform sampler2D emissive_sampler;
 uniform usampler2D shading_model_id_sampler;
 uniform samplerCubeArray environment_map_sampler;
+uniform sampler2D shadow_map_sampler;
 
 uniform vec3 camera; // TEST
 
@@ -152,6 +153,7 @@ void main() {
     const vec3 ambient_occlusion = texture(ambient_occlusion_sampler, frag_coord).rgb;
     const vec3 emissive = texture(emissive_sampler, frag_coord).rgb;
     const int  shading_model_id = int(texture(shading_model_id_sampler, frag_coord).r);
+    const vec3 shadow = texture(shadow_map_sampler, frag_coord).rgb;
 
     vec3 color = vec3(0.0);
     switch (shading_model_id) {

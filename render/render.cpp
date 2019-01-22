@@ -296,12 +296,12 @@ Renderer::Renderer(): graphics_batches{} {
     glActiveTexture(GL_TEXTURE0 + gl_shadowmapping_texture_unit);
     glGenTextures(1, &gl_shadowmapping_texture);
     glBindTexture(GL_TEXTURE_2D, gl_shadowmapping_texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, SHADOWMAP_W, SHADOWMAP_H, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, gl_shading_model_texture, 0);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOWMAP_W, SHADOWMAP_H, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, gl_shadowmapping_texture, 0);
     glDrawBuffer(GL_NONE);
     glReadBuffer(GL_NONE);
 
@@ -413,13 +413,19 @@ void Renderer::render(const uint32_t delta) {
     // BoundingVolume scene_bv = bounding_volume(indices, vertices);
     // TODO: 2. Get direction vector from sphere center to the directional light source
 
-    const glm::mat4 directional_light_transform; // TODO
+    glm::vec3 d(0.5, 0.5, 0.5);
+    glm::vec3 u(0.0, 1.0, 0.0);
+    glm::vec3 p(20.0, 20.0, 0.0);
+    const glm::mat4 directional_light_transform = glm::lookAt(p, p + d, u);
+    const glm::mat4 ortho_projection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 0.1f, 1000.0f);
 
     glViewport(0, 0, SHADOWMAP_W, SHADOWMAP_H);
     glBindFramebuffer(GL_FRAMEBUFFER, gl_shadowmapping_fbo);
-    glClear(GL_DEPTH_COMPONENT);
+    glEnable(GL_DEPTH_TEST);
+    glClear(GL_DEPTH_BUFFER_BIT);
     const uint32_t program = shadowmapping_shader->gl_program;
     glUseProgram(program);
+    glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, glm::value_ptr(ortho_projection));
     glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(directional_light_transform));
     for (size_t i = 0; i < graphics_batches.size(); i++) {
       const auto& batch = graphics_batches[i];
@@ -479,6 +485,7 @@ void Renderer::render(const uint32_t delta) {
     glUniform1i(glGetUniformLocation(program, "diffuse_sampler"), gl_diffuse_texture_unit);
     glUniform1i(glGetUniformLocation(program, "normal_sampler"), gl_normal_texture_unit);
     glUniform1i(glGetUniformLocation(program, "position_sampler"), gl_position_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "shadow_map_sampler"), gl_shadowmapping_texture_unit);
     glUniform1f(glGetUniformLocation(program, "screen_width"), screen_width);
     glUniform1f(glGetUniformLocation(program, "screen_height"), screen_height);
 
