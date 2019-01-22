@@ -408,16 +408,17 @@ void Renderer::render(const uint32_t delta) {
   pass_ended();
 
   pass_started("Directional shadow mapping pass");
+  glm::vec3 d(0.0, -1.0, 0.0);
+  glm::vec3 u(0.0, 1.0, 0.0);
+  glm::vec3 p(0.0, 8.0, 0.0);
+  const glm::mat4 directional_light_transform = glm::lookAt(p, p + d, u);
+  const glm::mat4 ortho_projection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 0.1f, 1000.0f);
+  const glm::mat4 light_space_transform = ortho_projection * directional_light_transform;
+
   {
     // TODO: 1. Compute bounding sphere for the culled objects
     // BoundingVolume scene_bv = bounding_volume(indices, vertices);
     // TODO: 2. Get direction vector from sphere center to the directional light source
-
-    glm::vec3 d(0.5, 0.5, 0.5);
-    glm::vec3 u(0.0, 1.0, 0.0);
-    glm::vec3 p(20.0, 20.0, 0.0);
-    const glm::mat4 directional_light_transform = glm::lookAt(p, p + d, u);
-    const glm::mat4 ortho_projection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 0.1f, 1000.0f);
 
     glViewport(0, 0, SHADOWMAP_W, SHADOWMAP_H);
     glBindFramebuffer(GL_FRAMEBUFFER, gl_shadowmapping_fbo);
@@ -425,8 +426,7 @@ void Renderer::render(const uint32_t delta) {
     glClear(GL_DEPTH_BUFFER_BIT);
     const uint32_t program = shadowmapping_shader->gl_program;
     glUseProgram(program);
-    glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, glm::value_ptr(ortho_projection));
-    glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(directional_light_transform));
+    glUniformMatrix4fv(glGetUniformLocation(program, "light_space_transform"), 1, GL_FALSE, glm::value_ptr(light_space_transform));
     for (size_t i = 0; i < graphics_batches.size(); i++) {
       const auto& batch = graphics_batches[i];
       glBindVertexArray(batch.gl_depth_vao);

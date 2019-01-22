@@ -15,6 +15,8 @@ uniform usampler2D shading_model_id_sampler;
 uniform samplerCubeArray environment_map_sampler;
 uniform sampler2D shadow_map_sampler;
 
+uniform mat4 light_space_transform;
+
 uniform vec3 camera; // TEST
 
 out vec4 outColor; // Defaults to zero when the frag shader only has 1 out variable
@@ -153,16 +155,23 @@ void main() {
     const vec3 ambient_occlusion = texture(ambient_occlusion_sampler, frag_coord).rgb;
     const vec3 emissive = texture(emissive_sampler, frag_coord).rgb;
     const int  shading_model_id = int(texture(shading_model_id_sampler, frag_coord).r);
-    const vec3 shadow = texture(shadow_map_sampler, frag_coord).rgb;
+
+    // Shadowmap calculations
+    vec4 lightspace_position = light_space_transform * vec4(position, 1.0);
+    lightspace_position.xyz /= lightspace_position.w;
+    lightspace_position = lightspace_position * 0.5 + 0.5;
+    const float current_shadowmap_depth = lightspace_position.z;
+    const float closest_shadowmap_depth = texture(shadow_map_sampler, lightspace_position.xy).r;
+    const float shadow = closest_shadowmap_depth < current_shadowmap_depth ? 0.0 : 1.0;
 
     vec3 color = vec3(0.0);
     switch (shading_model_id) {
         case 1: // Unlit
-        color = unlit_render(diffuse);
+        color = shadow * unlit_render(diffuse);
         break;     
         case 2: // Physically based rendering with parameters sourced from textures
         case 3: // Physically based rendering with parameters sourced from scalars
-        color = schlick_render(frag_coord, position, normal, diffuse, ambient_occlusion);
+        color = shadow * schlick_render(frag_coord, position, normal, diffuse, ambient_occlusion);
         // Emissive
         color += emissive; // TODO: Emissive factor missing
         break;
