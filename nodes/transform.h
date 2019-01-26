@@ -29,13 +29,14 @@ public:
 };
 
 struct TransformComponent {
-  Vec3f position = Vec3f(0.0f, 0.0f, 0.0f);
-  // TODO: Rotation
+  Vec3f position = Vec3f(0.0f, 0.0f, 0.0f); // World position
   float scale = 1.0f;
+  Vec3f rotation = Vec3f(0.0f, 0.0f, 0.0f); // Rotation in degrees around (x, y, z)
 };
 
+// FIXME
 inline static Mat4f compute_transform(const TransformComponent& comp) {
-  return Mat4f().translate(comp.position).scale(comp.scale);
+  return Mat4f().rotate(comp.rotation).translate(comp.position).scale(comp.scale);
 }
 
 struct TransformSystem {

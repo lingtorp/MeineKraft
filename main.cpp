@@ -202,6 +202,8 @@ int main() {
                   TransformComponent* transform = TransformSystem::instance().lookup_referenced(id);
                   ImGui::PushID(transform);
                   ImGui::InputFloat3("Position", &transform->position.x);
+                  ImGui::InputFloat3("Rotation", &transform->rotation.x);
+                  // ImGui::Input("Scale", &transform->scale);
                   ImGui::PopID();
                 }
               }
