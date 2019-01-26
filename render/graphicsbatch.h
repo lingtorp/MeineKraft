@@ -139,6 +139,7 @@ struct GraphicsBatch {
     // 4. Invalidate the old buffer
     // 5. Delete the old buffer object
     // 6. Update the GraphicsBatch state 
+    glBindVertexArray(gl_depth_vao); // TODO: Something in this function seems to affect VAO state, which?
     const auto flags = GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT | GL_MAP_WRITE_BIT;
     const uint32_t new_buffer_size = std::ceil(buffer_size * 2.0f);
 
@@ -161,6 +162,7 @@ struct GraphicsBatch {
     glCopyNamedBufferSubData(gl_depth_models_buffer_object, new_gl_depth_models_buffer_object, 0, 0, buffer_size * sizeof(Mat4f));
     glInvalidateBufferData(gl_depth_models_buffer_object);
     glDeleteBuffers(1, &gl_depth_models_buffer_object);
+    
     // Material buffer
     uint32_t new_gl_mbo = 0;
     glGenBuffers(1, &new_gl_mbo);
@@ -247,6 +249,9 @@ struct GraphicsBatch {
   uint8_t* gl_depth_model_buffer_object_ptr = nullptr; // Model b.o ptr
 
   Shader depth_shader;  // Shader used to render all the components in this batch
+
+  /// Shadow mapping pass variables
+  uint32_t gl_shadowmapping_vao = 0;
 };
 
 #endif // MEINEKRAFT_GRAPHICSBATCH_H

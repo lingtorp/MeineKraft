@@ -175,6 +175,7 @@ int main() {
         ImGui::Text("Frame: %lu", renderer.state.frame);
         ImGui::Text("Entities: %lu", renderer.state.entities);
         ImGui::Text("Average %lu ms / frame (%.1f FPS)", delta, io.Framerate);
+        ImGui::Checkbox("Shadowmapping", &renderer.state.shadowmapping);
 
         static size_t i = -1; i = (i + 1) % num_deltas;
         deltas[i] = float(delta);

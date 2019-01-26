@@ -300,8 +300,9 @@ struct RenderState {
   uint64_t entities        = 0;
   uint64_t graphic_batches = 0;
   uint64_t draw_calls      = 0;
+  bool shadowmapping = false;
   RenderState() = default;
-  RenderState(const RenderState& old): frame(old.frame) {}
+  RenderState(const RenderState& old): frame(old.frame), shadowmapping(old.shadowmapping) {}
 };
 
 #endif // MEINEKRAFT_PRIMITIVES_H

@@ -300,7 +300,7 @@ Renderer::Renderer(): graphics_batches{} {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOWMAP_W, SHADOWMAP_H, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, SHADOWMAP_W, SHADOWMAP_H, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
     glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, gl_shadowmapping_texture, 0);
     glDrawBuffer(GL_NONE);
     glReadBuffer(GL_NONE);
@@ -408,11 +408,11 @@ void Renderer::render(const uint32_t delta) {
   pass_ended();
 
   pass_started("Directional shadow mapping pass");
-  glm::vec3 d(0.0, -1.0, 0.0);
+  glm::vec3 d(0.0, -0.6, 0.7);
   glm::vec3 u(0.0, 1.0, 0.0);
-  glm::vec3 p(0.0, 8.0, 0.0);
+  glm::vec3 p(0.5, 10.0, -11.0);
   const glm::mat4 directional_light_transform = glm::lookAt(p, p + d, u);
-  const glm::mat4 ortho_projection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 0.1f, 1000.0f);
+  const glm::mat4 ortho_projection = glm::ortho(-20.0f, 20.0f, -20.0f, 20.0f, 0.1f, 100.0f);
   const glm::mat4 light_space_transform = ortho_projection * directional_light_transform;
 
   {
@@ -420,26 +420,28 @@ void Renderer::render(const uint32_t delta) {
     // BoundingVolume scene_bv = bounding_volume(indices, vertices);
     // TODO: 2. Get direction vector from sphere center to the directional light source
 
-    glViewport(0, 0, SHADOWMAP_W, SHADOWMAP_H);
+    glCullFace(GL_FRONT);
     glBindFramebuffer(GL_FRAMEBUFFER, gl_shadowmapping_fbo);
+    glViewport(0, 0, SHADOWMAP_W, SHADOWMAP_H);
     glEnable(GL_DEPTH_TEST);
-    glClear(GL_DEPTH_BUFFER_BIT);
+    glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); // Always update the depth buffer with the new values
     const uint32_t program = shadowmapping_shader->gl_program;
     glUseProgram(program);
+    glUniform3fv(glGetUniformLocation(program, "directional_light_direction"), 1, glm::value_ptr(d));
     glUniformMatrix4fv(glGetUniformLocation(program, "light_space_transform"), 1, GL_FALSE, glm::value_ptr(light_space_transform));
     for (size_t i = 0; i < graphics_batches.size(); i++) {
       const auto& batch = graphics_batches[i];
-      glBindVertexArray(batch.gl_depth_vao);
+      glBindVertexArray(batch.gl_shadowmapping_vao);
       glBindBuffer(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo); // GL_DRAW_INDIRECT_BUFFER is global context state
 
       const uint32_t gl_models_binding_point = 2; // Defaults to 2 in geometry.vert shader
       glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_models_binding_point, batch.gl_depth_models_buffer_object);
 
       const uint32_t draw_cmd_offset = batch.gl_curr_ibo_idx * sizeof(DrawElementsIndirectCommand);
-      glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (const void*)draw_cmd_offset, 1, sizeof(DrawElementsIndirectCommand));
+      glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (const void*) draw_cmd_offset, 1, sizeof(DrawElementsIndirectCommand));
     }
-
     glViewport(0, 0, screen_width, screen_height);
+    glCullFace(GL_BACK);
   }
   pass_ended();
 
@@ -470,7 +472,7 @@ void Renderer::render(const uint32_t delta) {
   pass_ended();
 
   pass_started("Lightning pass");
-  {
+  if (true) {
     const auto program = lightning_shader->gl_program;
     glBindFramebuffer(GL_FRAMEBUFFER, gl_lightning_fbo);
 
@@ -488,6 +490,8 @@ void Renderer::render(const uint32_t delta) {
     glUniform1i(glGetUniformLocation(program, "shadow_map_sampler"), gl_shadowmapping_texture_unit);
     glUniform1f(glGetUniformLocation(program, "screen_width"), screen_width);
     glUniform1f(glGetUniformLocation(program, "screen_height"), screen_height);
+    glUniformMatrix4fv(glGetUniformLocation(program, "light_space_transform"), 1, GL_FALSE, glm::value_ptr(light_space_transform));
+    glUniform1i(glGetUniformLocation(program, "shadowmapping"), state.shadowmapping);
 
     glUniform3fv(glGetUniformLocation(program, "camera"), 1, &camera->position.x);
 
@@ -573,6 +577,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     batch.gl_mbo_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, GraphicsBatch::INIT_BUFFER_SIZE * sizeof(Material), flags);
 
     // Element buffer
+    // FIXME: Does not need to be mapped (remove)
     glGenBuffers(1, &batch.gl_ebo);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, batch.gl_ebo);
     glBufferStorage(GL_ELEMENT_ARRAY_BUFFER, batch.mesh.byte_size_of_indices(), nullptr, flags);
@@ -589,6 +594,28 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glGenBuffers(1, &batch.gl_instance_idx_buffer);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, batch.gl_instance_idx_buffer);
     glBufferStorage(GL_SHADER_STORAGE_BUFFER, GraphicsBatch::INIT_BUFFER_SIZE * sizeof(GLuint), nullptr, 0);
+    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_instance_idx_buffer);
+    glVertexAttribIPointer(glGetAttribLocation(program, "instance_idx"), 1, GL_UNSIGNED_INT, sizeof(GLuint), nullptr);
+    glEnableVertexAttribArray(glGetAttribLocation(program, "instance_idx"));
+    glVertexAttribDivisor(glGetAttribLocation(program, "instance_idx"), 1);
+  }
+  /// Shadowmap pass setup
+  {
+    const auto program = shadowmapping_shader->gl_program;
+    glUseProgram(program);
+
+    glGenVertexArrays(1, &batch.gl_shadowmapping_vao);
+    glBindVertexArray(batch.gl_shadowmapping_vao);
+
+    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_vbo);
+
+    const auto position_attrib = glGetAttribLocation(program, "position");
+    glVertexAttribPointer(position_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void *) offsetof(Vertex, position));
+    glEnableVertexAttribArray(position_attrib);
+    
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, batch.gl_ebo);
+
+    // Batch instance idx buffer
     glBindBuffer(GL_ARRAY_BUFFER, batch.gl_instance_idx_buffer);
     glVertexAttribIPointer(glGetAttribLocation(program, "instance_idx"), 1, GL_UNSIGNED_INT, sizeof(GLuint), nullptr);
     glEnableVertexAttribArray(glGetAttribLocation(program, "instance_idx"));
