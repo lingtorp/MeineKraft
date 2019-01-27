@@ -43,8 +43,8 @@ struct quat {
   }
 
   /// Rotates point/vector around the vector v of the quat by rads radians
-  inline Vec3f rotate(const Vec3f& v, const float rads) const {
-    quat p(v, 1.0f);
+  inline Vec3f rotate(const Vec3f& point, const float rads) const {
+    quat p(point, 1.0f);
     quat q(std::sin(rads / 2.0f) * v.normalize(), std::cos(rads / 2.0f));
     return quat(q * (p * q.inverse())).v;
   }
@@ -54,7 +54,7 @@ struct quat {
   }
 
   inline Mat4f to_matrix() const {
-    const float s = 2.0 / (norm() * norm());
+    const float s = 2.0f / (norm() * norm());
     Mat4f mat;
     mat[0] = { 1.0f - s * (v.y * v.y + v.z * v.z), s * (v.x * v.y - w * v.z), s * (v.x * v.z + w * v.y), 0.0f };
     mat[1] = { s * (v.x * v.y + w * v.z), 1.0f - s * (v.x * v.x + v.z * v.z), s * (v.y * v.z - w * v.x), 0.0f };
