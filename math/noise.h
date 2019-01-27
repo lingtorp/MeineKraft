@@ -343,10 +343,10 @@ public:
      * @param vertex Vertex in the unit simplex cell (unskewed)
      * @return Contribution from the vertex
      */
-    double kernel(Vec3<double> uvw, Vec3<double> ijk, Vec3<double> vertex) const {
+    double kernel(const Vec3<double>& uvw, const Vec3<double>& ijk, const Vec3<double>& vertex) const {
         double sum = 0.0;
-        Vec3<double> rel = uvw - vertex; // Relative simplex cell vertex
-        double t = 0.6 - rel.length()*rel.length(); // 0.6 - x*x - y*y - z*z
+        const Vec3<double> rel = uvw - vertex; // Relative simplex cell vertex
+        double t = 0.6 - rel.length() * rel.length(); // 0.6 - x*x - y*y - z*z
         if (t > 0) {
             Vec3<double> pqr = grad(ijk + vertex, rel); // Generate gradient vector for vertex
             t *= t;
