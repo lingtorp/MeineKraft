@@ -100,7 +100,7 @@ struct Vec3 {
     inline static Vec3 Z() { return Vec3(0.0f, 0.0f, 1.0f); }
 
     /// Length of the vector
-    inline float length() const { return std::sqrt(std::pow(x, 2.0f) + std::pow(y, 2) + std::pow(z, 2.0f)); }
+    inline float length() const { return std::sqrtf(std::pow(x, 2.0f) + std::pow(y, 2.0f) + std::pow(z, 2.0f)); }
 
     /// Squared length of the vector
     inline float sqr_length() const { return x * x + y * y + z * z; }

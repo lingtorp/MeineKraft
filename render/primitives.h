@@ -198,9 +198,9 @@ struct Sphere: public Mesh {
       for (uint32_t i = 0; i <= X_SEGMENTS; ++i) {
         const float x_segment = (float)i / (float)X_SEGMENTS;
         const float y_segment = (float)j / (float)Y_SEGMENTS;
-        const float x = std::cos(x_segment * 2.0f * PI) * std::sin(y_segment * PI);
-        const float y = std::cos(y_segment * PI);
-        const float z = std::sin(x_segment * 2.0f * PI) * std::sin(y_segment * PI);
+        const float x = std::cosf(x_segment * 2.0f * PI) * std::sinf(y_segment * PI);
+        const float y = std::cosf(y_segment * PI);
+        const float z = std::sinf(x_segment * 2.0f * PI) * std::sinf(y_segment * PI);
         Vertex vertex;
         vertex.position = Vec3f{x, y, z} * radius;
         vertex.normal = Vec3f{x, y, z} * radius;
