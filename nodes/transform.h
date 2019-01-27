@@ -4,6 +4,7 @@
 
 #include <unordered_map>
 #include "../render/primitives.h"
+#include "../math/quaternion.h"
 
 struct NameSystem {
 private:
@@ -36,7 +37,7 @@ struct TransformComponent {
 
 // FIXME
 inline static Mat4f compute_transform(const TransformComponent& comp) {
-  return Mat4f().rotate(comp.rotation).translate(comp.position).scale(comp.scale);
+  return rotate(comp.rotation).translate(comp.position).scale(comp.scale);
 }
 
 struct TransformSystem {
