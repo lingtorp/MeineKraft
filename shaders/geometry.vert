@@ -23,7 +23,7 @@ void main() {
     fNormal = normal;
     fPosition = vec3(models[instance_idx] * vec4(position, 1.0));
     #if defined(DIFFUSE_CUBEMAP)
-    fPosition = vec3(vec4(position, 1.0));
+    fPosition = vec3(vec4(position, 1.0)); // TODO: Pass along world space and local?
     #endif
     fTexcoord = texcoord;
 
