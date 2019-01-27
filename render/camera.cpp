@@ -71,11 +71,11 @@ void Camera::move_up(bool move) {
   acceleration.y.y = move;
 }
 
-Vec3<float> Camera::recalculate_direction() const {
+Vec3f Camera::recalculate_direction() const {
   const bool euler_angles = true;
   if (euler_angles) {
     static constexpr float rad = PI / 180.0f;
-    Vec3<float> result;
+    Vec3f result;
     result.x = -sinf(yaw * rad) * cosf(pitch * rad);
     result.y = sinf(pitch * rad);
     result.z = -cosf(yaw * rad) * cosf(pitch * rad);
@@ -86,15 +86,15 @@ Vec3<float> Camera::recalculate_direction() const {
     const float dy = glm::radians(pitch * sensitivity);
 
     quat rotation(direction.cross(up));
-    Vec3<float> new_direction = rotation.rotate(direction, dy).normalize();
-    Vec3<float> new_up = rotation.rotate(up, dy).normalize();
+    Vec3f new_direction = rotation.rotate(direction, dy).normalize();
+    Vec3f new_up = rotation.rotate(up, dy).normalize();
 
     quat yrotation(new_up);
     return yrotation.rotate(new_direction, dx).normalize();
   }
 }
 
-Vec3<float> Camera::update(const uint32_t delta) {
+Vec3f Camera::update(const uint32_t delta) {
   /// Perform acceleration and de-acceleration calculations for each direction on each axis.
   if (acceleration.x.x) {
     // If accelerating along positive x-axis, increase the velocity along the positive axis
@@ -134,7 +134,7 @@ Vec3<float> Camera::update(const uint32_t delta) {
     if (std::abs(velocity.z - 0.01) < 0.1) { velocity.z = 0.0; }
   }
 
-  return position + direction * velocity.x + Vec3<float>::Y() * velocity.y + direction.cross(up).normalize() * velocity.z;
+  return position + direction * velocity.x + Vec3f::Y() * velocity.y + direction.cross(up).normalize() * velocity.z;
 }
 
 glm::mat4 Camera::transform() const {
