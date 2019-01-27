@@ -3,7 +3,6 @@
 #define MEINEKRAFT_GRAPHICSBATCH_H
 
 #include <map>
-#include <cstring>
 
 #include "rendercomponent.h"
 #include "../nodes/transform.h"
