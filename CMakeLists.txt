@@ -9,6 +9,8 @@ endif(UNIX)
 set(CMAKE_CXX_STANDARD 11)
 
 if(WIN32)
+        # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /d2cgsummary") # 
+        # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Bt") #  time spent in frontend (c1xx.dll) vs backend (c2.dll)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4") # Enable warning level 4
 endif(WIN32)
 
