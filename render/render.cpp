@@ -472,7 +472,7 @@ void Renderer::render(const uint32_t delta) {
   pass_ended();
 
   pass_started("Lightning pass");
-  if (true) {
+  {
     const auto program = lightning_shader->gl_program;
     glBindFramebuffer(GL_FRAMEBUFFER, gl_lightning_fbo);
 
@@ -505,8 +505,8 @@ void Renderer::render(const uint32_t delta) {
   {
     glBindFramebuffer(GL_READ_FRAMEBUFFER, gl_lightning_fbo);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-    auto mask = GL_COLOR_BUFFER_BIT;
-    auto filter = GL_NEAREST;
+    const auto mask = GL_COLOR_BUFFER_BIT;
+    const auto filter = GL_NEAREST;
     glBlitFramebuffer(0, 0, screen_width, screen_height, 0, 0, screen_width, screen_height, mask, filter);
   }
   pass_ended();
