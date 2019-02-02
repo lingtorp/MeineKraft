@@ -22,7 +22,7 @@ struct DrawCommand {
     uint count;         // Num elements (vertices)
     uint instanceCount; // Number of instances to draw (a.k.a primcount)
     uint firstIndex;    // Specifies a byte offset (cast to a pointer type) into the buffer bound to GL_ELEMENT_ARRAY_BUFFER to start reading indices from.
-    uint baseVertex;    // Specifies a constant that should be added to each element of indices​ when chosing elements from the enabled vertex arrays.
+    uint baseVertex;    // Specifies a constant that should be added to each element of indices? when chosing elements from the enabled vertex arrays.
     uint baseInstance;  // Specifies the base instance for use in fetching instanced vertex attributes.
     // 20 bytes
     uint padding0;
