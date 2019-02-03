@@ -647,8 +647,8 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
     if (batch.mesh_id != comp.mesh_id) { continue; }
     if (comp_shader_config != batch.depth_shader.defines) { continue; }
     if (comp.diffuse_texture.data.pixels) {
-      bool batch_contains_texture = batch.layer_idxs.count(comp.diffuse_texture.id) == 0;
-      if (!batch_contains_texture) {
+      const bool batch_contains_texture = batch.layer_idxs.count(comp.diffuse_texture.id) != 0;
+      if (batch_contains_texture) {
         material.diffuse_layer_idx = batch.layer_idxs[comp.diffuse_texture.id];
       } else {
         /// Expand texture buffer if needed
