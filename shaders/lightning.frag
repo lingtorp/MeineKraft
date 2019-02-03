@@ -13,6 +13,12 @@ uniform sampler2D ambient_occlusion_sampler;
 uniform sampler2D emissive_sampler;
 uniform usampler2D shading_model_id_sampler;
 uniform samplerCubeArray environment_map_sampler;
+uniform sampler2D shadow_map_sampler;
+
+// Shadow map related
+uniform bool shadowmapping;
+uniform mat4 light_space_transform;
+uniform vec3 directional_light_direction;
 
 uniform vec3 camera; // TEST
 
@@ -153,14 +159,29 @@ void main() {
     const vec3 emissive = texture(emissive_sampler, frag_coord).rgb;
     const int  shading_model_id = int(texture(shading_model_id_sampler, frag_coord).r);
 
+    // Shadowmap calculations
+    // Avoids _some_ shadowmap acne
+    const float shadow_bias = 0.005; // max(0.005 * (1.0 - clamp(dot(normal, directional_light_direction), 0.0, 1.0)), 0.0005);
+
+    vec4 lightspace_position = light_space_transform * vec4(position, 1.0);
+    lightspace_position.xyz /= lightspace_position.w;
+    lightspace_position = lightspace_position * 0.5 + 0.5;
+    const float current_shadowmap_depth = lightspace_position.z;
+
+    float shadow = 0.0; // Amount of shadow [0.0, 1.0]
+    if (current_shadowmap_depth < 1.0 && shadowmapping) { 
+        const float closest_shadowmap_depth = texture(shadow_map_sampler, lightspace_position.xy).r;
+        shadow = closest_shadowmap_depth < current_shadowmap_depth - shadow_bias ? 0.5 : 0.0;
+    }
+
     vec3 color = vec3(0.0);
     switch (shading_model_id) {
         case 1: // Unlit
-        color = unlit_render(diffuse);
+        color = (1.0 - shadow) * unlit_render(diffuse);
         break;     
         case 2: // Physically based rendering with parameters sourced from textures
         case 3: // Physically based rendering with parameters sourced from scalars
-        color = schlick_render(frag_coord, position, normal, diffuse, ambient_occlusion);
+        color = (1.0 - shadow) * schlick_render(frag_coord, position, normal, diffuse, ambient_occlusion);
         // Emissive
         color += emissive; // TODO: Emissive factor missing
         break;

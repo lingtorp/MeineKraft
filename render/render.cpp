@@ -288,6 +288,37 @@ Renderer::Renderer(): graphics_batches{} {
   // View frustum culling shader
   cull_shader = new ComputeShader{Filesystem::base + "shaders/culling.comp.glsl"};
 
+  // Directional shadow mapping setup
+  {
+    glGenFramebuffers(1, &gl_shadowmapping_fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, gl_shadowmapping_fbo);
+    gl_shadowmapping_texture_unit = Renderer::get_next_free_texture_unit();
+    glActiveTexture(GL_TEXTURE0 + gl_shadowmapping_texture_unit);
+    glGenTextures(1, &gl_shadowmapping_texture);
+    glBindTexture(GL_TEXTURE_2D, gl_shadowmapping_texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, SHADOWMAP_W, SHADOWMAP_H, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, gl_shadowmapping_texture, 0);
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+      Log::error("Directional shadow mapping FBO not complete"); exit(1);
+    }
+
+    // Shaders
+    std::string err_msg;
+    bool success = false;
+    shadowmapping_shader = new Shader(Filesystem::base + "shaders/shadowmapping.vert", Filesystem::base + "shaders/shadowmapping.frag");
+    std::tie(success, err_msg) = shadowmapping_shader->compile();
+    if (!success) {
+      Log::error("Could not compile directional shadow mapping shaders"); exit(1);
+    }
+  }
+
   glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
   glEnable(GL_CULL_FACE);
   glCullFace(GL_BACK);
@@ -376,6 +407,44 @@ void Renderer::render(const uint32_t delta) {
   }
   pass_ended();
 
+  pass_started("Directional shadow mapping pass");
+  glm::vec3 d(0.0, -0.6, 0.7);
+  glm::vec3 u(0.0, 1.0, 0.0);
+  glm::vec3 p(0.5, 10.0, -11.0);
+  const glm::mat4 directional_light_transform = glm::lookAt(p, p + d, u);
+  const glm::mat4 ortho_projection = glm::ortho(-20.0f, 20.0f, -20.0f, 20.0f, 0.1f, 100.0f);
+  const glm::mat4 light_space_transform = ortho_projection * directional_light_transform;
+
+  {
+    // TODO: 1. Compute bounding sphere for the culled objects
+    // BoundingVolume scene_bv = bounding_volume(indices, vertices);
+    // TODO: 2. Get direction vector from sphere center to the directional light source
+
+    glCullFace(GL_FRONT);
+    glBindFramebuffer(GL_FRAMEBUFFER, gl_shadowmapping_fbo);
+    glViewport(0, 0, SHADOWMAP_W, SHADOWMAP_H);
+    glEnable(GL_DEPTH_TEST);
+    glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); // Always update the depth buffer with the new values
+    const uint32_t program = shadowmapping_shader->gl_program;
+    glUseProgram(program);
+    glUniform3fv(glGetUniformLocation(program, "directional_light_direction"), 1, glm::value_ptr(d));
+    glUniformMatrix4fv(glGetUniformLocation(program, "light_space_transform"), 1, GL_FALSE, glm::value_ptr(light_space_transform));
+    for (size_t i = 0; i < graphics_batches.size(); i++) {
+      const auto& batch = graphics_batches[i];
+      glBindVertexArray(batch.gl_shadowmapping_vao);
+      glBindBuffer(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo); // GL_DRAW_INDIRECT_BUFFER is global context state
+
+      const uint32_t gl_models_binding_point = 2; // Defaults to 2 in geometry.vert shader
+      glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_models_binding_point, batch.gl_depth_models_buffer_object);
+
+      const uint32_t draw_cmd_offset = batch.gl_curr_ibo_idx * sizeof(DrawElementsIndirectCommand);
+      glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (const void*) draw_cmd_offset, 1, sizeof(DrawElementsIndirectCommand));
+    }
+    glViewport(0, 0, screen_width, screen_height);
+    glCullFace(GL_BACK);
+  }
+  pass_ended();
+
   pass_started("Geometry pass");
   {
     glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
@@ -418,8 +487,11 @@ void Renderer::render(const uint32_t delta) {
     glUniform1i(glGetUniformLocation(program, "diffuse_sampler"), gl_diffuse_texture_unit);
     glUniform1i(glGetUniformLocation(program, "normal_sampler"), gl_normal_texture_unit);
     glUniform1i(glGetUniformLocation(program, "position_sampler"), gl_position_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "shadow_map_sampler"), gl_shadowmapping_texture_unit);
     glUniform1f(glGetUniformLocation(program, "screen_width"), screen_width);
     glUniform1f(glGetUniformLocation(program, "screen_height"), screen_height);
+    glUniformMatrix4fv(glGetUniformLocation(program, "light_space_transform"), 1, GL_FALSE, glm::value_ptr(light_space_transform));
+    glUniform1i(glGetUniformLocation(program, "shadowmapping"), state.shadowmapping);
 
     glUniform3fv(glGetUniformLocation(program, "camera"), 1, &camera->position.x);
 
@@ -433,8 +505,8 @@ void Renderer::render(const uint32_t delta) {
   {
     glBindFramebuffer(GL_READ_FRAMEBUFFER, gl_lightning_fbo);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-    auto mask = GL_COLOR_BUFFER_BIT;
-    auto filter = GL_NEAREST;
+    const auto mask = GL_COLOR_BUFFER_BIT;
+    const auto filter = GL_NEAREST;
     glBlitFramebuffer(0, 0, screen_width, screen_height, 0, 0, screen_width, screen_height, mask, filter);
   }
   pass_ended();
@@ -505,6 +577,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     batch.gl_mbo_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, GraphicsBatch::INIT_BUFFER_SIZE * sizeof(Material), flags);
 
     // Element buffer
+    // FIXME: Does not need to be mapped (remove)
     glGenBuffers(1, &batch.gl_ebo);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, batch.gl_ebo);
     glBufferStorage(GL_ELEMENT_ARRAY_BUFFER, batch.mesh.byte_size_of_indices(), nullptr, flags);
@@ -521,6 +594,28 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glGenBuffers(1, &batch.gl_instance_idx_buffer);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, batch.gl_instance_idx_buffer);
     glBufferStorage(GL_SHADER_STORAGE_BUFFER, GraphicsBatch::INIT_BUFFER_SIZE * sizeof(GLuint), nullptr, 0);
+    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_instance_idx_buffer);
+    glVertexAttribIPointer(glGetAttribLocation(program, "instance_idx"), 1, GL_UNSIGNED_INT, sizeof(GLuint), nullptr);
+    glEnableVertexAttribArray(glGetAttribLocation(program, "instance_idx"));
+    glVertexAttribDivisor(glGetAttribLocation(program, "instance_idx"), 1);
+  }
+  /// Shadowmap pass setup
+  {
+    const auto program = shadowmapping_shader->gl_program;
+    glUseProgram(program);
+
+    glGenVertexArrays(1, &batch.gl_shadowmapping_vao);
+    glBindVertexArray(batch.gl_shadowmapping_vao);
+
+    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_vbo);
+
+    const auto position_attrib = glGetAttribLocation(program, "position");
+    glVertexAttribPointer(position_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void *) offsetof(Vertex, position));
+    glEnableVertexAttribArray(position_attrib);
+    
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, batch.gl_ebo);
+
+    // Batch instance idx buffer
     glBindBuffer(GL_ARRAY_BUFFER, batch.gl_instance_idx_buffer);
     glVertexAttribIPointer(glGetAttribLocation(program, "instance_idx"), 1, GL_UNSIGNED_INT, sizeof(GLuint), nullptr);
     glEnableVertexAttribArray(glGetAttribLocation(program, "instance_idx"));
@@ -552,8 +647,8 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
     if (batch.mesh_id != comp.mesh_id) { continue; }
     if (comp_shader_config != batch.depth_shader.defines) { continue; }
     if (comp.diffuse_texture.data.pixels) {
-      bool batch_contains_texture = batch.layer_idxs.count(comp.diffuse_texture.id) == 0;
-      if (!batch_contains_texture) {
+      const bool batch_contains_texture = batch.layer_idxs.count(comp.diffuse_texture.id) != 0;
+      if (batch_contains_texture) {
         material.diffuse_layer_idx = batch.layer_idxs[comp.diffuse_texture.id];
       } else {
         /// Expand texture buffer if needed

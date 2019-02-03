@@ -15,6 +15,7 @@ layout(location = 6) out uint gShadingModelID;
 #ifdef DIFFUSE_2D
 uniform sampler2DArray diffuse;
 #elif defined(DIFFUSE_CUBEMAP)
+in vec3 local_space_position; // Used to sample cubemap
 uniform samplerCubeArray diffuse;
 #endif
 uniform sampler2D pbr_parameters;
@@ -40,7 +41,7 @@ void main() {
     #ifdef DIFFUSE_2D
     gDiffuse.rgb = texture(diffuse, vec3(fTexcoord, material.diffuse_layer_idx)).rgb; 
     #elif defined(DIFFUSE_CUBEMAP)
-    gDiffuse.rgb = texture(diffuse, vec4(normalize(fPosition), material.diffuse_layer_idx)).rgb;
+    gDiffuse.rgb = texture(diffuse, vec4(local_space_position, material.diffuse_layer_idx)).rgb;
     #endif
     gDiffuse.a = 1.0; // Fetch from texture?
 
