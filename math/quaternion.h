@@ -54,7 +54,7 @@ struct quat {
   }
 
   inline Mat4f to_matrix() const {
-    const float s = 2.0f / (norm() * norm());
+    const float s = 2.0f / (v.dot(v) + w * w); // norm() * norm()
     Mat4f mat;
     mat[0] = { 1.0f - s * (v.y * v.y + v.z * v.z), s * (v.x * v.y - w * v.z), s * (v.x * v.z + w * v.y), 0.0f };
     mat[1] = { s * (v.x * v.y + w * v.z), 1.0f - s * (v.x * v.x + v.z * v.z), s * (v.y * v.z - w * v.x), 0.0f };
