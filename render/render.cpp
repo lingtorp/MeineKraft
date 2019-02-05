@@ -788,12 +788,11 @@ void Renderer::update_transforms() {
         bounding_volume.radius = batch.bounding_volume_radius * transform.scale;
         bounding_volume.position = transform.position;
         batch.objects.bounding_volumes[idx->second] = bounding_volume;
+        std::memcpy(batch.gl_bounding_volume_buffer_ptr + idx->second * sizeof(BoundingVolume), &batch.objects.bounding_volumes[idx->second], sizeof(BoundingVolume));
         // NOTE: Does not calculate the radius of the bounding volume ... BV should not be at the origin of the model ...
 
         batch.objects.transforms[idx->second] = compute_transform(transform);
+        std::memcpy(batch.gl_depth_model_buffer_object_ptr + idx->second * sizeof(Mat4f), &batch.objects.transforms[idx->second], sizeof(Mat4f));
       }
-      // FIXME: Copying large chunks of memory here, might be better to just copy the modifed elements
-      std::memcpy(batch.gl_depth_model_buffer_object_ptr, batch.objects.transforms.data(), batch.objects.transforms.size() * sizeof(Mat4f));
-      std::memcpy(batch.gl_bounding_volume_buffer_ptr, batch.objects.bounding_volumes.data(), batch.objects.bounding_volumes.size() * sizeof(BoundingVolume));
   }
 }
