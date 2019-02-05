@@ -282,7 +282,6 @@ int main() {
     }
     SDL_GL_SwapWindow(window);
   }
-  JobSystem::instance().wait_on_all();
   ImGui_ImplSdlGL3_Shutdown();
   SDL_GL_DeleteContext(context);
   SDL_DestroyWindow(window);
