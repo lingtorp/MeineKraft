@@ -322,11 +322,10 @@ public:
     inline Mat4<T> operator*(const Mat4<T>& mat) const {
         Mat4<T> matrix;
         for (uint8_t i = 0; i < 4; ++i) {
-            const auto row = rows[i];
-            for (uint8_t j = 0; j < 4; ++j) {
-                const Vec4<T> column = Vec4<T>{mat[0][j], mat[1][j], mat[2][j], mat[3][j]};
-                matrix.rows[i][j] = row[0]*column[0] + row[1]*column[1] + row[2]*column[2] + row[3]*column[3];
-            }
+          matrix.rows[i][0] = rows[i][0] * mat[0][0] + rows[i][1] * mat[1][0] + rows[i][2] * mat[2][0] + rows[i][3] * mat[3][0];
+          matrix.rows[i][1] = rows[i][0] * mat[0][1] + rows[i][1] * mat[1][1] + rows[i][2] * mat[2][1] + rows[i][3] * mat[3][1];
+          matrix.rows[i][2] = rows[i][0] * mat[0][2] + rows[i][1] * mat[1][2] + rows[i][2] * mat[2][2] + rows[i][3] * mat[3][2];
+          matrix.rows[i][3] = rows[i][0] * mat[0][3] + rows[i][1] * mat[1][3] + rows[i][2] * mat[2][3] + rows[i][3] * mat[3][3];
         }
         return matrix;
     }
