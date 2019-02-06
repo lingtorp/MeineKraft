@@ -201,34 +201,37 @@ public:
 /// Minimal object-oriented wrapper for a collection of components a.k.a a game object 
 struct Entity {
     ID id;
+    // uint64_t components = NO_COMPONENTS;
 
     Entity(): id(EntitySystem::instance().new_entity()) {}
     ~Entity() {
       EntitySystem::instance().destroy_entity(id);
+      // TODO: Add all of them?
+      // if (components & RENDER_COMPONENT) { Renderer::instance().remove_component(id); }
     }
 
     /** Component handling for convenience **/
-    inline void attach_component(const RenderComponent& component) {
+    inline void attach_component(const RenderComponent& component) const {
       Renderer::instance().add_component(component, id);
     }
 
-    inline void attach_component(const TransformComponent& component) {
+    inline void attach_component(const TransformComponent& component) const {
       TransformSystem::instance().add_component(component, id);
     }
 
-    inline void attach_component(const ActionComponent& component) {
+    inline void attach_component(const ActionComponent& component) const {
       ActionSystem::instance().add_component(component);
     }
 
-    inline void deattach_component(const RenderComponent& component) {
+    inline void deattach_component(const RenderComponent& component) const {
       Renderer::instance().remove_component(id);
     }
 
-    inline void deattach_component(const TransformComponent& component) {
+    inline void deattach_component(const TransformComponent& component) const {
       TransformSystem::instance().remove_component(id);
     }
 
-    inline void deattach_component(const ActionComponent& component) {
+    inline void deattach_component(const ActionComponent& component) const {
       ActionSystem::instance().remove_component(id);
     }
 };
