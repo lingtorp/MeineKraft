@@ -20,7 +20,7 @@ struct ComputeShader;
 struct RenderPass;
 struct Material;
 
-class Renderer {
+struct Renderer {
 public:
   Renderer(Renderer& render) = delete;
   ~Renderer();
