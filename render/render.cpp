@@ -738,7 +738,8 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
 }
 
 void Renderer::remove_component(ID entity_id) {
-  // TODO: Implement
+  // TODO: Implement, buffer then components that should be removed
+  // components_to_be_removed.push_back(entity_id);
 }
 
 void Renderer::add_graphics_state(GraphicsBatch& batch, const RenderComponent& comp, Material material, ID entity_id) {
@@ -777,22 +778,22 @@ void Renderer::add_graphics_state(GraphicsBatch& batch, const RenderComponent& c
 void Renderer::update_transforms() {
   const std::vector<ID> t_ids = TransformSystem::instance().get_dirty_transform_ids();
   for (size_t i = 0; i < graphics_batches.size(); i++) {
-      auto& batch = graphics_batches[i];
-      for (const auto& t_id : t_ids) {
-        const auto idx = batch.data_idx.find(t_id);
-        if (idx == batch.data_idx.cend()) { continue; }
+    auto& batch = graphics_batches[i];
+    for (const auto& t_id : t_ids) {
+      const auto idx = batch.data_idx.find(t_id);
+      if (idx == batch.data_idx.cend()) { continue; }
 
-        // Update the bounding volume for the object
-        const TransformComponent transform = TransformSystem::instance().lookup(t_id);
-        BoundingVolume bounding_volume;
-        bounding_volume.radius = batch.bounding_volume_radius * transform.scale;
-        bounding_volume.position = transform.position;
-        batch.objects.bounding_volumes[idx->second] = bounding_volume;
-        std::memcpy(batch.gl_bounding_volume_buffer_ptr + idx->second * sizeof(BoundingVolume), &batch.objects.bounding_volumes[idx->second], sizeof(BoundingVolume));
-        // NOTE: Does not calculate the radius of the bounding volume ... BV should not be at the origin of the model ...
+      // Update the bounding volume for the object
+      const TransformComponent transform = TransformSystem::instance().lookup(t_id);
+      BoundingVolume bounding_volume;
+      bounding_volume.radius = batch.bounding_volume_radius * transform.scale;
+      bounding_volume.position = transform.position;
+      batch.objects.bounding_volumes[idx->second] = bounding_volume;
+      std::memcpy(batch.gl_bounding_volume_buffer_ptr + idx->second * sizeof(BoundingVolume), &batch.objects.bounding_volumes[idx->second], sizeof(BoundingVolume));
+      // NOTE: Does not calculate the radius of the bounding volume ... BV should not be at the origin of the model ...
 
-        batch.objects.transforms[idx->second] = compute_transform(transform);
-        std::memcpy(batch.gl_depth_model_buffer_object_ptr + idx->second * sizeof(Mat4f), &batch.objects.transforms[idx->second], sizeof(Mat4f));
-      }
+      batch.objects.transforms[idx->second] = compute_transform(transform);
+      std::memcpy(batch.gl_depth_model_buffer_object_ptr + idx->second * sizeof(Mat4f), &batch.objects.transforms[idx->second], sizeof(Mat4f));
+    }
   }
 }
