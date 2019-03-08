@@ -18,7 +18,7 @@ private:
   std::mutex mut;
 
 public:
-  explicit Semaphore(size_t val) : value(val) {}
+  explicit Semaphore(const size_t val) : value(val) {}
 
   void post(const size_t val = 1) {
     std::lock_guard<std::mutex> lk(mut);
