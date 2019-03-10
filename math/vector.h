@@ -88,25 +88,25 @@ struct Vec3 {
     constexpr explicit Vec3(T val): x(val), y(val), z(val) {};
     constexpr Vec3(): x{}, y{}, z{} {};
 
-    inline static Vec3 zero() { return Vec3(0.0f, 0.0f, 0.0f); }
+    constexpr inline static Vec3 zero() { return Vec3(0.0f, 0.0f, 0.0f); }
 
     /// Unit vector along x-axis
-    inline static Vec3 X() { return Vec3(1.0f, 0.0f, 0.0f); }
+    constexpr inline static Vec3 X() { return Vec3(1.0f, 0.0f, 0.0f); }
 
     /// Unit vector along y-axis
-    inline static Vec3 Y() { return Vec3(0.0f, 1.0f, 0.0f); }
+    constexpr inline static Vec3 Y() { return Vec3(0.0f, 1.0f, 0.0f); }
 
     /// Unit vector along z-axis
-    inline static Vec3 Z() { return Vec3(0.0f, 0.0f, 1.0f); }
+    constexpr inline static Vec3 Z() { return Vec3(0.0f, 0.0f, 1.0f); }
 
     /// Length of the vector
-    inline float length() const { return std::sqrtf(std::pow(x, 2.0f) + std::pow(y, 2.0f) + std::pow(z, 2.0f)); }
+    constexpr inline float length() const { return std::sqrtf(std::pow(x, 2.0f) + std::pow(y, 2.0f) + std::pow(z, 2.0f)); }
 
     /// Squared length of the vector
-    inline float sqr_length() const { return x * x + y * y + z * z; }
+    constexpr inline float sqr_length() const { return x * x + y * y + z * z; }
 
     /// Normalizes a copy of this vector and returns it
-    inline Vec3<T> normalize() const {
+    constexpr inline Vec3<T> normalize() const {
         const float length = this->length();
         Vec3<T> result;
         result.x = x / length;
@@ -116,13 +116,13 @@ struct Vec3 {
     }
 
     /// Sum of the components of the vector
-    inline T sum() const { return x + y + z; }
+    constexpr inline T sum() const { return x + y + z; }
 
     /// Floors the components
-    Vec3<T> floor() const { return {std::floor(x), std::floor(y), std::floor(z)}; }
+    constexpr Vec3<T> floor() const { return Vec3<T>(std::floor(x), std::floor(y), std::floor(z)); }
 
     /// Result = v x u
-    inline Vec3<T> cross(Vec3<T> u) const {
+    constexpr inline Vec3<T> cross(const Vec3<T>& u) const {
         Vec3<T> result;
         result.x = y * u.z - z * u.y;
         result.y = z * u.x - x * u.z;
@@ -131,7 +131,7 @@ struct Vec3 {
     }
 
     /// Dot product of this and the vector u
-    inline T dot(Vec3<T> u) const { return x * u.x + y * u.y + z * u.z; }
+    constexpr inline T dot(const Vec3<T>& u) const { return x * u.x + y * u.y + z * u.z; }
 
     /************ Operators ************/
     // Hashing operator
@@ -147,35 +147,35 @@ struct Vec3 {
       return "(x:" + std::to_string(x) + " y:" + std::to_string(y) + " z:" + std::to_string(z) + ")";
     }
 
-    inline bool operator<(const Vec3& rhs) const {
+    constexpr inline bool operator<(const Vec3& rhs) const {
         return (x < rhs.x) && (y < rhs.y) && (z < rhs.z);
     }
 
-    inline Vec3<T> operator+(const Vec3& rhs) const {
+    constexpr inline Vec3<T> operator+(const Vec3& rhs) const {
         return Vec3<T>{x + rhs.x, y + rhs.y, z + rhs.z};
     }
 
-    inline Vec3<T> operator+(const T rhs) const {
+    constexpr inline Vec3<T> operator+(const T rhs) const {
         return Vec3<T>{x + rhs, y + rhs, z + rhs};
     }
 
-    inline Vec3<T> operator*(const Vec3& rhs) const {
+    constexpr inline Vec3<T> operator*(const Vec3& rhs) const {
         return Vec3<T>{x * rhs.x, y * rhs.y, z * rhs.z};
     }
 
-    inline Vec3<T> operator*(const T s) const {
+    constexpr inline Vec3<T> operator*(const T s) const {
         return Vec3<T>{x * s, y * s, z * s};
     }
 
-    inline Vec3<T> operator*=(const T rhs) const {
+    constexpr inline Vec3<T> operator*=(const T rhs) const {
       return Vec3<T>{x * rhs, y * rhs, z * rhs};
     }
 
-    inline bool operator==(const Vec3& rhs) const {
+    constexpr inline bool operator==(const Vec3& rhs) const {
         return (x == rhs.x) && (y == rhs.y) && (z == rhs.z);
     }
 
-    inline Vec3 operator/(const float& rhs) const {
+    constexpr inline Vec3 operator/(const float& rhs) const {
       return Vec3(x / rhs, y / rhs, z / rhs);
     }
 
@@ -183,13 +183,11 @@ struct Vec3 {
         return os << "(x:" << vec.x << " y:" << vec.y << " z:" << vec.z << ")";
     }
 
-    inline Vec3 operator-(const Vec3& rhs) const {
+    constexpr inline Vec3 operator-(const Vec3& rhs) const {
         return Vec3{x - rhs.x, y - rhs.y, z - rhs.z};
     }
 
-    inline Vec3 operator-() const {
-        return Vec3{-x, -y, -z};
-    }
+    constexpr inline Vec3 operator-() const { return Vec3{-x, -y, -z}; }
 
 private:
   void hash_combine(size_t& seed, const size_t hash) const {
@@ -198,34 +196,34 @@ private:
 };
 
 template<typename T>
-inline Vec3<T> operator*(const T s, const Vec3<T>& v) {
+constexpr inline Vec3<T> operator*(const T s, const Vec3<T>& v) {
     return Vec3<T>{v.x * s, v.y * s, v.z * s};
 }
 
 template<typename T>
 struct Vec2 {
     T x, y;
-    Vec2(T x, T y): x(x), y(y) {};
-    Vec2(): x(0.0f), y(0.0f) {};
+    constexpr Vec2(const T x, const T y): x(x), y(y) {};
+    constexpr Vec2(): x(0.0f), y(0.0f) {};
 
     /// Sum of the components of the vector
-    inline T sum() const { return x + y; }
+    constexpr inline T sum() const { return x + y; }
 
     /// Floors the components and returns a copy
-    inline Vec2<T> floor() const { return {std::floor(x), std::floor(y)}; }
+    constexpr inline Vec2<T> floor() const { return {std::floor(x), std::floor(y)}; }
 
     /// Dot product
-    inline T dot(Vec2<T> u) const { return x * u.x + y * u.y; }
+    constexpr inline T dot(Vec2<T> u) const { return x * u.x + y * u.y; }
 
     /************ Operators ************/
-    Vec2<T> operator+(const Vec2& rhs) const { return {x + rhs.x, y + rhs.y}; }
+    constexpr Vec2<T> operator+(const Vec2& rhs) const { return {x + rhs.x, y + rhs.y}; }
 
-    Vec2<T> operator-(const Vec2& rhs) const { return {x - rhs.x, y - rhs.y}; }
+    constexpr Vec2<T> operator-(const Vec2& rhs) const { return {x - rhs.x, y - rhs.y}; }
 
-    bool operator==(const Vec2& rhs) const { return x == rhs.x && y == rhs.y; }
+    constexpr bool operator==(const Vec2& rhs) const { return x == rhs.x && y == rhs.y; }
 
     /// Returns a copy of this vector normalized
-    inline Vec2<T> normalize() const {
+    constexpr inline Vec2<T> normalize() const {
         double length = this->length();
         Vec2<T> result;
         result.x = x / length;
@@ -234,11 +232,9 @@ struct Vec2 {
     }
 
     /// Length of the vector
-    inline double length() const { return std::sqrt(std::pow(x, 2) + std::pow(y, 2)); }
+    constexpr inline double length() const { return std::sqrt(std::pow(x, 2) + std::pow(y, 2)); }
 
-    friend std::ostream &operator<<(std::ostream& os, const Vec2& v) {
-      return os << "(x: " << v.x << ", y: " << v.y << std::endl;
-    }
+    friend std::ostream &operator<<(std::ostream& os, const Vec2& v) { return os << "(x: " << v.x << ", y: " << v.y << std::endl; }
 };
 
 template<typename T>
@@ -250,7 +246,7 @@ public:
     inline T* data() const { return &rows[0][0]; }
 
     /// Identity matrix by default
-    Mat4<T>() {
+    constexpr Mat4<T>() {
         rows[0] = Vec4<T>{1.0f, 0.0f, 0.0f, 0.0f};
         rows[1] = Vec4<T>{0.0f, 1.0f, 0.0f, 0.0f};
         rows[2] = Vec4<T>{0.0f, 0.0f, 1.0f, 0.0f};
@@ -258,7 +254,7 @@ public:
     }
 
     /// Translation - positions the matrix projection in space ...
-    inline Mat4<T> set_translation(const Vec3<T>& vec) const {
+    constexpr inline Mat4<T> set_translation(const Vec3<T>& vec) const {
         Mat4<T> matrix;
         matrix[0] = { 1.0f, 0.0f, 0.0f, 0.0f };
         matrix[1] = { 0.0f, 1.0f, 0.0f, 0.0f };
@@ -268,12 +264,12 @@ public:
     }
 
     /// Gets the translation vector (if that makes sense depends on the matrix) from the matrix
-    inline Vec3<T> get_translation() const {
+    constexpr inline Vec3<T> get_translation() const {
       return Vec3<T>{rows[3][0], rows[3][1], rows[3][2]};
     }
 
     /// Translation - moves the matrix projection in space ...
-    inline Mat4<T> translate(const Vec3<T>& vec) const {
+    constexpr inline Mat4<T> translate(const Vec3<T>& vec) const {
         Mat4<T> matrix;
         matrix[0] = { 1.0f, 0.0f, 0.0f, 0.0f };
         matrix[1] = { 0.0f, 1.0f, 0.0f, 0.0f };
@@ -283,7 +279,7 @@ public:
     }
 
     /// Scales the matrix the same over all axis except w
-    inline Mat4<T> scale(const T scale) const {
+    constexpr inline Mat4<T> scale(const T scale) const {
         Mat4<T> matrix;
         matrix[0] = {scale, 0.0f, 0.0f, 0.0f};
         matrix[1] = {0.0f, scale, 0.0f, 0.0f};
@@ -293,7 +289,7 @@ public:
     }
 
     /// Transposes the current matrix and returns that matrix
-    inline Mat4<T> transpose() {
+    constexpr inline Mat4<T> transpose() {
         Mat4<T> mat;
         mat[0][0] = rows[0][0];
         mat[1][1] = rows[1][1];
@@ -319,7 +315,7 @@ public:
 
     /************ Operators ************/
     /// Standard matrix multiplication row-column wise; *this * mat
-    inline Mat4<T> operator*(const Mat4<T>& mat) const {
+    constexpr inline Mat4<T> operator*(const Mat4<T>& mat) const {
         Mat4<T> matrix;
         for (uint8_t i = 0; i < 4; ++i) {
           matrix.rows[i][0] = rows[i][0] * mat[0][0] + rows[i][1] * mat[1][0] + rows[i][2] * mat[2][0] + rows[i][3] * mat[3][0];
@@ -331,7 +327,7 @@ public:
     }
 
     /// A * v = b
-    inline Vec4<T> operator*(Vec4<T> rhs) const {
+    constexpr inline Vec4<T> operator*(Vec4<T> rhs) const {
         Vec4<T> result;
         for (int i = 0; i < 4; i++) {
             result[i] = rows[i].x * rhs.x + rows[i].y * rhs.y + rows[i].z * rhs.z + rows[i].w * rhs.w;
@@ -340,8 +336,8 @@ public:
     }
 
     /// matrix[row_i][colum_j]
-    inline Vec4<T>& operator[](const int index) { return rows[index]; }
-    inline const Vec4<T>& operator[](const int index) const { return rows[index]; }
+    constexpr inline Vec4<T>& operator[](const int index) { return rows[index]; }
+    constexpr inline const Vec4<T>& operator[](const int index) const { return rows[index]; }
 
     friend std::ostream &operator<<(std::ostream& os, const Mat4& mat) {
         return os << "\n { \n" << mat.rows[0] << "), \n" << mat.rows[1] << "), \n" << mat.rows[2] << "), \n" << mat.rows[3] << ")\n }";
