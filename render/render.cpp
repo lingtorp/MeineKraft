@@ -310,8 +310,6 @@ Renderer::Renderer(): graphics_batches{} {
     }
 
     // Shaders
-    std::string err_msg;
-    bool success = false;
     shadowmapping_shader = new Shader(Filesystem::base + "shaders/shadowmapping.vert", Filesystem::base + "shaders/shadowmapping.frag");
     std::tie(success, err_msg) = shadowmapping_shader->compile();
     if (!success) {
