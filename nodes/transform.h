@@ -58,24 +58,14 @@ public:
   }
 
   std::vector<ID> get_dirty_transform_ids() const {
-    std::vector<ID> dirty_ids(dirty_idx);
-    for (size_t i = 0; i < dirty_idx; i++) {
+    std::vector<ID> dirty_ids(dirty_idx + 1);
+    for (size_t i = 0; i <= dirty_idx; i++) {
       dirty_ids[i] = data_ids[i];
     }
     return dirty_ids;
   }
 
-  std::vector<ID> get_dirty_transform_ids_from(const std::vector<ID>& ids) const {
-    std::vector<ID> dirty_ids;
-    for (const auto& id : ids) {
-      if (data_idxs.at(id) <= dirty_idx) {
-        dirty_ids.emplace_back(id);
-      }
-    }
-    return dirty_ids;
-  }
-
-  /// Looking up with a non-existant ID returns the first element in the data
+  /// Looking up with a non-existant ID returns the first element in the data, returns copy otherwise
   TransformComponent lookup(const ID id) {
     return data[data_idxs[id]]; 
   }
