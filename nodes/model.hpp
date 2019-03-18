@@ -2,8 +2,8 @@
 #ifndef MEINEKRAFT_TEAPOT_H
 #define MEINEKRAFT_TEAPOT_H
 
-#include "entity.h"
-#include "../render/rendercomponent.h"
+#include "entity.hpp"
+#include "../render/rendercomponent.hpp"
 
 class Model: public Entity {
 public:

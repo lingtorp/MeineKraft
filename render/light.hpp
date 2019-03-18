@@ -2,7 +2,7 @@
 #ifndef MEINEKRAFT_LIGHT_H
 #define MEINEKRAFT_LIGHT_H
 
-#include "../math/vector.h"
+#include "../math/vector.hpp"
 
 /// Padded in order to fit with the shader declaration
 struct PointLight {

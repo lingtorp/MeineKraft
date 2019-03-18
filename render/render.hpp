@@ -6,9 +6,9 @@
 #include <string>
 #include <vector>
 
-#include "texture.h"
-#include "light.h"
-#include "../render/primitives.h"
+#include "texture.hpp"
+#include "light.hpp"
+#include "../render/primitives.hpp"
 
 #include <glm/mat4x4.hpp>
 

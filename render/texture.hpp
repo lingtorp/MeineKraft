@@ -13,7 +13,7 @@
 #include <SDL2/SDL_image.h>
 #endif 
 
-#include "../util/logging.h"
+#include "../util/logging.hpp"
 
 /// Opaque ID type used to reference resources throughout the engine
 typedef uint64_t ID;

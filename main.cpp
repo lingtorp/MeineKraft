@@ -1,16 +1,16 @@
 #include <memory>
 #include <chrono>
 
-#include "render/render.h"
+#include "render/render.hpp"
 #include "include/imgui/imgui_impl_sdl.h"
-#include "render/camera.h"
-#include "nodes/model.h"
-#include "util/filesystem.h"
+#include "render/camera.hpp"
+#include "nodes/model.hpp"
+#include "util/filesystem.hpp"
 #include "scene/world.hpp"
-#include "render/debug_opengl.h"
-#include "nodes/skybox.h"
+#include "render/debug_opengl.hpp"
+#include "nodes/skybox.hpp"
 #include "scene/world.hpp"
-#include "render/graphicsbatch.h"
+#include "render/graphicsbatch.hpp"
 
 struct Resolution {
   int width, height;

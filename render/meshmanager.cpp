@@ -1,9 +1,9 @@
-#include "meshmanager.h"
+#include "meshmanager.hpp"
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 #include <assimp/Importer.hpp>
-#include "../util/filesystem.h"
-#include "../util/logging.h"
+#include "../util/filesystem.hpp"
+#include "../util/logging.hpp"
 
 static std::vector<Mesh> loaded_meshes{Cube(), Cube(true), Sphere()};
 

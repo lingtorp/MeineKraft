@@ -2,7 +2,7 @@
 #ifndef MEINEKRAFT_SKYBOX_H
 #define MEINEKRAFT_SKYBOX_H
 
-#include "entity.h"
+#include "entity.hpp"
 
 class Skybox: public Entity {
 public:

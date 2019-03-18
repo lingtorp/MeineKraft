@@ -1,8 +1,8 @@
-#include "camera.h"
-
 #include <algorithm>
-#include "../math/quaternion.h"
-#include "../render/primitives.h"
+#include "../math/quaternion.hpp"
+#include "../render/primitives.hpp"
+
+#include "camera.hpp"
 
 /*
 Camera::Camera(Vec3<float> position, Vec3<float> direction, Vec3<float> up):

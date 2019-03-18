@@ -1,8 +1,8 @@
-#include "skybox.h"
-#include "../render/camera.h"
-#include "../render/rendercomponent.h"
-#include "../util/filesystem.h"
-#include "../render/render.h"
+#include "skybox.hpp"
+#include "../render/camera.hpp"
+#include "../render/rendercomponent.hpp"
+#include "../util/filesystem.hpp"
+#include "../render/render.hpp"
 
 Skybox::Skybox(): Entity() {
   NameSystem::instance().add_name_to_entity("Skybox", this->id);

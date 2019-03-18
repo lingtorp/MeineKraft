@@ -2,7 +2,7 @@
 #ifndef MEINEKRAFT_QUATERNION_H
 #define MEINEKRAFT_QUATERNION_H
 
-#include "vector.h"
+#include "vector.hpp"
 
 #include <glm/glm.hpp>
 

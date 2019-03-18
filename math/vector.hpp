@@ -13,6 +13,30 @@
 #include <math.h>
 #endif
 
+constexpr inline float mk_cos(const float x) {
+#if defined(__APPLE__)
+  return std::cos(x);
+#elif defined(__linux__)
+  return cosf(x);
+#endif
+}
+
+constexpr inline float mk_sin(const float x) {
+#if defined(__APPLE__)
+  return std::sin(x);
+#elif defined(__linux__)
+  return sinf(x);
+#endif
+}
+
+constexpr inline float mk_sqrtf(const float x) {
+#if defined(__APPLE__)
+  return std::sqrt(x);
+#elif defined(__linux__)
+  return sqrt(x);
+#endif
+}
+
 /************ Forward declarations ************/
 template<typename T>
 struct Vec2;
@@ -30,7 +54,7 @@ struct Vec4 {
     Vec4(T x, T y, T z, T w): x(x), y(y), z(z), w(w) { };
     Vec4(T x, T y, T z): x(x), y(y), z(z), w(0.0f) { };
     Vec4(): x(0.0f), y(0.0f), z(0.0f), w(0.0f) { };
-    explicit Vec4(T val): x(val), y(val), z(val), w(val) {};
+    explicit Vec4(T val): x(val), y(val), z(val), w(val) { };
     explicit Vec4(Vec3<T> vec): x(vec.x), y(vec.y), z(vec.z), w(0.0f) { };
 
     /************ Operators ************/
@@ -100,7 +124,7 @@ struct Vec3 {
     constexpr inline static Vec3 Z() { return Vec3(0.0f, 0.0f, 1.0f); }
 
     /// Length of the vector
-    constexpr inline float length() const { return std::sqrtf(std::pow(x, 2.0f) + std::pow(y, 2.0f) + std::pow(z, 2.0f)); }
+    constexpr inline float length() const { return mk_sqrtf(x * x + y * y + z * z); }
 
     /// Squared length of the vector
     constexpr inline float sqr_length() const { return x * x + y * y + z * z; }

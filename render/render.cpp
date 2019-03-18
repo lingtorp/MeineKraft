@@ -1,4 +1,4 @@
-#include "render.h"
+#include "render.hpp"
 
 #include <array>
 
@@ -8,13 +8,13 @@
 #include <GL/glew.h>
 #endif
 
-#include "camera.h"
-#include "graphicsbatch.h"
-#include "../util/filesystem.h"
-#include "debug_opengl.h"
-#include "rendercomponent.h"
-#include "meshmanager.h"
-#include "../nodes/entity.h"
+#include "camera.hpp"
+#include "graphicsbatch.hpp"
+#include "../util/filesystem.hpp"
+#include "debug_opengl.hpp"
+#include "rendercomponent.hpp"
+#include "meshmanager.hpp"
+#include "../nodes/entity.hpp"
 
 #include <glm/common.hpp>
 #include <glm/gtc/type_ptr.hpp>

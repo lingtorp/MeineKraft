@@ -3,8 +3,9 @@
 #define MEINEKRAFT_TRANSFORM_H
 
 #include <unordered_map>
-#include "../render/primitives.h"
-#include "../math/quaternion.h"
+
+#include "../render/primitives.hpp"
+#include "../math/quaternion.hpp"
 
 struct NameSystem {
 private:

@@ -1,4 +1,4 @@
-#include "model.h"
+#include "model.hpp"
 
 Model::Model(const std::string& directory, const std::string& file) {
   NameSystem::instance().add_name_to_entity(file, id);

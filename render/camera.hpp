@@ -2,7 +2,7 @@
 #ifndef MEINEKRAFT_CAMERA_H
 #define MEINEKRAFT_CAMERA_H
 
-#include "../math/vector.h"
+#include "../math/vector.hpp"
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/common.hpp>

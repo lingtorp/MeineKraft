@@ -2,9 +2,9 @@
 #ifndef MEINEKRAFT_ENTITY_H
 #define MEINEKRAFT_ENTITY_H
 
-#include "../render/rendercomponent.h"
-#include "transform.h"
-#include "../render/render.h"
+#include "../render/rendercomponent.hpp"
+#include "transform.hpp"
+#include "../render/render.hpp"
 
 #include <algorithm>
 #include <functional>

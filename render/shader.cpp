@@ -1,8 +1,8 @@
-#include "shader.h"
+#include "shader.hpp"
 
 #include <fstream>
 
-#include "debug_opengl.h"
+#include "debug_opengl.hpp"
 
 #ifdef _WIN32
 #include <glew.h>

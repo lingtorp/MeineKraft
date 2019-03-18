@@ -1,9 +1,9 @@
 #include <SDL_opengl.h> // TODO: Remove.
 
-#include "rendercomponent.h"
-#include "render.h"
-#include "../nodes/entity.h"
-#include "meshmanager.h"
+#include "rendercomponent.hpp"
+#include "render.hpp"
+#include "../nodes/entity.hpp"
+#include "meshmanager.hpp"
 
 namespace TextureManager {
   static std::unordered_map<ID, RawTexture> textures{};

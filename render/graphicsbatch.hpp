@@ -4,12 +4,12 @@
 
 #include <map>
 
-#include "rendercomponent.h"
-#include "../nodes/transform.h"
-#include "primitives.h"
-#include "shader.h"
-#include "debug_opengl.h"
-#include "meshmanager.h"
+#include "rendercomponent.hpp"
+#include "../nodes/transform.hpp"
+#include "primitives.hpp"
+#include "shader.hpp"
+#include "debug_opengl.hpp"
+#include "meshmanager.hpp"
 
 #ifdef _WIN32
 #include <glew.h>

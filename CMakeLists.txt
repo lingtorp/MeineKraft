@@ -6,7 +6,7 @@ if(UNIX)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread") # pthread for Linux
 endif(UNIX)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 
 if(WIN32)
         # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /d2cgsummary") # 
@@ -22,20 +22,20 @@ include_directories(include/glew)
 include_directories(include/sdl2)
 include_directories(include/sdl2-image)
 
-set(MATH_SRC_FILES "math/noise.h" "math/vector.h" "math/quaternion.h")
+set(MATH_SRC_FILES "math/noise.hpp" "math/vector.hpp" "math/quaternion.hpp")
 source_group("math" FILES ${MATH_SRC_FILES})
 
-set(NODES_SRC_FILES "nodes/transform.h" "nodes/skybox.cpp" "nodes/skybox.h" "nodes/model.cpp" "nodes/model.h" "nodes/entity.cpp" "nodes/entity.h")
+set(NODES_SRC_FILES "nodes/transform.hpp" "nodes/skybox.cpp" "nodes/skybox.hpp" "nodes/model.cpp" "nodes/model.hpp" "nodes/entity.cpp" "nodes/entity.hpp")
 source_group("nodes" FILES ${NODES_SRC_FILES})
 
-set(RENDER_SRC_FILES "render/shader.cpp" "render/shader.h" "render/texture.cpp" "render/texture.h" 
-        "render/rendercomponent.cpp" "render/rendercomponent.h" "render/ray.h" "render/graphicsbatch.h"
-        "render/render.cpp" "render/render.h" "render/primitives.h"
-        "render/camera.cpp" "render/camera.h" "render/debug_opengl.h"
-        "render/light.h" "render/meshmanager.cpp" "render/meshmanager.h" "render/texturemanager.h")
+set(RENDER_SRC_FILES "render/shader.cpp" "render/shader.hpp" "render/texture.cpp" "render/texture.hpp" 
+        "render/rendercomponent.cpp" "render/rendercomponent.hpp" "render/ray.hpp" "render/graphicsbatch.hpp"
+        "render/render.cpp" "render/render.hpp" "render/primitives.hpp"
+        "render/camera.cpp" "render/camera.hpp" "render/debug_opengl.hpp"
+        "render/light.hpp" "render/meshmanager.cpp" "render/meshmanager.hpp" "render/texturemanager.hpp")
 source_group("render" FILES ${RENDER_SRC_FILES})
 
-set(UTIL_SRC_FILES "util/filemonitor.cpp" "util/filemonitor.h" "util/filesystem.h" "util/stb_image.h" "util/logging.h")
+set(UTIL_SRC_FILES "util/filemonitor.cpp" "util/filemonitor.hpp" "util/filesystem.hpp" "util/stb_image.h" "util/logging.hpp")
 source_group("util" FILES ${UTIL_SRC_FILES})
 
 set(SCENE_SRC_FILES "scene/world.cpp" "scene/world.hpp")

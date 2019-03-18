@@ -2,10 +2,10 @@
 #ifndef MEINEKRAFT_WORLD_HPP
 #define MEINEKRAFT_WORLD_HPP
 
-#include "../nodes/entity.h"
-#include "../render/camera.h"
-#include "../util/filesystem.h"
-#include "../math/noise.h"
+#include "../nodes/entity.hpp"
+#include "../render/camera.hpp"
+#include "../util/filesystem.hpp"
+#include "../math/noise.hpp"
 
 #include <array>
 #include <set>

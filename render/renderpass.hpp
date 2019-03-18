@@ -2,8 +2,8 @@
 #ifndef MEINEKRAFT_RENDERPASS_H
 #define MEINEKRAFT_RENDERPASS_H
 
-#include "shader.h"
-#include "render.h"
+#include "shader.hpp"
+#include "render.hpp"
 
 #include <stdint.h>
 

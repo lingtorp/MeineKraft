@@ -2,7 +2,7 @@
 #ifndef NOISE_H
 #define NOISE_H
 
-#include "vector.h"
+#include "vector.hpp"
 
 #include <random>
 #include <algorithm>

@@ -6,7 +6,7 @@
 #include <vector>
 #include <set>
 
-#include "texture.h"
+#include "texture.hpp"
 
 struct Shader {
   enum class Defines: uint32_t {
