@@ -8,6 +8,8 @@ endif(UNIX)
 
 set(CMAKE_CXX_STANDARD 14)
 
+set(CMAKE_BUILD_TYPE Debug)
+
 if(WIN32)
         # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /d2cgsummary") # 
         # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Bt") #  time spent in frontend (c1xx.dll) vs backend (c2.dll)
@@ -29,10 +31,10 @@ set(NODES_SRC_FILES "src/nodes/transform.hpp" "src/nodes/skybox.cpp" "src/nodes/
 source_group("nodes" FILES ${NODES_SRC_FILES})
 
 set(RENDER_SRC_FILES "src/rendering/shader.cpp" "src/rendering/shader.hpp" "src/rendering/texture.cpp" "src/rendering/texture.hpp" 
-        "src/rendering/rendercomponent.cpp" "rendering/rendercomponent.hpp" "src/rendering/ray.hpp" "src/rendering/graphicsbatch.hpp"
-        "src/rendering/renderer.cpp" "src/rendering/renderer.hpp" "src/rendering/primitives.hpp"
-        "src/rendering/camera.cpp" "src/rendering/camera.hpp" "src/rendering/debug_opengl.hpp"
-        "src/rendering/light.hpp" "src/rendering/meshmanager.cpp" "src/rendering/meshmanager.hpp" "src/rendering/texturemanager.hpp")
+        "src/rendering/rendercomponent.cpp" "src/rendering/rendercomponent.hpp" "src/rendering/ray.hpp" "src/rendering/graphicsbatch.hpp"
+        "src/rendering/renderer.cpp" "src/rendering/renderer.hpp"    "src/rendering/primitives.hpp"
+        "src/rendering/camera.cpp"   "src/rendering/camera.hpp"      "src/rendering/debug_opengl.hpp"
+        "src/rendering/light.hpp"    "src/rendering/meshmanager.cpp" "src/rendering/meshmanager.hpp" "src/rendering/texturemanager.hpp")
 source_group("render" FILES ${RENDER_SRC_FILES})
 
 set(UTIL_SRC_FILES "src/util/filemonitor.cpp" "src/util/filemonitor.hpp" "src/util/filesystem.hpp" "src/util/stb_image.h" "src/util/logging.hpp")
@@ -46,7 +48,7 @@ set(SHADER_SRC_FILES "shaders/blur-fragment.glsl" "shaders/blur-vertex.glsl" "sh
         "shaders/ssao-fragment.glsl" "shaders/ssao-vertex.glsl" "shaders/culling.comp.glsl")
 source_group("shaders" FILES ${SHADER_SRC_FILES})
 
-set(SOURCE_FILES main.cpp ${MATH_SRC_FILES} ${NODES_SRC_FILES} ${RENDER_SRC_FILES} ${UTIL_SRC_FILES} ${SCENE_SRC_FILES} ${IMGUI_SRC})
+set(SOURCE_FILES main.cpp src/meinekraft.hpp src/meinekraft.cpp ${MATH_SRC_FILES} ${NODES_SRC_FILES} ${RENDER_SRC_FILES} ${UTIL_SRC_FILES} ${SCENE_SRC_FILES} ${IMGUI_SRC})
 add_executable(MeineKraft ${SOURCE_FILES})
 
 if(WIN32)
