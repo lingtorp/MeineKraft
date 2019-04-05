@@ -1,6 +1,6 @@
 #pragma once
-#ifndef MEINEKRAFT_FILESYSTEM_H
-#define MEINEKRAFT_FILESYSTEM_H
+#ifndef MEINEKRAFT_FILESYSTEM_HPP
+#define MEINEKRAFT_FILESYSTEM_HPP
 
 // TODO: Make these dynamic rather than static
 namespace Filesystem {
@@ -22,4 +22,4 @@ namespace Filesystem {
 #endif
 }
 
-#endif // MEINEKRAFT_FILESYSTEM_H
+#endif // MEINEKRAFT_FILESYSTEM_HPP

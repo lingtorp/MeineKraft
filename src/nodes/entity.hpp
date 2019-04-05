@@ -1,10 +1,10 @@
 #pragma once
-#ifndef MEINEKRAFT_ENTITY_H
-#define MEINEKRAFT_ENTITY_H
+#ifndef MEINEKRAFT_ENTITY_HPP
+#define MEINEKRAFT_ENTITY_HPP
 
-#include "../render/rendercomponent.hpp"
+#include "../rendering/rendercomponent.hpp"
 #include "transform.hpp"
-#include "../render/render.hpp"
+#include "../rendering/renderer.hpp"
 
 #include <algorithm>
 #include <functional>
@@ -238,4 +238,4 @@ struct Entity {
     }
 };
 
-#endif // MEINEKRAFT_ENTITY_H
+#endif // MEINEKRAFT_ENTITY_HPP

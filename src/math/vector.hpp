@@ -1,6 +1,6 @@
 #pragma once
-#ifndef MEINEKRAFT_VECTOR_H
-#define MEINEKRAFT_VECTOR_H
+#ifndef MEINEKRAFT_VECTOR_HPP
+#define MEINEKRAFT_VECTOR_HPP
 
 #include <iostream>
 #include <vector>
@@ -387,4 +387,4 @@ using Vec3d = Vec3<double>;
 using Vec4d = Vec4<double>;
 using Mat4d = Mat4<double>;
 
-#endif // MEINEKRAFT_VECTOR_H
+#endif // MEINEKRAFT_VECTOR_HPP

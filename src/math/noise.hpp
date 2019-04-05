@@ -1,6 +1,6 @@
 #pragma once
-#ifndef NOISE_H
-#define NOISE_H
+#ifndef NOISE_HPP
+#define NOISE_HPP
 
 #include "vector.hpp"
 
@@ -834,4 +834,4 @@ public:
     }
 };
 
-#endif // NOISE_H
+#endif // NOISE_HPP

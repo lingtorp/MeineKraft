@@ -1,10 +1,10 @@
 #pragma once
-#ifndef MEINEKRAFT_TRANSFORM_H
-#define MEINEKRAFT_TRANSFORM_H
+#ifndef MEINEKRAFT_TRANSFORM_HPP
+#define MEINEKRAFT_TRANSFORM_HPP
 
 #include <unordered_map>
 
-#include "../render/primitives.hpp"
+#include "../rendering/primitives.hpp"
 #include "../math/quaternion.hpp"
 
 struct NameSystem {
@@ -111,4 +111,4 @@ public:
   }
 };
 
-#endif // MEINEKRAFT_TRANSFORM_H
+#endif // MEINEKRAFT_TRANSFORM_HPP

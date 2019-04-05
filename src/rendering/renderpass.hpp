@@ -1,9 +1,9 @@
 #pragma once
-#ifndef MEINEKRAFT_RENDERPASS_H
-#define MEINEKRAFT_RENDERPASS_H
+#ifndef MEINEKRAFT_RENDERPASS_HPP
+#define MEINEKRAFT_RENDERPASS_HPP
 
 #include "shader.hpp"
-#include "render.hpp"
+#include "renderer.hpp"
 
 #include <stdint.h>
 
@@ -192,4 +192,4 @@ class SSAOPass: public RenderPass {
   }
 };
 
-#endif // MEINEKRAFT_RENDERPASS_H
+#endif // MEINEKRAFT_RENDERPASS_HPP

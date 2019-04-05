@@ -1,6 +1,6 @@
 #pragma once
-#ifndef MEINEKRAFT_FILEMONITOR_H
-#define MEINEKRAFT_FILEMONITOR_H
+#ifndef MEINEKRAFT_FILEMONITOR_HPP
+#define MEINEKRAFT_FILEMONITOR_HPP
 
 #include <string>
 #include <unordered_map>
@@ -45,4 +45,4 @@ private:
     uint64_t get_time_modified(struct stat &stats);
 };
 
-#endif // MEINEKRAFT_FILEMONITOR_H
+#endif // MEINEKRAFT_FILEMONITOR_HPP

@@ -113,7 +113,7 @@ std::array<glm::vec4, 6> extract_planes(const glm::mat4& mat) {
 
 Renderer::~Renderer() = default;
 
-Renderer::Renderer(): graphics_batches{} {
+Renderer::Renderer(Resolution& screen): graphics_batches{} {
   glewExperimental = (GLboolean) true;
   glewInit();
 

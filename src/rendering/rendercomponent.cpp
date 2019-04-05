@@ -1,7 +1,7 @@
 #include <SDL_opengl.h> // TODO: Remove.
 
 #include "rendercomponent.hpp"
-#include "render.hpp"
+#include "renderer.hpp"
 #include "../nodes/entity.hpp"
 #include "meshmanager.hpp"
 

@@ -1,6 +1,6 @@
 #pragma once
-#ifndef MEINEKRAFT_CAMERA_H
-#define MEINEKRAFT_CAMERA_H
+#ifndef MEINEKRAFT_CAMERA_HPP
+#define MEINEKRAFT_CAMERA_HPP
 
 #include "../math/vector.hpp"
 
@@ -79,4 +79,4 @@ struct Camera {
     glm::mat4 transform() const;
 };
 
-#endif // MEINEKRAFT_CAMERA_H
+#endif // MEINEKRAFT_CAMERA_HPP

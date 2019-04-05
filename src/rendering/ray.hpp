@@ -1,19 +1,18 @@
 #pragma once
-#ifndef MEINEKRAFT_RAY_H
-#define MEINEKRAFT_RAY_H
+#ifndef MEINEKRAFT_RAY_HPP
+#define MEINEKRAFT_RAY_HPP
 
 #include "../math/vector.hpp"
 
 class Ray {
 public:
-    Vec3<> origin;
-    Vec3<> direction;
+    Vec3f origin;
+    Vec3f direction;
 
-    Ray() : origin(Vec3<>::ZERO()), direction(Vec3<>::ZERO()) {}
-    Ray(Vec3<> position, Vec3<> direction) :
-            origin(position), direction(direction) {}
+    Ray() : origin(Vec3f::ZERO(), direction(Vec3f::ZERO()) {}
+    Ray(Vec3f position, Vec3f direction): origin(position), direction(direction) {}
 
-    inline bool hits_sphere(Vec3<> sphere_center, double sphere_radius) {
+    inline bool hits_sphere(Vec3f sphere_center, double sphere_radius) {
         // dot(p(t) - C, p(t) - C) - R^2 = 0
         // p(t) = A + t*B // ray
         // C = (x, y, z) // position of the sphere
@@ -26,4 +25,4 @@ public:
     }
 };
 
-#endif //MEINEKRAFT_RAY_H
+#endif // MEINEKRAFT_RAY_HPP

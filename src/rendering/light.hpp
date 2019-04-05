@@ -1,6 +1,6 @@
 #pragma once
-#ifndef MEINEKRAFT_LIGHT_H
-#define MEINEKRAFT_LIGHT_H
+#ifndef MEINEKRAFT_LIGHT_HPP
+#define MEINEKRAFT_LIGHT_HPP
 
 #include "../math/vector.hpp"
 
@@ -14,4 +14,4 @@ struct PointLight {
   friend std::ostream &operator<<(std::ostream &os, const PointLight &light) { return os << light.position; }
 };
 
-#endif // MEINEKRAFT_LIGHT_H
+#endif // MEINEKRAFT_LIGHT_HPP

@@ -1,6 +1,6 @@
 #pragma once
-#ifndef MEINEKRAFT_RENDERCOMPONENT_H
-#define MEINEKRAFT_RENDERCOMPONENT_H
+#ifndef MEINEKRAFT_RENDERCOMPONENT_HPP
+#define MEINEKRAFT_RENDERCOMPONENT_HPP
 
 #include "primitives.hpp"
 #include "texture.hpp"
@@ -31,4 +31,4 @@ struct RenderComponent {
   }
 };
 
-#endif // MEINEKRAFT_RENDERCOMPONENT_H
+#endif // MEINEKRAFT_RENDERCOMPONENT_HPP

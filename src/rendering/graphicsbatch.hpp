@@ -1,6 +1,6 @@
 #pragma once
-#ifndef MEINEKRAFT_GRAPHICSBATCH_H
-#define MEINEKRAFT_GRAPHICSBATCH_H
+#ifndef MEINEKRAFT_GRAPHICSBATCH_HPP
+#define MEINEKRAFT_GRAPHICSBATCH_HPP
 
 #include <map>
 
@@ -253,4 +253,4 @@ struct GraphicsBatch {
   uint32_t gl_shadowmapping_vao = 0;
 };
 
-#endif // MEINEKRAFT_GRAPHICSBATCH_H
+#endif // MEINEKRAFT_GRAPHICSBATCH_HPP

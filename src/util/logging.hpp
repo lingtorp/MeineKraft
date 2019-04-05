@@ -1,6 +1,6 @@
 #pragma once
-#ifndef MEINEKRAFT_LOGGING_H
-#define MEINEKRAFT_LOGGING_H
+#ifndef MEINEKRAFT_LOGGING_HPP
+#define MEINEKRAFT_LOGGING_HPP
 
 #include <iostream>
 
@@ -20,4 +20,4 @@ namespace Log {
   #define info(msg)  log_to_console(msg, "INFO", __FILE__, __LINE__)
 } 
 
-#endif // MEINEKRAFT_LOGGING_H
+#endif // MEINEKRAFT_LOGGING_HPP

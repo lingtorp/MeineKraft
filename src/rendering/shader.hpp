@@ -1,6 +1,6 @@
 #pragma once
-#ifndef MEINEKRAFT_SHADER_H
-#define MEINEKRAFT_SHADER_H
+#ifndef MEINEKRAFT_SHADER_HPP
+#define MEINEKRAFT_SHADER_HPP
 
 #include <string>
 #include <vector>
@@ -41,4 +41,4 @@ struct ComputeShader {
   uint32_t gl_program;
 };
 
-#endif // MEINEKRAFT_SHADER_H
+#endif // MEINEKRAFT_SHADER_HPP

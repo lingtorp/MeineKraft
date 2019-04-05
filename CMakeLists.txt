@@ -22,23 +22,23 @@ include_directories(include/glew)
 include_directories(include/sdl2)
 include_directories(include/sdl2-image)
 
-set(MATH_SRC_FILES "math/noise.hpp" "math/vector.hpp" "math/quaternion.hpp")
+set(MATH_SRC_FILES "src/math/noise.hpp" "src/math/vector.hpp" "src/math/quaternion.hpp")
 source_group("math" FILES ${MATH_SRC_FILES})
 
-set(NODES_SRC_FILES "nodes/transform.hpp" "nodes/skybox.cpp" "nodes/skybox.hpp" "nodes/model.cpp" "nodes/model.hpp" "nodes/entity.cpp" "nodes/entity.hpp")
+set(NODES_SRC_FILES "src/nodes/transform.hpp" "src/nodes/skybox.cpp" "src/nodes/skybox.hpp" "src/nodes/model.cpp" "src/nodes/model.hpp" "src/nodes/entity.cpp" "src/nodes/entity.hpp")
 source_group("nodes" FILES ${NODES_SRC_FILES})
 
-set(RENDER_SRC_FILES "render/shader.cpp" "render/shader.hpp" "render/texture.cpp" "render/texture.hpp" 
-        "render/rendercomponent.cpp" "render/rendercomponent.hpp" "render/ray.hpp" "render/graphicsbatch.hpp"
-        "render/render.cpp" "render/render.hpp" "render/primitives.hpp"
-        "render/camera.cpp" "render/camera.hpp" "render/debug_opengl.hpp"
-        "render/light.hpp" "render/meshmanager.cpp" "render/meshmanager.hpp" "render/texturemanager.hpp")
+set(RENDER_SRC_FILES "src/rendering/shader.cpp" "src/rendering/shader.hpp" "src/rendering/texture.cpp" "src/rendering/texture.hpp" 
+        "src/rendering/rendercomponent.cpp" "rendering/rendercomponent.hpp" "src/rendering/ray.hpp" "src/rendering/graphicsbatch.hpp"
+        "src/rendering/renderer.cpp" "src/rendering/renderer.hpp" "src/rendering/primitives.hpp"
+        "src/rendering/camera.cpp" "src/rendering/camera.hpp" "src/rendering/debug_opengl.hpp"
+        "src/rendering/light.hpp" "src/rendering/meshmanager.cpp" "src/rendering/meshmanager.hpp" "src/rendering/texturemanager.hpp")
 source_group("render" FILES ${RENDER_SRC_FILES})
 
-set(UTIL_SRC_FILES "util/filemonitor.cpp" "util/filemonitor.hpp" "util/filesystem.hpp" "util/stb_image.h" "util/logging.hpp")
+set(UTIL_SRC_FILES "src/util/filemonitor.cpp" "src/util/filemonitor.hpp" "src/util/filesystem.hpp" "src/util/stb_image.h" "src/util/logging.hpp")
 source_group("util" FILES ${UTIL_SRC_FILES})
 
-set(SCENE_SRC_FILES "scene/world.cpp" "scene/world.hpp")
+set(SCENE_SRC_FILES "src/scene/world.cpp" "src/scene/world.hpp")
 source_group("scene" FILES ${SCENE_SRC_FILES})
 
 set(SHADER_SRC_FILES "shaders/blur-fragment.glsl" "shaders/blur-vertex.glsl" "shaders/geometry-fragment.glsl"

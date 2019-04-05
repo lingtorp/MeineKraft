@@ -1,6 +1,6 @@
 #pragma once
-#ifndef MEINEKRAFT_RENDER_H
-#define MEINEKRAFT_RENDER_H
+#ifndef MEINEKRAFT_RENDERER_HPP
+#define MEINEKRAFT_RENDERER_HPP
 
 #include <cstdint>
 #include <string>
@@ -8,7 +8,7 @@
 
 #include "texture.hpp"
 #include "light.hpp"
-#include "../render/primitives.hpp"
+#include "../rendering/primitives.hpp"
 
 #include <glm/mat4x4.hpp>
 
@@ -21,15 +21,9 @@ struct RenderPass;
 struct Material;
 
 struct Renderer {
-public:
-  Renderer(Renderer& render) = delete;
+  /// Create a renderer with a given window/screen size/resolution
+  Renderer(Resolution& screen);
   ~Renderer();
-
-  /// Singleton instance of core Render, use with caution.
-  static Renderer& instance() {
-    static Renderer instance;
-    return instance;
-  }
 
   /// Main render function, renders all the graphics batches
   void render(const uint32_t delta);
@@ -56,7 +50,6 @@ public:
   std::vector<PointLight> pointlights;
 
 private:
-  Renderer();
   void add_graphics_state(GraphicsBatch& batch, const RenderComponent& comp, Material material, ID entity_id);
   void update_transforms();
   void link_batch(GraphicsBatch& batch);
@@ -116,4 +109,4 @@ private:
   uint32_t gl_environment_map_texture_unit;
 };
 
-#endif // MEINEKRAFT_RENDER_H
+#endif // MEINEKRAFT_RENDERER_HPP

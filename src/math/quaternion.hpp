@@ -1,6 +1,6 @@
 #pragma once
-#ifndef MEINEKRAFT_QUATERNION_H
-#define MEINEKRAFT_QUATERNION_H
+#ifndef MEINEKRAFT_QUATERNION_HPP
+#define MEINEKRAFT_QUATERNION_HPP
 
 #include "vector.hpp"
 
@@ -82,5 +82,5 @@ inline quat operator*(const quat& q, const float s) {
   return quat(s * q.v, s * q.w);
 }
 
-#endif // MEINEKRAFT_QUATERNION_H
+#endif // MEINEKRAFT_QUATERNION_HPP
 

@@ -1,6 +1,6 @@
 #pragma once
-#ifndef MEINEKRAFT_TEXTURE_H
-#define MEINEKRAFT_TEXTURE_H
+#ifndef MEINEKRAFT_TEXTURE_HPP
+#define MEINEKRAFT_TEXTURE_HPP
 
 #include <cstdint>
 #include <string>
@@ -104,4 +104,4 @@ struct Texture {
   };
 };
 
-#endif // MEINEKRAFT_TEXTURE_H
+#endif // MEINEKRAFT_TEXTURE_HPP

@@ -1,6 +1,6 @@
 #pragma once
-#ifndef MEINEKRAFT_PRIMITIVES_H
-#define MEINEKRAFT_PRIMITIVES_H
+#ifndef MEINEKRAFT_PRIMITIVES_HPP
+#define MEINEKRAFT_PRIMITIVES_HPP
 
 #include <vector>
 
@@ -305,4 +305,4 @@ struct RenderState {
   RenderState(const RenderState& old): frame(old.frame), shadowmapping(old.shadowmapping) {}
 };
 
-#endif // MEINEKRAFT_PRIMITIVES_H
+#endif // MEINEKRAFT_PRIMITIVES_HPP

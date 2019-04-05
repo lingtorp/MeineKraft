@@ -3,7 +3,7 @@
 #define MEINEKRAFT_WORLD_HPP
 
 #include "../nodes/entity.hpp"
-#include "../render/camera.hpp"
+#include "../rendering/camera.hpp"
 #include "../util/filesystem.hpp"
 #include "../math/noise.hpp"
 

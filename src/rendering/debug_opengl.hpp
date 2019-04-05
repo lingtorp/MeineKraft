@@ -1,6 +1,6 @@
 #pragma once
-#ifndef MEINEKRAFT_DEBUG_OPENGL_H
-#define MEINEKRAFT_DEBUG_OPENGL_H
+#ifndef MEINEKRAFT_DEBUG_OPENGL_HPP
+#define MEINEKRAFT_DEBUG_OPENGL_HPP
 
 #include <glew.h>
 #include <SDL_opengl.h> 
@@ -123,4 +123,4 @@ static void log_gl_error() {
   Log::error("OpenGL error " + err_str + ":" + std::to_string(err));
 }
 
-#endif // MEINEKRAFT_DEBUG_OPENGL_H
+#endif // MEINEKRAFT_DEBUG_OPENGL_HPP
