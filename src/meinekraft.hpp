@@ -4,13 +4,6 @@
 
 /// NOTE: This header is forbidden from including other headers (except those already included here)
 
-struct Resolution {
-  int width, height;
-};
-
-static auto HD      = Resolution{1280, 720};
-static auto FULL_HD = Resolution{1920, 1080};
-
 #if defined(WIN32)
 #define OPENGL_MINOR_VERSION 6 // Windows 10
 #elif defined(__linux__)
@@ -20,13 +13,15 @@ static auto FULL_HD = Resolution{1920, 1080};
 #endif
 
 struct Renderer;
+struct SDL_Window;
 
 struct MeineKraft {
     MeineKraft(MeineKraft& mk) = delete;
     MeineKraft(const MeineKraft& mk) = delete;
-    MeineKraft();
+    ~MeineKraft();
     
-    Renderer* renderer;
+    Renderer* renderer = nullptr;
+    SDL_Window* window = nullptr;
 
     static MeineKraft& instance() {
         static MeineKraft mk;

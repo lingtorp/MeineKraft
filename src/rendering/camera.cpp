@@ -1,6 +1,6 @@
 #include <algorithm>
 #include "../math/quaternion.hpp"
-#include "../render/primitives.hpp"
+#include "../rendering/primitives.hpp"
 
 #include "camera.hpp"
 

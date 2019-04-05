@@ -305,4 +305,11 @@ struct RenderState {
   RenderState(const RenderState& old): frame(old.frame), shadowmapping(old.shadowmapping) {}
 };
 
+struct Resolution {
+  int width, height;
+};
+
+static auto HD      = Resolution{1280, 720};
+static auto FULL_HD = Resolution{1920, 1080};
+
 #endif // MEINEKRAFT_PRIMITIVES_HPP

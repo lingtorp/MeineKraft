@@ -2,6 +2,8 @@
 #ifndef MEINEKRAFT_ENTITY_HPP
 #define MEINEKRAFT_ENTITY_HPP
 
+#include "../meinekraft.hpp"
+
 #include "../rendering/rendercomponent.hpp"
 #include "transform.hpp"
 #include "../rendering/renderer.hpp"
@@ -214,7 +216,7 @@ struct Entity {
 
     /** Component handling for convenience **/
     inline void attach_component(const RenderComponent& component) const {
-      Renderer::instance().add_component(component, id);
+      MeineKraft::instance().renderer->add_component(component, id);
     }
 
     inline void attach_component(const TransformComponent& component) const {
@@ -226,7 +228,7 @@ struct Entity {
     }
 
     inline void deattach_component(const RenderComponent& component) const {
-      Renderer::instance().remove_component(id);
+      MeineKraft::instance().renderer->remove_component(id);
     }
 
     inline void deattach_component(const TransformComponent& component) const {

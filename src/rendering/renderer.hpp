@@ -22,7 +22,7 @@ struct Material;
 
 struct Renderer {
   /// Create a renderer with a given window/screen size/resolution
-  Renderer(Resolution& screen);
+  Renderer(const Resolution& screen);
   ~Renderer();
 
   /// Main render function, renders all the graphics batches
