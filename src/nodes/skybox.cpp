@@ -27,5 +27,5 @@ Skybox::Skybox(): Entity() {
            Filesystem::base + std::string("resources/lightmaps/garden/negy.bmp"),
            Filesystem::base + std::string("resources/lightmaps/garden/posz.bmp"),
            Filesystem::base + std::string("resources/lightmaps/garden/negz.bmp")};
-  MeineKraft::instance().renderer->load_environment_map(faces);
+  MeineKraft::instance->renderer->load_environment_map(faces);
 }

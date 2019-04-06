@@ -34,7 +34,7 @@ struct Renderer {
   void remove_component(ID entity_id);
 
   /// Updates all the shaders projection matrices in order to support resizing of the window
-  void update_projection_matrix(const float fov);
+  void update_projection_matrix(const float fov, const Resolution& screen);
 
   /// Returns the next unused texture unit
   static uint32_t get_next_free_texture_unit();

@@ -202,7 +202,7 @@ public:
 
 /*********************************************************************************/
 
-/// Minimal object-oriented wrapper for a collection of components a.k.a a game object 
+/// Minimal object-oriented wrapper for a collection of components a.k.a a game object/entity
 struct Entity {
     ID id;
     // uint64_t components = NO_COMPONENTS;
@@ -216,7 +216,7 @@ struct Entity {
 
     /** Component handling for convenience **/
     inline void attach_component(const RenderComponent& component) const {
-      MeineKraft::instance().renderer->add_component(component, id);
+      MeineKraft::instance->renderer->add_component(component, id);
     }
 
     inline void attach_component(const TransformComponent& component) const {
@@ -228,7 +228,7 @@ struct Entity {
     }
 
     inline void deattach_component(const RenderComponent& component) const {
-      MeineKraft::instance().renderer->remove_component(id);
+      MeineKraft::instance->renderer->remove_component(id);
     }
 
     inline void deattach_component(const TransformComponent& component) const {

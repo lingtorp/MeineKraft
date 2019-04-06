@@ -16,23 +16,18 @@ struct Renderer;
 struct SDL_Window;
 
 struct MeineKraft {
-    MeineKraft(MeineKraft& mk) = delete;
-    MeineKraft(const MeineKraft& mk) = delete;
+    MeineKraft();
     ~MeineKraft();
-    
+
+    static MeineKraft* instance;    
     Renderer* renderer = nullptr;
     SDL_Window* window = nullptr;
 
-    static MeineKraft& instance() {
-        static MeineKraft mk;
-        return mk;
-    }
+    /// MeineKraft initialization is done when this is called
+    void init();
 
     /// MeineKraft engine mainloop
     void mainloop();
-
-private:
-    MeineKraft();
 };
 
 #endif // MEINEKRAFT_APPLICATION_HPP

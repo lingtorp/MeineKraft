@@ -75,7 +75,7 @@ void imgui_styling() {
   // TODO: Change PlotLines color depending on the value (set thresholds for the different colors)
 }
 
-MeineKraft::MeineKraft() {
+MeineKraft::MeineKraft() {  
   SDL_Init(SDL_INIT_EVERYTHING);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
@@ -100,13 +100,14 @@ MeineKraft::MeineKraft() {
 
   // Inits GLEW
   renderer = new Renderer(HD);
-  renderer->update_projection_matrix(70.0f);
-
-  Skybox skybox;
-
-  Model model{ Filesystem::home + "Desktop/", "DamagedHelmet.gltf" };
+  renderer->update_projection_matrix(70.0f, HD);
 
   imgui_styling();
+}
+
+void MeineKraft::init() {
+  Skybox skybox;
+  Model model{ Filesystem::home + "Desktop/", "DamagedHelmet.gltf" };
 }
 
 MeineKraft::~MeineKraft() {
@@ -198,7 +199,9 @@ void MeineKraft::mainloop() {
         case SDL_WINDOWEVENT:
           switch (event.window.event) {
             case SDL_WINDOWEVENT_RESIZED:
-              renderer->update_projection_matrix(70);
+              Resolution screen;
+              SDL_GetWindowSize(window, &screen.width, &screen.height);
+              renderer->update_projection_matrix(70.0f, screen);
               break;
           }
           break;

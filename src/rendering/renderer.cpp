@@ -125,9 +125,6 @@ Renderer::Renderer(const Resolution& screen): graphics_batches{} {
   glDebugMessageControl(GL_DEBUG_SOURCE_APPLICATION, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_FALSE);
 #endif
 
-  const int screen_width = 1280; // TODO: Remove after singleton is removed
-  const int screen_height = 720;
-
   /// Global geometry pass framebuffer
   glGenFramebuffers(1, &gl_depth_fbo);
   glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
@@ -140,7 +137,7 @@ Renderer::Renderer(const Resolution& screen): graphics_batches{} {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   // glTexParameteri(GL_TEXTURE_2D, GL_DEPTH_STENCIL_TEXTURE_MODE, GL_DEPTH_COMPONENT); // Default value (intention only to read depth values from texture)
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, screen_width, screen_height, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, nullptr);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, screen.width, screen.height, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, nullptr);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, gl_depth_texture, 0);
 
   // Global normal buffer
@@ -148,7 +145,7 @@ Renderer::Renderer(const Resolution& screen): graphics_batches{} {
   glActiveTexture(GL_TEXTURE0 + gl_normal_texture_unit);
   glGenTextures(1, &gl_normal_texture);
   glBindTexture(GL_TEXTURE_2D, gl_normal_texture);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen_width, screen_height, 0, GL_RGB, GL_FLOAT, nullptr);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_normal_texture, 0);
@@ -158,7 +155,7 @@ Renderer::Renderer(const Resolution& screen): graphics_batches{} {
   glActiveTexture(GL_TEXTURE0 + gl_position_texture_unit);
   glGenTextures(1, &gl_position_texture);
   glBindTexture(GL_TEXTURE_2D, gl_position_texture);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen_width, screen_height, 0, GL_RGB, GL_FLOAT, nullptr);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, gl_position_texture, 0);
@@ -168,7 +165,7 @@ Renderer::Renderer(const Resolution& screen): graphics_batches{} {
   glActiveTexture(GL_TEXTURE0 + gl_diffuse_texture_unit);
   glGenTextures(1, &gl_diffuse_texture);
   glBindTexture(GL_TEXTURE_2D, gl_diffuse_texture);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, screen_width, screen_height, 0, GL_RGBA, GL_FLOAT, nullptr);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, screen.width, screen.height, 0, GL_RGBA, GL_FLOAT, nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, gl_diffuse_texture, 0);
@@ -178,7 +175,7 @@ Renderer::Renderer(const Resolution& screen): graphics_batches{} {
   glActiveTexture(GL_TEXTURE0 + gl_pbr_parameters_texture_unit);
   glGenTextures(1, &gl_pbr_parameters_texture);
   glBindTexture(GL_TEXTURE_2D, gl_pbr_parameters_texture);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen_width, screen_height, 0, GL_RGB, GL_FLOAT, nullptr);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, gl_pbr_parameters_texture, 0);
@@ -188,7 +185,7 @@ Renderer::Renderer(const Resolution& screen): graphics_batches{} {
   glActiveTexture(GL_TEXTURE0 + gl_ambient_occlusion_texture_unit);
   glGenTextures(1, &gl_ambient_occlusion_texture);
   glBindTexture(GL_TEXTURE_2D, gl_ambient_occlusion_texture);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen_width, screen_height, 0, GL_RGB, GL_FLOAT, nullptr);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, gl_ambient_occlusion_texture, 0);
@@ -198,7 +195,7 @@ Renderer::Renderer(const Resolution& screen): graphics_batches{} {
   glActiveTexture(GL_TEXTURE0 + gl_emissive_texture_unit);
   glGenTextures(1, &gl_emissive_texture);
   glBindTexture(GL_TEXTURE_2D, gl_emissive_texture);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen_width, screen_height, 0, GL_RGB, GL_FLOAT, nullptr);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT5, gl_emissive_texture, 0);
@@ -208,7 +205,7 @@ Renderer::Renderer(const Resolution& screen): graphics_batches{} {
   glActiveTexture(GL_TEXTURE0 + gl_shading_model_texture_unit);
   glGenTextures(1, &gl_shading_model_texture);
   glBindTexture(GL_TEXTURE_2D, gl_shading_model_texture);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, screen_width, screen_height, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, nullptr);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, screen.width, screen.height, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT6, gl_shading_model_texture, 0);
@@ -227,7 +224,7 @@ Renderer::Renderer(const Resolution& screen): graphics_batches{} {
   GLuint gl_lightning_rbo;
   glGenRenderbuffers(1, &gl_lightning_rbo);
   glBindRenderbuffer(GL_RENDERBUFFER, gl_lightning_rbo);
-  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, screen_width, screen_height);
+  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, screen.width, screen.height);
   glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, gl_lightning_rbo);
 
   gl_lightning_texture_unit = Renderer::get_next_free_texture_unit();
@@ -236,7 +233,7 @@ Renderer::Renderer(const Resolution& screen): graphics_batches{} {
   glBindTexture(GL_TEXTURE_2D, gl_lightning_texture);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, screen_width, screen_height, 0, GL_RGBA, GL_FLOAT, nullptr);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, screen.width, screen.height, 0, GL_RGBA, GL_FLOAT, nullptr);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_lightning_texture, 0);
 
   uint32_t lightning_attachments[1] = { GL_COLOR_ATTACHMENT0 };
@@ -516,11 +513,11 @@ void Renderer::render(const uint32_t delta) {
   syncs[state.frame % 3] = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
 }
 
-void Renderer::update_projection_matrix(const float fov) {
+void Renderer::update_projection_matrix(const float fov, const Resolution& screen) {
   // TODO: Adjust all the passes textures sizes & all the global texture buffers
-  const float aspect = (float) screen_width / (float) screen_height;
+  const float aspect = (float) screen.width / (float) screen.height;
   this->projection_matrix = glm::perspective(glm::radians(fov), aspect, 0.1f, 1000.0f);
-  glViewport(0, 0, screen_width, screen_height);
+  glViewport(0, 0, screen.width, screen.height);
 }
 
 void Renderer::link_batch(GraphicsBatch& batch) {
