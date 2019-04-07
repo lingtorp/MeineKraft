@@ -13,27 +13,33 @@
 #include <math.h>
 #endif
 
-constexpr inline float mk_cos(const float x) {
+inline float mk_cos(const float x) {
 #if defined(__APPLE__)
   return std::cos(x);
 #elif defined(__linux__)
   return cosf(x);
+#elif defined(WIN32)
+  return std::cosf(x);
 #endif
 }
 
-constexpr inline float mk_sin(const float x) {
+inline float mk_sin(const float x) {
 #if defined(__APPLE__)
   return std::sin(x);
 #elif defined(__linux__)
   return sinf(x);
+#elif defined(WIN32)
+  return std::sinf(x);
 #endif
 }
 
-constexpr inline float mk_sqrtf(const float x) {
+inline float mk_sqrtf(const float x) {
 #if defined(__APPLE__)
   return std::sqrt(x);
 #elif defined(__linux__)
   return sqrt(x);
+#elif defined(WIN32)
+  return std::sqrtf(x);
 #endif
 }
 
