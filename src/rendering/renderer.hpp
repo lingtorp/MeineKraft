@@ -44,8 +44,7 @@ struct Renderer {
   Camera* camera = nullptr;
   RenderState state;
   glm::mat4 projection_matrix; 
-  float screen_width;
-  float screen_height;
+  Resolution screen;
   std::vector<GraphicsBatch> graphics_batches;
   std::vector<PointLight> pointlights;
 

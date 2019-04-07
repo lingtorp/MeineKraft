@@ -113,7 +113,7 @@ std::array<glm::vec4, 6> extract_planes(const glm::mat4& mat) {
 
 Renderer::~Renderer() = default;
 
-Renderer::Renderer(const Resolution& screen): graphics_batches{} {
+Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{} {
   glewExperimental = (GLboolean) true;
   glewInit();
 
@@ -435,7 +435,7 @@ void Renderer::render(const uint32_t delta) {
       const uint32_t draw_cmd_offset = batch.gl_curr_ibo_idx * sizeof(DrawElementsIndirectCommand);
       glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (const void*) draw_cmd_offset, 1, sizeof(DrawElementsIndirectCommand));
     }
-    glViewport(0, 0, screen_width, screen_height);
+    glViewport(0, 0, screen.width, screen.height);
     glCullFace(GL_BACK);
   }
   pass_ended();
@@ -483,8 +483,8 @@ void Renderer::render(const uint32_t delta) {
     glUniform1i(glGetUniformLocation(program, "normal_sampler"), gl_normal_texture_unit);
     glUniform1i(glGetUniformLocation(program, "position_sampler"), gl_position_texture_unit);
     glUniform1i(glGetUniformLocation(program, "shadow_map_sampler"), gl_shadowmapping_texture_unit);
-    glUniform1f(glGetUniformLocation(program, "screen_width"), screen_width);
-    glUniform1f(glGetUniformLocation(program, "screen_height"), screen_height);
+    glUniform1f(glGetUniformLocation(program, "screen_width"), screen.width);
+    glUniform1f(glGetUniformLocation(program, "screen_height"), screen.height);
     glUniformMatrix4fv(glGetUniformLocation(program, "light_space_transform"), 1, GL_FALSE, glm::value_ptr(light_space_transform));
     glUniform1i(glGetUniformLocation(program, "shadowmapping"), state.shadowmapping);
 
@@ -502,7 +502,7 @@ void Renderer::render(const uint32_t delta) {
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     const auto mask = GL_COLOR_BUFFER_BIT;
     const auto filter = GL_NEAREST;
-    glBlitFramebuffer(0, 0, screen_width, screen_height, 0, 0, screen_width, screen_height, mask, filter);
+    glBlitFramebuffer(0, 0, screen.width, screen.height, 0, 0, screen.width, screen.height, mask, filter);
   }
   pass_ended();
 
