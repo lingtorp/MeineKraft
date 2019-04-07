@@ -19,7 +19,11 @@ struct MeineKraft {
     MeineKraft();
     ~MeineKraft();
 
-    static MeineKraft* instance;    
+    static MeineKraft& instance() {
+      static MeineKraft mk;
+      return mk;
+    };
+
     Renderer* renderer = nullptr;
     SDL_Window* window = nullptr;
 

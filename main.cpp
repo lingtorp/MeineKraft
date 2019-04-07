@@ -5,8 +5,7 @@ int wmain() {
 #else
 int main() {
 #endif
-  MeineKraft::instance = new MeineKraft();
-  MeineKraft::instance->init();
-  MeineKraft::instance->mainloop();
+  MeineKraft::instance().init();
+  MeineKraft::instance().mainloop();
   return 0;
 }
