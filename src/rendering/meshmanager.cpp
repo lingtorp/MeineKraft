@@ -17,7 +17,7 @@ MeshManager::load_mesh(const std::string& directory, const std::string& file) {
     auto scene = importer.ReadFile(mesh_info.loaded_from_filepath.c_str(), aiProcess_Triangulate | aiProcess_JoinIdenticalVertices);
 
     if (scene == nullptr || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) {
-        Log::error("Error: " + std::string(importer.GetErrorString()));
+        Log::error(std::string(importer.GetErrorString()));
         return {0, {}};
     }
 
