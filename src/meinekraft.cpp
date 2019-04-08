@@ -1,6 +1,5 @@
 #include "meinekraft.hpp"
 
-#include <memory>
 #include <chrono>
 
 #include "rendering/renderer.hpp"
