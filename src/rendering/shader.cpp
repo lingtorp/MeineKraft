@@ -95,37 +95,40 @@ std::pair<bool, std::string> Shader::compile() {
   GLint fragment_shader_status = 0;
   glGetShaderiv(gl_fragment_shader, GL_COMPILE_STATUS, &fragment_shader_status);
 
-  glDetachShader(gl_shader_program, gl_vertex_shader);
-  glDetachShader(gl_shader_program, gl_fragment_shader);
-  glDeleteShader(gl_vertex_shader);
-  glDeleteShader(gl_fragment_shader);
-
   if (vertex_shader_status == GL_TRUE && fragment_shader_status == GL_TRUE) {
-      gl_program = gl_shader_program;
-      return {true, ""};
+    glDetachShader(gl_shader_program, gl_vertex_shader);
+    glDetachShader(gl_shader_program, gl_fragment_shader);
+    glDeleteShader(gl_vertex_shader);
+    glDeleteShader(gl_fragment_shader);
+    gl_program = gl_shader_program;
+    return {true, ""};
+  } else {
+    GLint err_size = 1024;
+    glGetShaderiv(gl_vertex_shader, GL_INFO_LOG_LENGTH, &err_size);
+    char* vert_err_msg = new char[1024];
+    glGetShaderInfoLog(gl_vertex_shader, err_size, nullptr, vert_err_msg);
+    Log::info(vert_err_msg);
+
+    glGetShaderiv(gl_fragment_shader, GL_INFO_LOG_LENGTH, &err_size);
+    char* frag_err_msg = new char[1024];
+    glGetShaderInfoLog(gl_fragment_shader, err_size, nullptr, frag_err_msg);
+    Log::info(frag_err_msg);
+
+    glGetProgramiv(gl_shader_program, GL_INFO_LOG_LENGTH, &err_size);
+    char* prog_err_msg = new char[1024];
+    glGetProgramInfoLog(gl_shader_program, err_size, nullptr, prog_err_msg);
+    Log::info(prog_err_msg);
+
+    log_gl_error();
+
+    glDetachShader(gl_shader_program, gl_vertex_shader);
+    glDetachShader(gl_shader_program, gl_fragment_shader);
+    glDeleteShader(gl_vertex_shader);
+    glDeleteShader(gl_fragment_shader);
+    glDeleteProgram(gl_shader_program);
+
+    return {false, std::string(vert_err_msg) + std::string(frag_err_msg) + std::string(prog_err_msg)};
   }
-
-  GLint err_size = 1024;
-  glGetShaderiv(gl_vertex_shader, GL_INFO_LOG_LENGTH, &err_size);
-  char* vert_err_msg = new char[1024];
-  glGetShaderInfoLog(gl_vertex_shader, err_size, nullptr, vert_err_msg);
-  Log::info(vert_err_msg);
-
-  glGetShaderiv(gl_fragment_shader, GL_INFO_LOG_LENGTH, &err_size);
-  char* frag_err_msg = new char[1024];
-  glGetShaderInfoLog(gl_fragment_shader, err_size, nullptr, frag_err_msg);
-  Log::info(frag_err_msg);
-  
-  glGetProgramiv(gl_shader_program, GL_INFO_LOG_LENGTH, &err_size);
-  char* prog_err_msg = new char[1024];
-  glGetProgramInfoLog(gl_shader_program, err_size, nullptr, prog_err_msg);
-  Log::info(prog_err_msg);
-  
-  log_gl_error();
-  
-  glDeleteProgram(gl_shader_program);
-
-  return {false, std::string(vert_err_msg) + std::string(frag_err_msg) + std::string(prog_err_msg)};
 };
 
 std::string Shader::shader_define_to_string(const Shader::Defines define) {
