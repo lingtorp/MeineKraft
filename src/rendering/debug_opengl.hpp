@@ -77,6 +77,9 @@ static void GLAPIENTRY gl_debug_callback(
   case GL_DEBUG_SEVERITY_HIGH:
     std::cerr << "HIGH";
     break;
+  case GL_DEBUG_SEVERITY_NOTIFICATION:
+	  std::cerr << "NOTIFICATION";
+	  break;
   default: 
     std::cerr << "?";
   }
