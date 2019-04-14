@@ -3,7 +3,7 @@
 [![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](https://lbesson.mit-license.org/)
 [![](https://img.shields.io/badge/twitter-follow-blue.svg)](https://twitter.com/ALingtorp)
 
-![](/screenshots/pbr-1.png)
+![](/resources/screenshots/pbr-1.png)
 
 **MeineKraft** is a **physically based rendering engine** written in **C++11** & **OpenGL 4.6**.
 My intent is to follow up the implementation of the most interesting parts with some articles relating to my learning experience,
@@ -11,8 +11,8 @@ these articles can be found on my personal [site](http://lingtorp.com) with the 
 
 | Various | GIFs |
 | ------------- | ------------- |
-| Perlin noise ![Perlin Noise generated terrain](/screenshots/perlin-hills.gif) | Linear fog![Linear fog](/screenshots/linear-fog.gif) |
-| Dynamic shader reloading![Dynamic shader editing, with reloading!](/screenshots/dynamic-shader-editing.gif) | Phong reflection model ![Basic lighting](/screenshots/moving-lights.gif) |
+| Perlin noise ![Perlin Noise generated terrain](/resources/screenshots/perlin-hills.gif) | Linear fog![Linear fog](/resources/screenshots/linear-fog.gif) |
+| Dynamic shader reloading![Dynamic shader editing, with reloading!](/resources/screenshots/dynamic-shader-editing.gif) | Phong reflection model ![Basic lighting](/resources/screenshots/moving-lights.gif) |
 
 It does include some game engine related tech as well such as a Entity-Component-System
 architecture. The main game object in the engine is a object-oriented layer
