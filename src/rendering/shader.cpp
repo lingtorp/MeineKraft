@@ -108,16 +108,19 @@ std::pair<bool, std::string> Shader::compile() {
     char* vert_err_msg = new char[1024];
     glGetShaderInfoLog(gl_vertex_shader, err_size, nullptr, vert_err_msg);
     Log::info(vert_err_msg);
+    delete vert_err_msg;
 
     glGetShaderiv(gl_fragment_shader, GL_INFO_LOG_LENGTH, &err_size);
     char* frag_err_msg = new char[1024];
     glGetShaderInfoLog(gl_fragment_shader, err_size, nullptr, frag_err_msg);
     Log::info(frag_err_msg);
+    delete frag_err_msg;
 
     glGetProgramiv(gl_shader_program, GL_INFO_LOG_LENGTH, &err_size);
     char* prog_err_msg = new char[1024];
     glGetProgramInfoLog(gl_shader_program, err_size, nullptr, prog_err_msg);
     Log::info(prog_err_msg);
+    delete prog_err_msg;
 
     log_gl_error();
 
