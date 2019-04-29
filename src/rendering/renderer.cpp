@@ -47,7 +47,7 @@ uint32_t Renderer::get_next_free_texture_unit() {
 
 void Renderer::load_environment_map(const std::vector<std::string>& faces) {
   Texture texture;
-  const auto resource = TextureResource{ faces };
+  const auto resource = TextureResource{faces};
   texture.data = Texture::load_textures(resource);
   if (texture.data.pixels) {
     texture.gl_texture_target = GL_TEXTURE_CUBE_MAP_ARRAY;
@@ -370,8 +370,16 @@ void Renderer::render(const uint32_t delta) {
     ((DrawElementsIndirectCommand*)batch.gl_ibo_ptr)[batch.gl_curr_ibo_idx].instanceCount = 0;
   }
 
+  // FIXME: Future work
+  for (const RenderPass& render_pass : render_passes) {
+    pass_started(render_pass.name);
+    render_pass.render();
+    pass_ended();
+  }
+
   pass_started("Culling pass");
   {
+
     // NOTE: Extraction of frustum planes are performed on the transpose (because of column/row-major difference).
     // FIXME: Use the Direct3D way of extraction instead since GLM appears to store the matrix in a row-major way.
     const glm::mat4 proj_view = projection_matrix * camera_transform;

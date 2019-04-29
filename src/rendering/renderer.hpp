@@ -9,6 +9,7 @@
 #include "texture.hpp"
 #include "light.hpp"
 #include "../rendering/primitives.hpp"
+#include "renderpass.hpp"
 
 #include <glm/mat4x4.hpp>
 
@@ -17,7 +18,6 @@ struct RenderComponent;
 struct GraphicsBatch;
 struct Shader;
 struct ComputeShader;
-struct RenderPass;
 struct Material;
 
 struct Renderer {
@@ -41,12 +41,15 @@ struct Renderer {
 
   void load_environment_map(const std::vector<std::string>& faces);
 
+  // Rudimentary rendering pipeline for now
+  std::vector<RenderPass> render_passes;
+
   Camera* camera = nullptr;
   RenderState state;
   glm::mat4 projection_matrix; 
   Resolution screen;
   std::vector<GraphicsBatch> graphics_batches;
-  std::vector<PointLight> pointlights;
+  std::vector<PointLight> pointlights; 
 
 private:
   void add_graphics_state(GraphicsBatch& batch, const RenderComponent& comp, Material material, ID entity_id);
