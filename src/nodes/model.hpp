@@ -5,9 +5,14 @@
 #include "entity.hpp"
 #include "../rendering/rendercomponent.hpp"
 
-class Model: public Entity {
+class Model : public Entity {
 public:
-    Model(const std::string& directory, const std::string& file);
+  Model(const std::string& directory, const std::string& file);
+  Model(const RenderComponent& render);
+};
+
+struct Scene {
+  Scene(const std::string& directory, const std::string& file);
 };
 
 #endif // MEINEKRAFT_MODEL_HPP

@@ -11,3 +11,18 @@ Model::Model(const std::string& directory, const std::string& file) {
   render.set_shading_model(ShadingModel::PhysicallyBased);
   attach_component(render);
 }
+
+Model::Model(const RenderComponent& render) {
+  TransformComponent transform;
+  attach_component(transform);
+  attach_component(render);
+}
+
+Scene::Scene(const std::string& directory, const std::string& file) {
+  std::vector<RenderComponent> render_components = RenderComponent::load_scene_models(directory, file);
+  for (size_t i = 0; i < render_components.size(); i++) {
+    render_components[i].set_shading_model(ShadingModel::Unlit);
+    Model model(render_components[i]);
+    NameSystem::instance().add_name_to_entity("mesh-" + std::to_string(i), model.id);
+  }
+}
