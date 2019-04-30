@@ -14,8 +14,12 @@ struct RenderComponent {
   Texture emissive_texture;
   Vec3f pbr_scalar_parameters;        // Used by ShadingModel::PBRScalars (r,g,b) = (unused, roughness, metallic)
 
-  /// Sets the mesh for the RenderComponent from the .obj file in directory_file
+  /// Tries to set the mesh for the RenderComponent from the .obj file in directory_file
+  /// Loads and sets the relevant textures from the loaded material in the model
   void set_mesh(const std::string& directory, const std::string& file);
+
+  /// Loads all meshes in a file and returns multiple RenderComponents
+  static std::vector<RenderComponent> load_scene_models(const std::string& directory, const std::string& file);
 
   /// Sets the cube map texture to the bounded mesh
   /// order; right, left, top, bot, back, front
