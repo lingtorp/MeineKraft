@@ -105,8 +105,8 @@ MeineKraft::MeineKraft() {
 }
 
 void MeineKraft::init() {
-  Skybox skybox;
-  Model model{ Filesystem::home + "Desktop/Meinekraft/", "DamagedHelmet.gltf" };
+  // Skybox skybox;
+  Scene scene{ Filesystem::home + "Desktop/Meinekraft/sponza/", "Sponza.gltf" };
 }
 
 MeineKraft::~MeineKraft() {
