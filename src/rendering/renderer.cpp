@@ -33,6 +33,7 @@ inline void pass_ended() {
 #endif
 }
 
+// FIXME: Remake this to serve a better purpose (unique per line, file like the log_once)
 uint32_t Renderer::get_next_free_texture_unit() {
   int32_t max_texture_units;
   glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max_texture_units);
@@ -482,7 +483,7 @@ void Renderer::render(const uint32_t delta) {
     glBindVertexArray(gl_lightning_vao);
     glUseProgram(program);
 
-    glUniform1i(glGetUniformLocation(program, "environment_map_sampler"), gl_environment_map_texture_unit);
+    // glUniform1i(glGetUniformLocation(program, "environment_map_sampler"), gl_environment_map_texture_unit);
     glUniform1i(glGetUniformLocation(program, "shading_model_id_sampler"), gl_shading_model_texture_unit);
     glUniform1i(glGetUniformLocation(program, "emissive_sampler"), gl_emissive_texture_unit);
     glUniform1i(glGetUniformLocation(program, "ambient_occlusion_sampler"), gl_ambient_occlusion_texture_unit);
@@ -686,7 +687,7 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
   }
 
   if (comp.diffuse_texture.data.pixels) {
-    batch.gl_diffuse_texture_unit = Renderer::get_next_free_texture_unit();
+    batch.gl_diffuse_texture_unit = 11;
 
     batch.init_buffer(comp.diffuse_texture, &batch.gl_diffuse_texture_array, batch.gl_diffuse_texture_unit, &batch.diffuse_textures_capacity);
 
@@ -700,7 +701,7 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
 
   if (comp.metallic_roughness_texture.data.pixels) {
     const Texture& texture = comp.metallic_roughness_texture;
-    batch.gl_metallic_roughness_texture_unit = Renderer::get_next_free_texture_unit();
+    batch.gl_metallic_roughness_texture_unit = 12;
     glActiveTexture(GL_TEXTURE0 + batch.gl_metallic_roughness_texture_unit);
     uint32_t gl_metallic_roughness_texture = 0;
     glGenTextures(1, &gl_metallic_roughness_texture);
@@ -712,7 +713,7 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
 
   if (comp.ambient_occlusion_texture.data.pixels) {
     const Texture& texture = comp.ambient_occlusion_texture;
-    batch.gl_ambient_occlusion_texture_unit = Renderer::get_next_free_texture_unit();
+    batch.gl_ambient_occlusion_texture_unit = 13;
     glActiveTexture(GL_TEXTURE0 + batch.gl_ambient_occlusion_texture_unit);
     uint32_t gl_ambient_occlusion_texture = 0;
     glGenTextures(1, &gl_ambient_occlusion_texture);
@@ -724,7 +725,7 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
 
   if (comp.emissive_texture.data.pixels) {
     const Texture& texture = comp.emissive_texture;
-    batch.gl_emissive_texture_unit = Renderer::get_next_free_texture_unit();
+    batch.gl_emissive_texture_unit = 14;
     glActiveTexture(GL_TEXTURE0 + batch.gl_emissive_texture_unit);
     uint32_t gl_emissive_texture = 0;
     glGenTextures(1, &gl_emissive_texture);
