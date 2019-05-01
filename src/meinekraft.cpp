@@ -245,7 +245,7 @@ void MeineKraft::mainloop() {
           ImGui::Text("Graphics batches: %lu", renderer->state.graphic_batches);
           for (size_t batch_num = 0; batch_num < renderer->graphics_batches.size(); batch_num++) {
             const auto& batch = renderer->graphics_batches[batch_num];
-            const std::string batch_title = "Batch #" + std::to_string(batch_num) + " (" + std::to_string(batch.entity_ids.size()) + ")";
+            const std::string batch_title = "Batch #" + std::to_string(batch_num + 1) + " (" + std::to_string(batch.entity_ids.size()) + ")";
 
             if (ImGui::CollapsingHeader(batch_title.c_str())) {
               const std::string member_title = "Members##" + batch_title;
