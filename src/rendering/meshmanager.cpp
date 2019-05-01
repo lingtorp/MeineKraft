@@ -38,6 +38,7 @@ MeshManager::load_mesh(const std::string& directory, const std::string& file) {
       // FIXME: Assumes the mesh is a single mesh and not a hierarchy
       auto mesh = scene->mMeshes[0];
       Log::info("\t ... loading mesh with name: " + std::string(mesh->mName.data));
+      Log::info("\t ... has normals: " + mesh->HasNormals() ? "Y" : "N");
 
       // Load all vertices
       for (size_t j = 0; j < mesh->mNumVertices; j++) {
@@ -188,6 +189,7 @@ MeshManager::load_meshes(const std::string& directory, const std::string& file) 
 
       auto mesh = scene->mMeshes[mesh_idx];
       Log::info("\t ... loading mesh with name: " + std::string(mesh->mName.data));
+      Log::info("\t ... has normals: " + mesh->HasNormals() ? "Y" : "N");
 
       // Load all vertices
       for (size_t j = 0; j < mesh->mNumVertices; j++) {
