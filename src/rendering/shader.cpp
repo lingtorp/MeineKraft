@@ -140,9 +140,15 @@ std::string Shader::shader_define_to_string(const Shader::Defines define) {
     return "#define DIFFUSE_2D \n";
   case Shader::Defines::DiffuseCubemap:
     return "#define DIFFUSE_CUBEMAP \n";
+  case Shader::Defines::DiffuseRGB:
+    return "#define DIFFUSE_RGB \n";
+    break;
+  case Shader::Defines::DiffuseRGBA:
+    return "#define DIFFUSE_RGBA \n";
+    break;
   default:
     Log::error("Invalid shader define passed");
-    return "";
+    return "This will ensure that shader compilation does not work :)";
   }
 }
 

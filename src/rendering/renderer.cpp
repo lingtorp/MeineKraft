@@ -648,6 +648,12 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
     default:
       Log::error("Depth shader diffuse texture type not handled.");
     }
+
+    if (comp.diffuse_texture.data.bytes_per_pixel == 3) {
+      comp_shader_config.insert(Shader::Defines::DiffuseRGB);
+    } else {
+      comp_shader_config.insert(Shader::Defines::DiffuseRGBA);
+    }
   }
 
   Material material;

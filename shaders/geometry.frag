@@ -39,11 +39,16 @@ void main() {
     gPosition = fPosition;
     
     #ifdef DIFFUSE_2D
+    
+    #ifdef DIFFUSE_RGB
     gDiffuse.rgb = texture(diffuse, vec3(fTexcoord, material.diffuse_layer_idx)).rgb; 
+    #else 
+    gDiffuse.rgba = texture(diffuse, vec3(fTexcoord, material.diffuse_layer_idx)).rgba; 
+    #endif
+    
     #elif defined(DIFFUSE_CUBEMAP)
     gDiffuse.rgb = texture(diffuse, vec4(local_space_position, material.diffuse_layer_idx)).rgb;
     #endif
-    gDiffuse.a = 1.0; // Fetch from texture?
 
     switch (material.shading_model) {
         case 2: // Physically based rendering with textures 
@@ -51,8 +56,8 @@ void main() {
         gEmissive = texture(emissive, fTexcoord).rgb;
         break;
         case 3: // Physically based rendering with scalar
-        gDiffuse.rgb = vec3(1.0, 0.0, 0.0); // FIXME: Temporary color for unlit objects
-        gPBRParameters = vec3(0.0, material.pbr_scalar_parameters); // FIXME: Redfine pbr parameteres ...
+        gDiffuse.rgba = vec4(1.0, 0.0, 0.0, 1.0); // FIXME: Temporary color for unlit objects
+        gPBRParameters = vec3(0.0, material.pbr_scalar_parameters); // FIXME: Redefine pbr parameteres ...
         gEmissive = vec3(0.0);
         break;
     }

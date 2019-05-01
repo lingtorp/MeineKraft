@@ -10,8 +10,10 @@
 
 struct Shader {
   enum class Defines: uint32_t {
-    Diffuse2D, 
-    DiffuseCubemap
+    Diffuse2D,        // OpenGL texture target (GL_TEXTURE_2D)
+    DiffuseCubemap,   // OpenGL texture target (GL_TEXTURE_CUBE_MAP)
+    DiffuseRGB,       // Diffuse texture format 24 bit depth
+    DiffuseRGBA       // Diffuse texture format 32 bit depth
   };
   // Configuration of the shader a la Ubershader
   std::set<Shader::Defines> defines;
