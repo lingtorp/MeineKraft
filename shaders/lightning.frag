@@ -134,7 +134,7 @@ vec3 schlick_render(vec2 frag_coord, vec3 position, vec3 normal, vec3 diffuse, v
     // TODO: Seperate diffuse and specular terms from the irradiance
     // TODO: Lookup whether or not the irradiance comes in sRGB 
     const vec3 irradiance = texture(environment_map_sampler, vec4(pbr_inputs.N, 0)).rgb;
-    const vec3 ambient = irradiance * diffuse_lambertian(pbr_inputs) * ambient_occlusion; 
+    const vec3 ambient = irradiance * diffuse_lambertian(pbr_inputs) * (1.0 - ambient_occlusion);
     L0 += ambient;
     return L0;
 }
@@ -155,7 +155,7 @@ void main() {
     const vec3 normal = texture(normal_sampler, frag_coord).xyz;
     const vec3 position = texture(position_sampler, frag_coord).xyz;
     const vec3 diffuse = SRGB_to_linear(texture(diffuse_sampler, frag_coord).rgb); // Mandated by glTF 2.0
-    const vec3 ambient_occlusion = texture(ambient_occlusion_sampler, frag_coord).rgb;
+    const vec3 ambient_occlusion = vec3(0.0); // texture(ambient_occlusion_sampler, frag_coord).rgb;
     const vec3 emissive = texture(emissive_sampler, frag_coord).rgb;
     const int  shading_model_id = int(texture(shading_model_id_sampler, frag_coord).r);
 
