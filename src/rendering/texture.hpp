@@ -20,6 +20,7 @@ typedef uint64_t ID;
 
 struct RawTexture {
   uint8_t* pixels = nullptr;
+  uint8_t  bytes_per_pixel = 0;
   uint32_t size   = 0; // Byte size per face
   uint32_t width  = 0; // Measured in pixels
   uint32_t height = 0; 
@@ -54,11 +55,11 @@ struct Texture {
     if (image) {
       texture.width = static_cast<uint32_t>(image->w);
       texture.height = static_cast<uint32_t>(image->h);
-      const auto bytes_per_pixel = image->format->BytesPerPixel;
+      texture.bytes_per_pixel = image->format->BytesPerPixel;
       SDL_FreeSurface(image); // FIXME: Wasteful
 
       // Assumes that the files are the same size, in right order, same encoding, etc
-      texture.size = bytes_per_pixel * texture.width * texture.height;
+      texture.size = texture.bytes_per_pixel * texture.width * texture.height;
       texture.pixels = static_cast<uint8_t*>(std::calloc(1, texture.size * resource.files.size()));
 
       // Load all the files into a linear memory region
@@ -73,13 +74,13 @@ struct Texture {
           return texture;
         }
         // Convert it to OpenGL friendly format
-        const auto desired_img_format = bytes_per_pixel == 3 ? SDL_PIXELFORMAT_RGB24 : SDL_PIXELFORMAT_RGBA32;
+        const auto desired_img_format = texture.bytes_per_pixel == 3 ? SDL_PIXELFORMAT_RGB24 : SDL_PIXELFORMAT_RGBA32;
         SDL_Surface* conv = SDL_ConvertSurfaceFormat(image, desired_img_format, 0);
         if (conv) {
           std::memcpy(texture.pixels + texture.size * i, conv->pixels, texture.size);
           SDL_FreeSurface(image);
         } else {
-          Log::error(SDL_GetError());
+          Log::error("RawTexture loading failed: " + std::string(SDL_GetError()));
         }
 
         texture.faces++;

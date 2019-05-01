@@ -94,7 +94,8 @@ struct GraphicsBatch {
     glGenTextures(1, gl_buffer);
     glBindTexture(texture.gl_texture_target, *gl_buffer);
     const int default_buffer_size = 1;
-    glTexStorage3D(texture.gl_texture_target, 1, GL_RGB8, texture.data.width, texture.data.height, texture.data.faces * default_buffer_size); // depth = layer faces
+    const GLuint texture_format = texture.data.bytes_per_pixel == 3 ? GL_RGB8 : GL_RGBA8;
+    glTexStorage3D(texture.gl_texture_target, 1, texture_format, texture.data.width, texture.data.height, texture.data.faces * default_buffer_size); // depth = layer faces
     *buffer_capacity = default_buffer_size;
   }
 
@@ -107,7 +108,8 @@ struct GraphicsBatch {
     glBindTexture(texture.gl_texture_target, gl_new_texture_array);
     uint32_t old_capacity = *texture_array_capacity;
     *texture_array_capacity = (uint32_t) std::ceil(*texture_array_capacity * 1.5f);
-    glTexStorage3D(texture.gl_texture_target, 1, GL_RGB8, texture.data.width, texture.data.height, texture.data.faces * *texture_array_capacity);
+    const GLuint texture_format = texture.data.bytes_per_pixel == 3 ? GL_RGB8 : GL_RGBA8;
+    glTexStorage3D(texture.gl_texture_target, 1, texture_format, texture.data.width, texture.data.height, texture.data.faces * *texture_array_capacity);
     
     glCopyImageSubData(*gl_buffer, texture.gl_texture_target, 0, 0, 0, 0, // src parameters
       gl_new_texture_array, texture.gl_texture_target, 0, 0, 0, 0, texture.data.width, texture.data.height, texture.data.faces * old_capacity);
@@ -119,13 +121,14 @@ struct GraphicsBatch {
   
   /// Upload a texture to the diffuse array
   void upload(const Texture& texture, const uint32_t gl_texture_unit, const uint32_t gl_texture_array) {
+    const GLuint texture_format = texture.data.bytes_per_pixel == 3 ? GL_RGB : GL_RGBA;
     glActiveTexture(GL_TEXTURE0 + gl_texture_unit);
     glBindTexture(texture.gl_texture_target, gl_texture_array);
     glTexSubImage3D(texture.gl_texture_target,
       0,                     // Mipmap number (a.k.a level)
       0, 0, layer_idxs[texture.id] *  texture.data.faces, // xoffset, yoffset, zoffset = layer face
       texture.data.width, texture.data.height, texture.data.faces, // width, height, depth = faces
-      GL_RGB,                // format
+      texture_format,        // format
       GL_UNSIGNED_BYTE,      // type
       texture.data.pixels);  // pointer to data
   }
