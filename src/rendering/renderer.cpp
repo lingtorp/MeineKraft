@@ -489,7 +489,7 @@ void Renderer::render(const uint32_t delta) {
     glBindVertexArray(gl_lightning_vao);
     glUseProgram(program);
 
-    // glUniform1i(glGetUniformLocation(program, "environment_map_sampler"), gl_environment_map_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "environment_map_sampler"), gl_environment_map_texture_unit);
     glUniform1i(glGetUniformLocation(program, "shading_model_id_sampler"), gl_shading_model_texture_unit);
     glUniform1i(glGetUniformLocation(program, "emissive_sampler"), gl_emissive_texture_unit);
     glUniform1i(glGetUniformLocation(program, "ambient_occlusion_sampler"), gl_ambient_occlusion_texture_unit);
@@ -715,9 +715,8 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
     const Texture& texture = comp.metallic_roughness_texture;
     batch.gl_metallic_roughness_texture_unit = 12;
     glActiveTexture(GL_TEXTURE0 + batch.gl_metallic_roughness_texture_unit);
-    uint32_t gl_metallic_roughness_texture = 0;
-    glGenTextures(1, &gl_metallic_roughness_texture);
-    glBindTexture(texture.gl_texture_target, gl_metallic_roughness_texture);
+    glGenTextures(1, &batch.gl_metallic_roughness_texture);
+    glBindTexture(texture.gl_texture_target, batch.gl_metallic_roughness_texture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexImage2D(texture.gl_texture_target, 0, GL_RGB, texture.data.width, texture.data.height, 0, GL_RGB, GL_UNSIGNED_BYTE, texture.data.pixels);
