@@ -95,7 +95,9 @@ struct GraphicsBatch {
     glBindTexture(texture.gl_texture_target, *gl_buffer);
     const int default_buffer_size = 1;
     const GLuint texture_format = texture.data.bytes_per_pixel == 3 ? GL_RGB8 : GL_RGBA8;
-    glTexStorage3D(texture.gl_texture_target, 1, texture_format, texture.data.width, texture.data.height, texture.data.faces * default_buffer_size); // depth = layer faces
+    const uint8_t mipmap_levels = std::log(std::max(texture.data.width, texture.data.height)) + 1;
+    glTexStorage3D(texture.gl_texture_target, mipmap_levels, texture_format, texture.data.width, texture.data.height, texture.data.faces * default_buffer_size); // depth = layer faces
+    glGenerateMipmap(texture.gl_texture_target);
     *buffer_capacity = default_buffer_size;
   }
 
@@ -109,7 +111,8 @@ struct GraphicsBatch {
     uint32_t old_capacity = *texture_array_capacity;
     *texture_array_capacity = (uint32_t) std::ceil(*texture_array_capacity * 1.5f);
     const GLuint texture_format = texture.data.bytes_per_pixel == 3 ? GL_RGB8 : GL_RGBA8;
-    glTexStorage3D(texture.gl_texture_target, 1, texture_format, texture.data.width, texture.data.height, texture.data.faces * *texture_array_capacity);
+    const uint8_t mipmap_levels = std::log(std::max(texture.data.width, texture.data.height)) + 1;
+    glTexStorage3D(texture.gl_texture_target, mipmap_levels, texture_format, texture.data.width, texture.data.height, texture.data.faces * *texture_array_capacity);
     
     glCopyImageSubData(*gl_buffer, texture.gl_texture_target, 0, 0, 0, 0, // src parameters
       gl_new_texture_array, texture.gl_texture_target, 0, 0, 0, 0, texture.data.width, texture.data.height, texture.data.faces * old_capacity);
@@ -131,6 +134,7 @@ struct GraphicsBatch {
       texture_format,        // format
       GL_UNSIGNED_BYTE,      // type
       texture.data.pixels);  // pointer to data
+    glGenerateMipmap(texture.gl_texture_target);
   }
 
   void increase_entity_buffers() {
