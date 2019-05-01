@@ -469,6 +469,12 @@ void Renderer::render(const uint32_t delta) {
       const uint32_t gl_material_binding_point = 3; // Defaults to 3 in geometry.frag shader
       glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_material_binding_point, batch.gl_mbo);
 
+      glActiveTexture(GL_TEXTURE0 + batch.gl_diffuse_texture_unit);
+      glBindTexture(GL_TEXTURE_2D_ARRAY, batch.gl_diffuse_texture_array);
+
+      glActiveTexture(GL_TEXTURE0 + batch.gl_metallic_roughness_texture_unit);
+      glBindTexture(GL_TEXTURE_2D, batch.gl_metallic_roughness_texture);
+
       const uint32_t draw_cmd_offset = batch.gl_curr_ibo_idx * sizeof(DrawElementsIndirectCommand);
       glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (const void*) draw_cmd_offset, 1, sizeof(DrawElementsIndirectCommand));
     }
