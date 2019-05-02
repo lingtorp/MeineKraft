@@ -267,10 +267,10 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
   }
 
-  pointlights.emplace_back(PointLight(Vec3f(0.0, 0.0, 5.0)));
-  pointlights.emplace_back(PointLight(Vec3f(10.0, 10.0, 5.0)));
-  pointlights.emplace_back(PointLight(Vec3f(0.0, 10.0, 5.0)));
-  pointlights.emplace_back(PointLight(Vec3f(10.0, 0.0, 5.0)));
+  pointlights.emplace_back(PointLight(Vec3f(0.0, 500.0, 150.0)));
+  pointlights.emplace_back(PointLight(Vec3f(100.0, 100.0, 100.0)));
+  pointlights.emplace_back(PointLight(Vec3f(0.0, 300.0, 50.0)));
+  pointlights.emplace_back(PointLight(Vec3f(400.0, 200.0, 500.0)));
 
   /// Create SSBO for the PointLights
   glGenBuffers(1, &gl_pointlights_ssbo);
