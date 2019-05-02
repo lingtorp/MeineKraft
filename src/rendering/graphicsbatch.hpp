@@ -35,7 +35,7 @@ struct Material {
 };
 
 /// Computes the largest sphere radius fully containing the mesh [Ritter's algorithm]
-static float compute_bounding_volume_radius(const Mesh& mesh) {
+static BoundingVolume compute_bounding_volume(const Mesh& mesh) {
   // Compute extreme values along the axis
   float min_x = std::numeric_limits<float>::max();
   float min_y = std::numeric_limits<float>::max();
@@ -81,13 +81,13 @@ static float compute_bounding_volume_radius(const Mesh& mesh) {
       sphere.radius = (d + sphere.radius) / 2.0f;
     }
   }
-  Log::info("Bounding Volume sphere position: " + sphere.position.to_string());
-  return sphere.radius;
+  Log::info("Bounding Volume sphere: " + sphere.position.to_string() + ", " + std::to_string(sphere.radius));
+  return sphere;
 }
 
 struct GraphicsBatch {
   explicit GraphicsBatch(const ID mesh_id): mesh_id(mesh_id), objects{}, mesh{MeshManager::mesh_from_id(mesh_id)}, 
-    layer_idxs{}, bounding_volume_radius(compute_bounding_volume_radius(mesh)) {};
+    layer_idxs{}, bounding_volume(compute_bounding_volume(mesh)) {};
   
   void init_buffer(const Texture& texture, uint32_t* gl_buffer, const uint32_t gl_texture_unit, uint32_t* buffer_capacity) {
     glActiveTexture(GL_TEXTURE0 + gl_texture_unit);
@@ -242,8 +242,7 @@ struct GraphicsBatch {
   uint32_t gl_bounding_volume_buffer = 0;           // Bounding volume buffer
   uint8_t* gl_bounding_volume_buffer_ptr = nullptr; // Ptr to the mapped bounding volume buffer
   
-  // FIXME: Bounding volume geometry is the same across the batch, share this geometry instead
-  float bounding_volume_radius = 0.0f; // Computed based on the batch geometry at batch creation 
+  BoundingVolume bounding_volume; // Computed based on the batch geometry at batch creation 
 
   uint32_t gl_instance_idx_buffer = 0; // Instance indices passed along the shader pipeline for fetching per instance data from various buffers
 
