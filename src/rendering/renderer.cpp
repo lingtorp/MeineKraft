@@ -531,7 +531,7 @@ void Renderer::render(const uint32_t delta) {
 void Renderer::update_projection_matrix(const float fov, const Resolution& screen) {
   // TODO: Adjust all the passes textures sizes & all the global texture buffers
   const float aspect = (float) screen.width / (float) screen.height;
-  this->projection_matrix = glm::perspective(glm::radians(fov), aspect, 0.1f, 1000.0f);
+  this->projection_matrix = glm::perspective(glm::radians(fov), aspect, 0.1f, 3000.0f);
   glViewport(0, 0, screen.width, screen.height);
 }
 
