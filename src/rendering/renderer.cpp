@@ -766,21 +766,19 @@ void Renderer::add_graphics_state(GraphicsBatch& batch, const RenderComponent& c
   batch.entity_ids.push_back(entity_id);
   batch.data_idx[entity_id] = batch.entity_ids.size() - 1;
 
-  const TransformComponent transform = TransformSystem::instance().lookup(entity_id);
-  batch.objects.transforms.push_back(compute_transform(transform));
+  const TransformComponent transform_comp = TransformSystem::instance().lookup(entity_id);
+  const Mat4f transform = compute_transform(transform_comp);
+  batch.objects.transforms.push_back(transform);
   uint8_t* dest = batch.gl_depth_model_buffer_object_ptr + (batch.objects.transforms.size() - 1) * sizeof(Mat4f);
   std::memcpy(dest, &batch.objects.transforms.back(), sizeof(Mat4f));
 
   // Calculate a bounding volume for the object
-  // TODO: Bounding geometry should be the same for all objects (the radius as well)
-  // FIXME: The bounding volume position is dependent on the actual position of the object as well
-  // since we are want to not use simple origin based spheres anymore
   BoundingVolume bounding_volume;
-  bounding_volume.position = transform.position;
+  bounding_volume.radius = batch.bounding_volume.radius * transform_comp.scale;
+  bounding_volume.position = Vec3f(transform * Vec4f(batch.bounding_volume.position, 1.0f));
   batch.objects.bounding_volumes.push_back(bounding_volume);
   dest = batch.gl_bounding_volume_buffer_ptr + (batch.objects.bounding_volumes.size() - 1) * sizeof(BoundingVolume);
   std::memcpy(dest, &batch.objects.bounding_volumes.back(), sizeof(BoundingVolume));
-  // NOTE: Does not calculate the radius of the bounding volume ... BV should not be at the origin of the model ...
 
   material.pbr_scalar_parameters = Vec2f(comp.pbr_scalar_parameters.y, comp.pbr_scalar_parameters.z);
   material.shading_model = comp.shading_model;
@@ -799,15 +797,16 @@ void Renderer::update_transforms() {
       if (idx == batch.data_idx.cend()) { continue; }
 
       // Update the bounding volume for the object
-      const TransformComponent transform = TransformSystem::instance().lookup(t_id);
+      const TransformComponent transform_comp = TransformSystem::instance().lookup(t_id);
+      const Mat4f transform = compute_transform(transform_comp);
+
       BoundingVolume bounding_volume;
-      bounding_volume.radius = batch.bounding_volume_radius * transform.scale;
-      bounding_volume.position = transform.position;
+      bounding_volume.radius = batch.bounding_volume.radius * transform_comp.scale;
+      bounding_volume.position = Vec3f(transform * Vec4f(batch.bounding_volume.position, 1.0f));
       batch.objects.bounding_volumes[idx->second] = bounding_volume;
       std::memcpy(batch.gl_bounding_volume_buffer_ptr + idx->second * sizeof(BoundingVolume), &batch.objects.bounding_volumes[idx->second], sizeof(BoundingVolume));
-      // NOTE: Does not calculate the radius of the bounding volume ... BV should not be at the origin of the model ...
 
-      batch.objects.transforms[idx->second] = compute_transform(transform);
+      batch.objects.transforms[idx->second] = transform;
       std::memcpy(batch.gl_depth_model_buffer_object_ptr + idx->second * sizeof(Mat4f), &batch.objects.transforms[idx->second], sizeof(Mat4f));
     }
   }
