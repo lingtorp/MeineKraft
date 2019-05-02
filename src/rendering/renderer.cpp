@@ -320,8 +320,8 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   glCullFace(GL_BACK);
 
   /// Camera
-  const auto position  = Vec3f{8.0f, 8.0f, 8.0f};
-  const auto direction = Vec3f{0.0,  0.0, -1.0};
+  const auto position = Vec3f(754.0f, 575.0f, 363.0f);
+  const auto direction = Vec3f(-0.88f, -0.45f, -0.046f);
   const auto world_up  = Vec3f{0.0f, 1.0f, 0.0f};
   camera = new Camera(position, direction, world_up);
 }
@@ -412,11 +412,11 @@ void Renderer::render(const uint32_t delta) {
   pass_ended();
 
   pass_started("Directional shadow mapping pass");
-  glm::vec3 d(0.0, -0.6, 0.7);
+  glm::vec3 d = glm::vec3(directional_light.direction.x, directional_light.direction.y, directional_light.direction.z);
   glm::vec3 u(0.0, 1.0, 0.0);
-  glm::vec3 p(0.5, 10.0, -11.0);
+  glm::vec3 p = glm::vec3(directional_light.position.x, directional_light.position.y, directional_light.position.z);
   const glm::mat4 directional_light_transform = glm::lookAt(p, p + d, u);
-  const glm::mat4 ortho_projection = glm::ortho(-20.0f, 20.0f, -20.0f, 20.0f, 0.1f, 100.0f);
+  const glm::mat4 ortho_projection = glm::ortho(-1000.0f, 1000.0f, -1000.0f, 1000.0f, 0.1f, 2000.0f);
   const glm::mat4 light_space_transform = ortho_projection * directional_light_transform;
 
   {

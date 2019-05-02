@@ -51,6 +51,9 @@ struct Renderer {
   std::vector<GraphicsBatch> graphics_batches;
   std::vector<PointLight> pointlights; 
 
+  // Shadow mapping
+  DirectionalLight directional_light = DirectionalLight(Vec3f(-130.0, 2000.0, 0.0), Vec3f(0.0, -0.9, 0.523));
+
 private:
   void add_graphics_state(GraphicsBatch& batch, const RenderComponent& comp, Material material, ID entity_id);
   void update_transforms();

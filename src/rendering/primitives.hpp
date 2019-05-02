@@ -300,7 +300,7 @@ struct RenderState {
   uint64_t entities        = 0;
   uint64_t graphic_batches = 0;
   uint64_t draw_calls      = 0;
-  bool shadowmapping = false;
+  bool shadowmapping = true;
   RenderState() = default;
   RenderState(const RenderState& old): frame(old.frame), shadowmapping(old.shadowmapping) {}
 };
@@ -311,5 +311,11 @@ struct Resolution {
 
 static auto HD      = Resolution{1280, 720};
 static auto FULL_HD = Resolution{1920, 1080};
+
+struct DirectionalLight {
+  Vec3f position;
+  Vec3f direction;
+  DirectionalLight(const Vec3f& position, const Vec3f& direction): position(position), direction(direction) {}
+};
 
 #endif // MEINEKRAFT_PRIMITIVES_HPP
