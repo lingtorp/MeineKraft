@@ -31,7 +31,7 @@ struct Renderer {
   /// Adds the data of a RenderComponent to a internal batch
   void add_component(const RenderComponent comp, const ID entity_id);
 
-  void remove_component(ID entity_id);
+  void remove_component(ID entity_id); // TODO: Implement
 
   /// Updates all the shaders projection matrices in order to support resizing of the window
   void update_projection_matrix(const float fov, const Resolution& screen);
@@ -72,8 +72,8 @@ private:
   uint32_t gl_shadowmapping_texture = 0;
   uint32_t gl_shadowmapping_texture_unit = 0;
   Shader* shadowmapping_shader = nullptr;
-  const uint32_t SHADOWMAP_W = 1024; // Shadowmap texture dimensions
-  const uint32_t SHADOWMAP_H = 1024;
+  const uint32_t SHADOWMAP_W = 4 * 1024; // Shadowmap texture dimensions
+  const uint32_t SHADOWMAP_H = 4 * 1024;
 
   /// Lightning pass related
   Shader* lightning_shader;
