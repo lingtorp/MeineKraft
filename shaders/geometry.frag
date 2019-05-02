@@ -42,12 +42,14 @@ void main() {
     
     #ifdef DIFFUSE_RGB
     gDiffuse.rgb = texture(diffuse, vec3(fTexcoord, material.diffuse_layer_idx)).rgb; 
+    gDiffuse.a = 1.0;
     #else 
     gDiffuse.rgba = texture(diffuse, vec3(fTexcoord, material.diffuse_layer_idx)).rgba; 
     #endif
     
     #elif defined(DIFFUSE_CUBEMAP)
     gDiffuse.rgb = texture(diffuse, vec4(local_space_position, material.diffuse_layer_idx)).rgb;
+    gDiffuse.a = 1.0;
     #endif
 
     switch (material.shading_model) {
