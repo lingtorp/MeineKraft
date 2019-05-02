@@ -276,7 +276,7 @@ MeshManager::load_meshes(const std::string& directory, const std::string& file) 
           Log::info("Bumpmap texture name: " + std::string(directory.c_str()) + std::string(height_filepath.data));
         }
 
-        // Lightmap is usually the ambient occlusion map ...
+        // NOTE: Lightmap is usually the ambient occlusion map ...
         aiString lightmap_filepath;
         if (material->GetTexture(aiTextureType_LIGHTMAP, 0, &lightmap_filepath) == AI_SUCCESS) {
           Log::info("Lightmap texture name: " + std::string(directory.c_str()) + std::string(lightmap_filepath.data));
