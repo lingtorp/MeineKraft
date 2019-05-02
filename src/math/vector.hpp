@@ -62,6 +62,7 @@ struct Vec4 {
     Vec4(): x(0.0f), y(0.0f), z(0.0f), w(0.0f) { };
     explicit Vec4(T val): x(val), y(val), z(val), w(val) { };
     explicit Vec4(Vec3<T> vec): x(vec.x), y(vec.y), z(vec.z), w(0.0f) { };
+    explicit Vec4(Vec3<T> vec, T w) : x(vec.x), y(vec.y), z(vec.z), w(w) {};
 
     /************ Operators ************/
     /// Returns the members x, y, z, w in index order (invalid indexes returns w)
