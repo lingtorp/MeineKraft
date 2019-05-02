@@ -230,15 +230,29 @@ void MeineKraft::mainloop() {
         ImGui::Text("Frame: %lu", renderer->state.frame);
         ImGui::Text("Entities: %lu", renderer->state.entities);
         ImGui::Text("Average %lu ms / frame (%.1f FPS)", delta, io.Framerate);
-        ImGui::Checkbox("Shadowmapping", &renderer->state.shadowmapping);
 
         static size_t i = -1; i = (i + 1) % num_deltas;
         deltas[i] = float(delta);
         ImGui::PlotLines("", deltas, num_deltas, 0, "ms / frame", 0.0f, 50.0f, ImVec2(ImGui::GetWindowWidth(), 100));
 
         if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
-          ImGui::InputFloat3("Position", &renderer->camera->position.x);
-          ImGui::InputFloat3("Direction", &renderer->camera->direction.x);
+          ImGui::InputFloat3("Position##camera", &renderer->camera->position.x);
+          ImGui::InputFloat3("Direction##camera", &renderer->camera->direction.x);
+        }
+
+
+        if (ImGui::CollapsingHeader("Point lights")) {
+          for (size_t i = 0; i < renderer->pointlights.size(); i++) {
+            ImGui::PushID(&renderer->pointlights[i]);
+            ImGui::InputFloat3("Position", &renderer->pointlights[i].position.x);
+            ImGui::PopID();
+          }        
+        }
+
+        if (ImGui::CollapsingHeader("Directional light")) {
+          ImGui::Checkbox("Shadowmapping", &renderer->state.shadowmapping);
+          ImGui::InputFloat3("Position##directional_light", &renderer->directional_light.position.x);
+          ImGui::InputFloat3("Direction##directional_light", &renderer->directional_light.direction.x);
         }
 
         if (ImGui::CollapsingHeader("Graphics batches")) {
