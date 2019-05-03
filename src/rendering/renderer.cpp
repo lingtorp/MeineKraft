@@ -1,3 +1,12 @@
+// _____________________________TODOs____________________________________
+// ______________________________________________________________________
+// [ ] OBJECT LABEL ALL THE THINGS
+// [ ] SSAO
+// [ ] Weird texture sampling on the flowers/veins, OIT? depth peeling..?
+// [ ] Shadowmapping
+// [ ] Bump mapping?
+// ______________________________________________________________________
+
 #include "renderer.hpp"
 
 #include <array>
@@ -380,7 +389,6 @@ void Renderer::render(const uint32_t delta) {
 
   pass_started("Culling pass");
   {
-
     // NOTE: Extraction of frustum planes are performed on the transpose (because of column/row-major difference).
     // FIXME: Use the Direct3D way of extraction instead since GLM appears to store the matrix in a row-major way.
     const glm::mat4 proj_view = projection_matrix * camera_transform;
@@ -542,6 +550,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     const auto program = batch.depth_shader.gl_program;
     glUseProgram(program);
     glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, glm::value_ptr(projection_matrix));
+    
     glUniform1i(glGetUniformLocation(program, "diffuse"), batch.gl_diffuse_texture_unit);
     glUniform1i(glGetUniformLocation(program, "pbr_parameters"), batch.gl_metallic_roughness_texture_unit);
     glUniform1i(glGetUniformLocation(program, "ambient_occlusion"), batch.gl_ambient_occlusion_texture_unit);
