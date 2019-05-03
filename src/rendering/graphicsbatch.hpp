@@ -81,7 +81,7 @@ static BoundingVolume compute_bounding_volume(const Mesh& mesh) {
       sphere.radius = (d + sphere.radius) / 2.0f;
     }
   }
-  Log::info("Bounding Volume sphere: " + sphere.position.to_string() + ", " + std::to_string(sphere.radius));
+  // Log::info("Bounding Volume sphere: " + sphere.position.to_string() + ", " + std::to_string(sphere.radius));
   return sphere;
 }
 
@@ -164,20 +164,20 @@ struct GraphicsBatch {
     glGenBuffers(1, &new_gl_depth_models_buffer_object);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, new_gl_depth_models_buffer_object);
     glBufferStorage(GL_SHADER_STORAGE_BUFFER, new_buffer_size * sizeof(Mat4f), nullptr, flags);
-    gl_depth_model_buffer_object_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, new_buffer_size * sizeof(Mat4f), flags);
-    glCopyNamedBufferSubData(gl_depth_models_buffer_object, new_gl_depth_models_buffer_object, 0, 0, buffer_size * sizeof(Mat4f));
-    glInvalidateBufferData(gl_depth_models_buffer_object);
-    glDeleteBuffers(1, &gl_depth_models_buffer_object);
+    gl_depth_model_buffer_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, new_buffer_size * sizeof(Mat4f), flags);
+    glCopyNamedBufferSubData(gl_depth_model_buffer, new_gl_depth_models_buffer_object, 0, 0, buffer_size * sizeof(Mat4f));
+    glInvalidateBufferData(gl_depth_model_buffer);
+    glDeleteBuffers(1, &gl_depth_model_buffer);
     
     // Material buffer
     uint32_t new_gl_mbo = 0;
     glGenBuffers(1, &new_gl_mbo);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, new_gl_mbo);
     glBufferStorage(GL_SHADER_STORAGE_BUFFER, new_buffer_size * sizeof(Material), nullptr, flags);
-    gl_mbo_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, new_buffer_size * sizeof(Material), flags);
-    glCopyNamedBufferSubData(gl_mbo, new_gl_mbo, 0, 0, buffer_size * sizeof(Material));
-    glInvalidateBufferData(gl_mbo);
-    glDeleteBuffers(1, &gl_mbo);
+    gl_material_buffer_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, new_buffer_size * sizeof(Material), flags);
+    glCopyNamedBufferSubData(gl_material_buffer, new_gl_mbo, 0, 0, buffer_size * sizeof(Material));
+    glInvalidateBufferData(gl_material_buffer);
+    glDeleteBuffers(1, &gl_material_buffer);
 
     // Batch instance idx buffer
     uint32_t new_gl_instance_idx_buffer = 0;
@@ -194,8 +194,8 @@ struct GraphicsBatch {
 
     // Update state
     gl_bounding_volume_buffer = new_gl_bounding_volume_buffer;
-    gl_mbo = new_gl_mbo;
-    gl_depth_models_buffer_object = new_gl_depth_models_buffer_object;
+    gl_material_buffer = new_gl_mbo;
+    gl_depth_model_buffer = new_gl_depth_models_buffer_object;
     gl_instance_idx_buffer = new_gl_instance_idx_buffer;
     buffer_size = new_buffer_size;
   }
@@ -246,14 +246,14 @@ struct GraphicsBatch {
 
   uint32_t gl_instance_idx_buffer = 0; // Instance indices passed along the shader pipeline for fetching per instance data from various buffers
 
-  uint32_t gl_mbo = 0;           // Material b.o
-  uint8_t* gl_mbo_ptr = nullptr; // Ptr to mapped material buffer
+  uint32_t gl_material_buffer = 0;           // Material b.o
+  uint8_t* gl_material_buffer_ptr = nullptr; // Ptr to mapped material buffer
 
   /// Depth pass variables
   uint32_t gl_depth_vao = 0;
   uint32_t gl_depth_vbo = 0;
-  uint32_t gl_depth_models_buffer_object  = 0;  // Models b.o (holds all objects model matrices / transforms)
-  uint8_t* gl_depth_model_buffer_object_ptr = nullptr; // Model b.o ptr
+  uint32_t gl_depth_model_buffer  = 0;          // Models b.o (holds all objects model matrices / transforms)
+  uint8_t* gl_depth_model_buffer_ptr = nullptr; // Model b.o ptr
 
   Shader depth_shader;  // Shader used to render all the components in this batch
 
