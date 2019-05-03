@@ -139,8 +139,9 @@ vec3 schlick_render(vec2 frag_coord, vec3 position, vec3 normal, vec3 diffuse, v
     return L0;
 }
 
+/// Lambertian diffuse BRDF
 vec3 unlit_render(vec3 diffuse) {
-    return diffuse;
+    return diffuse / M_PI;
 }
 
 vec3 SRGB_to_linear(vec3 srgb) {
