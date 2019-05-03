@@ -1,11 +1,3 @@
-// _____________________________TODOs____________________________________
-// ______________________________________________________________________
-// [ ] SSAO
-// [ ] Weird texture sampling on the flowers/veins, OIT? depth peeling..?
-// [ ] Shadowmapping
-// [ ] Bump mapping?
-// ______________________________________________________________________
-
 #include "renderer.hpp"
 
 #include <array>
@@ -137,6 +129,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   /// Global geometry pass framebuffer
   glGenFramebuffers(1, &gl_depth_fbo);
   glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
+  glObjectLabel(GL_FRAMEBUFFER, gl_depth_fbo, -1, "GBuffer FBO");
 
   // Global depth buffer
   gl_depth_texture_unit = Renderer::get_next_free_texture_unit();
@@ -456,7 +449,7 @@ void Renderer::render(const uint32_t delta) {
       glBindBuffer(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo); // GL_DRAW_INDIRECT_BUFFER is global context state
 
       const uint32_t gl_models_binding_point = 2; // Defaults to 2 in geometry.vert shader
-      glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_models_binding_point, batch.gl_depth_models_buffer_object);
+      glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_models_binding_point, batch.gl_depth_model_buffer);
 
       const uint32_t draw_cmd_offset = batch.gl_curr_ibo_idx * sizeof(DrawElementsIndirectCommand);
       glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (const void*) draw_cmd_offset, 1, sizeof(DrawElementsIndirectCommand));
@@ -481,10 +474,10 @@ void Renderer::render(const uint32_t delta) {
       glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(camera_transform));
 
       const uint32_t gl_models_binding_point = 2; // Defaults to 2 in geometry.vert shader
-      glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_models_binding_point, batch.gl_depth_models_buffer_object);
+      glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_models_binding_point, batch.gl_depth_model_buffer);
 
       const uint32_t gl_material_binding_point = 3; // Defaults to 3 in geometry.frag shader
-      glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_material_binding_point, batch.gl_mbo);
+      glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_material_binding_point, batch.gl_material_buffer);
 
       glActiveTexture(GL_TEXTURE0 + batch.gl_diffuse_texture_unit);
       glBindTexture(GL_TEXTURE_2D_ARRAY, batch.gl_diffuse_texture_array);
@@ -594,16 +587,18 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glObjectLabel(GL_BUFFER, batch.gl_bounding_volume_buffer, -1, "BoundingVolume SSBO");
 
     // Buffer for all the model matrices
-    glGenBuffers(1, &batch.gl_depth_models_buffer_object);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, batch.gl_depth_models_buffer_object);
+    glGenBuffers(1, &batch.gl_depth_model_buffer);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, batch.gl_depth_model_buffer);
     glBufferStorage(GL_SHADER_STORAGE_BUFFER, GraphicsBatch::INIT_BUFFER_SIZE * sizeof(Mat4f), nullptr, flags);
-    batch.gl_depth_model_buffer_object_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, GraphicsBatch::INIT_BUFFER_SIZE * sizeof(Mat4f), flags);
+    batch.gl_depth_model_buffer_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, GraphicsBatch::INIT_BUFFER_SIZE * sizeof(Mat4f), flags);
+    glObjectLabel(GL_BUFFER, batch.gl_depth_model_buffer, -1, "Model SSBO");
 
     // Material buffer
-    glGenBuffers(1, &batch.gl_mbo);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, batch.gl_mbo);
+    glGenBuffers(1, &batch.gl_material_buffer);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, batch.gl_material_buffer);
     glBufferStorage(GL_SHADER_STORAGE_BUFFER, GraphicsBatch::INIT_BUFFER_SIZE * sizeof(Material), nullptr, flags);
-    batch.gl_mbo_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, GraphicsBatch::INIT_BUFFER_SIZE * sizeof(Material), flags);
+    batch.gl_material_buffer_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, GraphicsBatch::INIT_BUFFER_SIZE * sizeof(Material), flags);
+    glObjectLabel(GL_BUFFER, batch.gl_material_buffer, -1, "Material SSBO");
 
     // Element buffer
     // FIXME: Does not need to be mapped (remove)
@@ -612,16 +607,19 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glBufferStorage(GL_ELEMENT_ARRAY_BUFFER, batch.mesh.byte_size_of_indices(), nullptr, flags);
     batch.gl_ebo_ptr = (uint8_t*) glMapBufferRange(GL_ELEMENT_ARRAY_BUFFER, 0, batch.mesh.byte_size_of_indices(), flags);
     std::memcpy(batch.gl_ebo_ptr, batch.mesh.indices.data(), batch.mesh.byte_size_of_indices());
+    glObjectLabel(GL_BUFFER, batch.gl_ebo, -1, "Elements SSBO");
 
     // Setup GL_DRAW_INDIRECT_BUFFER for indirect drawing (basically a command buffer)
     glGenBuffers(1, &batch.gl_ibo);
     glBindBuffer(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo);
     glBufferStorage(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo_count * sizeof(DrawElementsIndirectCommand), nullptr, flags);
     batch.gl_ibo_ptr = (uint8_t*) glMapBufferRange(GL_DRAW_INDIRECT_BUFFER, 0, batch.gl_ibo_count * sizeof(DrawElementsIndirectCommand), flags);
+    glObjectLabel(GL_BUFFER, batch.gl_ibo, -1, "Draw Cmd SSBO");
 
     // Batch instance idx buffer
     glGenBuffers(1, &batch.gl_instance_idx_buffer);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, batch.gl_instance_idx_buffer);
+    glObjectLabel(GL_BUFFER, batch.gl_instance_idx_buffer, -1, "Instance idx SSBO");
     glBufferStorage(GL_SHADER_STORAGE_BUFFER, GraphicsBatch::INIT_BUFFER_SIZE * sizeof(GLuint), nullptr, 0);
     glBindBuffer(GL_ARRAY_BUFFER, batch.gl_instance_idx_buffer);
     glVertexAttribIPointer(glGetAttribLocation(program, "instance_idx"), 1, GL_UNSIGNED_INT, sizeof(GLuint), nullptr);
@@ -788,7 +786,7 @@ void Renderer::add_graphics_state(GraphicsBatch& batch, const RenderComponent& c
   const TransformComponent transform_comp = TransformSystem::instance().lookup(entity_id);
   const Mat4f transform = compute_transform(transform_comp);
   batch.objects.transforms.push_back(transform);
-  uint8_t* dest = batch.gl_depth_model_buffer_object_ptr + (batch.objects.transforms.size() - 1) * sizeof(Mat4f);
+  uint8_t* dest = batch.gl_depth_model_buffer_ptr + (batch.objects.transforms.size() - 1) * sizeof(Mat4f);
   std::memcpy(dest, &batch.objects.transforms.back(), sizeof(Mat4f));
 
   // Calculate a bounding volume for the object
@@ -803,7 +801,7 @@ void Renderer::add_graphics_state(GraphicsBatch& batch, const RenderComponent& c
   material.shading_model = comp.shading_model;
 
   batch.objects.materials.push_back(material);
-  dest = batch.gl_mbo_ptr + (batch.objects.materials.size() - 1) * sizeof(Material);
+  dest = batch.gl_material_buffer_ptr + (batch.objects.materials.size() - 1) * sizeof(Material);
   std::memcpy(dest, &batch.objects.materials.back(), sizeof(Material));
 }
 
@@ -826,7 +824,7 @@ void Renderer::update_transforms() {
       std::memcpy(batch.gl_bounding_volume_buffer_ptr + idx->second * sizeof(BoundingVolume), &batch.objects.bounding_volumes[idx->second], sizeof(BoundingVolume));
 
       batch.objects.transforms[idx->second] = transform;
-      std::memcpy(batch.gl_depth_model_buffer_object_ptr + idx->second * sizeof(Mat4f), &batch.objects.transforms[idx->second], sizeof(Mat4f));
+      std::memcpy(batch.gl_depth_model_buffer_ptr + idx->second * sizeof(Mat4f), &batch.objects.transforms[idx->second], sizeof(Mat4f));
     }
   }
 }
