@@ -74,8 +74,9 @@ float microfaced_distribution_trowbridge_reitz(PBRInputs inputs) {
     return (a * a) / (M_PI * f * f);
 }
 
-vec3 diffuse_lambertian(PBRInputs inputs) {
-    return inputs.base_color / M_PI;
+/// Lambertian diffuse BRDF
+vec3 diffuse_lambertian(vec3 rgb) {
+    return rgb / M_PI;
 }
 
 /// Disney Implementation of diffuse from Physically-Based Shading at Disney by Brent Burley. See Section 5.3. 
@@ -92,8 +93,7 @@ vec3 schlick_brdf(PBRInputs inputs) {
     inputs.base_color = mix(inputs.base_color * (1.0 - f0), black, inputs.metallic);
 
     const vec3 F = fresnel_schlick(normal_incidence, inputs);
-    const vec3 diffuse = diffuse_lambertian(inputs); 
-    const vec3 fdiffuse = (1.0 - F) * diffuse;
+    const vec3 fdiffuse = (1.0 - F) * diffuse_lambertian(inputs.base_color); 
 
     const float G = geometric_occlusion_schlick(inputs);
     const float D = microfaced_distribution_trowbridge_reitz(inputs);
@@ -134,14 +134,9 @@ vec3 schlick_render(vec2 frag_coord, vec3 position, vec3 normal, vec3 diffuse, v
     // TODO: Seperate diffuse and specular terms from the irradiance
     // TODO: Lookup whether or not the irradiance comes in sRGB 
     const vec3 irradiance = texture(environment_map_sampler, vec4(pbr_inputs.N, 0)).rgb;
-    const vec3 ambient = irradiance * diffuse_lambertian(pbr_inputs) * (1.0 - ambient_occlusion);
+    const vec3 ambient = irradiance * diffuse_lambertian(pbr_inputs.base_color) * (1.0 - ambient_occlusion);
     L0 += ambient;
     return L0;
-}
-
-/// Lambertian diffuse BRDF
-vec3 unlit_render(vec3 diffuse) {
-    return diffuse / M_PI;
 }
 
 vec3 SRGB_to_linear(vec3 srgb) {
@@ -178,7 +173,7 @@ void main() {
     vec3 color = vec3(0.0);
     switch (shading_model_id) {
         case 1: // Unlit
-        color = (1.0 - shadow) * unlit_render(diffuse);
+        color = (1.0 - shadow) * diffuse_lambertian(diffuse);
         break;     
         case 2: // Physically based rendering with parameters sourced from textures
         case 3: // Physically based rendering with parameters sourced from scalars
