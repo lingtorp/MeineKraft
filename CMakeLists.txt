@@ -14,6 +14,7 @@ if(WIN32)
         # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /d2cgsummary") # 
         # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Bt") #  time spent in frontend (c1xx.dll) vs backend (c2.dll)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4") # Enable warning level 4
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP") # MultiProcessor compilation
 endif(WIN32)
 
 file(GLOB IMGUI_SRC "include/imgui/*.cpp" "include/imgui/*.h") # Adds all imgui related files into the application
