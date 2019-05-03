@@ -192,6 +192,7 @@ MeshManager::load_meshes(const std::string& directory, const std::string& file) 
       Log::info("\t ... has normals: " + mesh->HasNormals() ? "Y" : "N");
 
       // Load all vertices
+      mesh_info.mesh.vertices.reserve(mesh->mNumVertices);
       for (size_t j = 0; j < mesh->mNumVertices; j++) {
         Vertex vertex;
 
@@ -212,6 +213,7 @@ MeshManager::load_meshes(const std::string& directory, const std::string& file) 
       }
 
       // Load all indices from the faces
+      mesh_info.mesh.indices.reserve(mesh->mNumFaces * 3);
       for (size_t j = 0; j < mesh->mNumFaces; j++) {
         auto face = &mesh->mFaces[j];
         if (face->mNumIndices != 3) {
@@ -219,8 +221,7 @@ MeshManager::load_meshes(const std::string& directory, const std::string& file) 
           return { {0}, {{}} };
         }
         for (size_t k = 0; k < 3; k++) {
-          auto index = face->mIndices[k];
-          mesh_info.mesh.indices.push_back(index);
+          mesh_info.mesh.indices.push_back(face->mIndices[k]);
         }
       }
       loaded_meshes.push_back(mesh_info.mesh);
