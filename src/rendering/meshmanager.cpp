@@ -196,16 +196,16 @@ MeshManager::load_meshes(const std::string& directory, const std::string& file) 
       for (size_t j = 0; j < mesh->mNumVertices; j++) {
         Vertex vertex;
 
-        auto pos = mesh->mVertices[j];
+        const auto pos = mesh->mVertices[j];
         vertex.position = { pos.x, pos.y, pos.z };
 
         if (mesh->HasTextureCoords(0)) {
-          auto tex_coord = mesh->mTextureCoords[0][j];
+          const auto tex_coord = mesh->mTextureCoords[0][j];
           vertex.tex_coord = { tex_coord.x, -tex_coord.y }; // glTF (& .obj) has a flipped texture coordinate system compared to OpenGL 
         }
 
         if (mesh->HasNormals()) {
-          auto normal = mesh->mNormals[j];
+          const auto normal = mesh->mNormals[j];
           vertex.normal = { normal.x, normal.y, normal.z };
         }
 
