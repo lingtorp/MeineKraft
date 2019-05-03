@@ -1,6 +1,5 @@
 // _____________________________TODOs____________________________________
 // ______________________________________________________________________
-// [ ] OBJECT LABEL ALL THE THINGS
 // [ ] SSAO
 // [ ] Weird texture sampling on the flowers/veins, OIT? depth peeling..?
 // [ ] Shadowmapping
@@ -149,6 +148,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   // glTexParameteri(GL_TEXTURE_2D, GL_DEPTH_STENCIL_TEXTURE_MODE, GL_DEPTH_COMPONENT); // Default value (intention only to read depth values from texture)
   glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, screen.width, screen.height, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, nullptr);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, gl_depth_texture, 0);
+  glObjectLabel(GL_TEXTURE, gl_depth_texture, -1, "GBuffer depth texture");
 
   // Global normal buffer
   gl_normal_texture_unit = Renderer::get_next_free_texture_unit();
@@ -159,6 +159,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_normal_texture, 0);
+  glObjectLabel(GL_TEXTURE, gl_normal_texture, -1, "GBuffer normal texture");
 
   // Global position buffer
   gl_position_texture_unit = Renderer::get_next_free_texture_unit();
@@ -169,6 +170,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, gl_position_texture, 0);
+  glObjectLabel(GL_TEXTURE, gl_position_texture, -1, "GBuffer position texture");
 
   // Global diffuse buffer
   gl_diffuse_texture_unit = Renderer::get_next_free_texture_unit();
@@ -179,6 +181,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, gl_diffuse_texture, 0);
+  glObjectLabel(GL_TEXTURE, gl_diffuse_texture, -1, "GBuffer diffuse texture");
 
   // Global PBR parameters buffer
   gl_pbr_parameters_texture_unit = Renderer::get_next_free_texture_unit();
@@ -189,6 +192,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, gl_pbr_parameters_texture, 0);
+  glObjectLabel(GL_TEXTURE, gl_pbr_parameters_texture, -1, "GBuffer PBR parameters texture");
 
   // Global ambient occlusion map
   gl_ambient_occlusion_texture_unit = Renderer::get_next_free_texture_unit();
@@ -199,6 +203,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, gl_ambient_occlusion_texture, 0);
+  glObjectLabel(GL_TEXTURE, gl_ambient_occlusion_texture, -1, "GBuffer AO texture");
 
   // Global emissive map
   gl_emissive_texture_unit = Renderer::get_next_free_texture_unit();
@@ -209,6 +214,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT5, gl_emissive_texture, 0);
+  glObjectLabel(GL_TEXTURE, gl_emissive_texture, -1, "GBuffer emissive texture");
 
   // Global shading model id
   gl_shading_model_texture_unit = Renderer::get_next_free_texture_unit();
@@ -219,6 +225,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT6, gl_shading_model_texture, 0);
+  glObjectLabel(GL_TEXTURE, gl_shading_model_texture, -1, "GBuffer shading ID texture");
 
   uint32_t depth_attachments[7] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT5, GL_COLOR_ATTACHMENT6 };
   glDrawBuffers(7, depth_attachments);
@@ -245,6 +252,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, screen.width, screen.height, 0, GL_RGBA, GL_FLOAT, nullptr);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_lightning_texture, 0);
+  glObjectLabel(GL_TEXTURE, gl_lightning_texture, -1, "Pointlighting texture");
 
   uint32_t lightning_attachments[1] = { GL_COLOR_ATTACHMENT0 };
   glDrawBuffers(1, lightning_attachments);
@@ -309,6 +317,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, SHADOWMAP_W, SHADOWMAP_H, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
     glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, gl_shadowmapping_texture, 0);
+    glObjectLabel(GL_TEXTURE, gl_shadowmapping_texture, -1, "Shadowmap texture");
     glDrawBuffer(GL_NONE);
     glReadBuffer(GL_NONE);
 
@@ -582,6 +591,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, batch.gl_bounding_volume_buffer);
     glBufferStorage(GL_SHADER_STORAGE_BUFFER, GraphicsBatch::INIT_BUFFER_SIZE * sizeof(BoundingVolume), nullptr, flags);
     batch.gl_bounding_volume_buffer_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, GraphicsBatch::INIT_BUFFER_SIZE * sizeof(BoundingVolume), flags);
+    glObjectLabel(GL_BUFFER, batch.gl_bounding_volume_buffer, -1, "BoundingVolume SSBO");
 
     // Buffer for all the model matrices
     glGenBuffers(1, &batch.gl_depth_models_buffer_object);
