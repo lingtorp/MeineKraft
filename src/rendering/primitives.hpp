@@ -308,8 +308,9 @@ struct RenderState {
   uint64_t graphic_batches = 0;
   uint64_t draw_calls      = 0;
   bool shadowmapping = true;
+  bool normalmapping = true;
   RenderState() = default;
-  RenderState(const RenderState& old): frame(old.frame), shadowmapping(old.shadowmapping) {}
+  RenderState(const RenderState& old) : frame(old.frame), shadowmapping(old.shadowmapping), normalmapping(old.normalmapping) {}
 };
 
 struct Resolution {
