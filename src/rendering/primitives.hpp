@@ -41,12 +41,13 @@ struct Vertex {
   Vec3f position  = {};
   Vec2f tex_coord = {};
   Vec3f normal    = {};
+  Vec3f tangent   = {};
   Vertex() = default;
-  explicit Vertex(Vec3f position): position(position), tex_coord{}, normal{} {};
-  Vertex(Vec3f position, Vec2f tex_coord): position(position), tex_coord(tex_coord), normal{} {};
+  explicit Vertex(Vec3f position): position(position), tex_coord{}, normal{}, tangent{} {};
+  Vertex(Vec3f position, Vec2f tex_coord): position(position), tex_coord(tex_coord), normal{}, tangent{} {};
 
   bool operator==(const Vertex& rhs) const {
-      return position == rhs.position && tex_coord == rhs.tex_coord && normal == rhs.normal;
+      return position == rhs.position && tex_coord == rhs.tex_coord && normal == rhs.normal && tangent == rhs.tangent;
   }
 };
 
@@ -69,6 +70,9 @@ namespace std {
           auto hashed_normal_x = hasher(vertex.normal.x);
           auto hashed_normal_y = hasher(vertex.normal.y);
           auto hashed_normal_z = hasher(vertex.normal.z);
+          auto hashed_tangent_x = hasher(vertex.tangent.x);
+          auto hashed_tangent_y = hasher(vertex.tangent.y);
+          auto hashed_tangent_z = hasher(vertex.tangent.z);
 
           size_t seed = 0;
           hash_combine(seed, hashed_x);
@@ -79,6 +83,9 @@ namespace std {
           hash_combine(seed, hashed_normal_x);
           hash_combine(seed, hashed_normal_y);
           hash_combine(seed, hashed_normal_z);
+          hash_combine(seed, hashed_tangent_x);
+          hash_combine(seed, hashed_tangent_y);
+          hash_combine(seed, hashed_tangent_z);
           return seed;
       }
   };
