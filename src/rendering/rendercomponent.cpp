@@ -37,6 +37,11 @@ void RenderComponent::set_mesh(const std::string& directory, const std::string& 
         emissive_texture.gl_texture_target = GL_TEXTURE_2D;
         emissive_texture.id = resource.to_hash();
         break;
+      case Texture::Type::TangentNormal:
+        normal_texture.data = Texture::load_textures(resource);
+        normal_texture.gl_texture_target = GL_TEXTURE_2D;
+        normal_texture.id = resource.to_hash();
+        break;
        default:
         Log::warn("Tried to load unsupported texture: " + texture_file);
     }
@@ -80,6 +85,11 @@ RenderComponent::load_scene_models(const std::string& directory, const std::stri
         render_component.emissive_texture.data = Texture::load_textures(resource);
         render_component.emissive_texture.gl_texture_target = GL_TEXTURE_2D;
         render_component.emissive_texture.id = resource.to_hash();
+        break;
+      case Texture::Type::TangentNormal:
+        render_component.normal_texture.data = Texture::load_textures(resource);
+        render_component.normal_texture.gl_texture_target = GL_TEXTURE_2D;
+        render_component.normal_texture.id = resource.to_hash();
         break;
       default:
         Log::warn("Tried to load unsupported texture: " + texture_file);
