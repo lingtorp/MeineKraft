@@ -537,6 +537,7 @@ void Renderer::render(const uint32_t delta) {
     glUniform1f(glGetUniformLocation(program, "screen_height"), screen.height);
     glUniformMatrix4fv(glGetUniformLocation(program, "light_space_transform"), 1, GL_FALSE, glm::value_ptr(light_space_transform));
     glUniform1i(glGetUniformLocation(program, "shadowmapping"), state.shadowmapping);
+    glUniform1i(glGetUniformLocation(program, "normalmapping"), state.normalmapping);
 
     glUniform3fv(glGetUniformLocation(program, "camera"), 1, &camera->position.x);
 
