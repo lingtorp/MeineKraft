@@ -198,6 +198,18 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, gl_ambient_occlusion_texture, 0);
   glObjectLabel(GL_TEXTURE, gl_ambient_occlusion_texture, -1, "GBuffer AO texture");
 
+  if (false) {
+    // Global emissive map
+    gl_emissive_texture_unit = Renderer::get_next_free_texture_unit();
+    glActiveTexture(GL_TEXTURE0 + gl_emissive_texture_unit);
+    glGenTextures(1, &gl_emissive_texture);
+    glBindTexture(GL_TEXTURE_2D, gl_emissive_texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT5, gl_emissive_texture, 0);
+    glObjectLabel(GL_TEXTURE, gl_emissive_texture, -1, "GBuffer emissive texture");
+  }
 
   // Global shading model id
   gl_shading_model_texture_unit = Renderer::get_next_free_texture_unit();
@@ -569,6 +581,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glUniform1i(glGetUniformLocation(program, "diffuse"), batch.gl_diffuse_texture_unit);
     glUniform1i(glGetUniformLocation(program, "pbr_parameters"), batch.gl_metallic_roughness_texture_unit);
     glUniform1i(glGetUniformLocation(program, "ambient_occlusion"), batch.gl_ambient_occlusion_texture_unit);
+    // glUniform1i(glGetUniformLocation(program, "emissive"), batch.gl_emissive_texture_unit);
     glUniform1i(glGetUniformLocation(program, "tangent_normal"), batch.gl_tangent_normal_texture_unit);
 
     glGenVertexArrays(1, &batch.gl_depth_vao);
@@ -780,9 +793,9 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
     glTexImage2D(texture.gl_texture_target, 0, GL_RGB, texture.data.width, texture.data.height, 0, GL_RGB, GL_UNSIGNED_BYTE, texture.data.pixels);
   }
 
-  if (comp.emissive_texture.data.pixels) {
+  if (comp.emissive_texture.data.pixels && false) {
     const Texture& texture = comp.emissive_texture;
-    batch.gl_emissive_texture_unit = 14;
+    batch.gl_emissive_texture_unit = 16;
     glActiveTexture(GL_TEXTURE0 + batch.gl_emissive_texture_unit);
     uint32_t gl_emissive_texture = 0;
     glGenTextures(1, &gl_emissive_texture);
