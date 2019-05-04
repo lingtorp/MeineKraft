@@ -314,7 +314,7 @@ MeshManager::load_meshes(const std::string& directory, const std::string& file) 
         aiString unknown_filepath;
         if (material->GetTexture(aiTextureType_UNKNOWN, 0, &unknown_filepath) == AI_SUCCESS) {
           Log::info("PBR parameter texture name: " + std::string(directory.c_str()) + std::string(unknown_filepath.data));
-          std::string texture_filepath(normals_filepath.data);
+          std::string texture_filepath(unknown_filepath.data);
           texture_filepath.insert(0, directory);
           texture_info.push_back({ Texture::Type::MetallicRoughness, texture_filepath });
         }
