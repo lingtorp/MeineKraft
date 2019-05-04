@@ -769,6 +769,7 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexImage2D(texture.gl_texture_target, 0, GL_RGB, texture.data.width, texture.data.height, 0, GL_RGB, GL_UNSIGNED_BYTE, texture.data.pixels);
+    glGenerateMipmap(GL_TEXTURE_2D);
   }
 
   if (comp.normal_texture.data.pixels) {
@@ -780,6 +781,7 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexImage2D(texture.gl_texture_target, 0, GL_RGB, texture.data.width, texture.data.height, 0, GL_RGB, GL_UNSIGNED_BYTE, texture.data.pixels);
+    glGenerateMipmap(GL_TEXTURE_2D);
   }
 
   if (comp.ambient_occlusion_texture.data.pixels) {
