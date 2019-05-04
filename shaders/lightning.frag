@@ -22,6 +22,8 @@ uniform bool shadowmapping;
 uniform mat4 light_space_transform;
 uniform vec3 directional_light_direction;
 
+uniform bool normalmapping;
+
 uniform vec3 camera; // TEST
 
 out vec4 outColor; // Defaults to zero when the frag shader only has 1 out variable
@@ -110,7 +112,7 @@ vec3 schlick_render(vec2 frag_coord, vec3 position, vec3 normal, vec3 diffuse, v
     pbr_inputs.metallic = texture(pbr_parameters_sampler, frag_coord).b;
     pbr_inputs.roughness *= pbr_inputs.roughness; // Convert to material roughness from perceptual roughness
     pbr_inputs.base_color = diffuse.rgb;  
-    pbr_inputs.N = normalize(normal);
+    pbr_inputs.N = normal;
 
     vec3 L0 = vec3(0.0);
     for (int i = 0; i < lights.length(); i++) {
@@ -150,14 +152,23 @@ vec3 SRGB_to_linear(vec3 srgb) {
 
 void main() {
     const vec2 frag_coord = vec2(gl_FragCoord.x / screen_width, gl_FragCoord.y / screen_height);
-    const vec3 normal = texture(geometric_normal_sampler, frag_coord).xyz;
-    const vec3 tangent_normal = 2 * (texture(tangent_normal_sampler, frag_coord).xyz - vec3(0.5));
-    const vec3 tangent = texture(tangent_sampler, frag_coord).xyz;
+    vec3 normal = normalize(texture(geometric_normal_sampler, frag_coord).xyz);
+    const vec3 tangent_normal = normalize(2 * (texture(tangent_normal_sampler, frag_coord).xyz - vec3(0.5)));
+    const vec3 tangent = normalize(texture(tangent_sampler, frag_coord).xyz);
     const vec3 position = texture(position_sampler, frag_coord).xyz;
     const vec3 diffuse = SRGB_to_linear(texture(diffuse_sampler, frag_coord).rgb); // Mandated by glTF 2.0
     const vec3 ambient_occlusion = vec3(0.0); // texture(ambient_occlusion_sampler, frag_coord).rgb;
     // const vec3 emissive = texture(emissive_sampler, frag_coord).rgb;
     const int  shading_model_id = int(texture(shading_model_id_sampler, frag_coord).r);
+
+    // Tangent normal mapping
+    if (normalmapping) {
+        const vec3 T = tangent;
+        const vec3 B = normalize(cross(normal, tangent));
+        const vec3 N = normal;
+        mat3 TBN = mat3(T, B, N);
+        normal = normalize(TBN * tangent_normal);
+    }
 
     // Shadowmap calculations
     // Avoids _some_ shadowmap acne
