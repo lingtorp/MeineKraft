@@ -394,6 +394,8 @@ void Renderer::render(const uint32_t delta) {
     ((DrawElementsIndirectCommand*)batch.gl_ibo_ptr)[batch.gl_curr_ibo_idx].instanceCount = 0;
   }
 
+  // Update pointlights
+  std::memcpy(gl_pointlights_ssbo_ptr, pointlights.data(), pointlights.size() * sizeof(PointLight));
 
   pass_started("Culling pass");
   {
