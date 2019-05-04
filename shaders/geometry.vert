@@ -6,12 +6,14 @@ in uint instance_idx;
 in vec3 position;
 in vec3 normal;
 in vec2 texcoord;
+in vec3 tangent;
 
 layout(std140, binding = 2) readonly buffer ModelsBlock {
     mat4 models[];
 };
 
-out vec3 fNormal;
+out vec3 fTangent;
+out vec3 fGeometricNormal;
 out vec3 fPosition;
 out vec2 fTexcoord;
 
@@ -24,7 +26,8 @@ flat out uint fInstance_idx;
 void main() {
     gl_Position = projection * camera_view * models[instance_idx] * vec4(position, 1.0);
 
-    fNormal = normal;
+    fTangent = tangent;
+    fGeometricNormal = normal;
     fPosition = vec3(models[instance_idx] * vec4(position, 1.0));
     fTexcoord = texcoord;
     fInstance_idx = instance_idx;

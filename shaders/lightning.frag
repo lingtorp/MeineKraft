@@ -4,13 +4,15 @@ const float M_PI = 3.141592653589793;
 uniform float screen_width;
 uniform float screen_height;
 
-uniform sampler2D normal_sampler;
+uniform sampler2D tangent_sampler;
+uniform sampler2D tangent_normal_sampler;
+uniform sampler2D geometric_normal_sampler;
 uniform sampler2D depth_sampler;
 uniform sampler2D position_sampler;
 uniform sampler2D diffuse_sampler;
 uniform sampler2D pbr_parameters_sampler;
 uniform sampler2D ambient_occlusion_sampler;
-uniform sampler2D emissive_sampler;
+// uniform sampler2D emissive_sampler;
 uniform usampler2D shading_model_id_sampler;
 uniform samplerCubeArray environment_map_sampler;
 uniform sampler2D shadow_map_sampler;
@@ -148,11 +150,13 @@ vec3 SRGB_to_linear(vec3 srgb) {
 
 void main() {
     const vec2 frag_coord = vec2(gl_FragCoord.x / screen_width, gl_FragCoord.y / screen_height);
-    const vec3 normal = texture(normal_sampler, frag_coord).xyz;
+    const vec3 normal = texture(geometric_normal_sampler, frag_coord).xyz;
+    const vec3 tangent_normal = 2 * (texture(tangent_normal_sampler, frag_coord).xyz - vec3(0.5));
+    const vec3 tangent = texture(tangent_sampler, frag_coord).xyz;
     const vec3 position = texture(position_sampler, frag_coord).xyz;
     const vec3 diffuse = SRGB_to_linear(texture(diffuse_sampler, frag_coord).rgb); // Mandated by glTF 2.0
     const vec3 ambient_occlusion = vec3(0.0); // texture(ambient_occlusion_sampler, frag_coord).rgb;
-    const vec3 emissive = texture(emissive_sampler, frag_coord).rgb;
+    // const vec3 emissive = texture(emissive_sampler, frag_coord).rgb;
     const int  shading_model_id = int(texture(shading_model_id_sampler, frag_coord).r);
 
     // Shadowmap calculations
@@ -179,7 +183,7 @@ void main() {
         case 3: // Physically based rendering with parameters sourced from scalars
         color = (1.0 - shadow) * schlick_render(frag_coord, position, normal, diffuse, ambient_occlusion);
         // Emissive
-        color += emissive; // TODO: Emissive factor missing
+        // color += emissive; // TODO: Emissive factor missing
         break;
     }
 
