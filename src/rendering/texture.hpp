@@ -92,7 +92,11 @@ struct Texture {
   uint32_t gl_texture_target = 0;
 
   enum class Type: uint8_t {
-    Diffuse, MetallicRoughness, AmbientOcclusion, Emissive
+    Diffuse,              // A.k.a albedo/base_color
+    MetallicRoughness,    // glTF 2.0 material model
+    AmbientOcclusion,     // 
+    Emissive,             // Emission texture
+    TangentNormal         // Tangent space normal map/texture
   };
 };
 
