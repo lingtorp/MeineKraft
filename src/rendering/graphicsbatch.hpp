@@ -231,8 +231,8 @@ struct GraphicsBatch {
   uint32_t gl_emissive_texture_unit           = 0;  // Emissive map
     
   /// General
-  static const uint32_t INIT_BUFFER_SIZE = 100;  // In # of elements 
-  uint32_t buffer_size = INIT_BUFFER_SIZE;       // Current buffer size (of ALL buffers) for the batch 
+  static const uint32_t INIT_BUFFER_SIZE = 10;  // In # of elements 
+  uint32_t buffer_size = INIT_BUFFER_SIZE;      // Current buffer size (of ALL buffers) for the batch 
 
   uint32_t gl_ebo = 0;            // Elements b.o
   uint8_t* gl_ebo_ptr = nullptr;  // Ptr to mapped GL_ELEMENTS_ARRAY_BUFFER
