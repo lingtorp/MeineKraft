@@ -53,7 +53,6 @@ struct Renderer {
 
   // Shadow mapping
   DirectionalLight directional_light = DirectionalLight(Vec3f(-130.0, 2000.0, 0.0), Vec3f(0.0, -0.9, 0.523));
-
 private:
   void add_graphics_state(GraphicsBatch& batch, const RenderComponent& comp, Material material, ID entity_id);
   void update_transforms();
@@ -63,9 +62,9 @@ private:
   ComputeShader* cull_shader = nullptr;
   
   /// Geometry pass related
-  uint32_t gl_depth_fbo;
-  uint32_t gl_depth_texture;
-  uint32_t gl_depth_texture_unit;
+  uint32_t gl_depth_fbo = 0;
+  uint32_t gl_depth_texture = 0;
+  uint32_t gl_depth_texture_unit = 0;
 
   /// Directional shadow mapping related
   uint32_t gl_shadowmapping_fbo = 0;
@@ -76,42 +75,48 @@ private:
   const uint32_t SHADOWMAP_H = 4 * 1024;
 
   /// Lightning pass related
-  Shader* lightning_shader;
+  Shader* lightning_shader = nullptr;
   // Used since default fbo is not to be trusted
-  uint32_t gl_lightning_texture;
-  uint32_t gl_lightning_fbo;
-  uint32_t gl_lightning_texture_unit;
-  uint32_t gl_lightning_vao;
+  uint32_t gl_lightning_texture = 0;
+  uint32_t gl_lightning_texture_unit = 0;
+  uint32_t gl_lightning_fbo = 0;
+  uint32_t gl_lightning_vao = 0;
 
-  uint32_t gl_pointlights_ssbo;
+  uint32_t gl_pointlights_ssbo = 0;
   uint8_t* gl_pointlights_ssbo_ptr = nullptr;
 
   /// Global buffers
-  // Normals
-  uint32_t gl_normal_texture;
-  uint32_t gl_normal_texture_unit;
+  // Geometric normals
+  uint32_t gl_geometric_normal_texture = 0;
+  uint32_t gl_geometric_normal_texture_unit = 0;
+  // Tangent space normals
+  uint32_t gl_tangent_normal_texture = 0;
+  uint32_t gl_tangent_normal_texture_unit = 0;
+  // Tangent map
+  uint32_t gl_tangent_texture = 0;
+  uint32_t gl_tangent_texture_unit = 0;
   // Positions
-  uint32_t gl_position_texture;
-  uint32_t gl_position_texture_unit;
+  uint32_t gl_position_texture = 0;
+  uint32_t gl_position_texture_unit = 0;
   // Diffuse
-  uint32_t gl_diffuse_texture;
-  uint32_t gl_diffuse_texture_unit;
+  uint32_t gl_diffuse_texture = 0;
+  uint32_t gl_diffuse_texture_unit = 0;
   // PBR Parameters
-  uint32_t gl_pbr_parameters_texture;
-  uint32_t gl_pbr_parameters_texture_unit;
+  uint32_t gl_pbr_parameters_texture = 0;
+  uint32_t gl_pbr_parameters_texture_unit = 0;
   // Ambient occlusion map
-  uint32_t gl_ambient_occlusion_texture;
-  uint32_t gl_ambient_occlusion_texture_unit;
+  uint32_t gl_ambient_occlusion_texture = 0;
+  uint32_t gl_ambient_occlusion_texture_unit = 0;
   // Emissive map
-  uint32_t gl_emissive_texture_unit;
-  uint32_t gl_emissive_texture;
+  uint32_t gl_emissive_texture_unit = 0;
+  uint32_t gl_emissive_texture = 0;
   // Shading model 
-  uint32_t gl_shading_model_texture_unit;
-  uint32_t gl_shading_model_texture;
+  uint32_t gl_shading_model_texture_unit = 0;
+  uint32_t gl_shading_model_texture = 0;
 
   // Environment map
   Texture environment_map; 
-  uint32_t gl_environment_map_texture_unit;
+  uint32_t gl_environment_map_texture_unit = 0;
 };
 
 #endif // MEINEKRAFT_RENDERER_HPP

@@ -144,15 +144,15 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   glObjectLabel(GL_TEXTURE, gl_depth_texture, -1, "GBuffer depth texture");
 
   // Global normal buffer
-  gl_normal_texture_unit = Renderer::get_next_free_texture_unit();
-  glActiveTexture(GL_TEXTURE0 + gl_normal_texture_unit);
-  glGenTextures(1, &gl_normal_texture);
-  glBindTexture(GL_TEXTURE_2D, gl_normal_texture);
+  gl_geometric_normal_texture_unit = Renderer::get_next_free_texture_unit();
+  glActiveTexture(GL_TEXTURE0 + gl_geometric_normal_texture_unit);
+  glGenTextures(1, &gl_geometric_normal_texture);
+  glBindTexture(GL_TEXTURE_2D, gl_geometric_normal_texture);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_normal_texture, 0);
-  glObjectLabel(GL_TEXTURE, gl_normal_texture, -1, "GBuffer normal texture");
+  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_geometric_normal_texture, 0);
+  glObjectLabel(GL_TEXTURE, gl_geometric_normal_texture, -1, "GBuffer normal texture");
 
   // Global position buffer
   gl_position_texture_unit = Renderer::get_next_free_texture_unit();
@@ -198,16 +198,6 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, gl_ambient_occlusion_texture, 0);
   glObjectLabel(GL_TEXTURE, gl_ambient_occlusion_texture, -1, "GBuffer AO texture");
 
-  // Global emissive map
-  gl_emissive_texture_unit = Renderer::get_next_free_texture_unit();
-  glActiveTexture(GL_TEXTURE0 + gl_emissive_texture_unit);
-  glGenTextures(1, &gl_emissive_texture);
-  glBindTexture(GL_TEXTURE_2D, gl_emissive_texture);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT5, gl_emissive_texture, 0);
-  glObjectLabel(GL_TEXTURE, gl_emissive_texture, -1, "GBuffer emissive texture");
 
   // Global shading model id
   gl_shading_model_texture_unit = Renderer::get_next_free_texture_unit();
@@ -217,11 +207,33 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, screen.width, screen.height, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT6, gl_shading_model_texture, 0);
+  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT5, gl_shading_model_texture, 0);
   glObjectLabel(GL_TEXTURE, gl_shading_model_texture, -1, "GBuffer shading ID texture");
 
-  uint32_t depth_attachments[7] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT5, GL_COLOR_ATTACHMENT6 };
-  glDrawBuffers(7, depth_attachments);
+  // Global tangent space normal map
+  gl_tangent_normal_texture_unit = Renderer::get_next_free_texture_unit();
+  glActiveTexture(GL_TEXTURE0 + gl_tangent_normal_texture_unit); 
+  glGenTextures(1, &gl_tangent_normal_texture);
+  glBindTexture(GL_TEXTURE_2D, gl_tangent_normal_texture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT6, gl_tangent_normal_texture, 0);
+  glObjectLabel(GL_TEXTURE, gl_tangent_normal_texture, -1, "GBuffer tangent normal texture");
+
+  // Global tangent map
+  gl_tangent_texture_unit = Renderer::get_next_free_texture_unit();
+  glActiveTexture(GL_TEXTURE0 + gl_tangent_texture_unit);
+  glGenTextures(1, &gl_tangent_texture);
+  glBindTexture(GL_TEXTURE_2D, gl_tangent_texture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT7, gl_tangent_texture, 0);
+  glObjectLabel(GL_TEXTURE, gl_tangent_texture, -1, "GBuffer tangent texture");
+
+  uint32_t depth_attachments[8] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT5, GL_COLOR_ATTACHMENT6, GL_COLOR_ATTACHMENT7 };
+  glDrawBuffers(8, depth_attachments);
 
   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
     Log::error("Lightning framebuffer status not complete.");
@@ -485,6 +497,9 @@ void Renderer::render(const uint32_t delta) {
       glActiveTexture(GL_TEXTURE0 + batch.gl_metallic_roughness_texture_unit);
       glBindTexture(GL_TEXTURE_2D, batch.gl_metallic_roughness_texture);
 
+      glActiveTexture(GL_TEXTURE0 + batch.gl_tangent_normal_texture_unit);
+      glBindTexture(GL_TEXTURE_2D, batch.gl_tangent_normal_texture);
+
       const uint32_t draw_cmd_offset = batch.gl_curr_ibo_idx * sizeof(DrawElementsIndirectCommand);
       glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (const void*) draw_cmd_offset, 1, sizeof(DrawElementsIndirectCommand));
     }
@@ -501,11 +516,13 @@ void Renderer::render(const uint32_t delta) {
 
     glUniform1i(glGetUniformLocation(program, "environment_map_sampler"), gl_environment_map_texture_unit);
     glUniform1i(glGetUniformLocation(program, "shading_model_id_sampler"), gl_shading_model_texture_unit);
-    glUniform1i(glGetUniformLocation(program, "emissive_sampler"), gl_emissive_texture_unit);
+    // glUniform1i(glGetUniformLocation(program, "emissive_sampler"), gl_emissive_texture_unit);
     glUniform1i(glGetUniformLocation(program, "ambient_occlusion_sampler"), gl_ambient_occlusion_texture_unit);
     glUniform1i(glGetUniformLocation(program, "pbr_parameters_sampler"), gl_pbr_parameters_texture_unit);
     glUniform1i(glGetUniformLocation(program, "diffuse_sampler"), gl_diffuse_texture_unit);
-    glUniform1i(glGetUniformLocation(program, "normal_sampler"), gl_normal_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "geometric_normal_sampler"), gl_geometric_normal_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "tangent_normal_sampler"), gl_tangent_normal_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "tangent_sampler"), gl_tangent_texture_unit);
     glUniform1i(glGetUniformLocation(program, "position_sampler"), gl_position_texture_unit);
     glUniform1i(glGetUniformLocation(program, "shadow_map_sampler"), gl_shadowmapping_texture_unit);
     glUniform1f(glGetUniformLocation(program, "screen_width"), screen.width);
@@ -556,7 +573,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glUniform1i(glGetUniformLocation(program, "diffuse"), batch.gl_diffuse_texture_unit);
     glUniform1i(glGetUniformLocation(program, "pbr_parameters"), batch.gl_metallic_roughness_texture_unit);
     glUniform1i(glGetUniformLocation(program, "ambient_occlusion"), batch.gl_ambient_occlusion_texture_unit);
-    glUniform1i(glGetUniformLocation(program, "emissive"), batch.gl_emissive_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "tangent_normal"), batch.gl_tangent_normal_texture_unit);
 
     glGenVertexArrays(1, &batch.gl_depth_vao);
     glBindVertexArray(batch.gl_depth_vao);
@@ -576,6 +593,10 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     const auto texcoord_attrib = glGetAttribLocation(program, "texcoord");
     glVertexAttribPointer(texcoord_attrib, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void *) offsetof(Vertex, tex_coord));
     glEnableVertexAttribArray(texcoord_attrib);
+
+    const auto tangent_attrib = glGetAttribLocation(program, "tangent");
+    glVertexAttribPointer(tangent_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void *)offsetof(Vertex, tangent));
+    glEnableVertexAttribArray(tangent_attrib);
 
     const auto flags = GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT | GL_MAP_WRITE_BIT;
 
@@ -676,6 +697,7 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
   Material material;
 
   // Shader configuration and mesh id defines the uniqueness of a GBatch
+  // FIXME: Does not take every texture into account ...
   for (auto& batch : graphics_batches) {
     if (batch.mesh_id != comp.mesh_id) { continue; }
     if (comp_shader_config != batch.depth_shader.defines) { continue; }
@@ -730,7 +752,7 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
 
   if (comp.metallic_roughness_texture.data.pixels) {
     const Texture& texture = comp.metallic_roughness_texture;
-    batch.gl_metallic_roughness_texture_unit = 12;
+    batch.gl_metallic_roughness_texture_unit = 13;
     glActiveTexture(GL_TEXTURE0 + batch.gl_metallic_roughness_texture_unit);
     glGenTextures(1, &batch.gl_metallic_roughness_texture);
     glBindTexture(texture.gl_texture_target, batch.gl_metallic_roughness_texture);
@@ -739,9 +761,20 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
     glTexImage2D(texture.gl_texture_target, 0, GL_RGB, texture.data.width, texture.data.height, 0, GL_RGB, GL_UNSIGNED_BYTE, texture.data.pixels);
   }
 
+  if (comp.normal_texture.data.pixels) {
+    const Texture& texture = comp.normal_texture;
+    batch.gl_tangent_normal_texture_unit = 14;
+    glActiveTexture(GL_TEXTURE0 + batch.gl_tangent_normal_texture_unit);
+    glGenTextures(1, &batch.gl_tangent_normal_texture);
+    glBindTexture(texture.gl_texture_target, batch.gl_tangent_normal_texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexImage2D(texture.gl_texture_target, 0, GL_RGB, texture.data.width, texture.data.height, 0, GL_RGB, GL_UNSIGNED_BYTE, texture.data.pixels);
+  }
+
   if (comp.ambient_occlusion_texture.data.pixels) {
     const Texture& texture = comp.ambient_occlusion_texture;
-    batch.gl_ambient_occlusion_texture_unit = 13;
+    batch.gl_ambient_occlusion_texture_unit = 15;
     glActiveTexture(GL_TEXTURE0 + batch.gl_ambient_occlusion_texture_unit);
     uint32_t gl_ambient_occlusion_texture = 0;
     glGenTextures(1, &gl_ambient_occlusion_texture);
