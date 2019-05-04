@@ -224,6 +224,9 @@ struct GraphicsBatch {
   uint32_t gl_metallic_roughness_texture_unit = 0;  // Metallic roughness texture buffer
   uint32_t gl_metallic_roughness_texture = 0;
 
+  uint32_t gl_tangent_normal_texture_unit = 0;      // Tangent space normal map
+  uint32_t gl_tangent_normal_texture = 0;
+
   uint32_t gl_ambient_occlusion_texture_unit  = 0;  // Ambient occlusion map
   uint32_t gl_emissive_texture_unit           = 0;  // Emissive map
     
