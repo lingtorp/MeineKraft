@@ -107,6 +107,7 @@ MeineKraft::MeineKraft() {
 void MeineKraft::init() {
   Skybox skybox;
   Scene scene{ Filesystem::home + "Desktop/Meinekraft/sponza/", "Sponza.gltf" };
+  // Scene scene{ Filesystem::home + "Desktop/MeineKraft/sponza-morgan/", "sponza.obj" };
 }
 
 MeineKraft::~MeineKraft() {
@@ -230,6 +231,7 @@ void MeineKraft::mainloop() {
         ImGui::Text("Frame: %lu", renderer->state.frame);
         ImGui::Text("Entities: %lu", renderer->state.entities);
         ImGui::Text("Average %lu ms / frame (%.1f FPS)", delta, io.Framerate);
+        ImGui::Checkbox("Normal mapping", &renderer->state.normalmapping);
 
         static size_t i = -1; i = (i + 1) % num_deltas;
         deltas[i] = float(delta);
