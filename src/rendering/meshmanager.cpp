@@ -209,6 +209,11 @@ MeshManager::load_meshes(const std::string& directory, const std::string& file) 
           vertex.normal = { normal.x, normal.y, normal.z };
         }
 
+        if (mesh->HasTangentsAndBitangents()) {
+          const auto tangent = mesh->mTangents[j];
+          vertex.tangent = { tangent.x, tangent.y, tangent.z };
+        }
+
         mesh_info.mesh.vertices.push_back(vertex);
       }
 
