@@ -272,6 +272,7 @@ MeshManager::load_meshes(const std::string& directory, const std::string& file) 
           // TODO: Fetch emissive factor as well 
         }
 
+        // NOTE: A.k.a bump map ...
         aiString displacement_filepath;
         if (material->GetTexture(aiTextureType_DISPLACEMENT, 0, &displacement_filepath) == AI_SUCCESS) {
           Log::info("Displacement texture name: " + std::string(directory.c_str()) + std::string(displacement_filepath.data));
@@ -294,6 +295,9 @@ MeshManager::load_meshes(const std::string& directory, const std::string& file) 
         aiString normals_filepath;
         if (material->GetTexture(aiTextureType_NORMALS, 0, &normals_filepath) == AI_SUCCESS) {
           Log::info("Normals texture name: " + std::string(directory.c_str()) + std::string(normals_filepath.data));
+          std::string texture_filepath(normals_filepath.data);
+          texture_filepath.insert(0, directory);
+          texture_info.push_back({ Texture::Type::TangentNormal, texture_filepath });
         }
 
         aiString reflection_filepath;
