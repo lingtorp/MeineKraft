@@ -61,7 +61,9 @@ struct Texture {
       texture.height = static_cast<uint32_t>(image->h);
       texture.bytes_per_pixel = image->format->BytesPerPixel;
       texture.size = texture.bytes_per_pixel * texture.width * texture.height;
-      texture.pixels = static_cast<uint8_t*>(std::calloc(1, texture.size * resource.files.size()));
+      if (i == 0) { // Allocate all the memory on the first iteration
+        texture.pixels = static_cast<uint8_t*>(std::calloc(1, texture.size * resource.files.size()));
+      }
 
       // Convert it to OpenGL friendly format if needed
       const auto desired_img_format = texture.bytes_per_pixel == 3 ? SDL_PIXELFORMAT_RGB24 : SDL_PIXELFORMAT_RGBA32;
