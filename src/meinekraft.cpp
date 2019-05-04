@@ -240,30 +240,37 @@ void MeineKraft::mainloop() {
           ImGui::InputFloat3("Direction##camera", &renderer->camera->direction.x);
         }
 
-
-        if (ImGui::CollapsingHeader("Point lights")) {
+        // Point lights
+        const std::string pointlights_title = "Point lights (" + std::to_string(renderer->pointlights.size()) + ")";
+        if (ImGui::CollapsingHeader(pointlights_title.c_str())) {
           for (size_t i = 0; i < renderer->pointlights.size(); i++) {
             ImGui::PushID(&renderer->pointlights[i]);
-            ImGui::InputFloat3("Position", &renderer->pointlights[i].position.x);
+            const std::string str = std::to_string(i);
+            if (ImGui::CollapsingHeader(str.c_str())) {
+              ImGui::InputFloat3("Position", &renderer->pointlights[i].position.x);
+              ImGui::InputFloat3("Intensity", &renderer->pointlights[i].intensity.x);
+            }
             ImGui::PopID();
           }        
         }
 
-        if (ImGui::CollapsingHeader("Directional light")) {
+        // Directional light
+        const std::string directionallights_title = "Directional light";
+        if (ImGui::CollapsingHeader(directionallights_title.c_str())) {
           ImGui::Checkbox("Shadowmapping", &renderer->state.shadowmapping);
           ImGui::InputFloat3("Position##directional_light", &renderer->directional_light.position.x);
           ImGui::InputFloat3("Direction##directional_light", &renderer->directional_light.direction.x);
         }
 
-        if (ImGui::CollapsingHeader("Graphics batches")) {
-          ImGui::Text("Graphics batches: %lu", renderer->state.graphic_batches);
+        // Graphics batches
+        const std::string graphicsbatches_title = "Graphics batches (" + std::to_string(renderer->graphics_batches.size()) + ")";
+        if (ImGui::CollapsingHeader(graphicsbatches_title.c_str())) {
           for (size_t batch_num = 0; batch_num < renderer->graphics_batches.size(); batch_num++) {
             const auto& batch = renderer->graphics_batches[batch_num];
             const std::string batch_title = "Batch #" + std::to_string(batch_num + 1) + " (" + std::to_string(batch.entity_ids.size()) + ")";
 
             if (ImGui::CollapsingHeader(batch_title.c_str())) {
               const std::string member_title = "Members##" + batch_title;
-
               if (ImGui::CollapsingHeader(member_title.c_str())) {
                 for (const auto& id : batch.entity_ids) {
                   const std::string* name = NameSystem::instance().get_name_from_entity_referenced(id);
