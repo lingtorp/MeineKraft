@@ -157,7 +157,7 @@ void main() {
     const vec3 tangent = normalize(texture(tangent_sampler, frag_coord).xyz);
     const vec3 position = texture(position_sampler, frag_coord).xyz;
     const vec3 diffuse = SRGB_to_linear(texture(diffuse_sampler, frag_coord).rgb); // Mandated by glTF 2.0
-    const vec3 ambient_occlusion = vec3(0.0); // texture(ambient_occlusion_sampler, frag_coord).rgb;
+    const vec3 ambient_occlusion = texture(ambient_occlusion_sampler, frag_coord).rgb;
     // const vec3 emissive = texture(emissive_sampler, frag_coord).rgb;
     const int  shading_model_id = int(texture(shading_model_id_sampler, frag_coord).r);
 
