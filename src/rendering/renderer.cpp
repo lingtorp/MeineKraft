@@ -355,8 +355,10 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   glCullFace(GL_BACK);
 
   /// Camera
-  const auto position = Vec3f(754.0f, 575.0f, 363.0f);
-  const auto direction = Vec3f(-0.88f, -0.45f, -0.046f);
+  // const auto position = Vec3f(754.0f, 575.0f, 363.0f); // Upper part shadow map testing
+  const auto position = Vec3f(41.8f, 36.1f, 127.0f);
+  // const auto direction = Vec3f(-0.88f, -0.45f, -0.046f);
+  const auto direction = Vec3f(0.66f, -0.24f, 0.70f);
   const auto world_up  = Vec3f{0.0f, 1.0f, 0.0f};
   camera = new Camera(position, direction, world_up);
 }
