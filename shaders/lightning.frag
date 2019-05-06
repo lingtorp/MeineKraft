@@ -44,13 +44,13 @@ struct PBRInputs {
     vec3 base_color;
 };
 
-struct PointLight {
+struct PointLight { // NOTE: Defined in voxelization.frag also
     vec4 position;  // (X, Y, Z, padding)
     vec4 intensity; // (R, G, B, padding)
 };
 
 layout(std140, binding = 4) buffer PointLightBlock {
-    PointLight lights[];
+    PointLight pointlights[];
 };
 
 /// Approximation of the Fresnel factor: Expresses the reflection of light reflected by each microfacet
@@ -115,13 +115,13 @@ vec3 schlick_render(vec2 frag_coord, vec3 position, vec3 normal, vec3 diffuse, v
     pbr_inputs.N = normal;
 
     vec3 L0 = vec3(0.0);
-    for (int i = 0; i < lights.length(); i++) {
-        const PointLight light = lights[i];
+    for (int i = 0; i < pointlights.length(); i++) {
+        const PointLight pointlight = pointlights[i];
 
-        pbr_inputs.L = normalize(light.position.xyz - position);
-        const float distance = length(light.position.xyz - position);
+        pbr_inputs.L = normalize(pointlight.position.xyz - position);
+        const float distance = length(pointlight.position.xyz - position);
         const float attenuation = 1.0 / (distance * distance);
-        const vec3 radiance = attenuation * light.intensity.rgb;
+        const vec3 radiance = attenuation * pointlight.intensity.rgb;
 
         // Metallic roughness material model glTF specific 
         pbr_inputs.V = normalize(camera - position);

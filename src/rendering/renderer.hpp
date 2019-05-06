@@ -51,12 +51,16 @@ struct Renderer {
   std::vector<GraphicsBatch> graphics_batches;
   std::vector<PointLight> pointlights; 
 
+  // Voxelization related
+  bool need_to_voxelize = true;
+
   // Shadow mapping
   DirectionalLight directional_light = DirectionalLight(Vec3f(-130.0, 2000.0, 0.0), Vec3f(0.0, -0.9, 0.523));
 private:
   void add_graphics_state(GraphicsBatch& batch, const RenderComponent& comp, Material material, ID entity_id);
   void update_transforms();
   void link_batch(GraphicsBatch& batch);
+  void voxelize_scene();
 
   /// View frustum culling shader
   ComputeShader* cull_shader = nullptr;
@@ -84,6 +88,20 @@ private:
 
   uint32_t gl_pointlights_ssbo = 0;
   uint8_t* gl_pointlights_ssbo_ptr = nullptr;
+
+  /// Voxelization pipeline related
+  const uint32_t voxel_grid_dimension = 256; // 256 ~ 60MB, 512 ~ 540MB (not counting mipmaps, adds ~33%)
+  
+  Shader* voxelization_shader = nullptr;
+  uint32_t gl_voxelization_fbo = 0;
+  
+  Shader* vct_shader = nullptr;
+  uint32_t gl_vct_fbo = 0;
+  uint32_t gl_vct_vao = 0;
+
+  // Voxels
+  uint32_t gl_voxels_texture = 0;
+  uint32_t gl_voxels_texture_unit = 0;
 
   /// Global buffers
   // Geometric normals

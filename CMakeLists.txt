@@ -45,12 +45,15 @@ source_group("util" FILES ${UTIL_SRC_FILES})
 set(SCENE_SRC_FILES "src/scene/world.cpp" "src/scene/world.hpp")
 source_group("scene" FILES ${SCENE_SRC_FILES})
 
-set(SHADER_SRC_FILES "shaders/blur-fragment.glsl" "shaders/blur-vertex.glsl" "shaders/geometry-fragment.glsl"
-        "shaders/geometry-vertex.glsl" "shaders/lightning-fragment.glsl" "shaders/lightning-vertex.glsl"
-        "shaders/ssao-fragment.glsl" "shaders/ssao-vertex.glsl" "shaders/culling.comp.glsl")
+# NOTE: Not needed for compilation but its nice to have the shaders visible in Visual Studio
+set(SHADER_SRC_FILES "shaders/blur.vert" "shaders/blur.frag" "shaders/geometry.vert"
+        "shaders/geometry.frag" "shaders/lightning.vert" "shaders/lightning.frag"
+        "shaders/ssao.frag" "shaders/ssao.vert" "shaders/culling.comp.glsl"
+        "shaders/voxel-cone-tracing.vert" "shaders/voxel-cone-tracing.frag" "shaders/voxelization.vert"
+        "shaders/voxelization.geom" "shaders/voxelization.frag")
 source_group("shaders" FILES ${SHADER_SRC_FILES})
 
-set(SOURCE_FILES main.cpp src/meinekraft.hpp src/meinekraft.cpp ${MATH_SRC_FILES} ${NODES_SRC_FILES} ${RENDER_SRC_FILES} ${UTIL_SRC_FILES} ${SCENE_SRC_FILES} ${IMGUI_SRC})
+set(SOURCE_FILES main.cpp src/meinekraft.hpp src/meinekraft.cpp ${MATH_SRC_FILES} ${NODES_SRC_FILES} ${RENDER_SRC_FILES} ${UTIL_SRC_FILES} ${SCENE_SRC_FILES} ${IMGUI_SRC} ${SHADER_SRC_FILES})
 add_executable(MeineKraft ${SOURCE_FILES})
 
 if(WIN32)

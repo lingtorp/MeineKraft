@@ -19,7 +19,11 @@ struct Shader {
   std::set<Shader::Defines> defines;
 
   Shader() = default;
-  Shader(const std::string& vertex_filepath, const std::string& fragment_filepath);
+  Shader(const std::string& vert_shader_file,
+         const std::string& frag_shader_file);
+  Shader(const std::string& vert_shader_file,
+         const std::string& geom_shader_file,
+         const std::string& frag_shader_file);
   bool operator==(const Shader& rhs);
 
   /// Loads and compiles the shader source, return compile error message in the pair.
@@ -35,6 +39,7 @@ struct Shader {
   
   uint32_t gl_program = 0;
   uint32_t gl_vertex_shader   = 0;
+  uint32_t gl_geometry_shader = 0;
   uint32_t gl_fragment_shader = 0;
 };
 

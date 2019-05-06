@@ -233,6 +233,10 @@ void MeineKraft::mainloop() {
         ImGui::Text("Average %lu ms / frame (%.1f FPS)", delta, io.Framerate);
         ImGui::Checkbox("Normal mapping", &renderer->state.normalmapping);
 
+        if (ImGui::Button("Voxelize scene")) {
+          renderer->need_to_voxelize = true;
+        }
+
         static size_t i = -1; i = (i + 1) % num_deltas;
         deltas[i] = float(delta);
         ImGui::PlotLines("", deltas, num_deltas, 0, "ms / frame", 0.0f, 50.0f, ImVec2(ImGui::GetWindowWidth(), 100));

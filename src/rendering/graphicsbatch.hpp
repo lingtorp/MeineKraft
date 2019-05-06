@@ -262,6 +262,9 @@ struct GraphicsBatch {
 
   /// Shadow mapping pass variables
   uint32_t gl_shadowmapping_vao = 0;
+
+  /// Voxelization pass variables
+  uint32_t gl_voxelization_vao = 0;
 };
 
 #endif // MEINEKRAFT_GRAPHICSBATCH_HPP
