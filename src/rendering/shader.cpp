@@ -1,7 +1,6 @@
 #include "shader.hpp"
 
-#include <fstream>
-
+#include "../util/filesystem.hpp"
 #include "debug_opengl.hpp"
 
 #ifdef _WIN32
@@ -18,21 +17,9 @@ static const char* GLSL_VERSION = "#version 450 core \n";
 static const char* GLSL_VERSION = "#version 460 core \n";
 #endif
 
-/// Check whether a file exists or not
-bool file_exists(std::string filename) {
-  std::ifstream ifs(filename);
-  return ifs.good();
-}
-
-/// Reads the entire contents of the file and returns it
-const std::string load_shader_source(const std::string& filename) {
-  std::ifstream ifs(filename);
-  return std::string((std::istreambuf_iterator<char>(ifs)), (std::istreambuf_iterator<char>()));
-}
-
 ComputeShader::ComputeShader(const std::string& compute_filepath) {
   GLuint gl_comp_shader = glCreateShader(GL_COMPUTE_SHADER);
-  std::string comp_src = load_shader_source(compute_filepath);
+  std::string comp_src = Filesystem::read_file(compute_filepath);
 
   // Insert the define into the shader src
   comp_src.insert(0, GLSL_VERSION);
