@@ -89,7 +89,7 @@ public:
     }
 
     /// 2D fractional Brownian motion noise of the underlying noise algorithm
-    double octaves(double x, double y, int octaves, double persistance = 1.0, double amplitude = 1.0) const {
+    double octaves(double x, double y, uint32_t octaves, double persistance = 1.0, double amplitude = 1.0) const {
         double total = 0.0;
         double max_value = 0.0;
         double frequency = 1.0;
@@ -106,7 +106,7 @@ public:
     }
 
     /// 3D fractional Brownian motion noise of the underlying noise algorithm
-    double octaves(double x, double y, double z, int octaves, double persistance = 1.0, double amplitude = 1.0) const {
+    double octaves(double x, double y, double z, uint32_t octaves, double persistance = 1.0, double amplitude = 1.0) const {
         double total = 0.0;
         double max_value = 0.0;
         double frequency = 1.0;
@@ -431,7 +431,7 @@ public:
     /// Perms size is double that of grad to avoid index wrapping
     Simplex_Tables(uint64_t seed): engine(seed), grads2(256), grads3(256), distr(-1.0, 1.0), perms(256) {
         /// Fill the gradients list with random normalized vectors
-        for (int i = 0; i < grads2.size(); i++) {
+        for (size_t i = 0; i < grads2.size(); i++) {
             double x = distr(engine);
             double y = distr(engine);
             double z = distr(engine);
