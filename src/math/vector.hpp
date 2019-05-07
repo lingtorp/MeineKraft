@@ -135,10 +135,10 @@ struct Vec3 {
     constexpr inline static Vec3 Z() { return Vec3(0.0f, 0.0f, 1.0f); }
 
     /// Length of the vector
-    constexpr inline float length() const { return mk_sqrtf(x * x + y * y + z * z); }
+    constexpr inline T length() const { return mk_sqrtf(x * x + y * y + z * z); }
 
     /// Squared length of the vector
-    constexpr inline float sqr_length() const { return x * x + y * y + z * z; }
+    constexpr inline T sqr_length() const { return x * x + y * y + z * z; }
 
     /// Normalizes a copy of this vector and returns it
     constexpr inline Vec3<T> normalize() const {
