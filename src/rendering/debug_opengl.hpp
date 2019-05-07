@@ -14,6 +14,7 @@ struct OpenGLContextInfo {
   int max_color_attachments;
   int max_draw_buffers;
   int max_texture_array_layers;
+  int max_image_texture_units;
 
   OpenGLContextInfo(const size_t gl_major_version, const size_t gl_minor_version) {
     Log::info("OpenGL version: " + std::string(reinterpret_cast<const char*>(glGetString(GL_VERSION))));
@@ -29,6 +30,12 @@ struct OpenGLContextInfo {
 
     glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &max_texture_array_layers);
     Log::info("Max texture array layers/elements: " + std::to_string(max_texture_array_layers));
+
+    glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max_texture_units);
+    Log::info("Max texture units: " + std::to_string(max_texture_units));
+
+    glGetIntegerv(GL_MAX_IMAGE_UNITS, &max_image_texture_units);
+    Log::info("Max image texture units: " + std::to_string(max_image_texture_units));
   }
 };
 
