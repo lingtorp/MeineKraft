@@ -31,8 +31,8 @@ struct RawTexture {
 struct TextureResource {
   std::vector<std::string> files;
   
-  explicit TextureResource(std::string file): files{file} {};
-  explicit TextureResource(std::vector<std::string> files): files{files} {};
+  explicit TextureResource(const std::string& file): files{file} {};
+  explicit TextureResource(const std::vector<std::string>& files): files{files} {};
   
   uint64_t to_hash() const {
     uint64_t hash = 0;
