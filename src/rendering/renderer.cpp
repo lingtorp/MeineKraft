@@ -819,14 +819,12 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glGenVertexArrays(1, &batch.gl_shadowmapping_vao);
     glBindVertexArray(batch.gl_shadowmapping_vao);
 
-    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_vbo); // Reuse geometry
-
-    const auto position_attrib = glGetAttribLocation(program, "position");
-    glVertexAttribPointer(position_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void *) offsetof(Vertex, position));
-    glEnableVertexAttribArray(position_attrib);
-    
+    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_vbo);   // Reuse geometry
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, batch.gl_ebo); // Reuse indices
 
+    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void *) offsetof(Vertex, position));
+    glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
+    
     // Batch instance idx buffer
     glBindBuffer(GL_ARRAY_BUFFER, batch.gl_instance_idx_buffer);
     glVertexAttribIPointer(glGetAttribLocation(program, "instance_idx"), 1, GL_UNSIGNED_INT, sizeof(GLuint), nullptr);
@@ -841,13 +839,17 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glGenVertexArrays(1, &batch.gl_voxelization_vao);
     glBindVertexArray(batch.gl_voxelization_vao);
 
-    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_vbo); // Reuse geometry
-
-    const auto position_attrib = glGetAttribLocation(program, "position");
-    glVertexAttribPointer(position_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void *)offsetof(Vertex, position));
-    glEnableVertexAttribArray(position_attrib);
-
+    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_vbo);   // Reuse geometry
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, batch.gl_ebo); // Reuse indices
+
+    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void *)offsetof(Vertex, position));
+    glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
+
+    glVertexAttribPointer(glGetAttribLocation(program, "normal"), 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void*)offsetof(Vertex, normal));
+    glEnableVertexAttribArray(glGetAttribLocation(program, "normal"));
+
+    glVertexAttribPointer(glGetAttribLocation(program, "texcoord"), 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void*)offsetof(Vertex, tex_coord));
+    glEnableVertexAttribArray(glGetAttribLocation(program, "texcoord"));
   }
 }
 
