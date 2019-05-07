@@ -102,7 +102,7 @@ static void orthographic_projections(glm::mat4& ortho_x, glm::mat4& ortho_y, glm
   // TODO: Implement s.t the orthographic projection is along each positive main axis and has a view size of voxel_grid_dimensions.xy
   const float left = 0.0f, right = 0.0f, bottom = 0.0f, top = float(voxel_grid_dimension), znear = 0.0f, zfar = float(voxel_grid_dimension);
   ortho_x = glm::ortho(left, right, bottom, top, znear, zfar) * glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-  ortho_y = glm::ortho(left, right, bottom, top, znear, zfar) * glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+  ortho_y = glm::ortho(left, right, bottom, top, znear, zfar) * glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
   ortho_z = glm::ortho(left, right, bottom, top, znear, zfar) * glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
