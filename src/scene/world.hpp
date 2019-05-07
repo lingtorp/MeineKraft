@@ -103,7 +103,7 @@ public:
 
         const int32_t y_max = 20 * noise.fbm(Vec2d(x, z), 64);
         for (int32_t y = 1; y < y_max; y++) {
-          Vec3f position = { Vec3f(x, y, z) };
+          Vec3f position(x, y, z);
           Block* block = new Block(position, block_type);
         }
       }
