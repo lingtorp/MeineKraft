@@ -38,7 +38,7 @@ ComputeShader::ComputeShader(const std::string& compute_filepath) {
   glDetachShader(gl_program, gl_comp_shader);
   glDeleteShader(gl_comp_shader);
 
-  if (!compute_shader_status) { std::cerr << "Could not compile compute shader, aborting ... " << std::endl; exit(-1); }
+  if (!compute_shader_status) { Log::error("Could not compile compute shader, aborting ... "); exit(-1); }
 }
 
 Shader::Shader(const std::string& vert_shader_file,
