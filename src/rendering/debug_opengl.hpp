@@ -5,6 +5,8 @@
 #include <glew.h>
 #include <SDL_opengl.h> 
 
+#include <sstream>
+
 /// Gathers information about the OpenGL context 
 struct OpenGLContextInfo {
   // TODO: Document each of the member variables??
@@ -30,6 +32,11 @@ struct OpenGLContextInfo {
   }
 };
 
+// Prints debug messages - notifications
+// #define DEBUG_NOTIFICATIONS
+// Prints debug messages - performance
+// #define DEBUG_PERFORMANCE
+
 static void GLAPIENTRY gl_debug_callback(
   GLenum source,
   GLenum type,
@@ -39,57 +46,64 @@ static void GLAPIENTRY gl_debug_callback(
   const GLchar* message,
   const void* user_param)
 {
-  std::cerr << " ----- GL ERROR CALLBACK ----- " << std::endl;
+  std::stringstream ss;
+  ss << " ----- GL ERROR CALLBACK ----- " << std::endl;
   
-  std::cerr << "Type: ";
+  ss << "Type: ";
   switch (type) {
   case GL_DEBUG_TYPE_ERROR:
-    std::cerr << "GL ERROR";
+    ss << "GL ERROR";
     break;
   case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
-    std::cerr << "DEPRECATED_BEHAVIOR";
+    ss << "DEPRECATED_BEHAVIOR";
     break;
   case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
-    std::cerr << "UNDEFINED_BEHAVIOR";
+    ss << "UNDEFINED_BEHAVIOR";
     break;
   case GL_DEBUG_TYPE_PORTABILITY:
-    std::cerr << "PORTABILITY";
+    ss << "PORTABILITY";
     break;
   case GL_DEBUG_TYPE_PERFORMANCE:
-    std::cerr << "PERFORMANCE";
+    ss << "PERFORMANCE";
+#ifndef DEBUG_PERFORMANCE
+    return;
+#endif
     break;
   case GL_DEBUG_TYPE_OTHER:
-    std::cerr << "OTHER";
+    ss << "OTHER";
     break;
   default:
-    std::cerr << "?";
+    ss << "?";
   }
-  std::cerr << std::endl;
+  ss << std::endl;
 
-  std::cerr << "Severity: ";
+  ss << "Severity: ";
   switch (severity) {
   case GL_DEBUG_SEVERITY_LOW:
-    std::cerr << "LOW";
+    ss << "LOW";
     break;
   case GL_DEBUG_SEVERITY_MEDIUM:
-    std::cerr << "MEDIUM";
+    ss << "MEDIUM";
     break;
   case GL_DEBUG_SEVERITY_HIGH:
-    std::cerr << "HIGH";
+    ss << "HIGH";
     break;
   case GL_DEBUG_SEVERITY_NOTIFICATION:
-	  std::cerr << "NOTIFICATION";
+	  ss << "NOTIFICATION";
+#ifndef DEBUG_NOTIFICATION
+    return;
+#endif
 	  break;
   default: 
-    std::cerr << "?";
+    ss << "?";
   }
-  std::cerr << std::endl;
+  ss << std::endl;
 
-  // TODO: Use logging functionality
-  std::cerr << "Type: " << glewGetErrorString(type) << std::endl;
-  std::cerr << "Message: " << message << std::endl;
-  std::cerr << " ----- ----- ----- ----- ----- " << std::endl;  
-  std::cerr << std::endl;
+  ss << "Type: " << glewGetErrorString(type) << std::endl;
+  ss << "Message: " << message << std::endl;
+  ss << " ----- ----- ----- ----- ----- " << std::endl;  
+  ss << std::endl;
+  Log::error(ss.str());
 }
 
 static void log_gl_error() {
