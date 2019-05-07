@@ -58,6 +58,19 @@ uint32_t Renderer::get_next_free_texture_unit() {
   return next_texture_unit;
 }
 
+// FIXME: Remake this to serve a better purpose (unique per line, file like the log_once)
+static uint32_t get_next_free_image_unit() {
+  int32_t max_image_units;
+  glGetIntegerv(GL_MAX_IMAGE_UNITS, &max_image_units);
+  static int32_t next_image_unit = -1;
+  next_image_unit++;
+  if (next_image_unit >= max_image_units) {
+    Log::error("Reached max image units: " + std::to_string(max_image_units));
+    exit(1);
+  }
+  return next_image_unit;
+}
+
 void Renderer::load_environment_map(const std::vector<std::string>& faces) {
   Texture texture;
   const auto resource = TextureResource{faces};
