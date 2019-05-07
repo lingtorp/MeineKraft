@@ -71,6 +71,7 @@ Shader::Shader(const std::string& vert_shader_file,
   glAttachShader(gl_program, gl_vertex_shader);
   glAttachShader(gl_program, gl_geometry_shader);
   glAttachShader(gl_program, gl_fragment_shader);
+  glLinkProgram(gl_program);
 
   GLint vertex_shader_status = 0;
   glGetShaderiv(gl_vertex_shader, GL_COMPILE_STATUS, &vertex_shader_status);
@@ -81,9 +82,14 @@ Shader::Shader(const std::string& vert_shader_file,
   GLint fragment_shader_status = 0;
   glGetShaderiv(gl_fragment_shader, GL_COMPILE_STATUS, &fragment_shader_status);
 
-  if (vertex_shader_status == GL_TRUE && fragment_shader_status == GL_TRUE && geometry_shader_status == GL_TRUE) {
-    glLinkProgram(gl_program);
-    
+  GLint err_size = 0;
+  glGetProgramiv(gl_program, GL_INFO_LOG_LENGTH, &err_size);
+  char* prog_err_msg = new char[err_size];
+  glGetProgramInfoLog(gl_program, err_size, nullptr, prog_err_msg);
+  Log::error(vert_shader_file + " / " + frag_shader_file + prog_err_msg);
+  delete[] prog_err_msg;
+
+  if (vertex_shader_status == GL_TRUE && fragment_shader_status == GL_TRUE && geometry_shader_status == GL_TRUE) {    
     glDetachShader(gl_program, gl_vertex_shader);
     glDetachShader(gl_program, gl_geometry_shader);
     glDetachShader(gl_program, gl_fragment_shader);
