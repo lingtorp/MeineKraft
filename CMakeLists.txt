@@ -39,7 +39,7 @@ set(RENDER_SRC_FILES "src/rendering/shader.cpp" "src/rendering/shader.hpp" "src/
         "src/rendering/renderpass.hpp" "src/rendering/renderpass.cpp")
 source_group("render" FILES ${RENDER_SRC_FILES})
 
-set(UTIL_SRC_FILES "src/util/filemonitor.cpp" "src/util/filemonitor.hpp" "src/util/filesystem.hpp" "src/util/stb_image.h" "src/util/logging.hpp")
+set(UTIL_SRC_FILES "src/util/filemonitor.cpp" "src/util/filemonitor.hpp" "src/util/filesystem.hpp" "src/util/logging.hpp")
 source_group("util" FILES ${UTIL_SRC_FILES})
 
 set(SCENE_SRC_FILES "src/scene/world.cpp" "src/scene/world.hpp")
