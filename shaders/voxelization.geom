@@ -3,8 +3,10 @@ layout(triangles) in;
 
 layout(triangle_strip, max_vertices = 3) out;
 
-in vec3[] fNormals;
-in vec2[] fTextureCoords;
+in VS_OUT {
+    in vec3 gsNormal;
+    in vec2 gsTextureCoord;
+} gs_in[];
 
 uniform mat4 ortho_x;
 uniform mat4 ortho_y;
@@ -42,11 +44,11 @@ void main() {
     // TODO: Conservative?
 
     // Orthographic projection along the dominant axis
-    for (uint i = 0; i < gl_in.length(); i++) {
+    for (uint i = 0; i < 3; i++) {
         gl_Position = ortho * gl_in[i].gl_Position;
-        fNormal = fNormals[i];
+        fNormal = gs_in[i].gsNormal;
         fPosition = gl_in[i].gl_Position.xyz;
-        fTextureCoord = fTextureCoords[i];
+        fTextureCoord = gs_in[i].gsTextureCoord;
         EmitVertex();
     }
 
