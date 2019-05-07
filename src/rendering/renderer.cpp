@@ -119,6 +119,8 @@ void Renderer::voxelize_scene() {
   glUniformMatrix4fv(glGetUniformLocation(program, "ortho_x"), 1, GL_FALSE, glm::value_ptr(ortho_x));
   glUniformMatrix4fv(glGetUniformLocation(program, "ortho_y"), 1, GL_FALSE, glm::value_ptr(ortho_y));
   glUniformMatrix4fv(glGetUniformLocation(program, "ortho_z"), 1, GL_FALSE, glm::value_ptr(ortho_z));
+  
+  glUniform1i(glGetUniformLocation(program, "voxel_data"), gl_voxels_image_unit);
 
   // TODO: Voxelize scene
   glDisable(GL_DEPTH_TEST); 
@@ -138,6 +140,8 @@ void Renderer::voxelize_scene() {
     const uint32_t draw_cmd_offset = batch.gl_curr_ibo_idx * sizeof(DrawElementsIndirectCommand);
     glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (const void*)draw_cmd_offset, 1, sizeof(DrawElementsIndirectCommand));
   }
+
+  glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT); // Due to incoherent mem. access need to sync read and usage of voxel data
 
   glGenerateTextureMipmap(gl_voxels_texture); // Regenerate the mipmaps
 }
@@ -433,11 +437,11 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glReadBuffer(GL_NONE);
 
     // Global voxel buffer
-    gl_voxels_texture_unit = get_next_free_texture_unit();
-    glActiveTexture(GL_TEXTURE0 + gl_voxels_texture_unit);
+    gl_voxels_image_unit = get_next_free_image_unit();
     glGenTextures(1, &gl_voxels_texture);
     glBindTexture(GL_TEXTURE_3D, gl_voxels_texture);
-    glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA16F, voxel_grid_dimension, voxel_grid_dimension, voxel_grid_dimension, 0, GL_RGBA, GL_FLOAT, nullptr);
+    glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA32F, voxel_grid_dimension, voxel_grid_dimension, voxel_grid_dimension, 0, GL_RGBA, GL_FLOAT, nullptr);
+    glBindImageTexture(gl_voxels_image_unit, gl_voxels_texture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glObjectLabel(GL_TEXTURE, gl_voxels_texture, -1, "Voxel texture");
