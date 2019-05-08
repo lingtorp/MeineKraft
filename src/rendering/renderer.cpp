@@ -49,7 +49,7 @@ inline void pass_ended() {
 uint32_t Renderer::get_next_free_texture_unit() {
   int32_t max_texture_units;
   glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max_texture_units);
-  static int32_t next_texture_unit = 0;
+  static int32_t next_texture_unit = -1;
   next_texture_unit++;
   if (next_texture_unit >= max_texture_units) {
     Log::error("Reached max texture units: " + std::to_string(max_texture_units));
@@ -428,6 +428,10 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glObjectLabel(GL_TEXTURE, gl_voxels_texture, -1, "Voxel texture");
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+      Log::error("Voxelization FBO not complete"); exit(-1);
+    }
   }
 
   /// Voxel cone tracing pass
@@ -436,7 +440,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
                             Filesystem::base + "shaders/voxel-cone-tracing.frag");
     std::tie(success, err_msg) = vct_shader->compile();
     if (!success) {
-      Log::error("Could not compile voxel-cone-tracing shaders"); exit(1);
+      Log::error("Could not compile voxel-cone-tracing shaders"); exit(-1);
     }
 
     const auto program = vct_shader->gl_program;
@@ -456,7 +460,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glDrawBuffers(1, fbo_attachments);
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-      std::cerr << "VCT fbo not complete" << std::endl; exit(-1); // Should not happen
+      Log::error("VCT fbo not complete"); exit(-1); 
     }
 
     glGenVertexArrays(1, &gl_vct_vao);
