@@ -25,6 +25,7 @@ gameplay code while keeping the performance and data-oriented architecture intac
 * [SDL2](https://www.libsdl.org/) - window creation, input handling
 * [SDL-image](https://www.libsdl.org/projects/SDL_image/) - image loading and conversion
 * [GLEW](https://duckduckgo.com/?q=GLEW&t=ffab&ia=web) - OpenGL function loader
+* [GLM](https://glm.g-truc.net/0.9.8/index.html) - various mathmatical utilities
 
 Platforms supported: Windows and Linux, macOS (_barely_)
 
