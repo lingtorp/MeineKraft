@@ -97,6 +97,7 @@ private:
   Shader* vct_shader = nullptr;
   uint32_t gl_vct_fbo = 0;
   uint32_t gl_vct_vao = 0;
+  uint32_t gl_vct_texture = 0;  // texture unit the same as gl_lightning_texture_unit
 
   // Voxels
   uint32_t gl_voxels_texture = 0;

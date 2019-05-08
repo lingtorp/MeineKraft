@@ -101,9 +101,9 @@ static void orthographic_projections(glm::mat4& ortho_x, glm::mat4& ortho_y, glm
   // NOTE: Assuming uniform voxel grid size in all dimensions
   // TODO: Implement s.t the orthographic projection is along each positive main axis and has a view size of voxel_grid_dimensions.xy
   const float left = 0.0f, right = 0.0f, bottom = 0.0f, top = float(voxel_grid_dimension), znear = 0.0f, zfar = float(voxel_grid_dimension);
-  ortho_x = glm::ortho(left, right, bottom, top, znear, zfar) * glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-  ortho_y = glm::ortho(left, right, bottom, top, znear, zfar) * glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-  ortho_z = glm::ortho(left, right, bottom, top, znear, zfar) * glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+  ortho_x = glm::ortho(left, right, bottom, top, znear, zfar) * glm::lookAt(glm::vec3(-voxel_grid_dimension / 2.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+  ortho_y = glm::ortho(left, right, bottom, top, znear, zfar) * glm::lookAt(glm::vec3(0.0f, -voxel_grid_dimension / 2.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+  ortho_z = glm::ortho(left, right, bottom, top, znear, zfar) * glm::lookAt(glm::vec3(0.0f, 0.0f, -voxel_grid_dimension / 2.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
 /// Normalizes the plane's equation and returns it
@@ -431,11 +431,20 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     GLuint gl_vct_rbo = 0;
     glGenRenderbuffers(1, &gl_vct_rbo);
     glBindRenderbuffer(GL_RENDERBUFFER, gl_vct_rbo);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA8, screen.width, screen.height);
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, gl_vct_rbo);
-    glObjectLabel(GL_TEXTURE, gl_vct_rbo, -1, "VCT RBO");
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, screen.width, screen.height);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, gl_vct_rbo);
+    glObjectLabel(GL_TEXTURE, gl_vct_rbo, -1, "VCT Depth RBO");
 
-    uint32_t fbo_attachments[3] = { GL_COLOR_ATTACHMENT0 };
+	glActiveTexture(GL_TEXTURE0 + gl_lightning_texture_unit);
+	glGenTextures(1, &gl_vct_texture);
+	glBindTexture(GL_TEXTURE_2D, gl_vct_texture);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, screen.width, screen.height, 0, GL_RGBA, GL_FLOAT, nullptr);
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_vct_texture, 0);
+	glObjectLabel(GL_TEXTURE, gl_vct_texture, -1, "VCT lighting texture");
+
+    uint32_t fbo_attachments[1] = { GL_COLOR_ATTACHMENT0 };
     glDrawBuffers(1, fbo_attachments);
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
@@ -647,7 +656,7 @@ void Renderer::render(const uint32_t delta) {
 
 	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT); // Due to incoherent mem. access need to sync read and usage of voxel data
 
-	glGenerateTextureMipmap(gl_voxels_texture); // Regenerate the 
+	glGenerateTextureMipmap(gl_voxels_texture); // Regenerate the voxel mipmaps
 	
 	// Restore modified global state
 	glEnable(GL_CULL_FACE);
@@ -664,13 +673,18 @@ void Renderer::render(const uint32_t delta) {
     glBindVertexArray(gl_vct_vao);
     glUseProgram(program);
     glBindFramebuffer(GL_FRAMEBUFFER, gl_vct_fbo);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	
+	glActiveTexture(GL_TEXTURE0 + gl_lightning_texture_unit);
+	glBindTexture(GL_TEXTURE_2D, gl_vct_texture);
+    
     glUniform1f(glGetUniformLocation(program, "uScreen_width"), screen.width);
     glUniform1f(glGetUniformLocation(program, "uScreen_height"), screen.height);
     glUniform1i(glGetUniformLocation(program, "uDiffuse"), gl_diffuse_texture_unit);
     // glUniform1i(glGetUniformLocation(program, "uNormal"), gl_normal_texture_unit);
     // glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
     // glUniform1i(glGetUniformLocation(program, "voxel_data"), gl_voxels_texture_unit);
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
   }
   pass_ended();
@@ -682,6 +696,9 @@ void Renderer::render(const uint32_t delta) {
 
     glBindVertexArray(gl_lightning_vao);
     glUseProgram(program);
+
+	glActiveTexture(GL_TEXTURE0 + gl_lightning_texture_unit);
+	glBindTexture(GL_TEXTURE_2D, gl_lightning_texture);
 
     glUniform1i(glGetUniformLocation(program, "environment_map_sampler"), gl_environment_map_texture_unit);
     glUniform1i(glGetUniformLocation(program, "shading_model_id_sampler"), gl_shading_model_texture_unit);
@@ -752,6 +769,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glGenBuffers(1, &batch.gl_depth_vbo);
     glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_vbo);
     glBufferData(GL_ARRAY_BUFFER, batch.mesh.byte_size_of_vertices(), batch.mesh.vertices.data(), GL_STATIC_DRAW);
+	glObjectLabel(GL_BUFFER, batch.gl_depth_vbo, -1, "Batch gl_depth_vbo");
 
     const auto position_attrib = glGetAttribLocation(program, "position");
     glVertexAttribPointer(position_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void *) offsetof(Vertex, position));
