@@ -83,6 +83,7 @@ public:
   std::unordered_map<Vec3<int>, Chunk> chunks;
   
   explicit World(): chunks{} {
+	return;
     std::mt19937 engine(1337);
     std::uniform_real_distribution<> distr(0.0, 1.0);
 

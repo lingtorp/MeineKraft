@@ -446,6 +446,8 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glObjectLabel(GL_TEXTURE, gl_voxels_texture, -1, "Voxel texture");
 
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, gl_shadowmapping_texture, 0); // Reuse shadowmap depth attachment (wont write to it)
+
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
       Log::error("Voxelization FBO not complete"); exit(-1);
     }
