@@ -5,7 +5,7 @@
 
 ![](/resources/screenshots/pbr-1.png)
 
-**MeineKraft** is a **physically based rendering engine** written in **C++11** & **OpenGL 4.6**.
+**MeineKraft** is a **physically based rendering engine** written in **C++14** & **OpenGL 4.6**.
 My intent is to follow up the implementation of the most interesting parts with some articles relating to my learning experience,
 these articles can be found on my personal [site](http://lingtorp.com) with the tag *MeineKraft*.
 
@@ -20,19 +20,17 @@ on top of the ECS architecture in order to make it slightly easier to write
 gameplay code while keeping the performance and data-oriented architecture intact.
 
 ## Dependencies
-All of the dependencies are bundled within the folder /include, /bin, /lib.
-* [dear imgui](https://github.com/ocornut/imgui) - debug GUI.
-* [assimp](https://github.com/syoyo/assimp) - model importing.
-* [SDL2](https://www.libsdl.org/) - window creation
+* [dear imgui](https://github.com/ocornut/imgui) - editor GUI
+* [assimp](https://github.com/syoyo/assimp) - model/scene importing
+* [SDL2](https://www.libsdl.org/) - window creation, input handling
 * [SDL-image](https://www.libsdl.org/projects/SDL_image/) - image loading and conversion
 * [GLEW](https://duckduckgo.com/?q=GLEW&t=ffab&ia=web) - OpenGL function loader
 
-Platforms supported: Windows and Linux, macOS support is not possible due to
-unsupported OpenGL version.
+Platforms supported: Windows and Linux, macOS (_barely_)
 
 ## Build
-Before continueing go to the file filesystem.h and adjust the filepaths so that they match your system.
-### Linux (Ubuntu)
+**NOTE:** Before continueing go to the file filesystem.h and adjust the filepaths so that they match your system.
+### Linux (Ubuntu 18.10)
 ```bash
 sudo apt install libsdl2-dev libsdl2-image-dev libassimp-dev libglew-dev
 cmake --build .
@@ -40,9 +38,15 @@ cmake .
 ./MeineKraft
 ```
 ### Windows
-Launch CMake-GUI and select repository root directory and then the build directory.
-Generate the Visual Studio 2017 solution and simply build it via Visual Studio.
+#### Install [Vcpkg](https://github.com/microsoft/vcpkg)
+Clone Vcpkg, build it, then run.
+```bash
+./vcpkg install sdl2 sdl2-image glew assimp
+```
+Launch CMake-GUI and select MeineKraft repository and then create a build directory and select it.
+Generate the Visual Studio 2017/2019 solution and simply build and run it via Visual Studio.
 ### macOS
+#### Install [Homebrew](https://brew.sh/)
 Since OpenGL is deprecated on macOS this will probably not work in the future.
 ```bash
 sudo brew install glew sdl2 assimp
