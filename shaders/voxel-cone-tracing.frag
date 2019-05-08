@@ -13,5 +13,5 @@ out vec4 color;
 void main() {
   const vec2 frag_coord = vec2(gl_FragCoord.x / uScreen_width, gl_FragCoord.y / uScreen_height);
   const vec3 diffuse = texture(uDiffuse, frag_coord).rgb;
-  color = vec4(diffuse, 1.0f);
+  color = vec4(diffuse, 1.0);
 } 
