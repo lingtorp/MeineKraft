@@ -58,6 +58,19 @@ uint32_t Renderer::get_next_free_texture_unit() {
   return next_texture_unit;
 }
 
+// FIXME: Remake this to serve a better purpose (unique per line, file like the log_once)
+static uint32_t get_next_free_image_unit() {
+  int32_t max_image_units;
+  glGetIntegerv(GL_MAX_IMAGE_UNITS, &max_image_units);
+  static int32_t next_image_unit = -1;
+  next_image_unit++;
+  if (next_image_unit >= max_image_units) {
+    Log::error("Reached max image units: " + std::to_string(max_image_units));
+    exit(1);
+  }
+  return next_image_unit;
+}
+
 void Renderer::load_environment_map(const std::vector<std::string>& faces) {
   Texture texture;
   const auto resource = TextureResource{faces};
@@ -89,7 +102,7 @@ static void orthographic_projections(glm::mat4& ortho_x, glm::mat4& ortho_y, glm
   // TODO: Implement s.t the orthographic projection is along each positive main axis and has a view size of voxel_grid_dimensions.xy
   const float left = 0.0f, right = 0.0f, bottom = 0.0f, top = float(voxel_grid_dimension), znear = 0.0f, zfar = float(voxel_grid_dimension);
   ortho_x = glm::ortho(left, right, bottom, top, znear, zfar) * glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-  ortho_y = glm::ortho(left, right, bottom, top, znear, zfar) * glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+  ortho_y = glm::ortho(left, right, bottom, top, znear, zfar) * glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
   ortho_z = glm::ortho(left, right, bottom, top, znear, zfar) * glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
@@ -106,6 +119,8 @@ void Renderer::voxelize_scene() {
   glUniformMatrix4fv(glGetUniformLocation(program, "ortho_x"), 1, GL_FALSE, glm::value_ptr(ortho_x));
   glUniformMatrix4fv(glGetUniformLocation(program, "ortho_y"), 1, GL_FALSE, glm::value_ptr(ortho_y));
   glUniformMatrix4fv(glGetUniformLocation(program, "ortho_z"), 1, GL_FALSE, glm::value_ptr(ortho_z));
+  
+  glUniform1i(glGetUniformLocation(program, "voxel_data"), gl_voxels_image_unit);
 
   // TODO: Voxelize scene
   glDisable(GL_DEPTH_TEST); 
@@ -125,6 +140,8 @@ void Renderer::voxelize_scene() {
     const uint32_t draw_cmd_offset = batch.gl_curr_ibo_idx * sizeof(DrawElementsIndirectCommand);
     glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (const void*)draw_cmd_offset, 1, sizeof(DrawElementsIndirectCommand));
   }
+
+  glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT); // Due to incoherent mem. access need to sync read and usage of voxel data
 
   glGenerateTextureMipmap(gl_voxels_texture); // Regenerate the mipmaps
 }
@@ -420,11 +437,11 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glReadBuffer(GL_NONE);
 
     // Global voxel buffer
-    gl_voxels_texture_unit = get_next_free_texture_unit();
-    glActiveTexture(GL_TEXTURE0 + gl_voxels_texture_unit);
+    gl_voxels_image_unit = get_next_free_image_unit();
     glGenTextures(1, &gl_voxels_texture);
     glBindTexture(GL_TEXTURE_3D, gl_voxels_texture);
-    glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA16F, voxel_grid_dimension, voxel_grid_dimension, voxel_grid_dimension, 0, GL_RGBA, GL_FLOAT, nullptr);
+    glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA32F, voxel_grid_dimension, voxel_grid_dimension, voxel_grid_dimension, 0, GL_RGBA, GL_FLOAT, nullptr);
+    glBindImageTexture(gl_voxels_image_unit, gl_voxels_texture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glObjectLabel(GL_TEXTURE, gl_voxels_texture, -1, "Voxel texture");
@@ -806,14 +823,12 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glGenVertexArrays(1, &batch.gl_shadowmapping_vao);
     glBindVertexArray(batch.gl_shadowmapping_vao);
 
-    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_vbo); // Reuse geometry
-
-    const auto position_attrib = glGetAttribLocation(program, "position");
-    glVertexAttribPointer(position_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void *) offsetof(Vertex, position));
-    glEnableVertexAttribArray(position_attrib);
-    
+    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_vbo);   // Reuse geometry
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, batch.gl_ebo); // Reuse indices
 
+    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void *) offsetof(Vertex, position));
+    glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
+    
     // Batch instance idx buffer
     glBindBuffer(GL_ARRAY_BUFFER, batch.gl_instance_idx_buffer);
     glVertexAttribIPointer(glGetAttribLocation(program, "instance_idx"), 1, GL_UNSIGNED_INT, sizeof(GLuint), nullptr);
@@ -828,13 +843,17 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glGenVertexArrays(1, &batch.gl_voxelization_vao);
     glBindVertexArray(batch.gl_voxelization_vao);
 
-    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_vbo); // Reuse geometry
-
-    const auto position_attrib = glGetAttribLocation(program, "position");
-    glVertexAttribPointer(position_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void *)offsetof(Vertex, position));
-    glEnableVertexAttribArray(position_attrib);
-
+    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_vbo);   // Reuse geometry
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, batch.gl_ebo); // Reuse indices
+
+    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void *)offsetof(Vertex, position));
+    glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
+
+    glVertexAttribPointer(glGetAttribLocation(program, "normal"), 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void*)offsetof(Vertex, normal));
+    glEnableVertexAttribArray(glGetAttribLocation(program, "normal"));
+
+    glVertexAttribPointer(glGetAttribLocation(program, "texcoord"), 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void*)offsetof(Vertex, tex_coord));
+    glEnableVertexAttribArray(glGetAttribLocation(program, "texcoord"));
   }
 }
 

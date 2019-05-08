@@ -101,7 +101,7 @@ private:
 
   // Voxels
   uint32_t gl_voxels_texture = 0;
-  uint32_t gl_voxels_texture_unit = 0;
+  uint32_t gl_voxels_image_unit = 0;
 
   /// Global buffers
   // Geometric normals

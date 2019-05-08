@@ -40,7 +40,7 @@ void main() {
 
     const uint voxel_grid_size = imageSize(voxel_data).x; // Assuming x = y = z in grid size
     const vec3 voxel = gl_FragCoord.xyz * voxel_grid_size;
-    ivec3 voxel_position;
+    ivec3 voxel_position = ivec3(fTextureCoord.x, fTextureCoord.x, fTextureCoord.x); // Prevent optimization
     switch (dominant_axis_projected) {
       case 0: // x axis
       voxel_position = ivec3(voxel.z, voxel.y, voxel.x);

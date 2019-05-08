@@ -5,6 +5,8 @@
 #include <glew.h>
 #include <SDL_opengl.h> 
 
+#include <sstream>
+
 /// Gathers information about the OpenGL context 
 struct OpenGLContextInfo {
   // TODO: Document each of the member variables??
@@ -12,6 +14,7 @@ struct OpenGLContextInfo {
   int max_color_attachments;
   int max_draw_buffers;
   int max_texture_array_layers;
+  int max_image_texture_units;
 
   OpenGLContextInfo(const size_t gl_major_version, const size_t gl_minor_version) {
     Log::info("OpenGL version: " + std::string(reinterpret_cast<const char*>(glGetString(GL_VERSION))));
@@ -27,8 +30,19 @@ struct OpenGLContextInfo {
 
     glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &max_texture_array_layers);
     Log::info("Max texture array layers/elements: " + std::to_string(max_texture_array_layers));
+
+    glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max_texture_units);
+    Log::info("Max texture units: " + std::to_string(max_texture_units));
+
+    glGetIntegerv(GL_MAX_IMAGE_UNITS, &max_image_texture_units);
+    Log::info("Max image texture units: " + std::to_string(max_image_texture_units));
   }
 };
+
+// Prints debug messages - notifications
+// #define DEBUG_NOTIFICATIONS
+// Prints debug messages - performance
+// #define DEBUG_PERFORMANCE
 
 static void GLAPIENTRY gl_debug_callback(
   GLenum source,
@@ -39,56 +53,64 @@ static void GLAPIENTRY gl_debug_callback(
   const GLchar* message,
   const void* user_param)
 {
-  std::cerr << " ----- GL ERROR CALLBACK ----- " << std::endl;
+  std::stringstream ss;
+  ss << " ----- GL ERROR CALLBACK ----- " << std::endl;
   
-  std::cerr << "Type: ";
+  ss << "Type: ";
   switch (type) {
   case GL_DEBUG_TYPE_ERROR:
-    std::cerr << "GL ERROR";
+    ss << "GL ERROR";
     break;
   case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
-    std::cerr << "DEPRECATED_BEHAVIOR";
+    ss << "DEPRECATED_BEHAVIOR";
     break;
   case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
-    std::cerr << "UNDEFINED_BEHAVIOR";
+    ss << "UNDEFINED_BEHAVIOR";
     break;
   case GL_DEBUG_TYPE_PORTABILITY:
-    std::cerr << "PORTABILITY";
+    ss << "PORTABILITY";
     break;
   case GL_DEBUG_TYPE_PERFORMANCE:
-    std::cerr << "PERFORMANCE";
+    ss << "PERFORMANCE";
+#ifndef DEBUG_PERFORMANCE
+    return;
+#endif
     break;
   case GL_DEBUG_TYPE_OTHER:
-    std::cerr << "OTHER";
+    ss << "OTHER";
     break;
   default:
-    std::cerr << "?";
+    ss << "?";
   }
-  std::cerr << std::endl;
+  ss << std::endl;
 
-  std::cerr << "Severity: ";
+  ss << "Severity: ";
   switch (severity) {
   case GL_DEBUG_SEVERITY_LOW:
-    std::cerr << "LOW";
+    ss << "LOW";
     break;
   case GL_DEBUG_SEVERITY_MEDIUM:
-    std::cerr << "MEDIUM";
+    ss << "MEDIUM";
     break;
   case GL_DEBUG_SEVERITY_HIGH:
-    std::cerr << "HIGH";
+    ss << "HIGH";
     break;
   case GL_DEBUG_SEVERITY_NOTIFICATION:
-	  std::cerr << "NOTIFICATION";
+	  ss << "NOTIFICATION";
+#ifndef DEBUG_NOTIFICATION
+    return;
+#endif
 	  break;
   default: 
-    std::cerr << "?";
+    ss << "?";
   }
-  std::cerr << std::endl;
+  ss << std::endl;
 
-  std::cerr << "Type: " << glewGetErrorString(type) << std::endl;
-  std::cerr << "Message: " << message << std::endl;
-  std::cerr << " ----- ----- ----- ----- ----- " << std::endl;  
-  std::cerr << std::endl;
+  ss << "Type: " << glewGetErrorString(type) << std::endl;
+  ss << "Message: " << message << std::endl;
+  ss << " ----- ----- ----- ----- ----- " << std::endl;  
+  ss << std::endl;
+  Log::error(ss.str());
 }
 
 static void log_gl_error() {
