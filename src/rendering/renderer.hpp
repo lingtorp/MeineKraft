@@ -60,7 +60,6 @@ private:
   void add_graphics_state(GraphicsBatch& batch, const RenderComponent& comp, Material material, ID entity_id);
   void update_transforms();
   void link_batch(GraphicsBatch& batch);
-  void voxelize_scene();
 
   /// View frustum culling shader
   ComputeShader* cull_shader = nullptr;

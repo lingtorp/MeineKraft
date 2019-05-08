@@ -106,46 +106,6 @@ static void orthographic_projections(glm::mat4& ortho_x, glm::mat4& ortho_y, glm
   ortho_z = glm::ortho(left, right, bottom, top, znear, zfar) * glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
-void Renderer::voxelize_scene() {
-  glClearTexImage(gl_voxels_texture, 0, GL_RGBA, GL_FLOAT, nullptr); // Clear all values
-  glBindFramebuffer(GL_FRAMEBUFFER, gl_voxelization_fbo);
-
-  const auto program = voxelization_shader->gl_program;
-  glUseProgram(program);
-
-  // Orthogonal projections along all three positive main axis
-  glm::mat4 ortho_x(0.0f), ortho_y(0.0f), ortho_z(0.0f);
-  orthographic_projections(ortho_x, ortho_y, ortho_z, voxel_grid_dimension);
-  glUniformMatrix4fv(glGetUniformLocation(program, "ortho_x"), 1, GL_FALSE, glm::value_ptr(ortho_x));
-  glUniformMatrix4fv(glGetUniformLocation(program, "ortho_y"), 1, GL_FALSE, glm::value_ptr(ortho_y));
-  glUniformMatrix4fv(glGetUniformLocation(program, "ortho_z"), 1, GL_FALSE, glm::value_ptr(ortho_z));
-  
-  glUniform1i(glGetUniformLocation(program, "voxel_data"), gl_voxels_image_unit);
-
-  // TODO: Voxelize scene
-  glDisable(GL_DEPTH_TEST); 
-  glDisable(GL_CULL_FACE);
-  glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-  glViewport(0, 0, voxel_grid_dimension, voxel_grid_dimension);
-
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); 
-  for (size_t i = 0; i < graphics_batches.size(); i++) {
-    const auto& batch = graphics_batches[i];
-    glBindVertexArray(batch.gl_depth_vao);
-    glBindBuffer(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo); // GL_DRAW_INDIRECT_BUFFER is global context state
-
-    const uint32_t gl_pointlight_ssbo_binding_point_idx = 4; // Default value in lightning.frag
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_pointlight_ssbo_binding_point_idx, gl_pointlights_ssbo);
-
-    const uint32_t draw_cmd_offset = batch.gl_curr_ibo_idx * sizeof(DrawElementsIndirectCommand);
-    glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (const void*)draw_cmd_offset, 1, sizeof(DrawElementsIndirectCommand));
-  }
-
-  glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT); // Due to incoherent mem. access need to sync read and usage of voxel data
-
-  glGenerateTextureMipmap(gl_voxels_texture); // Regenerate the mipmaps
-}
-
 /// Normalizes the plane's equation and returns it
 inline glm::vec4 normalize(const glm::vec4& p) {
   const float mag = std::sqrt(p.x * p.x + p.y * p.y + p.z * p.z);
@@ -449,7 +409,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, gl_shadowmapping_texture, 0); // Reuse shadowmap depth attachment (wont write to it)
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-      Log::error("Voxelization FBO not complete"); exit(-1);
+      Log::error("Voxelization FBO not complete"); exit(1);
     }
   }
 
@@ -652,8 +612,44 @@ void Renderer::render(const uint32_t delta) {
 
   if (need_to_voxelize) {
     pass_started("Voxelization pass");
-    voxelize_scene();
-    // need_to_voxelize = false;
+	glClearTexImage(gl_voxels_texture, 0, GL_RGBA, GL_FLOAT, nullptr); // Clear all values
+	glBindFramebuffer(GL_FRAMEBUFFER, gl_voxelization_fbo);
+
+	const auto program = voxelization_shader->gl_program;
+	glUseProgram(program);
+
+	// Orthogonal projections along all three positive main axis
+	glm::mat4 ortho_x(0.0f), ortho_y(0.0f), ortho_z(0.0f);
+	orthographic_projections(ortho_x, ortho_y, ortho_z, voxel_grid_dimension);
+	glUniformMatrix4fv(glGetUniformLocation(program, "ortho_x"), 1, GL_FALSE, glm::value_ptr(ortho_x));
+	glUniformMatrix4fv(glGetUniformLocation(program, "ortho_y"), 1, GL_FALSE, glm::value_ptr(ortho_y));
+	glUniformMatrix4fv(glGetUniformLocation(program, "ortho_z"), 1, GL_FALSE, glm::value_ptr(ortho_z));
+
+	glUniform1i(glGetUniformLocation(program, "voxel_data"), gl_voxels_image_unit);
+
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
+	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+	glViewport(0, 0, voxel_grid_dimension, voxel_grid_dimension);
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	for (size_t i = 0; i < graphics_batches.size(); i++) {
+		const auto& batch = graphics_batches[i];
+		glBindVertexArray(batch.gl_depth_vao);
+		glBindBuffer(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo); // GL_DRAW_INDIRECT_BUFFER is global context state
+
+		const uint32_t gl_pointlight_ssbo_binding_point_idx = 4; // Default value in lightning.frag
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_pointlight_ssbo_binding_point_idx, gl_pointlights_ssbo);
+
+		const uint32_t draw_cmd_offset = batch.gl_curr_ibo_idx * sizeof(DrawElementsIndirectCommand);
+		glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (const void*)draw_cmd_offset, 1, sizeof(DrawElementsIndirectCommand));
+	}
+
+	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT); // Due to incoherent mem. access need to sync read and usage of voxel data
+
+	glGenerateTextureMipmap(gl_voxels_texture); // Regenerate the 
+												
+	// need_to_voxelize = false;
     pass_ended();
   }
 
