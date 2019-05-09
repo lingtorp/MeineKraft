@@ -42,7 +42,7 @@ cmake .
 #### Install [Vcpkg](https://github.com/microsoft/vcpkg)
 Clone Vcpkg, build it, then run.
 ```bash
-./vcpkg install sdl2 sdl2-image glew assimp
+./vcpkg install sdl2:x64-windows sdl2-image:x64-windows glew:x64-windows assimp:x64-windows
 ```
 Launch CMake-GUI and select MeineKraft repository and then create a build directory and select it.
 Generate the Visual Studio 2017/2019 solution and simply build and run it via Visual Studio.
