@@ -593,6 +593,10 @@ void Renderer::render(const uint32_t delta) {
       glBindVertexArray(batch.gl_depth_vao);
       glBindBuffer(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo); // GL_DRAW_INDIRECT_BUFFER is global context state
 
+	  // const float left = 0.0f, right = float(voxel_grid_dimension), bottom = 0.0f, top = float(voxel_grid_dimension), znear = 0.1f, zfar = float(voxel_grid_dimension);
+	  // glm::mat4 ortho_proj = glm::ortho(left, right, bottom, top, znear, zfar);
+	  // glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, glm::value_ptr(ortho_proj));
+
       glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(camera_transform));
 
       const uint32_t gl_models_binding_point = 2; // Defaults to 2 in geometry.vert shader
