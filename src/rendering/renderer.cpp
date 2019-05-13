@@ -685,7 +685,7 @@ void Renderer::render(const uint32_t delta) {
   }
 
   pass_started("Voxel cone tracing pass");
-  if (false) {
+  if (true) {
     const auto program = vct_shader->gl_program;
 		glBindFramebuffer(GL_FRAMEBUFFER, gl_vct_fbo);
 
@@ -708,7 +708,7 @@ void Renderer::render(const uint32_t delta) {
   pass_ended();
 
   pass_started("Lightning pass");
-  {
+  if (false) {
     const auto program = lightning_shader->gl_program;
     glBindFramebuffer(GL_FRAMEBUFFER, gl_lightning_fbo);
 
@@ -745,7 +745,7 @@ void Renderer::render(const uint32_t delta) {
   /// Copy final pass into default FBO
   pass_started("Final blit pass");
   {
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, gl_lightning_fbo);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, gl_vct_fbo);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     const auto mask = GL_COLOR_BUFFER_BIT;
     const auto filter = GL_NEAREST;
