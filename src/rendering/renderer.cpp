@@ -639,15 +639,15 @@ void Renderer::render(const uint32_t delta) {
 		const auto program = voxelization_shader->gl_program;
 		glUseProgram(program);
 
-	const auto program = voxelization_shader->gl_program;
-	glUseProgram(program);
+		// Orthogonal projections along all three positive main axis
+		glm::mat4 ortho_x(0.0f), ortho_y(0.0f), ortho_z(0.0f);
+		orthographic_projections(scene_aabb, ortho_x, ortho_y, ortho_z, voxel_grid_dimension);
+		glUniformMatrix4fv(glGetUniformLocation(program, "ortho_x"), 1, GL_FALSE, glm::value_ptr(ortho_x));
+		glUniformMatrix4fv(glGetUniformLocation(program, "ortho_y"), 1, GL_FALSE, glm::value_ptr(ortho_y));
+		glUniformMatrix4fv(glGetUniformLocation(program, "ortho_z"), 1, GL_FALSE, glm::value_ptr(ortho_z));
 
-	// Orthogonal projections along all three positive main axis
-	glm::mat4 ortho_x(0.0f), ortho_y(0.0f), ortho_z(0.0f);
-	orthographic_projections(ortho_x, ortho_y, ortho_z, voxel_grid_dimension);
-	glUniformMatrix4fv(glGetUniformLocation(program, "ortho_x"), 1, GL_FALSE, glm::value_ptr(ortho_x));
-	glUniformMatrix4fv(glGetUniformLocation(program, "ortho_y"), 1, GL_FALSE, glm::value_ptr(ortho_y));
-	glUniformMatrix4fv(glGetUniformLocation(program, "ortho_z"), 1, GL_FALSE, glm::value_ptr(ortho_z));
+		const Vec3f aabb_size = Vec3f(scene_aabb.width(), scene_aabb.height(), scene_aabb.breadth());
+		glUniform3fv(glGetUniformLocation(program, "aabb_size"), 1, &aabb_size.x);
 
 		glUniform1i(glGetUniformLocation(program, "voxel_data"), gl_voxels_image_unit);
 
