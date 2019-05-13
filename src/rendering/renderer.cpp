@@ -657,11 +657,11 @@ void Renderer::render(const uint32_t delta) {
 		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 		glViewport(0, 0, voxel_grid_dimension, voxel_grid_dimension);
 
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-	for (size_t i = 0; i < graphics_batches.size(); i++) {
-		const auto& batch = graphics_batches[i];
-		glBindVertexArray(batch.gl_depth_vao);
-		glBindBuffer(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo); // GL_DRAW_INDIRECT_BUFFER is global context state
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+		for (size_t i = 0; i < graphics_batches.size(); i++) {
+			const auto& batch = graphics_batches[i];
+			glBindVertexArray(batch.gl_voxelization_vao);
+			glBindBuffer(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo); // GL_DRAW_INDIRECT_BUFFER is global context state
 
 			const uint32_t gl_pointlight_ssbo_binding_point_idx = 4; // Default value in lightning.frag
 			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_pointlight_ssbo_binding_point_idx, gl_pointlights_ssbo);
