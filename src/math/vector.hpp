@@ -13,7 +13,7 @@
 #include <math.h>
 #endif
 
-inline float mk_cos(const float x) {
+inline float mk_cosf(const float x) {
 #if defined(__APPLE__)
   return std::cos(x);
 #elif defined(__linux__)
@@ -23,7 +23,7 @@ inline float mk_cos(const float x) {
 #endif
 }
 
-inline float mk_sin(const float x) {
+inline float mk_sinf(const float x) {
 #if defined(__APPLE__)
   return std::sin(x);
 #elif defined(__linux__)

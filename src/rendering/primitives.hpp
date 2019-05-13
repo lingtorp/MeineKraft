@@ -7,7 +7,8 @@
 #include "../math/vector.hpp"
 
 /// Mathematical constants
-constexpr double PI = 3.1415926535897932384626433832795;
+constexpr double PI  = 3.1415926535897932384626433832795;
+constexpr float PI_F = 3.141592653589f;
 
 /// Linear interpolation of a, b given t
 static float lerp(const float a, const float b, const float t) {
@@ -205,9 +206,9 @@ struct Sphere: public Mesh {
       for (uint32_t i = 0; i <= X_SEGMENTS; ++i) {
         const float x_segment = (float)i / (float)X_SEGMENTS;
         const float y_segment = (float)j / (float)Y_SEGMENTS;
-        const float x = mk_cos(x_segment * 2.0f * PI) * mk_sin(y_segment * PI);
-        const float y = mk_cos(y_segment * PI);
-        const float z = mk_sin(x_segment * 2.0f * PI) * mk_sin(y_segment * PI);
+        const float x = mk_cosf(x_segment * 2.0f * PI_F) * mk_sinf(y_segment * PI_F);
+        const float y = mk_cosf(y_segment * PI_F);
+        const float z = mk_sinf(x_segment * 2.0f * PI_F) * mk_sinf(y_segment * PI_F);
         Vertex vertex;
         vertex.position = Vec3f{x, y, z} * radius;
         vertex.normal = Vec3f{x, y, z} * radius;
