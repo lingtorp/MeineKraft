@@ -26,18 +26,15 @@ void main() {
     const vec3 normal = normalize(cross(gs_in[1].gsPosition - gs_in[0].gsPosition, gs_in[2].gsPosition - gs_in[0].gsPosition));
 
     // Find the dominant axis of the triangle
-    vec3 dominant_axis = x;
     mat4 ortho = ortho_x;
     float max = abs(dot(normal, x));
     dominant_axis_projected = 0;
     
     if (max < abs(dot(normal, y))) {
-        dominant_axis = y;
         ortho = ortho_y;
         dominant_axis_projected = 1;
     }  
     if (max < abs(dot(normal, z))) {
-        dominant_axis = z;
         ortho = ortho_z;
         dominant_axis_projected = 2;
     }
