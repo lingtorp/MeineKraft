@@ -363,6 +363,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   {
     glGenFramebuffers(1, &gl_shadowmapping_fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, gl_shadowmapping_fbo);
+		glObjectLabel(GL_FRAMEBUFFER, gl_shadowmapping_fbo, -1, "Shadowmap FBO");
     gl_shadowmapping_texture_unit = Renderer::get_next_free_texture_unit();
     glActiveTexture(GL_TEXTURE0 + gl_shadowmapping_texture_unit);
     glGenTextures(1, &gl_shadowmapping_texture);
@@ -398,6 +399,8 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     GLuint gl_voxelization_fbo = 0;
     glGenFramebuffers(1, &gl_voxelization_fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, gl_voxelization_fbo);
+		glObjectLabel(GL_FRAMEBUFFER, gl_voxelization_fbo, -1, "Voxelization FBO");
+
     glDrawBuffer(GL_NONE);
     glReadBuffer(GL_NONE);
 
