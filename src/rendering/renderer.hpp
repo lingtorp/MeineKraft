@@ -56,7 +56,7 @@ struct Renderer {
   bool need_to_voxelize = true;
 
   // Shadow mapping
-  DirectionalLight directional_light = DirectionalLight(Vec3f(-130.0, 2000.0, 0.0), Vec3f(0.0, -0.9, 0.523));
+  DirectionalLight directional_light = DirectionalLight(Vec3f(-130.0f, 2000.0f, 0.0f), Vec3f(0.0f, -0.9f, 0.523f));
 private:
   void add_graphics_state(GraphicsBatch& batch, const RenderComponent& comp, Material material, ID entity_id);
   void update_transforms();

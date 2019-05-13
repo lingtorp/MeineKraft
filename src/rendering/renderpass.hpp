@@ -36,10 +36,10 @@ class SSAOPass: public RenderPass {
   const char* name = "SSAO pass";
 
   uint32_t ssao_num_samples = 64;
-  float ssao_kernel_radius = 1.0;
-  float ssao_power = 1.0;
-  float ssao_bias = 0.0025;
-  float ssao_blur_factor = 16.0;
+  float ssao_kernel_radius = 1.0f;
+  float ssao_power = 1.0f;
+  float ssao_bias = 0.0025f;
+  float ssao_blur_factor = 16.0f;
   bool  ssao_blur_enabled = false;
 
   std::vector<Vec3f> ssao_samples;
