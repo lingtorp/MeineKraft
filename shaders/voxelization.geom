@@ -45,7 +45,7 @@ void main() {
     for (uint i = 0; i < 3; i++) {
         gl_Position = ortho * gl_in[i].gl_Position;
         fNormal = gs_in[i].gsNormal;
-        fPosition = gl_in[i].gl_Position.xyz;
+        fPosition = gs_in[i].gsPosition;
         fTextureCoord = gs_in[i].gsTextureCoord;
         EmitVertex();
     }
