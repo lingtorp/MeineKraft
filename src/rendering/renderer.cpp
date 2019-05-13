@@ -396,7 +396,6 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     voxelization_shader = new Shader(Filesystem::base + "shaders/voxelization.vert",
                                      Filesystem::base + "shaders/voxelization.geom",
                                      Filesystem::base + "shaders/voxelization.frag");
-    GLuint gl_voxelization_fbo = 0;
     glGenFramebuffers(1, &gl_voxelization_fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, gl_voxelization_fbo);
 		glObjectLabel(GL_FRAMEBUFFER, gl_voxelization_fbo, -1, "Voxelization FBO");
