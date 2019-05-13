@@ -467,7 +467,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glBindBuffer(GL_ARRAY_BUFFER, gl_vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(Primitive::quad), &Primitive::quad, GL_STATIC_DRAW);
     glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
-    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), nullptr);
+    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
   }
 
   glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
