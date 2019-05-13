@@ -6,6 +6,7 @@ layout(triangle_strip, max_vertices = 3) out;
 in VS_OUT {
     in vec3 gsNormal;
     in vec2 gsTextureCoord;
+    in vec3 gsPosition;
 } gs_in[];
 
 uniform mat4 ortho_x;
@@ -15,7 +16,7 @@ uniform mat4 ortho_z;
 out vec3 fNormal;   
 out vec3 fPosition; // World space position
 out vec2 fTextureCoord;
-flat out uint dominant_axis_projected;
+flat out uint dominant_axis_projected; // 0 = x, 1 = y, 2 = z
 
 void main() {
     const vec3 x = vec3(1.0, 0.0, 0.0);
@@ -28,7 +29,7 @@ void main() {
     vec3 dominant_axis = x;
     mat4 ortho = ortho_x;
     float max = abs(dot(normal, x));
-    dominant_axis_projected = 1;
+    dominant_axis_projected = 0;
     
     if (max < abs(dot(normal, y))) {
         dominant_axis = y;
@@ -41,7 +42,7 @@ void main() {
         dominant_axis_projected = 2;
     }
 
-    // TODO: Conservative?
+    // TODO: Conservative rasterization?
 
     // Orthographic projection along the dominant axis
     for (uint i = 0; i < 3; i++) {
