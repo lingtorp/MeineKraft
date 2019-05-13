@@ -429,7 +429,7 @@ class Simplex_Tables : public Noise {
     std::vector<uint8_t> perms;
 public:
     /// Perms size is double that of grad to avoid index wrapping
-    Simplex_Tables(uint64_t seed): engine(seed), grads2(256), grads3(256), distr(-1.0, 1.0), perms(256) {
+    Simplex_Tables(const uint64_t seed): engine(seed), grads2(256), grads3(256), distr(-1.0, 1.0), perms(256) {
         /// Fill the gradients list with random normalized vectors
         for (size_t i = 0; i < grads2.size(); i++) {
             double x = distr(engine);
