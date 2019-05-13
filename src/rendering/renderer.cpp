@@ -760,11 +760,12 @@ void Renderer::render(const uint32_t delta) {
   syncs[state.frame % 3] = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
 }
 
-void Renderer::update_projection_matrix(const float fov, const Resolution& screen) {
+void Renderer::update_projection_matrix(const float fov, const Resolution& new_screen) {
   // TODO: Adjust all the passes textures sizes & all the global texture buffers
-  const float aspect = (float) screen.width / (float) screen.height;
+  const float aspect = (float)new_screen.width / (float)new_screen.height;
   this->projection_matrix = glm::perspective(glm::radians(fov), aspect, 0.1f, 3000.0f);
-  glViewport(0, 0, screen.width, screen.height);
+  glViewport(0, 0, new_screen.width, new_screen.height);
+  screen = new_screen;
 }
 
 void Renderer::link_batch(GraphicsBatch& batch) {
