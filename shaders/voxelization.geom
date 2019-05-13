@@ -23,7 +23,7 @@ void main() {
     const vec3 y = vec3(0.0, 1.0, 0.0);
     const vec3 z = vec3(0.0, 0.0, 1.0);
 
-    const vec3 normal = normalize(cross(gl_in[0].gl_Position.xyz - gl_in[1].gl_Position.xyz, gl_in[0].gl_Position.xyz - gl_in[2].gl_Position.xyz));
+    const vec3 normal = normalize(cross(gs_in[1].gsPosition - gs_in[0].gsPosition, gs_in[2].gsPosition - gs_in[0].gsPosition));
 
     // Find the dominant axis of the triangle
     vec3 dominant_axis = x;
