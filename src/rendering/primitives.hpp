@@ -327,4 +327,29 @@ struct DirectionalLight {
   DirectionalLight(const Vec3f& position, const Vec3f& direction): position(position), direction(direction) {}
 };
 
+struct AABB {
+	Vec3f max;
+	Vec3f min;
+	AABB() = default;
+
+	AABB(const Vec3f& min, const Vec3f& max): min(min), max(max) {}
+
+	// Along the diagonal (from min to max) of the AABB
+	inline float diagonal_lng() const { return (max - min).length(); }
+	// Along x-axis
+	inline float width() const { return std::abs(max.x - min.x); }
+	// Along y-axis
+	inline float height() const { return std::abs(max.y - min.y); }
+	// Along z-axis
+	inline float breadth() const { return std::abs(max.z - min.z); }
+
+	inline bool is_cubic() const { return (width() == height()) == breadth(); }
+
+	inline Vec3f center() const { return min + ((max - min) / 2.0f); }
+
+	friend std::ostream& operator<<(std::ostream& os, const AABB& aabb) {
+		return os << "AABB(min: " << aabb.min << ", max: " << aabb.max << ")";
+	}
+};
+
 #endif // MEINEKRAFT_PRIMITIVES_HPP

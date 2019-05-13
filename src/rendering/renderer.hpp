@@ -44,6 +44,7 @@ struct Renderer {
   // Rudimentary rendering pipeline for now
   std::vector<RenderPass> render_passes;
 
+	AABB scene_aabb;
   Camera* camera = nullptr;
   RenderState state;
   glm::mat4 projection_matrix; 

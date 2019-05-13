@@ -107,6 +107,7 @@ MeineKraft::MeineKraft() {
 void MeineKraft::init() {
   Skybox skybox;
   Scene scene{ Filesystem::home + "Desktop/Meinekraft/sponza/", "Sponza.gltf" };
+	renderer->scene_aabb = scene.aabb;
   // Scene scene{ Filesystem::home + "Desktop/MeineKraft/sponza-morgan/", "sponza.obj" };
 }
 

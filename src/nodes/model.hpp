@@ -12,6 +12,7 @@ public:
 };
 
 struct Scene {
+	AABB aabb;
   Scene(const std::string& directory, const std::string& file);
 };
 
