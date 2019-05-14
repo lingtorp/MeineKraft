@@ -104,7 +104,7 @@ static void orthographic_projections(const AABB& aabb, glm::mat4& ortho_x, glm::
 	const float znear  =  0.0f;
 	const float zfar   =  float(voxel_grid_dimension);
 	const glm::mat4 ortho = glm::ortho(left, right, bottom, top, znear, zfar);
-	const glm::vec3 center = glm::vec3(0.0f); // glm::vec3(aabb.center().x, aabb.center().y, aabb.center().z);
+	const glm::vec3 center = glm::vec3(aabb.center().x, aabb.center().y, aabb.center().z);
   ortho_x = ortho * glm::lookAt(glm::vec3(voxel_grid_dimension / 2.0f, 0.0f, 0.0f), center, glm::vec3(0.0f, 1.0f, 0.0f));
   ortho_y = ortho * glm::lookAt(glm::vec3(0.0f, voxel_grid_dimension / 2.0f, 0.0f), center, glm::vec3(0.0f, 0.0f, 1.0f));
   ortho_z = ortho * glm::lookAt(glm::vec3(0.0f, 0.0f, voxel_grid_dimension / 2.0f), center, glm::vec3(0.0f, 1.0f, 0.0f));
@@ -640,7 +640,7 @@ void Renderer::render(const uint32_t delta) {
 
 		// Orthogonal projections along all three positive main axis
 		glm::mat4 ortho_x(0.0f), ortho_y(0.0f), ortho_z(0.0f);
-		orthographic_projections(scene_aabb, ortho_x, ortho_y, ortho_z, 2427);
+		orthographic_projections(scene_aabb, ortho_x, ortho_y, ortho_z, 2500);
 		glUniformMatrix4fv(glGetUniformLocation(program, "ortho_x"), 1, GL_FALSE, glm::value_ptr(ortho_x));
 		glUniformMatrix4fv(glGetUniformLocation(program, "ortho_y"), 1, GL_FALSE, glm::value_ptr(ortho_y));
 		glUniformMatrix4fv(glGetUniformLocation(program, "ortho_z"), 1, GL_FALSE, glm::value_ptr(ortho_z));
