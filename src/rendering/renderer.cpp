@@ -97,11 +97,11 @@ void Renderer::load_environment_map(const std::vector<std::string>& faces) {
 }
 
 static void orthographic_projections(const AABB& aabb, glm::mat4& ortho_x, glm::mat4& ortho_y, glm::mat4& ortho_z, const uint32_t voxel_grid_dimension) {
-	const float left   =  float(voxel_grid_dimension) / 2.0f;
+	const float left   = -float(voxel_grid_dimension) / 2.0f;
 	const float right  =  float(voxel_grid_dimension) / 2.0f;
 	const float bottom = -float(voxel_grid_dimension) / 2.0f;
 	const float top    =  float(voxel_grid_dimension) / 2.0f;
-	const float znear  = 0.0f;
+	const float znear  =  0.0f;
 	const float zfar   =  float(voxel_grid_dimension);
 	const glm::mat4 ortho = glm::ortho(left, right, bottom, top, znear, zfar);
 	const glm::vec3 center = glm::vec3(0.0f); // glm::vec3(aabb.center().x, aabb.center().y, aabb.center().z);
