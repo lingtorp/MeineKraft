@@ -23,12 +23,11 @@ ivec3 voxel_coordinate_from_world_pos(vec3 pos) {
     vec3 vpos = pos / aabb_size;
     vpos = clamp(vpos, vec3(-1.0), vec3(1.0));
     const uvec3 vgrid = imageSize(voxel_data).xyz; 
-    vpos = vgrid * (vpos * 0.5 + 0.5);
+    vpos = vgrid * (vpos * vec3(0.5) + vec3(0.5));
     return ivec3(vpos);
 }
 
 // NOTE: Adding all lights here for the direct lighting is weird, might be doable with only the shadowmap information. Need to experiment with both approaches.
-// TODO: fPosition is in world space, need to have it to [0, textureSize] in order to get the voxel position
 
 // TODO: Implement a real attenuation formula
 const float a = 0.5;
