@@ -640,7 +640,7 @@ void Renderer::render(const uint32_t delta) {
 
 		// Orthogonal projections along all three positive main axis
 		glm::mat4 ortho_x(0.0f), ortho_y(0.0f), ortho_z(0.0f);
-		orthographic_projections(scene_aabb, ortho_x, ortho_y, ortho_z, voxel_grid_dimension);
+		orthographic_projections(scene_aabb, ortho_x, ortho_y, ortho_z, 2427);
 		glUniformMatrix4fv(glGetUniformLocation(program, "ortho_x"), 1, GL_FALSE, glm::value_ptr(ortho_x));
 		glUniformMatrix4fv(glGetUniformLocation(program, "ortho_y"), 1, GL_FALSE, glm::value_ptr(ortho_y));
 		glUniformMatrix4fv(glGetUniformLocation(program, "ortho_z"), 1, GL_FALSE, glm::value_ptr(ortho_z));
