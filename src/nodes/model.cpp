@@ -44,6 +44,8 @@ static AABB compute_aabb_from(const std::vector<RenderComponent>& render_compone
 		if (aabb.min.length() < min.length()) { aabb.min = min; }
 	}
 	Log::info(aabb);
+	Log::info("Center: " + aabb.center().to_string());
+	Log::info("Size(dx, dy, dz): " + std::to_string(aabb.width()) + ", " + std::to_string(aabb.height()) + ", " + std::to_string(aabb.breadth()));
 	return aabb;
 }
 
