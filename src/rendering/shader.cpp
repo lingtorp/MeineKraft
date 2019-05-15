@@ -86,7 +86,7 @@ Shader::Shader(const std::string& vert_shader_file,
   glGetProgramiv(gl_program, GL_INFO_LOG_LENGTH, &err_size);
   char* prog_err_msg = new char[err_size];
   glGetProgramInfoLog(gl_program, err_size, nullptr, prog_err_msg);
-  Log::error(vert_shader_file + " / " + frag_shader_file + prog_err_msg);
+	if (err_size != 0) { Log::error(vert_shader_file + " / " + frag_shader_file + prog_err_msg); }
   delete[] prog_err_msg;
 
   if (vertex_shader_status == GL_TRUE && fragment_shader_status == GL_TRUE && geometry_shader_status == GL_TRUE) {    
