@@ -157,6 +157,8 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   glewExperimental = (GLboolean) true;
   glewInit();
 
+	glEnable(GL_MULTISAMPLE);
+
 #if defined(WIN32)
   // OpenGL debug output
   glEnable(GL_DEBUG_OUTPUT);
