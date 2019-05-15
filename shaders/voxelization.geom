@@ -33,6 +33,7 @@ void main() {
     if (max < abs(dot(normal, y))) {
         ortho = ortho_y;
         dominant_axis_projected = 1;
+        max = abs(dot(normal, y));
     }  
     if (max < abs(dot(normal, z))) {
         ortho = ortho_z;
