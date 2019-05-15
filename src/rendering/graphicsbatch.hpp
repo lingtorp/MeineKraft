@@ -95,7 +95,7 @@ struct GraphicsBatch {
     glBindTexture(texture.gl_texture_target, *gl_buffer);
     const int default_buffer_size = 1;
     const GLuint texture_format = texture.data.bytes_per_pixel == 3 ? GL_RGB8 : GL_RGBA8;
-    const uint8_t mipmap_levels = std::log(std::max(texture.data.width, texture.data.height)) + 1;
+    const uint8_t mipmap_levels = uint8_t(std::log(std::max(texture.data.width, texture.data.height))) + 1;
     glTexStorage3D(texture.gl_texture_target, mipmap_levels, texture_format, texture.data.width, texture.data.height, texture.data.faces * default_buffer_size); // depth = layer faces
     glGenerateMipmap(texture.gl_texture_target);
     *buffer_capacity = default_buffer_size;

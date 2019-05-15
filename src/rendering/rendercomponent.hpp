@@ -7,7 +7,7 @@
 
 struct RenderComponent {
   ShadingModel shading_model = ShadingModel::Unlit;
-  ID mesh_id; 
+  ID mesh_id = 0; 
   Texture diffuse_texture;            // ?
   Texture metallic_roughness_texture; // Used by ShadingModel::PBRTextured
   Texture ambient_occlusion_texture;  // ?

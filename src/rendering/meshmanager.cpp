@@ -216,7 +216,7 @@ MeshManager::load_meshes(const std::string& directory, const std::string& file) 
       }
 
       // Load all indices from the faces
-      mesh_info.mesh.indices.reserve(mesh->mNumFaces * 3);
+      mesh_info.mesh.indices.reserve(size_t(mesh->mNumFaces) * 3);
       for (size_t j = 0; j < mesh->mNumFaces; j++) {
         auto face = &mesh->mFaces[j];
         if (face->mNumIndices != 3) {
