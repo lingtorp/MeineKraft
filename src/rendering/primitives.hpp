@@ -343,7 +343,7 @@ struct AABB {
 	// Along z-axis
 	inline float breadth() const { return std::abs(max.z - min.z); }
 
-	inline bool is_cubic() const { return (width() == height()) == breadth(); }
+	inline bool is_cubic() const { return width() == height() && height() == breadth(); }
 
 	inline Vec3f center() const { return min + ((max - min) / 2.0f); }
 
