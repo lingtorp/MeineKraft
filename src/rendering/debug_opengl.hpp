@@ -5,6 +5,8 @@
 #include <glew.h>
 #include <SDL_opengl.h> 
 
+#include "../util/logging.hpp"
+
 #include <sstream>
 
 /// Gathers information about the OpenGL context 
