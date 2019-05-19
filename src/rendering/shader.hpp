@@ -6,8 +6,6 @@
 #include <vector>
 #include <set>
 
-#include "texture.hpp"
-
 struct Shader {
   enum class Defines: uint32_t {
     Diffuse2D,        // OpenGL texture target (GL_TEXTURE_2D)
@@ -24,6 +22,7 @@ struct Shader {
   Shader(const std::string& vert_shader_file,
          const std::string& geom_shader_file,
          const std::string& frag_shader_file);
+
   bool operator==(const Shader& rhs);
 
   /// Loads and compiles the shader source, return compile error message in the pair.
