@@ -673,7 +673,7 @@ void Renderer::render(const uint32_t delta) {
 
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT); // Due to incoherent mem. access need to sync read and usage of voxel data
 
-	glGenerateTextureMipmap(gl_voxels_texture); // Regenerate the voxel mipmaps
+		glGenerateTextureMipmap(gl_voxels_texture); // Regenerate the voxel mipmaps
 	
 		// Restore modified global state
 		glEnable(GL_CULL_FACE);
@@ -681,7 +681,7 @@ void Renderer::render(const uint32_t delta) {
 		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 		glViewport(0, 0, screen.width, screen.height);
 
-	// need_to_voxelize = false;
+		// need_to_voxelize = false;
     pass_ended();
   }
 
