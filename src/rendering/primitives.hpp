@@ -304,6 +304,8 @@ enum class ShadingModel: uint32_t {
 
 /// Represents the state of the Render, used for ImGUI debug panes
 struct RenderState {
+	uint32_t camera_selection = 0;
+
   uint64_t frame           = 0;
   uint64_t entities        = 0;
   uint64_t graphic_batches = 0;
@@ -311,7 +313,7 @@ struct RenderState {
   bool shadowmapping = true;
   bool normalmapping = true;
   RenderState() = default;
-  RenderState(const RenderState& old) : frame(old.frame), shadowmapping(old.shadowmapping), normalmapping(old.normalmapping) {}
+  RenderState(const RenderState& old) : frame(old.frame), shadowmapping(old.shadowmapping), normalmapping(old.normalmapping), camera_selection(old.camera_selection) {}
 };
 
 struct Resolution {

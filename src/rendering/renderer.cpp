@@ -602,11 +602,25 @@ void Renderer::render(const uint32_t delta) {
       glBindVertexArray(batch.gl_depth_vao);
       glBindBuffer(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo); // GL_DRAW_INDIRECT_BUFFER is global context state
 
-			// const float left = 0.0f, right = float(voxel_grid_dimension), bottom = 0.0f, top = float(voxel_grid_dimension), znear = 0.0f, zfar = float(voxel_grid_dimension);
-			// const glm::mat4 ortho = glm::ortho(left, right, bottom, top, znear, zfar);			
-			// glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, glm::value_ptr(ortho));
-
-      glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(camera_transform));
+			glm::mat4 ortho_x(0.0f), ortho_y(0.0f), ortho_z(0.0f);
+			orthographic_projections(scene_aabb, ortho_x, ortho_y, ortho_z, 2000);
+			glUniformMatrix4fv(glGetUniformLocation(program, "ortho_x"), 1, GL_FALSE, glm::value_ptr(ortho_x));
+			glUniformMatrix4fv(glGetUniformLocation(program, "ortho_y"), 1, GL_FALSE, glm::value_ptr(ortho_y));
+			glUniformMatrix4fv(glGetUniformLocation(program, "ortho_z"), 1, GL_FALSE, glm::value_ptr(ortho_z));
+			glm::mat4 ortho;
+			switch (state.camera_selection) {
+			case 0: 
+				ortho = ortho_x;
+				break;
+			case 1:
+				ortho = ortho_y;
+				break;
+			case 2:
+				ortho = ortho_z;
+				break;
+			}
+			glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(ortho));
+			// glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(camera_transform));
 
       const uint32_t gl_models_binding_point = 2; // Defaults to 2 in geometry.vert shader
       glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_models_binding_point, batch.gl_depth_model_buffer);

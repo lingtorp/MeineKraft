@@ -152,6 +152,15 @@ void MeineKraft::mainloop() {
           break;
         case SDL_KEYDOWN:
           switch (event.key.keysym.sym) {
+					case SDLK_1:
+						renderer->state.camera_selection = 0;
+						break;
+					case SDLK_2:
+						renderer->state.camera_selection = 1;
+						break; 
+					case SDLK_3:
+						renderer->state.camera_selection = 2;
+						break;
             case SDLK_w:
               renderer->camera->move_forward(true);
               break;
