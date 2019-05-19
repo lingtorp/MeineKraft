@@ -105,9 +105,9 @@ static void orthographic_projections(const AABB& aabb, glm::mat4& ortho_x, glm::
 	const float zfar   =  float(voxel_grid_dimension);
 	const glm::mat4 ortho = glm::ortho(left, right, bottom, top, znear, zfar);
 	const glm::vec3 center = glm::vec3(aabb.center().x, aabb.center().y, aabb.center().z);
-  ortho_x = ortho * glm::lookAt(glm::vec3(voxel_grid_dimension / 2.0f, 0.0f, 0.0f), center, glm::vec3(0.0f, 1.0f, 0.0f));
-  ortho_y = ortho * glm::lookAt(glm::vec3(0.0f, voxel_grid_dimension / 2.0f, 0.0f), center, glm::vec3(0.0f, 0.0f, 1.0f));
-  ortho_z = ortho * glm::lookAt(glm::vec3(0.0f, 0.0f, voxel_grid_dimension / 2.0f), center, glm::vec3(0.0f, 1.0f, 0.0f));
+  ortho_x = ortho * glm::lookAt(center + glm::vec3(voxel_grid_dimension / 2.0f, 0.0f, 0.0f), center, glm::vec3(0.0f, 1.0f, 0.0f));
+  ortho_y = ortho * glm::lookAt(center + glm::vec3(0.0f, voxel_grid_dimension / 2.0f, 0.0f), center, glm::vec3(0.0f, 0.0f, 1.0f));
+  ortho_z = ortho * glm::lookAt(center + glm::vec3(0.0f, 0.0f, voxel_grid_dimension / 2.0f), center, glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
 /// Normalizes the plane's equation and returns it
