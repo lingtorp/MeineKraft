@@ -322,7 +322,7 @@ MeshManager::load_meshes(const std::string& directory, const std::string& file) 
   }
 
   std::vector<ID> mesh_ids(scene->mNumMeshes);
-  std:iota(mesh_ids.begin(), mesh_ids.end(), loaded_meshes.size() - scene->mNumMeshes);
+  std::iota(mesh_ids.begin(), mesh_ids.end(), loaded_meshes.size() - scene->mNumMeshes);
   assert(mesh_ids.size() == texture_infos.size());
   return { mesh_ids, texture_infos };
 }
