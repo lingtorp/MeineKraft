@@ -27,8 +27,6 @@ ivec3 voxel_coordinate_from_world_pos(vec3 pos) {
     return ivec3(vpos);
 }
 
-// NOTE: Adding all lights here for the direct lighting is weird, might be doable with only the shadowmap information. Need to experiment with both approaches.
-
 // TODO: Implement a real attenuation formula
 const float a = 0.5;
 const float b = 0.5;
@@ -49,5 +47,5 @@ void main() {
     for (uint i = 0; i < pointlights.length(); i++) { color = diffuse_lighting(fPosition, fNormal, pointlights[i]); }
 
     ivec3 vpos = voxel_coordinate_from_world_pos(fPosition);
-    imageStore(voxel_data, vpos, vec4(vec3(1.0), 1.0));
+    imageStore(voxel_data, vpos, vec4(fPosition, 1.0));
 }
