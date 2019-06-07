@@ -84,7 +84,7 @@ MeineKraft::MeineKraft() {
 	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 16);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
   auto window_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_MOUSE_CAPTURE;
-  window = SDL_CreateWindow("MeineKraft", 100, 100, HD.width, HD.height, window_flags);
+  window = SDL_CreateWindow("MeineKraft", 0, 0, HD.width, HD.height, window_flags);
   SDL_GLContext context = SDL_GL_CreateContext(window);
   if (!context) { Log::error(std::string(SDL_GetError())); }
   SDL_GL_SetSwapInterval(0); // Disables vsync
