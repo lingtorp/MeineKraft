@@ -96,7 +96,8 @@ void Renderer::load_environment_map(const std::vector<std::string>& faces) {
   }
 }
 
-static void orthographic_projections(const AABB& aabb, glm::mat4& ortho_x, glm::mat4& ortho_y, glm::mat4& ortho_z, const uint32_t voxel_grid_dimension) {
+static glm::mat4 orthographic_projection(const AABB& aabb, uint32_t voxel_grid_dimension) {
+  voxel_grid_dimension = 2;
 	const float left   = -float(voxel_grid_dimension) / 2.0f;
 	const float right  =  float(voxel_grid_dimension) / 2.0f;
 	const float bottom = -float(voxel_grid_dimension) / 2.0f;
@@ -105,9 +106,7 @@ static void orthographic_projections(const AABB& aabb, glm::mat4& ortho_x, glm::
 	const float zfar   =  float(voxel_grid_dimension);
 	const glm::mat4 ortho = glm::ortho(left, right, bottom, top, znear, zfar);
 	const glm::vec3 center = glm::vec3(aabb.center().x, aabb.center().y, aabb.center().z);
-  ortho_x = ortho * glm::lookAt(center + glm::vec3(voxel_grid_dimension / 2.0f, 0.0f, 0.0f), center, glm::vec3(0.0f, 1.0f, 0.0f));
-  ortho_y = ortho * glm::lookAt(center + glm::vec3(0.0f, voxel_grid_dimension / 2.0f, 0.0f), center, glm::vec3(0.0f, 0.0f, 1.0f));
-  ortho_z = ortho * glm::lookAt(center + glm::vec3(0.0f, 0.0f, voxel_grid_dimension / 2.0f), center, glm::vec3(0.0f, 1.0f, 0.0f));
+  return ortho * glm::lookAt(center - glm::vec3(0.0f, 0.0f, voxel_grid_dimension / 2.0f), center, glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
 /// Normalizes the plane's equation and returns it
@@ -602,23 +601,7 @@ void Renderer::render(const uint32_t delta) {
       glBindVertexArray(batch.gl_depth_vao);
       glBindBuffer(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo); // GL_DRAW_INDIRECT_BUFFER is global context state
 
-			glm::mat4 ortho_x(0.0f), ortho_y(0.0f), ortho_z(0.0f);
-			orthographic_projections(scene_aabb, ortho_x, ortho_y, ortho_z, voxel_grid_dimension);
-			glUniformMatrix4fv(glGetUniformLocation(program, "ortho_x"), 1, GL_FALSE, glm::value_ptr(ortho_x));
-			glUniformMatrix4fv(glGetUniformLocation(program, "ortho_y"), 1, GL_FALSE, glm::value_ptr(ortho_y));
-			glUniformMatrix4fv(glGetUniformLocation(program, "ortho_z"), 1, GL_FALSE, glm::value_ptr(ortho_z));
-			glm::mat4 ortho;
-			switch (state.camera_selection) {
-			case 0: 
-				ortho = ortho_x;
-				break;
-			case 1:
-				ortho = ortho_y;
-				break;
-			case 2:
-				ortho = ortho_z;
-				break;
-			}
+			const glm::mat4 ortho = orthographic_projection(scene_aabb, voxel_grid_dimension);
 			glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(ortho));
 			// glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(camera_transform));
 
@@ -654,12 +637,9 @@ void Renderer::render(const uint32_t delta) {
 		const auto program = voxelization_shader->gl_program;
 		glUseProgram(program);
 
-		// Orthogonal projections along all three positive main axis
-		glm::mat4 ortho_x(0.0f), ortho_y(0.0f), ortho_z(0.0f);
-		orthographic_projections(scene_aabb, ortho_x, ortho_y, ortho_z, voxel_grid_dimension);
-		glUniformMatrix4fv(glGetUniformLocation(program, "ortho_x"), 1, GL_FALSE, glm::value_ptr(ortho_x));
-		glUniformMatrix4fv(glGetUniformLocation(program, "ortho_y"), 1, GL_FALSE, glm::value_ptr(ortho_y));
-		glUniformMatrix4fv(glGetUniformLocation(program, "ortho_z"), 1, GL_FALSE, glm::value_ptr(ortho_z));
+		// Orthogonal projection along +z-axis
+		const glm::mat4 ortho = orthographic_projection(scene_aabb, voxel_grid_dimension);
+		glUniformMatrix4fv(glGetUniformLocation(program, "ortho"), 1, GL_FALSE, glm::value_ptr(ortho));
 
 		const Vec3f aabb_size = Vec3f(scene_aabb.width(), scene_aabb.height(), scene_aabb.breadth());
 		glUniform3fv(glGetUniformLocation(program, "aabb_size"), 1, &aabb_size.x);
