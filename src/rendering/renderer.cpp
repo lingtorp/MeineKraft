@@ -702,8 +702,9 @@ void Renderer::render(const uint32_t delta) {
   }
   pass_ended();
 
-  pass_started("Lightning pass");
   if (false) {
+    pass_started("Lightning pass");
+
     const auto program = lightning_shader->gl_program;
     glBindFramebuffer(GL_FRAMEBUFFER, gl_lightning_fbo);
 
@@ -734,8 +735,9 @@ void Renderer::render(const uint32_t delta) {
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+    pass_ended();
   }
-  pass_ended();
 
   /// Copy final pass into default FBO
   pass_started("Final blit pass");
