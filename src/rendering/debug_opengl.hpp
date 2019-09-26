@@ -13,12 +13,17 @@
 struct OpenGLContextInfo {
   // TODO: Document each of the member variables??
   int max_texture_units;
-  int max_color_attachments;
+  int max_fbo_color_attachments;
+  int max_fbo_attachment_width;
+  int max_fbo_attachment_height;
+  int max_fbo_layers;
   int max_draw_buffers;
   int max_texture_array_layers;
   int max_image_texture_units;
 
   OpenGLContextInfo(const size_t gl_major_version, const size_t gl_minor_version) {
+    Log::info(glGetString(GL_VERSION) == nullptr ? "null" : "smt");
+    Log::info("OpenGL version: " + std::string((const char*)glGetString(GL_VERSION)));
     Log::info("OpenGL version: " + std::string(reinterpret_cast<const char*>(glGetString(GL_VERSION))));
     Log::info("GLSL: " + std::string(reinterpret_cast<const char*>(glGetString(GL_SHADING_LANGUAGE_VERSION))));
     Log::info("Vendor: " + std::string(reinterpret_cast<const char*>(glGetString(GL_VENDOR))));
@@ -27,8 +32,14 @@ struct OpenGLContextInfo {
     glGetIntegerv(GL_MAX_DRAW_BUFFERS, &max_draw_buffers);
     Log::info("Max draw buffers: " + std::to_string(max_draw_buffers));
 
-    glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &max_color_attachments);
-    Log::info("Max color attachments: " + std::to_string(max_color_attachments));
+    glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &max_fbo_color_attachments);
+    Log::info("Max FBO color attachments: " + std::to_string(max_fbo_color_attachments));
+
+    glGetIntegerv(GL_MAX_FRAMEBUFFER_WIDTH, &max_fbo_attachment_width);
+    Log::info("Max FBO attachment width and height: " + std::to_string(max_fbo_attachment_width) + " / " + std::to_string(max_fbo_attachment_height));
+
+    glGetIntegerv(GL_MAX_FRAMEBUFFER_LAYERS, &max_fbo_layers);
+    Log::info("Max FBO layers: " + std::to_string(max_fbo_layers));
 
     glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &max_texture_array_layers);
     Log::info("Max texture array layers/elements: " + std::to_string(max_texture_array_layers));

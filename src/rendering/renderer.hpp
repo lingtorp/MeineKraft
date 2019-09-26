@@ -22,7 +22,7 @@ struct Material;
 
 struct Renderer {
   /// Create a renderer with a given window/screen size/resolution
-  Renderer(const Resolution& screen);
+  explicit Renderer(const Resolution& screen);
   ~Renderer();
 
   /// Main render function, renders all the graphics batches
@@ -90,7 +90,7 @@ private:
   uint8_t* gl_pointlights_ssbo_ptr = nullptr;
 
   /// Voxelization pipeline related
-  const uint32_t voxel_grid_dimension = 16; // 256 ~ 60MB, 512 ~ 540MB (not counting mipmaps, adds ~33%)
+  const uint32_t voxel_grid_dimension = 32; // 256 ~ 60MB, 512 ~ 540MB (not counting mipmaps, adds ~33%)
   
   Shader* voxelization_shader = nullptr;
   uint32_t gl_voxelization_fbo = 0;
