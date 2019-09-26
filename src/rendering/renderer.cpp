@@ -408,8 +408,8 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     gl_voxels_image_unit = get_next_free_image_unit();
     glGenTextures(1, &gl_voxels_texture);
     glBindTexture(GL_TEXTURE_3D, gl_voxels_texture);
-    glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA32F, voxel_grid_dimension, voxel_grid_dimension, voxel_grid_dimension, 0, GL_RGBA, GL_FLOAT, nullptr);
-    glBindImageTexture(gl_voxels_image_unit, gl_voxels_texture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+    glTexStorage3D(GL_TEXTURE_3D, 1, GL_RGBA32F, voxel_grid_dimension, voxel_grid_dimension, voxel_grid_dimension);
+    glBindImageTexture(gl_voxels_image_unit, gl_voxels_texture, 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA32F);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glObjectLabel(GL_TEXTURE, gl_voxels_texture, -1, "Voxel texture");
