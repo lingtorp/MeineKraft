@@ -74,14 +74,13 @@ void imgui_styling() {
   // TODO: Change PlotLines color depending on the value (set thresholds for the different colors)
 }
 
-MeineKraft::MeineKraft() {  
+MeineKraft::MeineKraft() {
   SDL_Init(SDL_INIT_EVERYTHING);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, OPENGL_MINOR_VERSION);
   SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
   SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 16);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
   auto window_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_MOUSE_CAPTURE;
   window = SDL_CreateWindow("MeineKraft", 0, 0, HD.width, HD.height, window_flags);
@@ -120,7 +119,7 @@ MeineKraft::~MeineKraft() {
 }
 
 void MeineKraft::mainloop() {
-  World world; 
+  World world;
 
   bool toggle_mouse_capture = true;
   bool DONE = false;
@@ -157,7 +156,7 @@ void MeineKraft::mainloop() {
 						break;
 					case SDLK_2:
 						renderer->state.camera_selection = 1;
-						break; 
+						break;
 					case SDLK_3:
 						renderer->state.camera_selection = 2;
 						break;
@@ -268,7 +267,7 @@ void MeineKraft::mainloop() {
               ImGui::InputFloat3("Intensity", &renderer->pointlights[i].intensity.x);
             }
             ImGui::PopID();
-          }        
+          }
         }
 
         // Directional light
