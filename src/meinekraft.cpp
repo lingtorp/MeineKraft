@@ -108,7 +108,8 @@ MeineKraft::MeineKraft() {
 void MeineKraft::init() {
   // Scene scene{ Filesystem::home + "Desktop/Meinekraft/sponza/", "Sponza.gltf" };
 	Scene scene{ Filesystem::home + "Desktop/Meinekraft/BoxTextured/",  "BoxTextured.gltf" };
-	renderer->scene_aabb = AABB(Vec3f(-2.0f), Vec3f(2.0f));
+  Log::info(scene.aabb);
+	renderer->scene_aabb = scene.aabb;
 }
 
 MeineKraft::~MeineKraft() {
