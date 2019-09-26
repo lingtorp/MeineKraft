@@ -156,8 +156,6 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   glewExperimental = (GLboolean) true;
   glewInit();
 
-	glEnable(GL_MULTISAMPLE);
-
 #if defined(WIN32) || defined(__LINUX__)
   // OpenGL debug output
   glEnable(GL_DEBUG_OUTPUT);
@@ -373,7 +371,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, SHADOWMAP_W, SHADOWMAP_H, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+    glTexStorage2D(GL_TEXTURE_2D, 1, GL_DEPTH_COMPONENT16, SHADOWMAP_W, SHADOWMAP_H);
     glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, gl_shadowmapping_texture, 0);
     glObjectLabel(GL_TEXTURE, gl_shadowmapping_texture, -1, "Shadowmap texture");
     glDrawBuffer(GL_NONE);
@@ -628,7 +626,7 @@ void Renderer::render(const uint32_t delta) {
 
   if (true) {
 		pass_started("Voxelization pass");
-		// glClearTexImage(gl_voxels_texture, 0, GL_RGBA, GL_FLOAT, nullptr); // Clear all values
+		glClearTexImage(gl_voxels_texture, 0, GL_RGBA, GL_FLOAT, nullptr); // Clear all values
 		glBindFramebuffer(GL_FRAMEBUFFER, gl_voxelization_fbo);
 
 		const auto program = voxelization_shader->gl_program;
@@ -654,8 +652,8 @@ void Renderer::render(const uint32_t delta) {
 			glBindVertexArray(batch.gl_voxelization_vao);
 			glBindBuffer(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo); // GL_DRAW_INDIRECT_BUFFER is global context state
 
-			const uint32_t gl_pointlight_ssbo_binding_point_idx = 4; // Default value in lightning.frag
-			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_pointlight_ssbo_binding_point_idx, gl_pointlights_ssbo);
+			// const uint32_t gl_pointlight_ssbo_binding_point_idx = 4; // Default value in lightning.frag
+		  // glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_pointlight_ssbo_binding_point_idx, gl_pointlights_ssbo);
 
 			const uint32_t draw_cmd_offset = batch.gl_curr_ibo_idx * sizeof(DrawElementsIndirectCommand);
 			glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (const void*)draw_cmd_offset, 1, sizeof(DrawElementsIndirectCommand));
@@ -663,9 +661,10 @@ void Renderer::render(const uint32_t delta) {
 
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT); // Due to incoherent mem. access need to sync read and usage of voxel data
 
-		glGenerateTextureMipmap(gl_voxels_texture); // Regenerate the voxel mipmaps
+		// glGenerateTextureMipmap(gl_voxels_texture); // Regenerate the voxel mipmaps
 	
 		// Restore modified global state
+    glEnable(GL_DEPTH_TEST);
 		glEnable(GL_CULL_FACE);
 		glDepthMask(GL_TRUE);
 		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
@@ -882,11 +881,11 @@ void Renderer::link_batch(GraphicsBatch& batch) {
 	  glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void*)offsetof(Vertex, position));
 	  glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
 
-	  glVertexAttribPointer(glGetAttribLocation(program, "normal"), 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void*)offsetof(Vertex, normal));
-	  glEnableVertexAttribArray(glGetAttribLocation(program, "normal"));
+	  // glVertexAttribPointer(glGetAttribLocation(program,"normal"), 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void*)offsetof(Vertex, normal));
+	  // glEnableVertexAttribArray(glGetAttribLocation(program, "normal"));
 
-	  glVertexAttribPointer(glGetAttribLocation(program, "texcoord"), 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void*)offsetof(Vertex, tex_coord));
-	  glEnableVertexAttribArray(glGetAttribLocation(program, "texcoord"));
+	  // glVertexAttribPointer(glGetAttribLocation(program, "texcoord"), 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void*)offsetof(Vertex, tex_coord));
+	  // glEnableVertexAttribArray(glGetAttribLocation(program, "texcoord"));
   }
 }
 
