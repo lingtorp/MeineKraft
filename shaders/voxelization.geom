@@ -9,9 +9,7 @@ in VS_OUT {
     in vec3 gsPosition;
 } gs_in[];
 
-uniform mat4 ortho_x;
-uniform mat4 ortho_y;
-uniform mat4 ortho_z;
+uniform mat4 ortho;
 
 out vec3 fNormal;   
 out vec3 fPosition; // World space position
@@ -26,17 +24,14 @@ void main() {
     const vec3 normal = normalize(cross(gs_in[1].gsPosition - gs_in[0].gsPosition, gs_in[2].gsPosition - gs_in[0].gsPosition));
 
     // Find the dominant axis of the triangle
-    mat4 ortho = ortho_x;
     float max = abs(dot(normal, x));
     dominant_axis_projected = 0;
     
     if (max < abs(dot(normal, y))) {
-        ortho = ortho_y;
-        dominant_axis_projected = 1;
         max = abs(dot(normal, y));
+        dominant_axis_projected = 1;
     }  
     if (max < abs(dot(normal, z))) {
-        ortho = ortho_z;
         dominant_axis_projected = 2;
     }
 
@@ -45,6 +40,13 @@ void main() {
     // Orthographic projection along the dominant axis
     for (uint i = 0; i < 3; i++) {
         gl_Position = ortho * gl_in[i].gl_Position;
+
+        if (dominant_axis_projected == 0) {
+          gl_Position.xyz = gl_Position.zyx;
+        } else if (dominant_axis_projected == 1) {
+          gl_Position.xyz = gl_Position.xzy;
+        }
+
         fNormal = gs_in[i].gsNormal;
         fPosition = gs_in[i].gsPosition;
         fTextureCoord = gs_in[i].gsTextureCoord;
