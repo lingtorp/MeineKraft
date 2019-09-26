@@ -401,9 +401,6 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glBindFramebuffer(GL_FRAMEBUFFER, gl_voxelization_fbo);
 		glObjectLabel(GL_FRAMEBUFFER, gl_voxelization_fbo, -1, "Voxelization FBO");
 
-    glDrawBuffer(GL_NONE);
-    glReadBuffer(GL_NONE);
-
     // Global voxel buffer
     gl_voxels_image_unit = get_next_free_image_unit();
     glGenTextures(1, &gl_voxels_texture);
@@ -652,7 +649,6 @@ void Renderer::render(const uint32_t delta) {
 		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 		glViewport(0, 0, voxel_grid_dimension, voxel_grid_dimension);
 
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 		for (size_t i = 0; i < graphics_batches.size(); i++) {
 			const auto& batch = graphics_batches[i];
 			glBindVertexArray(batch.gl_voxelization_vao);
