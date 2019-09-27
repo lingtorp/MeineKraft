@@ -90,7 +90,7 @@ private:
   uint8_t* gl_pointlights_ssbo_ptr = nullptr;
 
   /// Voxelization pipeline related
-  const uint32_t voxel_grid_dimension = 32; // 256 ~ 60MB, 512 ~ 540MB (not counting mipmaps, adds ~33%)
+  const uint32_t voxel_grid_dimension = 16; // 256 ~ 60MB, 512 ~ 540MB (not counting mipmaps, adds ~33%)
   
   Shader* voxelization_shader = nullptr;
   uint32_t gl_voxelization_fbo = 0;
@@ -103,6 +103,7 @@ private:
   // Voxels
   uint32_t gl_voxels_texture = 0;
   uint32_t gl_voxels_image_unit = 0;
+  uint32_t gl_voxels_texture_unit = 0; 
 
   /// Global buffers
   // Geometric normals

@@ -401,10 +401,12 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
 
     // Global voxel buffer
     gl_voxels_image_unit = get_next_free_image_unit();
+    gl_voxels_texture_unit = get_next_free_texture_unit();
+    glActiveTexture(GL_TEXTURE0 + gl_voxels_texture_unit);
     glGenTextures(1, &gl_voxels_texture);
     glBindTexture(GL_TEXTURE_3D, gl_voxels_texture);
     glTexStorage3D(GL_TEXTURE_3D, 1, GL_RGBA32F, voxel_grid_dimension, voxel_grid_dimension, voxel_grid_dimension);
-    glBindImageTexture(gl_voxels_image_unit, gl_voxels_texture, 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA32F);
+    glBindImageTexture(gl_voxels_image_unit, gl_voxels_texture, 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_RGBA32F);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glObjectLabel(GL_TEXTURE, gl_voxels_texture, -1, "Voxel texture");
@@ -470,19 +472,16 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   glCullFace(GL_BACK);
 
   /// Camera
-  // const auto position = Vec3f(754.0f, 575.0f, 363.0f); // Upper part shadow map testing
-  const auto position = Vec3f(41.8f, 36.1f, 127.0f);
-  // const auto direction = Vec3f(-0.88f, -0.45f, -0.046f);
-  const auto direction = Vec3f(0.66f, -0.24f, 0.70f);
-  const auto world_up  = Vec3f{0.0f, 1.0f, 0.0f};
-  camera = new Camera(position, direction, world_up);
+  const auto position = Vec3f(3.0f);
+  const auto direction = Vec3f(-1.5f);
+  camera = new Camera(position, direction);
 }
 
 void Renderer::render(const uint32_t delta) {
   state = RenderState(state);
   state.frame++;
 
-  const glm::mat4 camera_transform = camera->transform(); // TODO: Camera handling needs to be reworked
+  const glm::mat4 camera_transform = projection_matrix * camera->transform(); // TODO: Camera handling needs to be reworked
 
   /// Renderer caches the transforms of components thus we need to fetch the ones who changed during the last frame
   if (state.frame % 10 == 0) {
@@ -514,8 +513,9 @@ void Renderer::render(const uint32_t delta) {
   // Update pointlights
   std::memcpy(gl_pointlights_ssbo_ptr, pointlights.data(), pointlights.size() * sizeof(PointLight));
 
-  pass_started("Culling pass");
   {
+    pass_started("Culling pass");
+
     // NOTE: Extraction of frustum planes are performed on the transpose (because of column/row-major difference).
     // FIXME: Use the Direct3D way of extraction instead since GLM appears to store the matrix in a row-major way.
     const glm::mat4 proj_view = projection_matrix * camera_transform;
@@ -543,8 +543,9 @@ void Renderer::render(const uint32_t delta) {
     }
     // TODO: Is this barrier required?
     glMemoryBarrier(GL_COMMAND_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT); // Buffer objects affected by this bit are derived from the GL_DRAW_INDIRECT_BUFFER binding.
+
+    pass_ended();
   }
-  pass_ended();
 
   pass_started("Directional shadow mapping pass");
   glm::vec3 d = glm::vec3(directional_light.direction.x, directional_light.direction.y, directional_light.direction.z);
@@ -581,11 +582,13 @@ void Renderer::render(const uint32_t delta) {
     }
     glViewport(0, 0, screen.width, screen.height);
     glCullFace(GL_BACK);
-  }
-  pass_ended();
 
-  pass_started("Geometry pass");
+    pass_ended();
+  }
+
   {
+    pass_started("Geometry pass");
+
     glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
     glEnable(GL_DEPTH_TEST);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); // Always update the depth buffer with the new values
@@ -597,8 +600,8 @@ void Renderer::render(const uint32_t delta) {
       glBindBuffer(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo); // GL_DRAW_INDIRECT_BUFFER is global context state
 
 			const glm::mat4 ortho = orthographic_projection(scene_aabb, voxel_grid_dimension);
-			glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(ortho));
-			// glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(camera_transform));
+			// glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(ortho));
+			glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(camera_transform));
 
       const uint32_t gl_models_binding_point = 2; // Defaults to 2 in geometry.vert shader
       glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_models_binding_point, batch.gl_depth_model_buffer);
@@ -621,8 +624,9 @@ void Renderer::render(const uint32_t delta) {
       const uint64_t draw_cmd_offset = batch.gl_curr_ibo_idx * sizeof(DrawElementsIndirectCommand);
       glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (const void*) draw_cmd_offset, 1, sizeof(DrawElementsIndirectCommand));
     }
+
+    pass_ended();
   }
-  pass_ended();
 
   if (true) {
 		pass_started("Voxelization pass");
@@ -640,7 +644,7 @@ void Renderer::render(const uint32_t delta) {
 		glUniform3fv(glGetUniformLocation(program, "aabb_size"), 1, &aabb_size.x);
 
     glUniform1f(glGetUniformLocation(program, "voxel_grid_dimension"), (float)voxel_grid_dimension);
-		glUniform1i(glGetUniformLocation(program, "voxel_data"), gl_voxels_image_unit);
+		glUniform1i(glGetUniformLocation(program, "uVoxels"), gl_voxels_image_unit);
 
     glDisable(GL_DEPTH_TEST);
     glDepthMask(GL_FALSE);
@@ -676,8 +680,9 @@ void Renderer::render(const uint32_t delta) {
     pass_ended();
   }
 
-  pass_started("Voxel cone tracing pass");
   if (true) {
+    pass_started("Voxel cone tracing pass");
+
     const auto program = vct_shader->gl_program;
 		glBindFramebuffer(GL_FRAMEBUFFER, gl_vct_fbo);
 
@@ -690,14 +695,18 @@ void Renderer::render(const uint32_t delta) {
     glUniform1f(glGetUniformLocation(program, "uScreen_width"), (float) screen.width);
     glUniform1f(glGetUniformLocation(program, "uScreen_height"), (float) screen.height);
     glUniform1i(glGetUniformLocation(program, "uDiffuse"), gl_diffuse_texture_unit);
-    // glUniform1i(glGetUniformLocation(program, "uNormal"), gl_normal_texture_unit);
-    // glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
-    // glUniform1i(glGetUniformLocation(program, "voxel_data"), gl_voxels_image_unit);
+    glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "uVoxels"), gl_voxels_texture_unit);
+    glUniform3fv(glGetUniformLocation(program, "uCamera_position"), 1, &camera->position.x);
+
+		const Vec3f aabb_size = Vec3f(scene_aabb.width(), scene_aabb.height(), scene_aabb.breadth());
+		glUniform3fv(glGetUniformLocation(program, "aabb_size"), 1, &aabb_size.x);
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+    pass_ended();
   }
-  pass_ended();
 
   if (false) {
     pass_started("Lightning pass");
@@ -737,15 +746,17 @@ void Renderer::render(const uint32_t delta) {
   }
 
   /// Copy final pass into default FBO
-  pass_started("Final blit pass");
   {
+    pass_started("Final blit pass");
+
     glBindFramebuffer(GL_READ_FRAMEBUFFER, gl_vct_fbo);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     const auto mask = GL_COLOR_BUFFER_BIT;
     const auto filter = GL_NEAREST;
     glBlitFramebuffer(0, 0, screen.width, screen.height, 0, 0, screen.width, screen.height, mask, filter);
+
+    pass_ended();
   }
-  pass_ended();
 
   log_gl_error();
   state.graphic_batches = graphics_batches.size();

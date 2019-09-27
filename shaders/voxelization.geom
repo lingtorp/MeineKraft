@@ -15,7 +15,6 @@ uniform float voxel_grid_dimension;
 out vec3 fNormal;   
 out vec3 fPosition; // World space position
 out vec2 fTextureCoord;
-flat out uint dominant_axis_projected; // 0 = x, 1 = y, 2 = z
 
 void main() {
     const vec3 x = vec3(1.0, 0.0, 0.0);
@@ -26,7 +25,7 @@ void main() {
 
     // Find the dominant axis of the triangle
     float max = abs(dot(normal, x));
-    dominant_axis_projected = 0;
+    uint dominant_axis_projected = 0;
     
     if (max < abs(dot(normal, y))) {
         max = abs(dot(normal, y));

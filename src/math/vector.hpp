@@ -384,6 +384,10 @@ public:
 };
 
 /// Convenience type declarations
+using Vec2b = Vec2<bool>;
+using Vec3b = Vec3<bool>;
+using Vec4b = Vec4<bool>;
+
 using Vec2i = Vec2<int32_t>;
 using Vec3i = Vec3<int32_t>;
 using Vec4i = Vec4<int32_t>;
