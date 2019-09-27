@@ -43,7 +43,7 @@ static double clamp(const double x, const double lo, const double hi) {
   return std::min(std::max(x, lo), hi);
 }
 
-Camera::Camera(Vec3<float> position, Vec3<float> direction, Vec3<float> world_up) :
+Camera::Camera(const Vec3f position, Vec3f direction, const Vec3f world_up) :
   direction(direction), position(position), up(world_up),
   pitch(0), yaw(0), velocity{ 0.0, 0.0, 0.0 }, max_velocity{ 5.0, 5.0, 5.0 }, acceleration{ {false, false}, {false, false}, {false, false} } {};
 
