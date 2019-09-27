@@ -639,18 +639,19 @@ void Renderer::render(const uint32_t delta) {
 		const Vec3f aabb_size = Vec3f(scene_aabb.width(), scene_aabb.height(), scene_aabb.breadth());
 		glUniform3fv(glGetUniformLocation(program, "aabb_size"), 1, &aabb_size.x);
 
+    glUniform1f(glGetUniformLocation(program, "voxel_grid_dimension"), (float)voxel_grid_dimension);
 		glUniform1i(glGetUniformLocation(program, "voxel_data"), gl_voxels_image_unit);
 
-		glDisable(GL_DEPTH_TEST);
-		glDepthMask(GL_FALSE);
-		glDisable(GL_CULL_FACE);
-		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-		glViewport(0, 0, voxel_grid_dimension, voxel_grid_dimension);
+    glDisable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);
+    glDisable(GL_CULL_FACE);
+    glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+    glViewport(0, 0, voxel_grid_dimension, voxel_grid_dimension);
 
-		for (size_t i = 0; i < graphics_batches.size(); i++) {
-			const auto& batch = graphics_batches[i];
-			glBindVertexArray(batch.gl_voxelization_vao);
-			glBindBuffer(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo); // GL_DRAW_INDIRECT_BUFFER is global context state
+    for (size_t i = 0; i < graphics_batches.size(); i++) {
+      const auto &batch = graphics_batches[i];
+      glBindVertexArray(batch.gl_voxelization_vao);
+      glBindBuffer(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo); // GL_DRAW_INDIRECT_BUFFER is global context state
 
       glActiveTexture(GL_TEXTURE0 + batch.gl_diffuse_texture_unit);
       glBindTexture(GL_TEXTURE_2D_ARRAY, batch.gl_diffuse_texture_array);
@@ -691,7 +692,7 @@ void Renderer::render(const uint32_t delta) {
     glUniform1i(glGetUniformLocation(program, "uDiffuse"), gl_diffuse_texture_unit);
     // glUniform1i(glGetUniformLocation(program, "uNormal"), gl_normal_texture_unit);
     // glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
-    // glUniform1i(glGetUniformLocation(program, "voxel_data"), gl_voxels_texture_unit);
+    // glUniform1i(glGetUniformLocation(program, "voxel_data"), gl_voxels_image_unit);
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
