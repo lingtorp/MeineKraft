@@ -652,8 +652,9 @@ void Renderer::render(const uint32_t delta) {
 			glBindVertexArray(batch.gl_voxelization_vao);
 			glBindBuffer(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo); // GL_DRAW_INDIRECT_BUFFER is global context state
 
-			// const uint32_t gl_pointlight_ssbo_binding_point_idx = 4; // Default value in lightning.frag
-		  // glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_pointlight_ssbo_binding_point_idx, gl_pointlights_ssbo);
+      glActiveTexture(GL_TEXTURE0 + batch.gl_diffuse_texture_unit);
+      glBindTexture(GL_TEXTURE_2D_ARRAY, batch.gl_diffuse_texture_array);
+      glUniform1i(glGetUniformLocation(program, "uDiffuse"), batch.gl_diffuse_texture_unit);
 
 			const uint32_t draw_cmd_offset = batch.gl_curr_ibo_idx * sizeof(DrawElementsIndirectCommand);
 			glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (const void*)draw_cmd_offset, 1, sizeof(DrawElementsIndirectCommand));
@@ -884,8 +885,8 @@ void Renderer::link_batch(GraphicsBatch& batch) {
 	  // glVertexAttribPointer(glGetAttribLocation(program,"normal"), 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void*)offsetof(Vertex, normal));
 	  // glEnableVertexAttribArray(glGetAttribLocation(program, "normal"));
 
-	  // glVertexAttribPointer(glGetAttribLocation(program, "texcoord"), 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void*)offsetof(Vertex, tex_coord));
-	  // glEnableVertexAttribArray(glGetAttribLocation(program, "texcoord"));
+	  glVertexAttribPointer(glGetAttribLocation(program, "texcoord"), 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void*)offsetof(Vertex, tex_coord));
+	  glEnableVertexAttribArray(glGetAttribLocation(program, "texcoord"));
   }
 }
 
