@@ -10,6 +10,7 @@ in VS_OUT {
 } gs_in[];
 
 uniform mat4 ortho;
+uniform float voxel_grid_dimension;
 
 out vec3 fNormal;   
 out vec3 fPosition; // World space position
@@ -35,18 +36,30 @@ void main() {
         dominant_axis_projected = 2;
     }
 
-    // TODO: Conservative rasterization?
-
-    // Orthographic projection along the dominant axis
+    // Conservative Rasterization setup
+    vec4 gs_out[3];
     for (uint i = 0; i < 3; i++) {
-        gl_Position = ortho * gl_in[i].gl_Position;
+      gs_out[i] = ortho * gl_in[i].gl_Position;
 
-        if (dominant_axis_projected == 0) {
-          gl_Position.xyz = gl_Position.zyx;
-        } else if (dominant_axis_projected == 1) {
-          gl_Position.xyz = gl_Position.xzy;
-        }
+      if (dominant_axis_projected == 0) {
+        gs_out[i].xyz = gs_out[i].zyx;
+      } else if (dominant_axis_projected == 1) {
+        gs_out[i].xyz = gs_out[i].xzy;
+      }
+    }
 
+    // Enlarge the triangle with one texel size
+    vec2 side0N = normalize(gs_out[1].xy - gs_out[0].xy);
+    vec2 side1N = normalize(gs_out[2].xy - gs_out[1].xy);
+    vec2 side2N = normalize(gs_out[0].xy - gs_out[2].xy);
+    const float texel_size = 1.0 / voxel_grid_dimension;
+    gs_out[0].xy += normalize(-side0N + side2N) * texel_size;
+    gs_out[1].xy += normalize(side0N - side1N)  * texel_size;
+    gs_out[2].xy += normalize(side1N - side2N)  * texel_size;
+
+    // Emit the enlarged vertices
+    for (uint i = 0; i < 3; i++) {
+        gl_Position = gs_out[i];
         fNormal = gs_in[i].gsNormal;
         fPosition = gs_in[i].gsPosition;
         fTextureCoord = gs_in[i].gsTextureCoord;
