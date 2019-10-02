@@ -327,6 +327,10 @@ struct DirectionalLight {
   Vec3f position;
   Vec3f direction;
   DirectionalLight(const Vec3f& position, const Vec3f& direction): position(position), direction(direction) {}
+
+  friend std::ostream &operator<<(std::ostream &os, const DirectionalLight& l) {
+    return os << "DirectionalLight(direction: " << l.direction << ", postiion: " << l.position << ")";
+  }
 };
 
 struct AABB {
