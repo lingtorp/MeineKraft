@@ -56,7 +56,7 @@ struct Renderer {
   bool need_to_voxelize = true;
 
   // Shadow mapping
-  DirectionalLight directional_light = DirectionalLight(Vec3f(-130.0f, 2000.0f, 0.0f), Vec3f(0.0f, -0.9f, 0.523f));
+  DirectionalLight directional_light = DirectionalLight(Vec3f(0.5f, 0.5f, 0.5f), Vec3f(-1.0f, -1.0f, -1.0f));
 private:
   void add_graphics_state(GraphicsBatch& batch, const RenderComponent& comp, Material material, ID entity_id);
   void update_transforms();
@@ -75,8 +75,8 @@ private:
   uint32_t gl_shadowmapping_texture = 0;
   uint32_t gl_shadowmapping_texture_unit = 0;
   Shader* shadowmapping_shader = nullptr;
-  const uint32_t SHADOWMAP_W = 4 * 1024; // Shadowmap texture dimensions
-  const uint32_t SHADOWMAP_H = 4 * 1024;
+  const uint32_t SHADOWMAP_W = 128; // Shadowmap texture dimensions
+  const uint32_t SHADOWMAP_H = 128;
 
   /// Lightning pass related
   Shader* lightning_shader = nullptr;

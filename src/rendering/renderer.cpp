@@ -548,26 +548,25 @@ void Renderer::render(const uint32_t delta) {
   }
 
   pass_started("Directional shadow mapping pass");
-  glm::vec3 d = glm::vec3(directional_light.direction.x, directional_light.direction.y, directional_light.direction.z);
-  glm::vec3 u(0.0, 1.0, 0.0);
-  glm::vec3 p = glm::vec3(directional_light.position.x, directional_light.position.y, directional_light.position.z);
+  // TODO: 1. Compute bounding sphere for the culled objects
+  // BoundingVolume scene_bv = bounding_volume(indices, vertices);
+  // TODO: 2. Get direction vector from sphere center to the directional light
+  // source
+  const glm::vec3 d = glm::vec3(directional_light.direction.x, directional_light.direction.y, directional_light.direction.z);
+  const glm::vec3 u(0.0, 1.0, 0.0);
+  const glm::vec3 p = glm::vec3(directional_light.position.x, directional_light.position.y, directional_light.position.z);
   const glm::mat4 directional_light_transform = glm::lookAt(p, p + d, u);
-  const glm::mat4 ortho_projection = glm::ortho(-1000.0f, 1000.0f, -1000.0f, 1000.0f, 0.1f, 2000.0f);
+  const glm::mat4 ortho_projection = orthographic_projection(scene_aabb, voxel_grid_dimension);
   const glm::mat4 light_space_transform = ortho_projection * directional_light_transform;
 
   {
-    // TODO: 1. Compute bounding sphere for the culled objects
-    // BoundingVolume scene_bv = bounding_volume(indices, vertices);
-    // TODO: 2. Get direction vector from sphere center to the directional light source
-
     glCullFace(GL_FRONT);
     glBindFramebuffer(GL_FRAMEBUFFER, gl_shadowmapping_fbo);
     glViewport(0, 0, SHADOWMAP_W, SHADOWMAP_H);
     glEnable(GL_DEPTH_TEST);
-    glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); // Always update the depth buffer with the new values
+    glClear(GL_DEPTH_BUFFER_BIT); // Always update the depth buffer with the new values
     const uint32_t program = shadowmapping_shader->gl_program;
     glUseProgram(program);
-    glUniform3fv(glGetUniformLocation(program, "directional_light_direction"), 1, glm::value_ptr(d));
     glUniformMatrix4fv(glGetUniformLocation(program, "light_space_transform"), 1, GL_FALSE, glm::value_ptr(light_space_transform));
     for (size_t i = 0; i < graphics_batches.size(); i++) {
       const auto& batch = graphics_batches[i];
@@ -599,7 +598,7 @@ void Renderer::render(const uint32_t delta) {
       glBindVertexArray(batch.gl_depth_vao);
       glBindBuffer(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo); // GL_DRAW_INDIRECT_BUFFER is global context state
 
-			const glm::mat4 ortho = orthographic_projection(scene_aabb, voxel_grid_dimension);
+			// const glm::mat4 ortho = orthographic_projection(scene_aabb, voxel_grid_dimension);
 			// glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(ortho));
 			glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(camera_transform));
 
