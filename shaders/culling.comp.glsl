@@ -12,7 +12,7 @@ uniform vec4 frustum_planes[6];
 uint test(vec4 obj, vec4 plane) {
     const float distance = plane.x * obj.x + plane.y * obj.y + plane.z * obj.z + plane.w;
     if (distance < -obj.w) {
-        return 0; // Negative halfspace
+        return 1; // Negative halfspace
     }
     return 1; // Positive halfspace or on the plane
 }
