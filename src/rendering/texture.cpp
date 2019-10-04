@@ -5,11 +5,7 @@
 #include <vector>
 #include <cstring>
 
-#ifdef _WIN32
 #include <SDL2/SDL_image.h>
-#else
-#include <SDL2/SDL_image.h>
-#endif 
 
 #include "../util/logging.hpp"
 

@@ -19,11 +19,16 @@ Model::Model(const RenderComponent& render) {
   attach_component(render);
 }
 
-static AABB compute_AABB_from(const RenderComponent& render_component) {
+static AABB compute_aabb_from(const RenderComponent& render_component) {
 	return AABB();
 }
 
 static AABB compute_aabb_from(const std::vector<RenderComponent>& render_components) {
+  if (render_components.empty()) {
+    Log::error("Tried to compute AABB from a list of zero RenderComponents");
+    return AABB();
+  }
+
 	AABB aabb;
 	aabb.min = Vec3f(std::numeric_limits<float>::min());
 	aabb.max = Vec3f(std::numeric_limits<float>::min());

@@ -21,7 +21,7 @@ MeshManager::load_mesh(const std::string& directory, const std::string& file) {
 
     if (scene == nullptr || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) {
       Log::error(std::string(importer.GetErrorString()));
-      return {0, {}};
+      return {};
     }
 
 #define VERBOSE
@@ -64,7 +64,7 @@ MeshManager::load_mesh(const std::string& directory, const std::string& file) {
         auto face = &mesh->mFaces[j];
         if (face->mNumIndices != 3) {
             Log::warn("Not 3 vertices per face in model.");
-            return {0, {}};
+            return {};
         }
         for (size_t k = 0; k < 3; k++) {
           auto index = face->mIndices[k];
@@ -170,7 +170,15 @@ MeshManager::load_meshes(const std::string& directory, const std::string& file) 
 
   if (scene == nullptr || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) {
     Log::error(std::string(importer.GetErrorString()));
-    return { {0}, {{}} };
+    return {};
+  }
+
+  if (!scene->HasMeshes()) {
+    if (std::strlen(importer.GetErrorString()) != 0) {
+      Log::error(std::string(importer.GetErrorString()));
+    }
+    Log::error("Tried to load a Scene without any meshes from " + loaded_from_filepath);
+    return {};
   }
 
 #define VERBOSE
@@ -221,7 +229,7 @@ MeshManager::load_meshes(const std::string& directory, const std::string& file) 
         auto face = &mesh->mFaces[j];
         if (face->mNumIndices != 3) {
           Log::warn("Not 3 vertices per face in model.");
-          return { {0}, {{}} };
+          return {};
         }
         for (size_t k = 0; k < 3; k++) {
           mesh_info.mesh.indices.push_back(face->mIndices[k]);
@@ -306,6 +314,16 @@ MeshManager::load_meshes(const std::string& directory, const std::string& file) 
         aiString opacity_filepath;
         if (material->GetTexture(aiTextureType_OPACITY, 0, &opacity_filepath) == AI_SUCCESS) {
           Log::info("Opacity texture name: " + std::string(directory.c_str()) + std::string(opacity_filepath.data));
+        }
+
+        aiString diffuse_roughness_filepath;
+        if (material->GetTexture(aiTextureType_DIFFUSE_ROUGHNESS, 0, &diffuse_roughness_filepath) == AI_SUCCESS) {
+          Log::info("Diffuse roughness texture name: " + std::string(directory.c_str()) + std::string(diffuse_roughness_filepath.data));
+        }
+
+        aiString metallic_filepath;
+        if (material->GetTexture(aiTextureType_METALNESS, 0, &metallic_filepath) == AI_SUCCESS) {
+          Log::info("Metallic texture name: " + std::string(directory.c_str()) + std::string(metallic_filepath.data));
         }
 
         // NOTE: Roughness metallic textures are not detected so here we are assuming this is the unknown texture of the material.

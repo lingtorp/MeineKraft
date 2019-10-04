@@ -2,7 +2,8 @@
 uniform float uScreen_height;
 uniform float uScreen_width;
 
-uniform sampler3D uVoxels;
+uniform sampler3D uVoxelRadiance;
+uniform sampler3D uVoxelOpacity;
 
 uniform sampler2D uDiffuse;
 uniform sampler2D uPosition; // World space
