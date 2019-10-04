@@ -101,9 +101,13 @@ private:
   uint32_t gl_vct_texture = 0;  // texture unit the same as gl_lightning_texture_unit
 
   // Voxels
-  uint32_t gl_voxels_texture = 0;
-  uint32_t gl_voxels_image_unit = 0;
-  uint32_t gl_voxels_texture_unit = 0; 
+  uint32_t gl_voxel_radiance_texture = 0;
+  uint32_t gl_voxel_radiance_image_unit = 0;
+  uint32_t gl_voxel_radiance_texture_unit = 0;
+
+  uint32_t gl_voxel_opacity_texture = 0;
+  uint32_t gl_voxel_opacity_image_unit = 0;
+  uint32_t gl_voxel_opacity_texture_unit = 0;
 
   /// Global buffers
   // Geometric normals

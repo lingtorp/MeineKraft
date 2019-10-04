@@ -10,7 +10,7 @@ in VS_OUT {
 } gs_in[];
 
 uniform mat4 ortho;
-uniform float voxel_grid_dimension;
+uniform uint voxel_grid_dimension;
 
 out vec3 fNormal;   
 out vec3 fPosition; // World space position
@@ -51,7 +51,7 @@ void main() {
     vec2 side0N = normalize(gs_out[1].xy - gs_out[0].xy);
     vec2 side1N = normalize(gs_out[2].xy - gs_out[1].xy);
     vec2 side2N = normalize(gs_out[0].xy - gs_out[2].xy);
-    const float texel_size = 1.0 / voxel_grid_dimension;
+    const float texel_size = 1.0 / float(voxel_grid_dimension);
     gs_out[0].xy += normalize(-side0N + side2N) * texel_size;
     gs_out[1].xy += normalize(side0N - side1N)  * texel_size;
     gs_out[2].xy += normalize(side1N - side2N)  * texel_size;

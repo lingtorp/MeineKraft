@@ -399,20 +399,32 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glBindFramebuffer(GL_FRAMEBUFFER, gl_voxelization_fbo);
 		glObjectLabel(GL_FRAMEBUFFER, gl_voxelization_fbo, -1, "Voxelization FBO");
 
-    // Global voxel buffer
-    gl_voxels_image_unit = get_next_free_image_unit();
-    gl_voxels_texture_unit = get_next_free_texture_unit();
-    glActiveTexture(GL_TEXTURE0 + gl_voxels_texture_unit);
-    glGenTextures(1, &gl_voxels_texture);
-    glBindTexture(GL_TEXTURE_3D, gl_voxels_texture);
+    // Global radiance voxel buffer
+    gl_voxel_radiance_image_unit = get_next_free_image_unit();
+    gl_voxel_radiance_texture_unit = get_next_free_texture_unit();
+    glActiveTexture(GL_TEXTURE0 + gl_voxel_radiance_texture_unit);
+    glGenTextures(1, &gl_voxel_radiance_texture);
+    glBindTexture(GL_TEXTURE_3D, gl_voxel_radiance_texture);
     glTexStorage3D(GL_TEXTURE_3D, 1, GL_RGBA32F, voxel_grid_dimension, voxel_grid_dimension, voxel_grid_dimension);
-    glBindImageTexture(gl_voxels_image_unit, gl_voxels_texture, 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+    glBindImageTexture(gl_voxel_radiance_image_unit, gl_voxel_radiance_texture, 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_RGBA32F);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glObjectLabel(GL_TEXTURE, gl_voxels_texture, -1, "Voxel texture");
+    glObjectLabel(GL_TEXTURE, gl_voxel_radiance_texture, -1, "Voxel radiance texture");
 
-		glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, gl_shadowmapping_texture, 0); // Reuse shadowmap depth attachment (wont write to it)
+    // Global opacity voxel buffer
+    gl_voxel_opacity_image_unit = get_next_free_image_unit();
+    gl_voxel_opacity_texture_unit = get_next_free_texture_unit();
+    glActiveTexture(GL_TEXTURE0 + gl_voxel_opacity_texture_unit);
+    glGenTextures(1, &gl_voxel_opacity_texture);
+    glBindTexture(GL_TEXTURE_3D, gl_voxel_opacity_texture);
+    glTexStorage3D(GL_TEXTURE_3D, 1, GL_RGBA32F, voxel_grid_dimension, voxel_grid_dimension, voxel_grid_dimension);
+    glBindImageTexture(gl_voxel_opacity_image_unit, gl_voxel_opacity_texture, 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glObjectLabel(GL_TEXTURE, gl_voxel_opacity_texture, -1, "Voxel opacity texture");
 
+    // Reuse shadowmap depth attachment for FBO completeness (disabled anyway)
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, gl_shadowmapping_texture, 0);
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
       Log::error("Voxelization FBO not complete"); exit(1);
     }
@@ -629,7 +641,8 @@ void Renderer::render(const uint32_t delta) {
 
   if (true) {
 		pass_started("Voxelization pass");
-		glClearTexImage(gl_voxels_texture, 0, GL_RGBA, GL_FLOAT, nullptr); // Clear all values
+		glClearTexImage(gl_voxel_radiance_texture, 0, GL_RGBA, GL_FLOAT, nullptr); // Clear all values
+    glClearTexImage(gl_voxel_opacity_texture, 0, GL_RGBA, GL_FLOAT, nullptr);
 		glBindFramebuffer(GL_FRAMEBUFFER, gl_voxelization_fbo);
 
 		const auto program = voxelization_shader->gl_program;
@@ -642,8 +655,12 @@ void Renderer::render(const uint32_t delta) {
 		const Vec3f aabb_size = Vec3f(scene_aabb.width(), scene_aabb.height(), scene_aabb.breadth());
 		glUniform3fv(glGetUniformLocation(program, "aabb_size"), 1, &aabb_size.x);
 
-    glUniform1f(glGetUniformLocation(program, "voxel_grid_dimension"), (float)voxel_grid_dimension);
-		glUniform1i(glGetUniformLocation(program, "uVoxels"), gl_voxels_image_unit);
+    glUniform3fv(glGetUniformLocation(program, "light_direction"), 1, &directional_light.direction.x);
+    glUniform1ui(glGetUniformLocation(program, "voxel_grid_dimension"), voxel_grid_dimension);
+		glUniform1i(glGetUniformLocation(program, "uVoxelRadiance"), gl_voxel_radiance_image_unit);
+    glUniform1i(glGetUniformLocation(program, "uVoxelOpacity"), gl_voxel_opacity_image_unit);
+    glUniform1i(glGetUniformLocation(program, "uShadowmap"), gl_shadowmapping_texture_unit);
+    glUniformMatrix4fv(glGetUniformLocation(program, "light_space_transform"), 1, GL_FALSE, glm::value_ptr(light_space_transform));
 
     glDisable(GL_DEPTH_TEST);
     glDepthMask(GL_FALSE);
@@ -665,8 +682,6 @@ void Renderer::render(const uint32_t delta) {
 		}
 
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT); // Due to incoherent mem. access need to sync read and usage of voxel data
-
-		// glGenerateTextureMipmap(gl_voxels_texture); // Regenerate the voxel mipmaps
 	
 		// Restore modified global state
     glEnable(GL_DEPTH_TEST);
@@ -695,7 +710,8 @@ void Renderer::render(const uint32_t delta) {
     glUniform1f(glGetUniformLocation(program, "uScreen_height"), (float) screen.height);
     glUniform1i(glGetUniformLocation(program, "uDiffuse"), gl_diffuse_texture_unit);
     glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
-    glUniform1i(glGetUniformLocation(program, "uVoxels"), gl_voxels_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "uVoxelRadiance"), gl_voxel_radiance_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "uVoxelOpacity"), gl_voxel_opacity_texture_unit);
     glUniform3fv(glGetUniformLocation(program, "uCamera_position"), 1, &camera->position.x);
 
 		const Vec3f aabb_size = Vec3f(scene_aabb.width(), scene_aabb.height(), scene_aabb.breadth());
@@ -893,8 +909,8 @@ void Renderer::link_batch(GraphicsBatch& batch) {
 	  glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void*)offsetof(Vertex, position));
 	  glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
 
-	  // glVertexAttribPointer(glGetAttribLocation(program,"normal"), 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void*)offsetof(Vertex, normal));
-	  // glEnableVertexAttribArray(glGetAttribLocation(program, "normal"));
+	  glVertexAttribPointer(glGetAttribLocation(program,"normal"), 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void*)offsetof(Vertex, normal));
+	  glEnableVertexAttribArray(glGetAttribLocation(program, "normal"));
 
 	  glVertexAttribPointer(glGetAttribLocation(program, "texcoord"), 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void*)offsetof(Vertex, tex_coord));
 	  glEnableVertexAttribArray(glGetAttribLocation(program, "texcoord"));
