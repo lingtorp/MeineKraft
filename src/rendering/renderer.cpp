@@ -96,8 +96,20 @@ void Renderer::load_environment_map(const std::vector<std::string>& faces) {
   }
 }
 
+// NOTE: AABB passed is assumed to be the Scene AABB
+static glm::mat4 shadowmap_orthographic_projection(const AABB& aabb, const DirectionalLight& light) {
+  const float diameter = aabb.diagonal_lng();
+  const float left   = -diameter / 2.0f;
+  const float right  =  diameter / 2.0f;
+  const float bottom = -diameter / 2.0f;
+  const float top    =  diameter / 2.0f;
+  const float znear  = 0.0f;
+  const float zfar   = 2.0f * diameter;
+  return glm::ortho(left, right, bottom, top, znear, zfar);
+}
+
 static glm::mat4 orthographic_projection(const AABB& aabb, uint32_t voxel_grid_dimension) {
-  voxel_grid_dimension = 2;
+  voxel_grid_dimension = 2; // FIXME: Use voxel_grid_dimension...?
 	const float left   = -float(voxel_grid_dimension) / 2.0f;
 	const float right  =  float(voxel_grid_dimension) / 2.0f;
 	const float bottom = -float(voxel_grid_dimension) / 2.0f;
@@ -560,16 +572,16 @@ void Renderer::render(const uint32_t delta) {
   }
 
   pass_started("Directional shadow mapping pass");
-  // TODO: 1. Compute bounding sphere for the culled objects
-  // BoundingVolume scene_bv = bounding_volume(indices, vertices);
-  // TODO: 2. Get direction vector from sphere center to the directional light
-  // source
-  const glm::vec3 d = glm::vec3(directional_light.direction.x, directional_light.direction.y, directional_light.direction.z);
-  const glm::vec3 u(0.0, 1.0, 0.0);
-  const glm::vec3 p = glm::vec3(directional_light.position.x, directional_light.position.y, directional_light.position.z);
-  const glm::mat4 directional_light_transform = glm::lookAt(p, p + d, u);
-  const glm::mat4 ortho_projection = orthographic_projection(scene_aabb, voxel_grid_dimension);
-  const glm::mat4 light_space_transform = ortho_projection * directional_light_transform;
+  // const glm::vec3 d = glm::vec3(directional_light.direction.x, directional_light.direction.y, directional_light.direction.z);
+  // const glm::vec3 u(0.0, 1.0, 0.0);
+  // const glm::vec3 p = glm::vec3(directional_light.position.x, directional_light.position.y, directional_light.position.z);
+  // const glm::mat4 directional_light_transform = glm::lookAt(p, p + d, u);
+  // FIXME: Rewrite below to have the form of above
+  const glm::vec3 center = glm::vec3(scene_aabb.center().x, scene_aabb.center().y, scene_aabb.center().z);
+  const glm::vec3 light_direction = glm::vec3(directional_light.direction.x, directional_light.direction.y, directional_light.direction.z);
+  const glm::mat4 directional_light_transform = glm::lookAt(center - scene_aabb.diagonal_lng() * light_direction, center, glm::vec3(0.0f, 1.0f, 0.0f));
+  const glm::mat4 shadowmap_ortho = shadowmap_orthographic_projection(scene_aabb, directional_light);
+  const glm::mat4 light_space_transform = shadowmap_ortho * directional_light_transform;
 
   {
     glCullFace(GL_FRONT);
