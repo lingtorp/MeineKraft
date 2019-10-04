@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.13)
 project(MeineKraft)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
@@ -84,7 +84,7 @@ if(WIN32)
         find_library(SDL2IMAGE_LIBRARIES NAMES sdl2_image SDL2_image.dll PATHS ${CMAKE_SOURCE_DIR}/libs)
         target_link_libraries(MeineKraft ${SDL2IMAGE_LIBRARIES})
 else(WIN32)
-        find_package(ASSIMP REQUIRED)
+        find_package(ASSIMP 5.0.0 REQUIRED)
         include_directories(${ASSIMP_INCLUDE_DIRS})
         target_link_libraries(MeineKraft ${ASSIMP_LIBRARIES})
 
