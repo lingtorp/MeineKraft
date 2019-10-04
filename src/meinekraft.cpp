@@ -105,7 +105,7 @@ MeineKraft::MeineKraft() {
 }
 
 void MeineKraft::init() {
-	Scene scene{ Filesystem::home + "Desktop/Meinekraft/BoxTextured/",  "BoxTextured.gltf" };
+	Scene scene{ Filesystem::home + "Desktop/Meinekraft/Sponza/",  "Sponza.gltf" };
   Log::info(scene.aabb);
 	renderer->scene_aabb = scene.aabb;
 }
