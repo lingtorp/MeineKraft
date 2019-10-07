@@ -48,5 +48,5 @@ void main() {
     }
   }
 
-  imageStore(uVoxelOpacity, vpos, vec4(1.0)); // FIXME: Does not work when uncommented ...
+  imageStore(uVoxelOpacity, vpos, vec4(1.0)); 
 }
