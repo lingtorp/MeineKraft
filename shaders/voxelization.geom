@@ -1,4 +1,6 @@
 
+// #define CONSERVATIVE_RASTERIZATION_ON
+
 layout(triangles) in;
 
 layout(triangle_strip, max_vertices = 3) out;
@@ -47,6 +49,7 @@ void main() {
       }
     }
 
+    #ifdef CONSERVATIVE_RASTERIZATION_ONy
     // Enlarge the triangle with one texel size
     vec2 side0N = normalize(gs_out[1].xy - gs_out[0].xy);
     vec2 side1N = normalize(gs_out[2].xy - gs_out[1].xy);
@@ -55,6 +58,7 @@ void main() {
     gs_out[0].xy += normalize(-side0N + side2N) * texel_size;
     gs_out[1].xy += normalize(side0N - side1N)  * texel_size;
     gs_out[2].xy += normalize(side1N - side2N)  * texel_size;
+    #endif
 
     // Emit the enlarged vertices
     for (uint i = 0; i < 3; i++) {
