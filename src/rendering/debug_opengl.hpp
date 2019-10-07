@@ -9,71 +9,6 @@
 
 #include <sstream>
 
-/// Gathers information about the OpenGL context 
-struct OpenGLContextInfo {
-  // TODO: Document each of the member variables??
-  int max_texture_units;
-  int max_fbo_color_attachments;
-  int max_fbo_attachment_width;
-  int max_fbo_attachment_height;
-  int max_fbo_layers;
-  int max_draw_buffers;
-  int max_texture_array_layers;
-  int max_image_texture_units;
-
-  bool GL_NV_shader_atomic_float_supported = false;
-
-  OpenGLContextInfo(const size_t gl_major_version,
-                    const size_t gl_minor_version) {
-    Log::info(glGetString(GL_VERSION) == nullptr ? "null" : "smt");
-    Log::info("OpenGL version: " + std::string((const char*)glGetString(GL_VERSION)));
-    Log::info("OpenGL version: " + std::string(reinterpret_cast<const char*>(glGetString(GL_VERSION))));
-    Log::info("GLSL: " + std::string(reinterpret_cast<const char*>(glGetString(GL_SHADING_LANGUAGE_VERSION))));
-    Log::info("Vendor: " + std::string(reinterpret_cast<const char*>(glGetString(GL_VENDOR))));
-    Log::info("Renderer: " + std::string(reinterpret_cast<const char*>(glGetString(GL_RENDERER))));
-
-    // #define VERBOSE
-    #ifdef VERBOSE
-    GLint n = 0;
-    glGetIntegerv(GL_NUM_EXTENSIONS, &n);
-    const char **extensions = (const char **)malloc(n * sizeof(char *));
-    if (n > 0) {
-      for (GLint i = 0; i < n; i++) {
-        extensions[i] = (char*)glGetStringi(GL_EXTENSIONS, i);
-        Log::info(std::string(extensions[i]));
-      }
-    }
-    delete extensions;
-    #endif
-
-    // Handle extensions
-    if (glewIsExtensionSupported("GL_NV_shader_atomic_float")) {
-      GL_NV_shader_atomic_float_supported = true;
-    }
-
-    glGetIntegerv(GL_MAX_DRAW_BUFFERS, &max_draw_buffers);
-    Log::info("Max draw buffers: " + std::to_string(max_draw_buffers));
-
-    glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &max_fbo_color_attachments);
-    Log::info("Max FBO color attachments: " + std::to_string(max_fbo_color_attachments));
-
-    glGetIntegerv(GL_MAX_FRAMEBUFFER_WIDTH, &max_fbo_attachment_width);
-    Log::info("Max FBO attachment width and height: " + std::to_string(max_fbo_attachment_width) + " / " + std::to_string(max_fbo_attachment_height));
-
-    glGetIntegerv(GL_MAX_FRAMEBUFFER_LAYERS, &max_fbo_layers);
-    Log::info("Max FBO layers: " + std::to_string(max_fbo_layers));
-
-    glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &max_texture_array_layers);
-    Log::info("Max texture array layers/elements: " + std::to_string(max_texture_array_layers));
-
-    glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max_texture_units);
-    Log::info("Max texture units: " + std::to_string(max_texture_units));
-
-    glGetIntegerv(GL_MAX_IMAGE_UNITS, &max_image_texture_units);
-    Log::info("Max image texture units: " + std::to_string(max_image_texture_units));
-  }
-};
-
 // Prints debug messages - notifications
 // #define DEBUG_NOTIFICATIONS
 // Prints debug messages - performance
@@ -147,6 +82,79 @@ static void GLAPIENTRY gl_debug_callback(
   ss << std::endl;
   Log::error(ss.str());
 }
+
+/// Gathers information about the OpenGL context 
+struct OpenGLContextInfo {
+  // TODO: Document each of the member variables??
+  int max_texture_units;
+  int max_fbo_color_attachments;
+  int max_fbo_attachment_width;
+  int max_fbo_attachment_height;
+  int max_fbo_layers;
+  int max_draw_buffers;
+  int max_texture_array_layers;
+  int max_image_texture_units;
+
+  bool GL_NV_shader_atomic_float_supported = false;
+
+  OpenGLContextInfo(const size_t gl_major_version,
+                    const size_t gl_minor_version) {
+    #if defined(WIN32) || defined(__LINUX__)
+    // OpenGL debug output
+    glEnable(GL_DEBUG_OUTPUT);
+    glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+    glDebugMessageCallback(gl_debug_callback, 0);
+    glDebugMessageControl(GL_DEBUG_SOURCE_APPLICATION, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_FALSE);
+    #endif
+
+    Log::info(glGetString(GL_VERSION) == nullptr ? "null" : "smt");
+    Log::info("OpenGL version: " + std::string((const char*)glGetString(GL_VERSION)));
+    Log::info("OpenGL version: " + std::string(reinterpret_cast<const char*>(glGetString(GL_VERSION))));
+    Log::info("GLSL: " + std::string(reinterpret_cast<const char*>(glGetString(GL_SHADING_LANGUAGE_VERSION))));
+    Log::info("Vendor: " + std::string(reinterpret_cast<const char*>(glGetString(GL_VENDOR))));
+    Log::info("Renderer: " + std::string(reinterpret_cast<const char*>(glGetString(GL_RENDERER))));
+
+    // #define VERBOSE
+    #ifdef VERBOSE
+    GLint n = 0;
+    glGetIntegerv(GL_NUM_EXTENSIONS, &n);
+    const char **extensions = (const char **)malloc(n * sizeof(char *));
+    if (n > 0) {
+      for (GLint i = 0; i < n; i++) {
+        extensions[i] = (char*)glGetStringi(GL_EXTENSIONS, i);
+        Log::info(std::string(extensions[i]));
+      }
+    }
+    delete extensions;
+    #endif
+
+    // Handle extensions
+    if (glewIsExtensionSupported("GL_NV_shader_atomic_float")) {
+      GL_NV_shader_atomic_float_supported = true;
+    }
+
+    glGetIntegerv(GL_MAX_DRAW_BUFFERS, &max_draw_buffers);
+    Log::info("Max draw buffers: " + std::to_string(max_draw_buffers));
+
+    glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &max_fbo_color_attachments);
+    Log::info("Max FBO color attachments: " + std::to_string(max_fbo_color_attachments));
+
+    glGetIntegerv(GL_MAX_FRAMEBUFFER_WIDTH, &max_fbo_attachment_width);
+    Log::info("Max FBO attachment width and height: " + std::to_string(max_fbo_attachment_width) + " / " + std::to_string(max_fbo_attachment_height));
+
+    glGetIntegerv(GL_MAX_FRAMEBUFFER_LAYERS, &max_fbo_layers);
+    Log::info("Max FBO layers: " + std::to_string(max_fbo_layers));
+
+    glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &max_texture_array_layers);
+    Log::info("Max texture array layers/elements: " + std::to_string(max_texture_array_layers));
+
+    glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max_texture_units);
+    Log::info("Max texture units: " + std::to_string(max_texture_units));
+
+    glGetIntegerv(GL_MAX_IMAGE_UNITS, &max_image_texture_units);
+    Log::info("Max image texture units: " + std::to_string(max_image_texture_units));
+  }
+};
 
 static void log_gl_error() {
   GLenum err = glGetError();

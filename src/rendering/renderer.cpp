@@ -167,14 +167,6 @@ std::array<glm::vec4, 6> extract_planes(const glm::mat4& mat) {
 Renderer::~Renderer() = default;
 
 Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{} {
-#if defined(WIN32) || defined(__LINUX__)
-  // OpenGL debug output
-  glEnable(GL_DEBUG_OUTPUT);
-  glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-  glDebugMessageCallback(gl_debug_callback, 0);
-  glDebugMessageControl(GL_DEBUG_SOURCE_APPLICATION, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_FALSE);
-#endif
-
   /// Global geometry pass framebuffer
   glGenFramebuffers(1, &gl_depth_fbo);
   glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
