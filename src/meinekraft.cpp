@@ -88,16 +88,16 @@ MeineKraft::MeineKraft() {
   if (!context) { Log::error(std::string(SDL_GetError())); }
   SDL_GL_SetSwapInterval(0); // Disables vsync
 
+  glewExperimental = (GLboolean) true;
+  glewInit();
+
   OpenGLContextInfo gl_context_info(4, OPENGL_MINOR_VERSION);
 
-  // Init sdl2_image
   atexit(IMG_Quit);
   IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG);
 
-  // Init ImGui
   ImGui_ImplSdlGL3_Init(window);
 
-  // Inits GLEW
   renderer = new Renderer(HD);
   renderer->update_projection_matrix(70.0f, HD);
 

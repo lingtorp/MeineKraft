@@ -167,9 +167,6 @@ std::array<glm::vec4, 6> extract_planes(const glm::mat4& mat) {
 Renderer::~Renderer() = default;
 
 Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{} {
-  glewExperimental = (GLboolean) true;
-  glewInit();
-
 #if defined(WIN32) || defined(__LINUX__)
   // OpenGL debug output
   glEnable(GL_DEBUG_OUTPUT);
