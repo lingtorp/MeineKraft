@@ -21,13 +21,35 @@ struct OpenGLContextInfo {
   int max_texture_array_layers;
   int max_image_texture_units;
 
-  OpenGLContextInfo(const size_t gl_major_version, const size_t gl_minor_version) {
+  bool GL_NV_shader_atomic_float_supported = false;
+
+  OpenGLContextInfo(const size_t gl_major_version,
+                    const size_t gl_minor_version) {
     Log::info(glGetString(GL_VERSION) == nullptr ? "null" : "smt");
     Log::info("OpenGL version: " + std::string((const char*)glGetString(GL_VERSION)));
     Log::info("OpenGL version: " + std::string(reinterpret_cast<const char*>(glGetString(GL_VERSION))));
     Log::info("GLSL: " + std::string(reinterpret_cast<const char*>(glGetString(GL_SHADING_LANGUAGE_VERSION))));
     Log::info("Vendor: " + std::string(reinterpret_cast<const char*>(glGetString(GL_VENDOR))));
     Log::info("Renderer: " + std::string(reinterpret_cast<const char*>(glGetString(GL_RENDERER))));
+
+    // #define VERBOSE
+    #ifdef VERBOSE
+    GLint n = 0;
+    glGetIntegerv(GL_NUM_EXTENSIONS, &n);
+    const char **extensions = (const char **)malloc(n * sizeof(char *));
+    if (n > 0) {
+      for (GLint i = 0; i < n; i++) {
+        extensions[i] = (char*)glGetStringi(GL_EXTENSIONS, i);
+        Log::info(std::string(extensions[i]));
+      }
+    }
+    delete extensions;
+    #endif
+
+    // Handle extensions
+    if (glewIsExtensionSupported("GL_NV_shader_atomic_float")) {
+      GL_NV_shader_atomic_float_supported = true;
+    }
 
     glGetIntegerv(GL_MAX_DRAW_BUFFERS, &max_draw_buffers);
     Log::info("Max draw buffers: " + std::to_string(max_draw_buffers));
