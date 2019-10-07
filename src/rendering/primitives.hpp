@@ -338,7 +338,7 @@ struct AABB {
 	Vec3f min;
 	AABB() = default;
 
-	AABB(const Vec3f& min, const Vec3f& max): min(min), max(max) {}
+	AABB(const Vec3f& min, const Vec3f& max): max(max), min(min) {}
 
 	// Along the diagonal (from min to max) of the AABB
 	inline float diagonal_lng() const { return (max - min).length(); }
