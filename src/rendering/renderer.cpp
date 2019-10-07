@@ -108,17 +108,19 @@ static glm::mat4 shadowmap_orthographic_projection(const AABB& aabb, const Direc
   return glm::ortho(left, right, bottom, top, znear, zfar);
 }
 
+// NOTE: AABB passed is assumed to be the Scene AABB
 static glm::mat4 orthographic_projection(const AABB& aabb, uint32_t voxel_grid_dimension) {
-  voxel_grid_dimension = 2; // FIXME: Use voxel_grid_dimension...?
+  voxel_grid_dimension = std::max(aabb.width(), std::max(aabb.height(), aabb.breadth()));
 	const float left   = -float(voxel_grid_dimension) / 2.0f;
 	const float right  =  float(voxel_grid_dimension) / 2.0f;
 	const float bottom = -float(voxel_grid_dimension) / 2.0f;
 	const float top    =  float(voxel_grid_dimension) / 2.0f;
 	const float znear  =  0.0f;
 	const float zfar   =  float(voxel_grid_dimension);
-	const glm::mat4 ortho = glm::ortho(left, right, bottom, top, znear, zfar);
+	const glm::mat4 ortho  = glm::ortho(left, right, bottom, top, znear, zfar);
 	const glm::vec3 center = glm::vec3(aabb.center().x, aabb.center().y, aabb.center().z);
-  return ortho * glm::lookAt(center - glm::vec3(0.0f, 0.0f, voxel_grid_dimension / 2.0f), center, glm::vec3(0.0f, 1.0f, 0.0f));
+  const glm::vec3 offset = glm::vec3(0.0f, 0.0f,  float(voxel_grid_dimension) / 2.0f);
+  return ortho * glm::lookAt(center - offset, center, glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
 /// Normalizes the plane's equation and returns it
