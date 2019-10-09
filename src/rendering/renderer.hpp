@@ -45,7 +45,6 @@ struct Renderer {
   // Rudimentary rendering pipeline for now
   std::vector<RenderPass> render_passes;
 
-  AABB prescaled_scene_aabb;
 	AABB scene_aabb;
   Camera* camera = nullptr;
   RenderState state;
@@ -89,7 +88,7 @@ private:
   uint8_t* gl_pointlights_ssbo_ptr = nullptr;
 
   /// Voxelization pipeline related
-  const uint32_t voxel_grid_dimension = 16; // 256 ~ 60MB, 512 ~ 540MB (not counting mipmaps, adds ~33%)
+  const uint32_t voxel_grid_dimension = 128; // 256 ~ 60MB, 512 ~ 540MB (not counting mipmaps, adds ~33%)
   
   Shader* voxelization_shader = nullptr;
   uint32_t gl_voxelization_fbo = 0;

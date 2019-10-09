@@ -1,7 +1,6 @@
 
 uniform mat4 projection;
 uniform mat4 camera_view;
-uniform float scaling_factor;
 
 in vec3 position;
 in vec3 normal;
@@ -25,7 +24,7 @@ out vec3 local_space_position;
 flat out uint fInstance_idx;
 
 void main() {
-    gl_Position = camera_view * models[instance_idx] * vec4(scaling_factor * position, 1.0);
+    gl_Position = camera_view * models[instance_idx] * vec4(position, 1.0);
 
     fTangent = tangent;
     fGeometricNormal = normal;

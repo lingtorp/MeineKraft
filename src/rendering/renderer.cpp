@@ -115,17 +115,17 @@ static glm::mat4 shadowmap_transform(const AABB& aabb, const DirectionalLight& l
 }
 
 // NOTE: AABB passed is assumed to be the Scene AABB
-static glm::mat4 orthographic_projection(const AABB& aabb, uint32_t unused) {
-  const float voxel_grid_dimension = 2.0f;
-	const float left   = -float(voxel_grid_dimension) / 2.0f;
-	const float right  =  float(voxel_grid_dimension) / 2.0f;
-	const float bottom = -float(voxel_grid_dimension) / 2.0f;
-	const float top    =  float(voxel_grid_dimension) / 2.0f;
+static glm::mat4 orthographic_projection(const AABB& aabb) {
+  const float voxel_grid_dimension = aabb.max_dimension();
+	const float left   = -float(voxel_grid_dimension);
+	const float right  =  float(voxel_grid_dimension);
+	const float bottom = -float(voxel_grid_dimension);
+	const float top    =  float(voxel_grid_dimension);
 	const float znear  =  0.0f;
-	const float zfar   =  float(voxel_grid_dimension);
+	const float zfar   =  2.0f * float(voxel_grid_dimension);
 	const glm::mat4 ortho  = glm::ortho(left, right, bottom, top, znear, zfar);
   const glm::vec3 center = glm::vec3(aabb.center().x, aabb.center().y, aabb.center().z);
-  const glm::vec3 offset = glm::vec3(0.0f, 0.0f,  float(voxel_grid_dimension) / 2.0f);
+  const glm::vec3 offset = glm::vec3(0.0f, 0.0f,  float(voxel_grid_dimension));
   return ortho * glm::lookAt(center - offset, center, glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
@@ -609,9 +609,9 @@ void Renderer::render(const uint32_t delta) {
       glBindVertexArray(batch.gl_depth_vao);
       glBindBuffer(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo); // GL_DRAW_INDIRECT_BUFFER is global context state
 
-			const glm::mat4 ortho = orthographic_projection(scene_aabb, voxel_grid_dimension);
+			const glm::mat4 ortho = orthographic_projection(scene_aabb);
 			glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(ortho));
-			// glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(camera_transform));
+			glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(camera_transform));
 
       const uint32_t gl_models_binding_point = 2; // Defaults to 2 in geometry.vert shader
       glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_models_binding_point, batch.gl_depth_model_buffer);
@@ -632,9 +632,6 @@ void Renderer::render(const uint32_t delta) {
         glBindTexture(GL_TEXTURE_2D, batch.gl_tangent_normal_texture);
       }
 
-      const float voxel_scaling_factor = 1.0f / prescaled_scene_aabb.max_dimension();
-      glUniform1f(glGetUniformLocation(program, "scaling_factor"), voxel_scaling_factor);
-
       const uint64_t draw_cmd_offset = batch.gl_curr_ibo_idx * sizeof(DrawElementsIndirectCommand);
       glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (const void*) draw_cmd_offset, 1, sizeof(DrawElementsIndirectCommand));
     }
@@ -652,18 +649,14 @@ void Renderer::render(const uint32_t delta) {
 		glUseProgram(program);
 
 		// Orthogonal projection along +z-axis
-		const glm::mat4 ortho = orthographic_projection(scene_aabb, voxel_grid_dimension);
+		const glm::mat4 ortho = orthographic_projection(scene_aabb);
 		glUniformMatrix4fv(glGetUniformLocation(program, "ortho"), 1, GL_FALSE, glm::value_ptr(ortho));
 
-    const float voxel_scaling_factor = 1.0f / prescaled_scene_aabb.max_dimension();
+    const float voxel_scaling_factor = 1.0f / scene_aabb.max_dimension();
     glUniform1f(glGetUniformLocation(program, "scaling_factor"), voxel_scaling_factor);
 
     const Vec3f aabb_center = scene_aabb.center();
     glUniform3fv(glGetUniformLocation(program, "aabb_center"), 1, &aabb_center.x);
-
-    const Vec3f aabb_size =
-        Vec3f(scene_aabb.width(), scene_aabb.height(), scene_aabb.breadth());
-    glUniform3fv(glGetUniformLocation(program, "aabb_size"), 1, &aabb_size.x);
 
     glUniform3fv(glGetUniformLocation(program, "light_direction"), 1, &directional_light.direction.x);
     glUniform1ui(glGetUniformLocation(program, "voxel_grid_dimension"), voxel_grid_dimension);

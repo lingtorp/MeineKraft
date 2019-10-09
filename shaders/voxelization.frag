@@ -14,11 +14,11 @@ uniform mat4 light_space_transform;
 
 uniform vec3 aabb_center;
 uniform float scaling_factor;
-uniform vec3 aabb_size;
+
 uniform vec3 light_direction; // Directional light direction
 
-ivec3 voxel_coordinate_from_world_pos(vec3 pos) {
-  vec3 vpos = (pos * scaling_factor) - aabb_center;
+ivec3 voxel_coordinate_from_world_pos(const vec3 pos) {
+  vec3 vpos = (pos - aabb_center) * scaling_factor;
   vpos = clamp(vpos, vec3(-1.0), vec3(1.0));
   const vec3 vgrid = vec3(voxel_grid_dimension);
   vpos = vgrid * (vpos * vec3(0.5) + vec3(0.5));
