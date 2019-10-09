@@ -48,9 +48,6 @@ static AABB compute_aabb_from(const std::vector<RenderComponent>& render_compone
 		if (aabb.max.length() < max.length()) { aabb.max = max; }
 		if (aabb.min.length() < min.length()) { aabb.min = min; }
 	}
-	Log::info(aabb);
-	Log::info("Center: " + aabb.center().to_string());
-	Log::info("Size(dx, dy, dz): " + std::to_string(aabb.width()) + ", " + std::to_string(aabb.height()) + ", " + std::to_string(aabb.breadth()));
 	return aabb;
 }
 
@@ -62,4 +59,8 @@ Scene::Scene(const std::string& directory, const std::string& file) {
     Model model(render_components[i]);
     NameSystem::instance().add_name_to_entity("mesh-" + std::to_string(i), model.id);
   }
+
+  Log::info(aabb);
+  Log::info("Center: " + aabb.center().to_string());
+  Log::info("Size(dx, dy, dz): " + std::to_string(aabb.width()) + ", " + std::to_string(aabb.height()) + ", " + std::to_string(aabb.breadth()));
 }

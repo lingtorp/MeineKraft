@@ -105,13 +105,8 @@ MeineKraft::MeineKraft() {
 }
 
 void MeineKraft::init() {
-	Scene scene{ Filesystem::home + "Desktop/Meinekraft/Suzanne/",  "Suzanne.gltf" };
-  renderer->prescaled_scene_aabb = scene.aabb;
-
-  Log::info("\n --- Scaled --- ");
-  renderer->scene_aabb = scene.aabb.unit_scaled();
-  Log::info(renderer->scene_aabb);
-  Log::info(renderer->scene_aabb.center());
+	Scene scene{ Filesystem::home + "Desktop/Meinekraft/Sponza/",  "Sponza.gltf" };
+  renderer->scene_aabb = scene.aabb;
 }
 
 MeineKraft::~MeineKraft() {
