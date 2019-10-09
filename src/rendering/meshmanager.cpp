@@ -8,6 +8,10 @@
 #include <numeric> // std::iota
 #include <cassert> // assert
 
+#define VERBOSE_LEVEL_0
+// #define VERBOSE_LEVEL_1
+// #define VERBOSE_LEVEL_2
+
 static std::vector<Mesh> loaded_meshes{Cube(), Cube(true), Sphere()};
 
 // NOTE: Assuming the metallic-roughness material model of models loaded with GLTF.
@@ -24,20 +28,20 @@ MeshManager::load_mesh(const std::string& directory, const std::string& file) {
       return {};
     }
 
-#define VERBOSE
-#ifdef VERBOSE
+    #ifdef VERBOSE_LEVEL_0
     Log::info("Loading scene: " + file);
     Log::info("\t ... # meshes " + std::to_string(scene->mNumMeshes));
     Log::info("\t ... # materials " + std::to_string(scene->mNumMaterials));
-#endif
+    #endif
 
     std::vector<std::pair<Texture::Type, std::string>> texture_info;
     MeshInformation mesh_info;
     mesh_info.loaded_from_filepath = directory + file;
     if (scene->HasMeshes()) {
-      // FIXME: Assumes the mesh is a single mesh and not a hierarchy
       auto mesh = scene->mMeshes[0];
+      #ifdef VERBOSE_LEVEL_1
       Log::info("\t ... loading mesh with name: " + std::string(mesh->mName.data));
+      #endif
 
       // Load all vertices
       for (size_t j = 0; j < mesh->mNumVertices; j++) {
@@ -76,13 +80,17 @@ MeshManager::load_mesh(const std::string& directory, const std::string& file) {
       if (scene->HasMaterials()) {
         auto material = scene->mMaterials[mesh->mMaterialIndex];
 
+        #ifdef VERBOSE_LEVEL_1
         aiString material_name;
         material->Get(AI_MATKEY_NAME, material_name);
         Log::info("\t ... loading material: " + std::string(material_name.C_Str()));
+        #endif
 
         aiString diffuse_filepath;
         if (material->GetTexture(aiTextureType_DIFFUSE, 0, &diffuse_filepath) == AI_SUCCESS) {
+          #ifdef VERBOSE_LEVEL_2
           Log::info("Diffuse texture name: " + std::string(directory.c_str()) + std::string(diffuse_filepath.data));
+          #endif
           std::string texture_filepath(diffuse_filepath.data);
           texture_filepath.insert(0, directory);
           texture_info.push_back({ Texture::Type::Diffuse, texture_filepath });
@@ -133,7 +141,9 @@ MeshManager::load_mesh(const std::string& directory, const std::string& file) {
 
         aiString normals_filepath;
         if (material->GetTexture(aiTextureType_NORMALS, 0, &normals_filepath) == AI_SUCCESS) {
+          #ifdef VERBOSE_LEVEL_2
           Log::info("Normals texture name: " + std::string(directory.c_str()) + std::string(normals_filepath.data));
+          #endif
         }
 
         aiString reflection_filepath;
@@ -149,7 +159,9 @@ MeshManager::load_mesh(const std::string& directory, const std::string& file) {
         // NOTE: Roughness metallic textures are not detected so here we are assuming this is the unknown texture of the material.
         aiString unknown_filepath;
         if (material->GetTexture(aiTextureType_UNKNOWN, 0, &unknown_filepath) == AI_SUCCESS) {
+          #ifdef VERBOSE_LEVEL_2
           Log::info("PBR parameter texture name: " + std::string(directory.c_str()) + std::string(unknown_filepath.data));
+          #endif
           std::string texture_filepath(normals_filepath.data);
           texture_filepath.insert(0, directory);
           texture_info.push_back({ Texture::Type::MetallicRoughness, texture_filepath });
@@ -181,26 +193,23 @@ MeshManager::load_meshes(const std::string& directory, const std::string& file) 
     return {};
   }
 
-#define VERBOSE
-#ifdef VERBOSE
+  #ifdef VERBOSE_LEVEL_0
   Log::info("Loading scene: " + file);
   Log::info("\t ... # meshes " + std::to_string(scene->mNumMeshes));
   Log::info("\t ... # materials " + std::to_string(scene->mNumMaterials));
-#endif
+  #endif
   
   std::vector<std::vector<std::pair<Texture::Type, std::string>>> texture_infos;
   if (scene->HasMeshes()) {
     // FIXME: Assumes the mesh is a single mesh and not a hierarchy
-    //      #define SPONZA_TEST
-      #ifdef SPONZA_TEST
-    for (size_t mesh_idx = 5; mesh_idx < 6; mesh_idx++) {
-      #else 
     for (size_t mesh_idx = 0; mesh_idx < scene->mNumMeshes; mesh_idx++) {
-      #endif
       MeshInformation mesh_info; 
 
       auto mesh = scene->mMeshes[mesh_idx];
+
+      #ifdef VERBOSE_LEVEL_1
       Log::info("\t ... loading mesh with name: " + std::string(mesh->mName.data));
+      #endif
 
       // Load all vertices
       mesh_info.mesh.vertices.reserve(mesh->mNumVertices);
@@ -245,15 +254,19 @@ MeshManager::load_meshes(const std::string& directory, const std::string& file) 
       if (scene->HasMaterials()) {
         auto material = scene->mMaterials[mesh->mMaterialIndex];
 
+        #ifdef VERBOSE_LEVEL_1
         aiString material_name;
         material->Get(AI_MATKEY_NAME, material_name);
         Log::info("\t ... loading material: " + std::string(material_name.C_Str()));
+        #endif
 
         std::vector<std::pair<Texture::Type, std::string>> texture_info;
 
         aiString diffuse_filepath;
         if (material->GetTexture(aiTextureType_DIFFUSE, 0, &diffuse_filepath) == AI_SUCCESS) {
+          #ifdef VERBOSE_LEVEL_2
           Log::info("Diffuse texture name: " + std::string(directory.c_str()) + std::string(diffuse_filepath.data));
+          #endif
           std::string texture_filepath(diffuse_filepath.data);
           texture_filepath.insert(0, directory);
           texture_info.push_back({ Texture::Type::Diffuse, texture_filepath });
@@ -305,7 +318,9 @@ MeshManager::load_meshes(const std::string& directory, const std::string& file) 
 
         aiString normals_filepath;
         if (material->GetTexture(aiTextureType_NORMALS, 0, &normals_filepath) == AI_SUCCESS) {
+          #ifdef VERBOSE_LEVEL_2
           Log::info("Normals texture name: " + std::string(directory.c_str()) + std::string(normals_filepath.data));
+          #endif
           std::string texture_filepath(normals_filepath.data);
           texture_filepath.insert(0, directory);
           texture_info.push_back({ Texture::Type::TangentNormal, texture_filepath });
@@ -334,7 +349,9 @@ MeshManager::load_meshes(const std::string& directory, const std::string& file) 
         // NOTE: Roughness metallic textures are not detected so here we are assuming this is the unknown texture of the material.
         aiString unknown_filepath;
         if (material->GetTexture(aiTextureType_UNKNOWN, 0, &unknown_filepath) == AI_SUCCESS) {
+          #ifdef VERBOSE_LEVEL_2
           Log::info("PBR parameter texture name: " + std::string(directory.c_str()) + std::string(unknown_filepath.data));
+          #endif
           std::string texture_filepath(unknown_filepath.data);
           texture_filepath.insert(0, directory);
           texture_info.push_back({ Texture::Type::MetallicRoughness, texture_filepath });
@@ -343,13 +360,10 @@ MeshManager::load_meshes(const std::string& directory, const std::string& file) 
       }
     }
   }
-  #ifdef SPONZA_TEST
-  std::vector<ID> mesh_ids(1);
-  #else
+
   std::vector<ID> mesh_ids(scene->mNumMeshes);
-  #endif
   std::iota(mesh_ids.begin(), mesh_ids.end(), loaded_meshes.size() - mesh_ids.size());
-  // assert(mesh_ids.size() == texture_infos.size());
+  assert(mesh_ids.size() == texture_infos.size());
   return { mesh_ids, texture_infos };
 }
 
