@@ -366,6 +366,10 @@ struct AABB {
     return AABB(lhs.min + rhs, lhs.max + rhs);
   }
 
+  friend AABB operator-(const AABB& lhs, const Vec3f& rhs) {
+    return AABB(lhs.min - rhs, lhs.max - rhs);
+  }
+
 	friend std::ostream& operator<<(std::ostream& os, const AABB& aabb) {
 		return os << "AABB(min: " << aabb.min << ", max: " << aabb.max << ")";
 	}
