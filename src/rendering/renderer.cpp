@@ -118,13 +118,13 @@ static glm::mat4 orthographic_projection(const AABB& aabb, uint32_t voxel_grid_d
 	const float znear  =  0.0f;
 	const float zfar   =  float(voxel_grid_dimension);
 	const glm::mat4 ortho  = glm::ortho(left, right, bottom, top, znear, zfar);
-	const glm::vec3 center = glm::vec3(aabb.center().x, aabb.center().y, aabb.center().z);
+  const glm::vec3 center = glm::vec3(aabb.center().x, aabb.center().y, aabb.center().z);
   const glm::vec3 offset = glm::vec3(0.0f, 0.0f,  float(voxel_grid_dimension) / 2.0f);
   return ortho * glm::lookAt(center - offset, center, glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
 /// Normalizes the plane's equation and returns it
-inline glm::vec4 normalize(const glm::vec4& p) {
+static inline glm::vec4 normalize(const glm::vec4& p) {
   const float mag = std::sqrt(p.x * p.x + p.y * p.y + p.z * p.z);
   return glm::vec4(p.x / mag, p.y / mag, p.z / mag, p.w / mag);
 }
@@ -693,7 +693,6 @@ void Renderer::render(const uint32_t delta) {
 		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 		glViewport(0, 0, screen.width, screen.height);
 
-		// need_to_voxelize = false;
     pass_ended();
   }
 

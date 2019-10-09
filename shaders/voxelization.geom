@@ -49,7 +49,7 @@ void main() {
       }
     }
 
-    #ifdef CONSERVATIVE_RASTERIZATION_ONy
+    #ifdef CONSERVATIVE_RASTERIZATION_ON
     // Enlarge the triangle with one texel size
     vec2 side0N = normalize(gs_out[1].xy - gs_out[0].xy);
     vec2 side1N = normalize(gs_out[2].xy - gs_out[1].xy);

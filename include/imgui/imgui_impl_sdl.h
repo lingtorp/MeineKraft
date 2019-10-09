@@ -17,8 +17,8 @@
 #include "imgui.h"
 
 // SDL,GL3W
-#include <SDL.h>
-#include <SDL_syswm.h>
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_syswm.h>
 
 #ifdef _WIN32
 #include <glew.h>

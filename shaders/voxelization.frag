@@ -1,6 +1,4 @@
 
-layout(RGBA8) uniform image3D voxel_data;
-
 in vec3 fNormal;   
 in vec3 fPosition; // World space position
 in vec2 fTextureCoord;

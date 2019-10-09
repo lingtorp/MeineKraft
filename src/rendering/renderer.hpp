@@ -19,6 +19,7 @@ struct GraphicsBatch;
 struct Shader;
 struct ComputeShader;
 struct Material;
+struct Texture;
 
 struct Renderer {
   /// Create a renderer with a given window/screen size/resolution
@@ -52,11 +53,8 @@ struct Renderer {
   std::vector<GraphicsBatch> graphics_batches;
   std::vector<PointLight> pointlights; 
 
-  // Voxelization related
-  bool need_to_voxelize = true;
-
   // Shadow mapping
-  DirectionalLight directional_light = DirectionalLight(Vec3f(0.0f, 0.5f, 0.5f), Vec3f(0.0f, -1.0f, -0.2f));
+  DirectionalLight directional_light = DirectionalLight(Vec3f(0.0f, 0.5f, 0.5f), Vec3f(0.0f, -1.0f, -0.1f));
 private:
   void add_graphics_state(GraphicsBatch& batch, const RenderComponent& comp, Material material, ID entity_id);
   void update_transforms();
@@ -90,7 +88,7 @@ private:
   uint8_t* gl_pointlights_ssbo_ptr = nullptr;
 
   /// Voxelization pipeline related
-  const uint32_t voxel_grid_dimension = 64; // 256 ~ 60MB, 512 ~ 540MB (not counting mipmaps, adds ~33%)
+  const uint32_t voxel_grid_dimension = 16; // 256 ~ 60MB, 512 ~ 540MB (not counting mipmaps, adds ~33%)
   
   Shader* voxelization_shader = nullptr;
   uint32_t gl_voxelization_fbo = 0;

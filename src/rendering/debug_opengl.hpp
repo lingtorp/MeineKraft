@@ -107,8 +107,6 @@ struct OpenGLContextInfo {
     glDebugMessageControl(GL_DEBUG_SOURCE_APPLICATION, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_FALSE);
     #endif
 
-    Log::info(glGetString(GL_VERSION) == nullptr ? "null" : "smt");
-    Log::info("OpenGL version: " + std::string((const char*)glGetString(GL_VERSION)));
     Log::info("OpenGL version: " + std::string(reinterpret_cast<const char*>(glGetString(GL_VERSION))));
     Log::info("GLSL: " + std::string(reinterpret_cast<const char*>(glGetString(GL_SHADING_LANGUAGE_VERSION))));
     Log::info("Vendor: " + std::string(reinterpret_cast<const char*>(glGetString(GL_VENDOR))));

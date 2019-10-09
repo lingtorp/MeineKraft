@@ -3,6 +3,8 @@
 #define MEINEKRAFT_PRIMITIVES_HPP
 
 #include <vector>
+#include <array>
+#include <algorithm>
 
 #include "../math/vector.hpp"
 
@@ -352,6 +354,17 @@ struct AABB {
 	inline bool is_cubic() const { return width() == height() && height() == breadth(); }
 
 	inline Vec3f center() const { return min + ((max - min) / 2.0f); }
+
+  inline float max_dimension() const {
+    std::array<float, 6> axis = {std::abs(min.x), std::abs(min.y), std::abs(min.z), std::abs(max.x), std::abs(max.y), std::abs(max.z)};
+    return *std::max_element(axis.begin(), axis.end());
+  }
+
+  inline AABB unit_scaled() const { return AABB(min / max_dimension(), max / max_dimension()); }
+
+  friend AABB operator+(const AABB& lhs, const Vec3f& rhs) {
+    return AABB(lhs.min + rhs, lhs.max + rhs);
+  }
 
 	friend std::ostream& operator<<(std::ostream& os, const AABB& aabb) {
 		return os << "AABB(min: " << aabb.min << ", max: " << aabb.max << ")";
