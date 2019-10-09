@@ -12,15 +12,43 @@ uniform sampler2DArray uDiffuse;
 uniform sampler2D uShadowmap;
 uniform mat4 light_space_transform;
 
+uniform vec3 aabb_center;
+uniform float scaling_factor;
 uniform vec3 aabb_size;
 uniform vec3 light_direction; // Directional light direction
 
 ivec3 voxel_coordinate_from_world_pos(vec3 pos) {
-  vec3 vpos = pos / aabb_size;
+  vec3 vpos = (pos * scaling_factor) - aabb_center;
   vpos = clamp(vpos, vec3(-1.0), vec3(1.0));
   const vec3 vgrid = vec3(voxel_grid_dimension);
   vpos = vgrid * (vpos * vec3(0.5) + vec3(0.5));
   return ivec3(vpos);
+}
+
+vec4 conv_RGBA8_to_vec4(uint v) {
+  return vec4(float(v & 0x000000FF), float((v & 0x0000FF00) >> 8U),
+              float((v & 0x00FF0000) >> 16U), float((v & 0xFF000000) >> 24U));
+}
+
+uint conv_vec4_to_uint(vec4 v) {
+  return uint((uint(v.w) & 0x000000FF) << 24U | (uint(v.z) & 0x000000FF) << 16U |
+              (uint(v.y) & 0x000000FF) << 8U | uint(v.x) & 0x000000FF);
+}
+
+void atomic_add_radiance_to_voxel(layout(R32UI) coherent volatile uimage3D voxels,
+                                  const vec3 radiance, const ivec3 vpos) {
+  uint new_value = conv_vec4_to_uint(vec4(radiance, 1.0));
+  uint curr_value = 0;
+  uint prev_value = 0;
+  // Compute moving average until value settles
+  while ((curr_value = imageAtomicCompSwap(voxels, vpos, prev_value, new_value)) != prev_value) {
+    prev_value = curr_value;
+    vec4 value = conv_RGBA8_to_vec4(curr_value);
+    value.xyz *= value.w;
+    vec4 valuef = value + new_value;
+    valuef.xyz /= valuef.w;
+    new_value = conv_vec4_to_uint(valuef);
+  }
 }
 
 void main() {
@@ -43,6 +71,7 @@ void main() {
       const vec3 diffuse = texture(uDiffuse, vec3(fTextureCoord, 0)).rgb;
       const vec3 radiance = diffuse * max(dot(light_direction, fNormal), 0.0);
       imageStore(uVoxelRadiance, vpos, vec4(radiance, 1.0));
+      // atomic_add_radiance_to_voxel(uVoxelRadiance, radiance, vpos);
     }
   }
 

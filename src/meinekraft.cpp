@@ -95,7 +95,7 @@ MeineKraft::MeineKraft() {
 
   atexit(IMG_Quit);
   IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG);
-
+  
   ImGui_ImplSdlGL3_Init(window);
 
   renderer = new Renderer(HD);
@@ -105,9 +105,13 @@ MeineKraft::MeineKraft() {
 }
 
 void MeineKraft::init() {
-	Scene scene{ Filesystem::home + "Desktop/Meinekraft/Sponza/",  "Sponza.gltf" };
-  Log::info(scene.aabb);
-	renderer->scene_aabb = scene.aabb;
+	Scene scene{ Filesystem::home + "Desktop/Meinekraft/Suzanne/",  "Suzanne.gltf" };
+  renderer->prescaled_scene_aabb = scene.aabb;
+
+  Log::info("\n --- Scaled --- ");
+  renderer->scene_aabb = scene.aabb.unit_scaled();
+  Log::info(renderer->scene_aabb);
+  Log::info(renderer->scene_aabb.center());
 }
 
 MeineKraft::~MeineKraft() {
@@ -148,6 +152,7 @@ void MeineKraft::mainloop() {
           renderer->camera->yaw += event.motion.xrel;
           renderer->camera->direction = renderer->camera->recalculate_direction();
           break;
+
         case SDL_KEYDOWN:
           switch (event.key.keysym.sym) {
 					case SDLK_1:
@@ -159,32 +164,33 @@ void MeineKraft::mainloop() {
 					case SDLK_3:
 						renderer->state.camera_selection = 2;
 						break;
-            case SDLK_w:
-              renderer->camera->move_forward(true);
-              break;
-            case SDLK_a:
-              renderer->camera->move_left(true);
-              break;
-            case SDLK_s:
-              renderer->camera->move_backward(true);
-              break;
-            case SDLK_d:
-              renderer->camera->move_right(true);
-              break;
-            case SDLK_q:
-              renderer->camera->move_down(true);
-              break;
-            case SDLK_e:
-              renderer->camera->move_up(true);
-              break;
-            case SDLK_TAB:
-              toggle_mouse_capture = !toggle_mouse_capture;
-              break;
-            case SDLK_ESCAPE:
-              DONE = true;
-              break;
+          case SDLK_w:
+            renderer->camera->move_forward(true);
+            break;
+          case SDLK_a:
+            renderer->camera->move_left(true);
+            break;
+          case SDLK_s:
+            renderer->camera->move_backward(true);
+            break;
+          case SDLK_d:
+            renderer->camera->move_right(true);
+            break;
+          case SDLK_q:
+            renderer->camera->move_down(true);
+            break;
+          case SDLK_e:
+            renderer->camera->move_up(true);
+            break;
+          case SDLK_TAB:
+            toggle_mouse_capture = !toggle_mouse_capture;
+            break;
+          case SDLK_ESCAPE:
+            DONE = true;
+            break;
           }
           break;
+
         case SDL_KEYUP:
           switch (event.key.keysym.sym) {
             case SDLK_w:
@@ -205,6 +211,7 @@ void MeineKraft::mainloop() {
             case SDLK_e:
               renderer->camera->move_up(false);
           }
+
         case SDL_WINDOWEVENT:
           switch (event.window.event) {
             case SDL_WINDOWEVENT_RESIZED:

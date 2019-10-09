@@ -45,6 +45,7 @@ struct Renderer {
   // Rudimentary rendering pipeline for now
   std::vector<RenderPass> render_passes;
 
+  AABB prescaled_scene_aabb;
 	AABB scene_aabb;
   Camera* camera = nullptr;
   RenderState state;

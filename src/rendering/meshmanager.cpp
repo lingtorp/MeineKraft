@@ -191,7 +191,12 @@ MeshManager::load_meshes(const std::string& directory, const std::string& file) 
   std::vector<std::vector<std::pair<Texture::Type, std::string>>> texture_infos;
   if (scene->HasMeshes()) {
     // FIXME: Assumes the mesh is a single mesh and not a hierarchy
+    //      #define SPONZA_TEST
+      #ifdef SPONZA_TEST
+    for (size_t mesh_idx = 5; mesh_idx < 6; mesh_idx++) {
+      #else 
     for (size_t mesh_idx = 0; mesh_idx < scene->mNumMeshes; mesh_idx++) {
+      #endif
       MeshInformation mesh_info; 
 
       auto mesh = scene->mMeshes[mesh_idx];
@@ -338,10 +343,13 @@ MeshManager::load_meshes(const std::string& directory, const std::string& file) 
       }
     }
   }
-
+  #ifdef SPONZA_TEST
+  std::vector<ID> mesh_ids(1);
+  #else
   std::vector<ID> mesh_ids(scene->mNumMeshes);
-  std::iota(mesh_ids.begin(), mesh_ids.end(), loaded_meshes.size() - scene->mNumMeshes);
-  assert(mesh_ids.size() == texture_infos.size());
+  #endif
+  std::iota(mesh_ids.begin(), mesh_ids.end(), loaded_meshes.size() - mesh_ids.size());
+  // assert(mesh_ids.size() == texture_infos.size());
   return { mesh_ids, texture_infos };
 }
 
