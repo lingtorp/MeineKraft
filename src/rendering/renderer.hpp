@@ -107,6 +107,13 @@ private:
   uint32_t gl_voxel_opacity_image_unit = 0;
   uint32_t gl_voxel_opacity_texture_unit = 0;
 
+  // Voxel visualization pass
+  bool voxel_visualization_enabled = false;
+  Shader* voxel_visualization_shader = nullptr;
+  uint32_t gl_voxel_visualization_vao = 0;
+  uint32_t gl_voxel_visualization_fbo = 0;
+  uint32_t gl_voxel_visualization_texture = 0;
+
   /// Global buffers
   // Geometric normals
   uint32_t gl_geometric_normal_texture = 0;

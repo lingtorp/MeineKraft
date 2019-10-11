@@ -404,6 +404,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     voxelization_shader = new Shader(Filesystem::base + "shaders/voxelization.vert",
                                      Filesystem::base + "shaders/voxelization.geom",
                                      Filesystem::base + "shaders/voxelization.frag");
+
     glGenFramebuffers(1, &gl_voxelization_fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, gl_voxelization_fbo);
 		glObjectLabel(GL_FRAMEBUFFER, gl_voxelization_fbo, -1, "Voxelization FBO");
@@ -415,7 +416,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glGenTextures(1, &gl_voxel_radiance_texture);
     glBindTexture(GL_TEXTURE_3D, gl_voxel_radiance_texture);
     glTexStorage3D(GL_TEXTURE_3D, 1, GL_RGBA32F, voxel_grid_dimension, voxel_grid_dimension, voxel_grid_dimension);
-    glBindImageTexture(gl_voxel_radiance_image_unit, gl_voxel_radiance_texture, 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+    glBindImageTexture(gl_voxel_radiance_image_unit, gl_voxel_radiance_texture, 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA32F);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glObjectLabel(GL_TEXTURE, gl_voxel_radiance_texture, -1, "Voxel radiance texture");
@@ -426,8 +427,8 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glActiveTexture(GL_TEXTURE0 + gl_voxel_opacity_texture_unit);
     glGenTextures(1, &gl_voxel_opacity_texture);
     glBindTexture(GL_TEXTURE_3D, gl_voxel_opacity_texture);
-    glTexStorage3D(GL_TEXTURE_3D, 1, GL_RGBA32F, voxel_grid_dimension, voxel_grid_dimension, voxel_grid_dimension);
-    glBindImageTexture(gl_voxel_opacity_image_unit, gl_voxel_opacity_texture, 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+    glTexStorage3D(GL_TEXTURE_3D, 1, GL_RGBA8, voxel_grid_dimension, voxel_grid_dimension, voxel_grid_dimension);
+    glBindImageTexture(gl_voxel_opacity_image_unit, gl_voxel_opacity_texture, 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA8);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glObjectLabel(GL_TEXTURE, gl_voxel_opacity_texture, -1, "Voxel opacity texture");
@@ -437,6 +438,47 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
       Log::error("Voxelization FBO not complete"); exit(1);
     }
+  }
+
+  /// Voxel visualization pass
+  if (voxel_visualization_enabled) {
+    voxel_visualization_shader = new Shader(Filesystem::base + "shaders/voxel-visualization.vert",
+                                            Filesystem::base + "shaders/voxel-visualization.geom",
+                                            Filesystem::base + "shaders/voxel-visualization.frag");
+
+    const auto program = voxel_visualization_shader->gl_program;
+    glUseProgram(program);
+
+    glGenFramebuffers(1, &gl_voxel_visualization_fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, gl_voxel_visualization_fbo);
+    glObjectLabel(GL_FRAMEBUFFER, gl_voxel_visualization_fbo, -1, "Voxel visualization FBO");
+
+    glActiveTexture(GL_TEXTURE0 + gl_lightning_texture_unit);
+    glGenTextures(1, &gl_voxel_visualization_texture);
+    glBindTexture(GL_TEXTURE_2D, gl_voxel_visualization_texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, screen.width, screen.height, 0, GL_RGBA, GL_FLOAT, nullptr);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_voxel_visualization_texture, 0);
+    glObjectLabel(GL_TEXTURE, gl_voxel_visualization_texture, -1, "Voxel visualization texture");
+
+    uint32_t fbo_attachments[1] = {GL_COLOR_ATTACHMENT0};
+    glDrawBuffers(1, fbo_attachments);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+      Log::error("Voxel visualization FBO not complete"); exit(1);
+    }
+
+    glGenVertexArrays(1, &gl_voxel_visualization_vao);
+    glBindVertexArray(gl_voxel_visualization_vao);
+
+    GLuint gl_vbo = 0;
+    glGenBuffers(1, &gl_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, gl_vbo);
+    const Vec3f vertex = Vec3f(1.0f, 1.0f, 1.0f);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(Vec3f), &vertex, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
+    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), nullptr);
   }
 
   /// Voxel cone tracing pass
@@ -454,6 +496,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glGenFramebuffers(1, &gl_vct_fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, gl_vct_fbo);
 
+    // TODO: Can be removed (along with other pointlight vestiges)
     GLuint gl_vct_rbo = 0;
     glGenRenderbuffers(1, &gl_vct_rbo);
     glBindRenderbuffer(GL_RENDERBUFFER, gl_vct_rbo);
@@ -692,6 +735,30 @@ void Renderer::render(const uint32_t delta) {
 		glDepthMask(GL_TRUE);
 		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 		glViewport(0, 0, screen.width, screen.height);
+
+    pass_ended();
+  }
+
+  if (voxel_visualization_enabled) {
+    pass_started("Voxel visualization");
+
+    const auto program = voxel_visualization_shader->gl_program;
+    glUseProgram(program);
+    glBindFramebuffer(GL_FRAMEBUFFER, gl_voxel_visualization_fbo);
+    glBindVertexArray(gl_voxel_visualization_vao);
+
+    glActiveTexture(GL_TEXTURE0 + gl_lightning_texture_unit);
+    glBindTexture(GL_TEXTURE_2D, gl_voxel_visualization_texture);
+
+    glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(camera_transform));
+    glUniform1i(glGetUniformLocation(program, "uVoxelOpacity"), gl_voxel_opacity_image_unit);
+    glUniform1i(glGetUniformLocation(program, "uVoxelRadiance"), gl_voxel_radiance_image_unit);
+    glUniform1f(glGetUniformLocation(program, "aabb_max_dimension"), scene_aabb.max_dimension());
+    glUniform1ui(glGetUniformLocation(program, "voxel_grid_dimension"), voxel_grid_dimension);
+    glUniform3fv(glGetUniformLocation(program, "aabb_min"), 1, &scene_aabb.min.x);
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glDrawArraysInstanced(GL_POINTS, 0, 1, voxel_grid_dimension * voxel_grid_dimension * voxel_grid_dimension);
 
     pass_ended();
   }
