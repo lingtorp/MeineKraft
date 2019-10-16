@@ -8,17 +8,19 @@
 #include <GL/glew.h>
 #endif
 
-#include "camera.hpp"
-#include "graphicsbatch.hpp"
-#include "../util/filesystem.hpp"
-#include "debug_opengl.hpp"
-#include "rendercomponent.hpp"
-#include "meshmanager.hpp"
+#include "../nodes/model.hpp"
 #include "../nodes/entity.hpp"
+#include "../util/filesystem.hpp"
+
+#include "camera.hpp"
+#include "debug_opengl.hpp"
+#include "graphicsbatch.hpp"
+#include "meshmanager.hpp"
+#include "rendercomponent.hpp"
 
 #include <glm/common.hpp>
-#include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 /// Draw struct taken from OpenGL (see: glMultiDrawElementsIndirect)
 struct DrawElementsIndirectCommand {
@@ -26,14 +28,15 @@ struct DrawElementsIndirectCommand {
   uint32_t instanceCount = 0; // # instances (kind of drawcalls)
   uint32_t firstIndex = 0;    // index of the first element in the EBO
   uint32_t baseVertex = 0;    // indices[i] + baseVertex
-  uint32_t baseInstance = 0;  // instance = [gl_InstanceID / divisor] + baseInstance
-  uint32_t padding0 = 0;      // Padding due to GLSL layout std140 16B alignment rule
+  uint32_t baseInstance =
+      0;                 // instance = [gl_InstanceID / divisor] + baseInstance
+  uint32_t padding0 = 0; // Padding due to GLSL layout std140 16B alignment rule
   uint32_t padding1 = 0;
   uint32_t padding2 = 0;
 };
 
 /// Pass handling code - used for debuggging at this moment
-inline void pass_started(const std::string& msg) {
+inline void pass_started(const std::string &msg) {
 #if defined(__LINUX__) || defined(WIN32)
   glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, msg.c_str());
 #endif
@@ -199,7 +202,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_geometric_normal_texture, 0);
-  glObjectLabel(GL_TEXTURE, gl_geometric_normal_texture, -1, "GBuffer normal texture");
+  glObjectLabel(GL_TEXTURE, gl_geometric_normal_texture, -1, "GBuffer geometric normal texture");
 
   // Global position buffer
   gl_position_texture_unit = Renderer::get_next_free_texture_unit();
@@ -415,7 +418,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glActiveTexture(GL_TEXTURE0 + gl_voxel_radiance_texture_unit);
     glGenTextures(1, &gl_voxel_radiance_texture);
     glBindTexture(GL_TEXTURE_3D, gl_voxel_radiance_texture);
-    glTexStorage3D(GL_TEXTURE_3D, 1, GL_RGBA32F, voxel_grid_dimension, voxel_grid_dimension, voxel_grid_dimension);
+    glTexStorage3D(GL_TEXTURE_3D, 4, GL_RGBA32F, voxel_grid_dimension, voxel_grid_dimension, voxel_grid_dimension);
     glBindImageTexture(gl_voxel_radiance_image_unit, gl_voxel_radiance_texture, 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA32F);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -427,7 +430,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glActiveTexture(GL_TEXTURE0 + gl_voxel_opacity_texture_unit);
     glGenTextures(1, &gl_voxel_opacity_texture);
     glBindTexture(GL_TEXTURE_3D, gl_voxel_opacity_texture);
-    glTexStorage3D(GL_TEXTURE_3D, 1, GL_RGBA8, voxel_grid_dimension, voxel_grid_dimension, voxel_grid_dimension);
+    glTexStorage3D(GL_TEXTURE_3D, 4, GL_RGBA8, voxel_grid_dimension, voxel_grid_dimension, voxel_grid_dimension);
     glBindImageTexture(gl_voxel_opacity_image_unit, gl_voxel_opacity_texture, 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA8);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -534,18 +537,13 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
   glEnable(GL_CULL_FACE);
   glCullFace(GL_BACK);
-
-  /// Camera
-  const auto position = Vec3f(3.0f);
-  const auto direction = Vec3f(-1.5f);
-  camera = new Camera(position, direction);
 }
 
 void Renderer::render(const uint32_t delta) {
   state = RenderState(state);
   state.frame++;
 
-  const glm::mat4 camera_transform = projection_matrix * camera->transform(); // TODO: Camera handling needs to be reworked
+  const glm::mat4 camera_transform = projection_matrix * scene->camera->transform(); // TODO: Camera handling needs to be reworked
 
   /// Renderer caches the transforms of components thus we need to fetch the ones who changed during the last frame
   if (state.frame % 10 == 0) {
@@ -612,7 +610,7 @@ void Renderer::render(const uint32_t delta) {
   }
 
   pass_started("Directional shadow mapping pass");
-  const glm::mat4 light_space_transform = shadowmap_transform(scene_aabb, directional_light);
+  const glm::mat4 light_space_transform = shadowmap_transform(scene->aabb, directional_light);
   {
     glCullFace(GL_FRONT);
     glBindFramebuffer(GL_FRAMEBUFFER, gl_shadowmapping_fbo);
@@ -652,7 +650,7 @@ void Renderer::render(const uint32_t delta) {
       glBindVertexArray(batch.gl_depth_vao);
       glBindBuffer(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo); // GL_DRAW_INDIRECT_BUFFER is global context state
 
-			const glm::mat4 ortho = orthographic_projection(scene_aabb);
+			const glm::mat4 ortho = orthographic_projection(scene->aabb);
 			glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(ortho));
 			glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(camera_transform));
 
@@ -682,7 +680,9 @@ void Renderer::render(const uint32_t delta) {
     pass_ended();
   }
 
-  if (true) {
+  static bool voxelize = true;
+  if (voxelize) {
+    voxelize = false;
 		pass_started("Voxelization pass");
 		glClearTexImage(gl_voxel_radiance_texture, 0, GL_RGBA, GL_FLOAT, nullptr); // Clear all values
     glClearTexImage(gl_voxel_opacity_texture, 0, GL_RGBA, GL_FLOAT, nullptr);
@@ -692,13 +692,13 @@ void Renderer::render(const uint32_t delta) {
 		glUseProgram(program);
 
 		// Orthogonal projection along +z-axis
-		const glm::mat4 ortho = orthographic_projection(scene_aabb);
+		const glm::mat4 ortho = orthographic_projection(scene->aabb);
 		glUniformMatrix4fv(glGetUniformLocation(program, "ortho"), 1, GL_FALSE, glm::value_ptr(ortho));
 
-    const float voxel_scaling_factor = 1.0f / scene_aabb.max_dimension();
+    const float voxel_scaling_factor = 1.0f / scene->aabb.max_dimension();
     glUniform1f(glGetUniformLocation(program, "scaling_factor"), voxel_scaling_factor);
 
-    const Vec3f aabb_center = scene_aabb.center();
+    const Vec3f aabb_center = scene->aabb.center();
     glUniform3fv(glGetUniformLocation(program, "aabb_center"), 1, &aabb_center.x);
 
     glUniform3fv(glGetUniformLocation(program, "light_direction"), 1, &directional_light.direction.x);
@@ -728,7 +728,10 @@ void Renderer::render(const uint32_t delta) {
 		}
 
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT); // Due to incoherent mem. access need to sync read and usage of voxel data
-	
+
+    glGenerateTextureMipmap(gl_voxel_opacity_texture);
+    glGenerateTextureMipmap(gl_voxel_radiance_texture);
+
 		// Restore modified global state
     glEnable(GL_DEPTH_TEST);
 		glEnable(GL_CULL_FACE);
@@ -753,9 +756,9 @@ void Renderer::render(const uint32_t delta) {
     glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(camera_transform));
     glUniform1i(glGetUniformLocation(program, "uVoxelOpacity"), gl_voxel_opacity_image_unit);
     glUniform1i(glGetUniformLocation(program, "uVoxelRadiance"), gl_voxel_radiance_image_unit);
-    glUniform1f(glGetUniformLocation(program, "aabb_max_dimension"), scene_aabb.max_dimension());
+    glUniform1f(glGetUniformLocation(program, "aabb_max_dimension"), scene->aabb.max_dimension());
     glUniform1ui(glGetUniformLocation(program, "voxel_grid_dimension"), voxel_grid_dimension);
-    glUniform3fv(glGetUniformLocation(program, "aabb_min"), 1, &scene_aabb.min.x);
+    glUniform3fv(glGetUniformLocation(program, "aabb_min"), 1, &scene->aabb.min.x);
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glDrawArraysInstanced(GL_POINTS, 0, 1, voxel_grid_dimension * voxel_grid_dimension * voxel_grid_dimension);
@@ -774,17 +777,21 @@ void Renderer::render(const uint32_t delta) {
 
 		glActiveTexture(GL_TEXTURE0 + gl_lightning_texture_unit);
 		glBindTexture(GL_TEXTURE_2D, gl_vct_texture);
-    
-    glUniform1f(glGetUniformLocation(program, "uScreen_width"), (float) screen.width);
-    glUniform1f(glGetUniformLocation(program, "uScreen_height"), (float) screen.height);
+
+    const float voxel_scaling_factor = 1.0f / scene->aabb.max_dimension();
+    glUniform1f(glGetUniformLocation(program, "uScaling_factor"), voxel_scaling_factor);
+
+    const Vec3f aabb_center = scene->aabb.center();
+    glUniform3fv(glGetUniformLocation(program, "uAABB_center"), 1, &aabb_center.x);
+
+    glUniform1ui(glGetUniformLocation(program, "uVoxel_grid_dimension"), voxel_grid_dimension);
+    glUniform1f(glGetUniformLocation(program, "uScreen_width"), (float)screen.width);
+    glUniform1f(glGetUniformLocation(program, "uScreen_height"), (float)screen.height);
     glUniform1i(glGetUniformLocation(program, "uDiffuse"), gl_diffuse_texture_unit);
     glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "uNormal"), gl_geometric_normal_texture_unit);
     glUniform1i(glGetUniformLocation(program, "uVoxelRadiance"), gl_voxel_radiance_texture_unit);
     glUniform1i(glGetUniformLocation(program, "uVoxelOpacity"), gl_voxel_opacity_texture_unit);
-    glUniform3fv(glGetUniformLocation(program, "uCamera_position"), 1, &camera->position.x);
-
-		const Vec3f aabb_size = Vec3f(scene_aabb.width(), scene_aabb.height(), scene_aabb.breadth());
-		glUniform3fv(glGetUniformLocation(program, "aabb_size"), 1, &aabb_size.x);
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
@@ -821,7 +828,7 @@ void Renderer::render(const uint32_t delta) {
     glUniform1i(glGetUniformLocation(program, "shadowmapping"), state.shadowmapping);
     glUniform1i(glGetUniformLocation(program, "normalmapping"), state.normalmapping);
 
-    glUniform3fv(glGetUniformLocation(program, "camera"), 1, &camera->position.x);
+    glUniform3fv(glGetUniformLocation(program, "camera"), 1, &scene->camera->position.x);
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
