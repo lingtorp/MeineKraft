@@ -95,8 +95,6 @@ struct OpenGLContextInfo {
   int max_texture_array_layers;
   int max_image_texture_units;
 
-  bool GL_NV_shader_atomic_float_supported = false;
-
   OpenGLContextInfo(const size_t gl_major_version,
                     const size_t gl_minor_version) {
     #if defined(WIN32) || defined(__LINUX__)
@@ -125,11 +123,6 @@ struct OpenGLContextInfo {
     }
     delete extensions;
     #endif
-
-    // Handle extensions
-    if (glewIsExtensionSupported("GL_NV_shader_atomic_float")) {
-      GL_NV_shader_atomic_float_supported = true;
-    }
 
     glGetIntegerv(GL_MAX_DRAW_BUFFERS, &max_draw_buffers);
     Log::info("Max draw buffers: " + std::to_string(max_draw_buffers));
