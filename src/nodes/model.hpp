@@ -2,6 +2,7 @@
 #ifndef MEINEKRAFT_MODEL_HPP
 #define MEINEKRAFT_MODEL_HPP
 
+#include "../rendering/camera.hpp"
 #include "entity.hpp"
 #include "../rendering/rendercomponent.hpp"
 
@@ -13,6 +14,7 @@ public:
 
 struct Scene {
 	AABB aabb;
+  Camera* camera;
   Scene(const std::string& directory, const std::string& file);
 };
 

@@ -20,6 +20,7 @@ struct Shader;
 struct ComputeShader;
 struct Material;
 struct Texture;
+struct Scene;
 
 struct Renderer {
   /// Create a renderer with a given window/screen size/resolution
@@ -45,8 +46,7 @@ struct Renderer {
   // Rudimentary rendering pipeline for now
   std::vector<RenderPass> render_passes;
 
-	AABB scene_aabb;
-  Camera* camera = nullptr;
+	Scene *scene = nullptr;
   RenderState state;
   glm::mat4 projection_matrix; 
   Resolution screen;

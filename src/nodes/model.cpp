@@ -63,4 +63,9 @@ Scene::Scene(const std::string& directory, const std::string& file) {
   Log::info(aabb);
   Log::info("Center: " + aabb.center().to_string());
   Log::info("Size(dx, dy, dz): " + std::to_string(aabb.width()) + ", " + std::to_string(aabb.height()) + ", " + std::to_string(aabb.breadth()));
+
+  // Root scene Camera
+  const auto position = aabb.center();
+  const auto direction = Vec3f(0.0f, 0.0f, 1.0f);
+  this->camera = new Camera(position, direction);
 }

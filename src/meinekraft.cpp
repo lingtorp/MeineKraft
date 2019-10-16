@@ -105,8 +105,7 @@ MeineKraft::MeineKraft() {
 }
 
 void MeineKraft::init() {
-	Scene scene{ Filesystem::home + "Desktop/Meinekraft/Sponza/",  "Sponza.gltf" };
-  renderer->scene_aabb = scene.aabb;
+	renderer->scene = new Scene{ Filesystem::home + "Desktop/Meinekraft/Sponza/",  "Sponza.gltf" };
 }
 
 MeineKraft::~MeineKraft() {
@@ -141,11 +140,9 @@ void MeineKraft::mainloop() {
         switch (event.type) {
         case SDL_MOUSEMOTION:
           if (toggle_mouse_capture) { break; }
-          // renderer.camera->pitch = 0;
-          // renderer.camera->yaw = 0;
-          renderer->camera->pitch += event.motion.yrel;
-          renderer->camera->yaw += event.motion.xrel;
-          renderer->camera->direction = renderer->camera->recalculate_direction();
+          renderer->scene->camera->pitch += event.motion.yrel;
+          renderer->scene->camera->yaw += event.motion.xrel;
+          renderer->scene->camera->direction = renderer->scene->camera->recalculate_direction();
           break;
 
         case SDL_KEYDOWN:
@@ -160,22 +157,22 @@ void MeineKraft::mainloop() {
 						renderer->state.camera_selection = 2;
 						break;
           case SDLK_w:
-            renderer->camera->move_forward(true);
+            renderer->scene->camera->move_forward(true);
             break;
           case SDLK_a:
-            renderer->camera->move_left(true);
+            renderer->scene->camera->move_left(true);
             break;
           case SDLK_s:
-            renderer->camera->move_backward(true);
+            renderer->scene->camera->move_backward(true);
             break;
           case SDLK_d:
-            renderer->camera->move_right(true);
+            renderer->scene->camera->move_right(true);
             break;
           case SDLK_q:
-            renderer->camera->move_down(true);
+            renderer->scene->camera->move_down(true);
             break;
           case SDLK_e:
-            renderer->camera->move_up(true);
+            renderer->scene->camera->move_up(true);
             break;
           case SDLK_TAB:
             toggle_mouse_capture = !toggle_mouse_capture;
@@ -188,23 +185,23 @@ void MeineKraft::mainloop() {
 
         case SDL_KEYUP:
           switch (event.key.keysym.sym) {
-            case SDLK_w:
-              renderer->camera->move_forward(false);
-              break;
-            case SDLK_a:
-              renderer->camera->move_left(false);
-              break;
-            case SDLK_s:
-              renderer->camera->move_backward(false);
-              break;
-            case SDLK_d:
-              renderer->camera->move_right(false);
-              break;
-            case SDLK_q:
-              renderer->camera->move_down(false);
-              break;
-            case SDLK_e:
-              renderer->camera->move_up(false);
+          case SDLK_w:
+            renderer->scene->camera->move_forward(false);
+            break;
+          case SDLK_a:
+            renderer->scene->camera->move_left(false);
+            break;
+          case SDLK_s:
+            renderer->scene->camera->move_backward(false);
+            break;
+          case SDLK_d:
+            renderer->scene->camera->move_right(false);
+            break;
+          case SDLK_q:
+            renderer->scene->camera->move_down(false);
+            break;
+          case SDLK_e:
+            renderer->scene->camera->move_up(false);
           }
 
         case SDL_WINDOWEVENT:
@@ -221,7 +218,7 @@ void MeineKraft::mainloop() {
           break;
       }
     }
-    renderer->camera->position = renderer->camera->update(delta);
+    renderer->scene->camera->position = renderer->scene->camera->update(delta);
 
     /// Run all actions
     ActionSystem::instance().execute_actions(renderer->state.frame, delta);
@@ -249,8 +246,8 @@ void MeineKraft::mainloop() {
         ImGui::PlotLines("", deltas, num_deltas, 0, "ms / frame", 0.0f, 50.0f, ImVec2(ImGui::GetWindowWidth(), 100));
 
         if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
-          ImGui::InputFloat3("Position##camera", &renderer->camera->position.x);
-          ImGui::InputFloat3("Direction##camera", &renderer->camera->direction.x);
+          ImGui::InputFloat3("Position##camera", &renderer->scene->camera->position.x);
+          ImGui::InputFloat3("Direction##camera", &renderer->scene->camera->direction.x);
         }
 
         // Point lights
