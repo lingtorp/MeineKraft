@@ -4,9 +4,8 @@ in vec3 fPosition; // World space position
 in vec2 fTextureCoord;
 
 uniform uint voxel_grid_dimension;
-layout(RGBA8) uniform writeonly image3D uVoxelRadiance; // restrict
-// FIXME: Does not work for RG8 ...
-layout(RGBA8) uniform writeonly image3D uVoxelOpacity; // restrict
+layout(RGBA8) uniform writeonly image3D uVoxelRadiance; 
+layout(RGBA8) uniform writeonly image3D uVoxelOpacity; 
 
 uniform sampler2DArray uDiffuse;
 uniform sampler2D uShadowmap;
@@ -35,9 +34,10 @@ uint conv_vec4_to_uint(vec4 v) {
               (uint(v.y) & 0x000000FF) << 8U | uint(v.x) & 0x000000FF);
 }
 
-void atomic_add_radiance_to_voxel(layout(R32UI) coherent volatile uimage3D voxels,
-                                  const vec3 radiance, const ivec3 vpos) {
-  uint new_value = conv_vec4_to_uint(vec4(radiance, 1.0));
+void atomic_moving_avg_radiance_to_voxel(layout(R32UI) coherent volatile uimage3D voxels,
+                                  const vec4 radiance,
+                                  const ivec3 vpos) {
+  uint new_value = conv_vec4_to_uint(radiance);
   uint curr_value = 0;
   uint prev_value = 0;
   // Compute moving average until value settles
@@ -69,9 +69,9 @@ void main() {
     const bool shadow = closest_shadowmap_depth < voxel_depth - shadow_bias ? true : false;
     if (!shadow) {
       const vec3 diffuse = texture(uDiffuse, vec3(fTextureCoord, 0)).rgb;
-      const vec3 radiance = diffuse * max(dot(light_direction, fNormal), 0.0);
-      imageStore(uVoxelRadiance, vpos, vec4(radiance, 1.0));
-      // atomic_add_radiance_to_voxel(uVoxelRadiance, radiance, vpos);
+      const vec4 radiance = vec4(diffuse * max(dot(light_direction, fNormal), 0.0), 1.0);
+      imageStore(uVoxelRadiance, vpos, radiance);
+      // atomic_moving_avg_radiance_to_voxel(uVoxelRadiance, radiance, vpos);
     }
   }
 
