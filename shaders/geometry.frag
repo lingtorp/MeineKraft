@@ -40,7 +40,7 @@ void main() {
     const Material material = materials[fInstance_idx];
 
     gTangent = fTangent;
-    gGeometricNormal = fGeometricNormal;
+    gGeometricNormal = normalize(fGeometricNormal);
     gTangentNormal = texture(tangent_normal, fTexcoord).xyz;
     gPosition = fPosition;
     
