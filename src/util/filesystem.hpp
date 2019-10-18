@@ -23,6 +23,8 @@ namespace Filesystem {
   const std::string home = "C:/Users/Alexander/";
 #endif
 
+  const std::string tmp = Filesystem::base + "tmp/";
+
   /// Check whether a file exists or not
   inline bool file_exists(const std::string& filename) {
     std::ifstream ifs(filename);
