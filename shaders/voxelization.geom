@@ -1,5 +1,5 @@
 
-// #define CONSERVATIVE_RASTERIZATION_ON
+uniform bool conservative_rasterization_enabled;
 
 layout(triangles) in;
 
@@ -49,16 +49,16 @@ void main() {
       }
     }
 
-    #ifdef CONSERVATIVE_RASTERIZATION_ON
-    // Enlarge the triangle with one texel size
-    vec2 side0N = normalize(gs_out[1].xy - gs_out[0].xy);
-    vec2 side1N = normalize(gs_out[2].xy - gs_out[1].xy);
-    vec2 side2N = normalize(gs_out[0].xy - gs_out[2].xy);
-    const float texel_size = 1.0 / float(voxel_grid_dimension);
-    gs_out[0].xy += normalize(-side0N + side2N) * texel_size;
-    gs_out[1].xy += normalize(side0N - side1N)  * texel_size;
-    gs_out[2].xy += normalize(side1N - side2N)  * texel_size;
-    #endif
+    if (conservative_rasterization_enabled) {
+      // Enlarge the triangle with one texel size
+      vec2 side0N = normalize(gs_out[1].xy - gs_out[0].xy);
+      vec2 side1N = normalize(gs_out[2].xy - gs_out[1].xy);
+      vec2 side2N = normalize(gs_out[0].xy - gs_out[2].xy);
+      const float texel_size = 1.0 / float(voxel_grid_dimension);
+      gs_out[0].xy += normalize(-side0N + side2N) * texel_size;
+      gs_out[1].xy += normalize(side0N - side1N)  * texel_size;
+      gs_out[2].xy += normalize(side1N - side2N)  * texel_size;
+    }
 
     // Emit the enlarged vertices
     for (uint i = 0; i < 3; i++) {
