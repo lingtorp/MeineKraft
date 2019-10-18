@@ -255,9 +255,20 @@ void MeineKraft::mainloop() {
         ImGui::PlotLines("", deltas, num_deltas, 0, "ms / frame", 0.0f, 50.0f, ImVec2(ImGui::GetWindowWidth(), 100));
 
         ImGui::Checkbox("Normal mapping", &renderer->state.normalmapping);
-        // ImGui::Checkbox("Direct lighting",
-        // &renderer->state.direct_lighting); ImGui::Checkbox("Indirect
-        // lighting", &renderer->state.indirect_lighting);
+        ImGui::Checkbox("Conservative raster.", &renderer->state.conservative_rasterization);
+
+        if (ImGui::Button("Voxelize")) {
+          renderer->state.voxelize = true;
+        }
+
+        ImGui::Checkbox("Direct", &renderer->state.direct_lighting);
+        ImGui::Checkbox("Indirect", &renderer->state.indirect_lighting);
+
+        ImGui::InputInt("Cone steps", &renderer->state.max_cone_sample_steps);
+        ImGui::InputFloat("Roughness", &renderer->state.roughness);
+        ImGui::InputFloat("Metallic", &renderer->state.metallic);
+        ImGui::InputFloat("Roughness aperature (deg.)", &renderer->state.roughness_aperature);
+        ImGui::InputFloat("Metallic aperature (deg.)", &renderer->state.metallic_aperature);
 
         if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
           ImGui::InputFloat3("Position##camera", &renderer->scene->camera->position.x);
@@ -265,6 +276,13 @@ void MeineKraft::mainloop() {
           if (ImGui::Button("Reset camera")) {
             renderer->scene->reset_camera();
           }
+        }
+
+        // Directional light
+        const std::string directional_light_title = "Directional light";
+        if (ImGui::CollapsingHeader(directional_light_title.c_str())) {
+          ImGui::InputFloat3("Position##directional_light", &renderer->directional_light.position.x);
+          ImGui::InputFloat3("Direction##directional_light", &renderer->directional_light.direction.x);
         }
 
         // Point lights
@@ -279,14 +297,6 @@ void MeineKraft::mainloop() {
             }
             ImGui::PopID();
           }
-        }
-
-        // Directional light
-        const std::string directionallights_title = "Directional light";
-        if (ImGui::CollapsingHeader(directionallights_title.c_str())) {
-          ImGui::Checkbox("Shadowmapping", &renderer->state.shadowmapping);
-          ImGui::InputFloat3("Position##directional_light", &renderer->directional_light.position.x);
-          ImGui::InputFloat3("Direction##directional_light", &renderer->directional_light.direction.x);
         }
 
         // Graphics batches
