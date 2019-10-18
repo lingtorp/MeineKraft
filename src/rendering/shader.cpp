@@ -17,9 +17,14 @@ static const char* GLSL_VERSION = "#version 450 core \n";
 static const char* GLSL_VERSION = "#version 460 core \n";
 #endif
 
-ComputeShader::ComputeShader(const std::string& compute_filepath) {
+ComputeShader::ComputeShader(const std::string& compute_filepath,
+                             const std::vector<std::string>& defines) {
   GLuint gl_comp_shader = glCreateShader(GL_COMPUTE_SHADER);
   std::string comp_src = Filesystem::read_file(compute_filepath);
+
+  for (const std::string& define : defines) {
+    comp_src.insert(0, define);
+  }
 
   // Insert the define into the shader src
   comp_src.insert(0, GLSL_VERSION);

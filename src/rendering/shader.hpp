@@ -43,7 +43,8 @@ struct Shader {
 };
 
 struct ComputeShader {
-  ComputeShader(const std::string& compute_filepath);
+  ComputeShader(const std::string& compute_filepath,
+                const std::vector<std::string>& defines = {});
   uint32_t gl_program;
 };
 
