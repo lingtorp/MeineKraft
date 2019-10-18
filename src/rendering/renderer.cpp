@@ -776,13 +776,25 @@ void Renderer::render(const uint32_t delta) {
 		glUseProgram(program);
 
 		glActiveTexture(GL_TEXTURE0 + gl_lightning_texture_unit);
-		glBindTexture(GL_TEXTURE_2D, gl_vct_texture);
+		glBindTexture(GL_TEXTURE_2D, gl_vct_texture);  
+
+    glUniform3fv(glGetUniformLocation(program, "uCamera_position"), 1, &scene->camera->position.x);
+
+    const Vec3f cone_directions[4] = {Vec3f( 0.5f,  0.0f, 0.5f),
+                                      Vec3f( 0.0f,  0.5f, 0.5f),
+                                      Vec3f(-0.5f,  0.0f, 0.5f),
+                                      Vec3f( 0.0f, -0.5f, 0.5f)};
+    glUniform3fv(glGetUniformLocation(program, "uCone_directions"), 4, &cone_directions[0].x);
+
+    glUniform1i(glGetUniformLocation(program, "normalmapping"), state.normalmapping);
 
     const float voxel_scaling_factor = 1.0f / scene->aabb.max_dimension();
     glUniform1f(glGetUniformLocation(program, "uScaling_factor"), voxel_scaling_factor);
 
     const Vec3f aabb_center = scene->aabb.center();
     glUniform3fv(glGetUniformLocation(program, "uAABB_center"), 1, &aabb_center.x);
+    glUniform3fv(glGetUniformLocation(program, "uAABB_min"), 1, &scene->aabb.min.x);
+    glUniform3fv(glGetUniformLocation(program, "uAABB_max"), 1, &scene->aabb.max.x);
 
     glUniform1ui(glGetUniformLocation(program, "uVoxel_grid_dimension"), voxel_grid_dimension);
     glUniform1f(glGetUniformLocation(program, "uScreen_width"), (float)screen.width);
@@ -792,8 +804,11 @@ void Renderer::render(const uint32_t delta) {
     glUniform1i(glGetUniformLocation(program, "uNormal"), gl_geometric_normal_texture_unit);
     glUniform1i(glGetUniformLocation(program, "uVoxelRadiance"), gl_voxel_radiance_texture_unit);
     glUniform1i(glGetUniformLocation(program, "uVoxelOpacity"), gl_voxel_opacity_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "uPBR_parameters"), gl_pbr_parameters_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "uTangent_normal"), gl_tangent_normal_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "uTangent"), gl_tangent_texture_unit);
 
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
     pass_ended();

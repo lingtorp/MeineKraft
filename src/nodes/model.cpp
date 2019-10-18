@@ -73,3 +73,11 @@ Scene::Scene(const std::string& directory, const std::string& file) {
   const auto direction = Vec3f(0.0f, 0.0f, 1.0f);
   this->camera = new Camera(position, direction);
 }
+
+void Scene::reset_camera() {
+  if (camera) {
+    camera->position = aabb.center();
+  } else {
+    Log::error("Tried to reset non existing camera in Scene");
+  }
+}

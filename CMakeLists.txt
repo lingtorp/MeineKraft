@@ -6,7 +6,7 @@ if(UNIX)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread") # pthread for Linux
 endif(UNIX)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -24,6 +24,7 @@ include_directories(include/assimp)
 include_directories(include/glew)
 include_directories(include/sdl2)
 include_directories(include/sdl2-image)
+include_directories(include/json)
 
 set(MATH_SRC_FILES "src/math/noise.hpp" "src/math/vector.hpp" "src/math/quaternion.hpp")
 source_group("math" FILES ${MATH_SRC_FILES})
@@ -39,7 +40,7 @@ set(RENDER_SRC_FILES "src/rendering/shader.cpp" "src/rendering/shader.hpp" "src/
         "src/rendering/renderpass.hpp" "src/rendering/renderpass.cpp")
 source_group("render" FILES ${RENDER_SRC_FILES})
 
-set(UTIL_SRC_FILES "src/util/filemonitor.cpp" "src/util/filemonitor.hpp" "src/util/filesystem.hpp" "src/util/logging.hpp")
+set(UTIL_SRC_FILES "src/util/filemonitor.cpp" "src/util/filemonitor.hpp" "src/util/filesystem.hpp" "src/util/logging.hpp" "src/util/config.hpp" "src/util/config.cpp")
 source_group("util" FILES ${UTIL_SRC_FILES})
 
 set(SCENE_SRC_FILES "src/scene/world.cpp" "src/scene/world.hpp")

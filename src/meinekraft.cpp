@@ -12,6 +12,7 @@
 #include "nodes/skybox.hpp"
 #include "scene/world.hpp"
 #include "rendering/graphicsbatch.hpp"
+#include "util/config.hpp"
 
 void imgui_styling() {
   ImGuiStyle* style = &ImGui::GetStyle();
@@ -94,7 +95,7 @@ MeineKraft::MeineKraft() {
   OpenGLContextInfo gl_context_info(4, OPENGL_MINOR_VERSION);
 
   atexit(IMG_Quit);
-  IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG);
+  IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG); 
   
   ImGui_ImplSdlGL3_Init(window);
 
@@ -105,7 +106,16 @@ MeineKraft::MeineKraft() {
 }
 
 void MeineKraft::init() {
-	renderer->scene = new Scene{ Filesystem::home + "Desktop/Meinekraft/Sponza/",  "Sponza.gltf" };
+  const auto config = Config::load_config();
+  const std::string path = config["scene"]["path"].get<std::string>();
+  const std::string name = config["scene"]["name"].get<std::string>();
+	renderer->scene = new Scene{ Filesystem::home + path,  name };
+  // renderer->scene->camera->position.x = config["scene"]["camera"]["position"][0].get<float>();
+  // renderer->scene->camera->position.x = config["scene"]["camera"]["position"][1];
+  // renderer->scene->camera->position.x = config["scene"]["camera"]["position"][2];
+  // renderer->scene->camera->position.x = config["scene"]["camera"]["direction"][0];
+  // renderer->scene->camera->position.x = config["scene"]["camera"]["direction"][1];
+  // renderer->scene->camera->position.x = config["scene"]["camera"]["direction"][2];
 }
 
 MeineKraft::~MeineKraft() {
@@ -239,15 +249,22 @@ void MeineKraft::mainloop() {
         ImGui::Text("Frame: %lu", renderer->state.frame);
         ImGui::Text("Entities: %lu", renderer->state.entities);
         ImGui::Text("Average %lu ms / frame (%.1f FPS)", delta, io.Framerate);
-        ImGui::Checkbox("Normal mapping", &renderer->state.normalmapping);
 
         static size_t i = -1; i = (i + 1) % num_deltas;
         deltas[i] = float(delta);
         ImGui::PlotLines("", deltas, num_deltas, 0, "ms / frame", 0.0f, 50.0f, ImVec2(ImGui::GetWindowWidth(), 100));
 
+        ImGui::Checkbox("Normal mapping", &renderer->state.normalmapping);
+        // ImGui::Checkbox("Direct lighting",
+        // &renderer->state.direct_lighting); ImGui::Checkbox("Indirect
+        // lighting", &renderer->state.indirect_lighting);
+
         if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
           ImGui::InputFloat3("Position##camera", &renderer->scene->camera->position.x);
           ImGui::InputFloat3("Direction##camera", &renderer->scene->camera->direction.x);
+          if (ImGui::Button("Reset camera")) {
+            renderer->scene->reset_camera();
+          }
         }
 
         // Point lights
@@ -304,4 +321,5 @@ void MeineKraft::mainloop() {
     }
     SDL_GL_SwapWindow(window);
   }
+  Config::save_scene(renderer->scene);
 }

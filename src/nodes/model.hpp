@@ -16,6 +16,7 @@ struct Scene {
 	AABB aabb;
   Camera* camera;
   Scene(const std::string& directory, const std::string& file);
+  void reset_camera();  
 };
 
 #endif // MEINEKRAFT_MODEL_HPP
