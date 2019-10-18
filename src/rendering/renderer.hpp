@@ -73,8 +73,8 @@ private:
   uint32_t gl_shadowmapping_texture = 0;
   uint32_t gl_shadowmapping_texture_unit = 0;
   Shader* shadowmapping_shader = nullptr;
-  const uint32_t SHADOWMAP_W = 128; // Shadowmap texture dimensions
-  const uint32_t SHADOWMAP_H = 128;
+  const uint32_t SHADOWMAP_W = 1024; // Shadowmap texture dimensions
+  const uint32_t SHADOWMAP_H = SHADOWMAP_W;
 
   /// Lightning pass related
   Shader* lightning_shader = nullptr;
@@ -88,10 +88,11 @@ private:
   uint8_t* gl_pointlights_ssbo_ptr = nullptr;
 
   /// Voxelization pipeline related
-  const uint32_t voxel_grid_dimension = 128; // 256 ~ 60MB, 512 ~ 540MB (not counting mipmaps, adds ~33%)
+  const uint32_t voxel_grid_dimension = 32; // 256 ~ 60MB, 512 ~ 540MB (not counting mipmaps, adds ~33%)
   
   Shader* voxelization_shader = nullptr;
   uint32_t gl_voxelization_fbo = 0;
+  ComputeShader* voxelization_opacity_norm_shader = nullptr;
   
   Shader* vct_shader = nullptr;
   uint32_t gl_vct_fbo = 0;
