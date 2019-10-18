@@ -395,7 +395,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
 
     // Shaders
     shadowmapping_shader = new Shader(Filesystem::base + "shaders/shadowmapping.vert", 
-									  Filesystem::base + "shaders/shadowmapping.frag");
+                                      Filesystem::base + "shaders/shadowmapping.frag");
     std::tie(success, err_msg) = shadowmapping_shader->compile();
     if (!success) {
       Log::error("Could not compile directional shadow mapping shaders"); exit(1);
@@ -403,7 +403,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   }
 
   /// Voxelization pass
-  if (true) {
+  {
     voxelization_shader = new Shader(Filesystem::base + "shaders/voxelization.vert",
                                      Filesystem::base + "shaders/voxelization.geom",
                                      Filesystem::base + "shaders/voxelization.frag");
@@ -441,6 +441,11 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
       Log::error("Voxelization FBO not complete"); exit(1);
     }
+
+    // Opacity normalization compute shader subpass
+    voxelization_opacity_norm_shader = new ComputeShader(Filesystem::base + "shaders/opacity-normalization.geom",
+                                                         {"#define VOXEL_GRID_DIMENSION " + std::to_string(voxel_grid_dimension)});
+
   }
 
   /// Voxel visualization pass
@@ -680,9 +685,8 @@ void Renderer::render(const uint32_t delta) {
     pass_ended();
   }
 
-  static bool voxelize = true;
-  if (voxelize) {
-    voxelize = false;
+  if (state.voxelize) {
+    state.voxelize = false;
 		pass_started("Voxelization pass");
 		glClearTexImage(gl_voxel_radiance_texture, 0, GL_RGBA, GL_FLOAT, nullptr); // Clear all values
     glClearTexImage(gl_voxel_opacity_texture, 0, GL_RGBA, GL_FLOAT, nullptr);
@@ -707,6 +711,8 @@ void Renderer::render(const uint32_t delta) {
     glUniform1i(glGetUniformLocation(program, "uVoxelOpacity"), gl_voxel_opacity_image_unit);
     glUniform1i(glGetUniformLocation(program, "uShadowmap"), gl_shadowmapping_texture_unit);
     glUniformMatrix4fv(glGetUniformLocation(program, "light_space_transform"), 1, GL_FALSE, glm::value_ptr(light_space_transform));
+
+    glUniform1i(glGetUniformLocation(program, "conservative_rasterization_enabled"), state.conservative_rasterization);
 
     glDisable(GL_DEPTH_TEST);
     glDepthMask(GL_FALSE);
@@ -739,11 +745,20 @@ void Renderer::render(const uint32_t delta) {
 		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 		glViewport(0, 0, screen.width, screen.height);
 
+    if (false) {
+      pass_started("Opacity normalization subpass");
+
+      glUseProgram(voxelization_opacity_norm_shader->gl_program);
+      glDispatchCompute(voxel_grid_dimension, voxel_grid_dimension, voxel_grid_dimension);
+
+      pass_ended();
+    }
+
     pass_ended();
   }
 
   if (voxel_visualization_enabled) {
-    pass_started("Voxel visualization");
+    pass_started("Voxel visualization pass");
 
     const auto program = voxel_visualization_shader->gl_program;
     glUseProgram(program);
@@ -752,6 +767,7 @@ void Renderer::render(const uint32_t delta) {
 
     glActiveTexture(GL_TEXTURE0 + gl_lightning_texture_unit);
     glBindTexture(GL_TEXTURE_2D, gl_voxel_visualization_texture);
+
 
     glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(camera_transform));
     glUniform1i(glGetUniformLocation(program, "uVoxelOpacity"), gl_voxel_opacity_image_unit);
@@ -777,6 +793,21 @@ void Renderer::render(const uint32_t delta) {
 
 		glActiveTexture(GL_TEXTURE0 + gl_lightning_texture_unit);
 		glBindTexture(GL_TEXTURE_2D, gl_vct_texture);  
+
+    // User customizable
+    glUniform1i(glGetUniformLocation(program, "uDirect_lighting"), state.direct_lighting);
+    glUniform1i(glGetUniformLocation(program, "uIndirect_lighting"), state.indirect_lighting);
+    glUniform1i(glGetUniformLocation(program, "uMax_steps"), state.max_cone_sample_steps);
+    glUniform1f(glGetUniformLocation(program, "uRoughness"), state.roughness);
+    const float roughness_aperature = glm::radians(state.roughness_aperature);
+    glUniform1f(glGetUniformLocation(program, "uRoughness_aperature"), roughness_aperature);
+    glUniform1f(glGetUniformLocation(program, "uMetallic"), state.metallic);
+    const float metallic_aperature = glm::radians(state.metallic_aperature);
+    glUniform1f(glGetUniformLocation(program, "uMetallic_aperature"), metallic_aperature);
+
+    // Shadowmapping
+    glUniformMatrix4fv(glGetUniformLocation(program, "uLight_space_transform"), 1, GL_FALSE, glm::value_ptr(light_space_transform));
+    glUniform1i(glGetUniformLocation(program, "uShadowmap"), gl_shadowmapping_texture_unit);
 
     glUniform3fv(glGetUniformLocation(program, "uCamera_position"), 1, &scene->camera->position.x);
 
