@@ -10,8 +10,14 @@
 using json = nlohmann::json;
 
 // NOTE: Disabled until GCC-9 is released as default compiler on Ubuntu
-json Config::load_config() {
+json Config::load_config(bool& success) {
   const std::string json_str = Filesystem::read_file(Filesystem::base + "config.json");
+
+  if (json_str.empty()) {
+    success = false;
+    return json{};
+  }
+
   json config = json::parse(json_str);
 
   // Camera
@@ -21,6 +27,7 @@ json Config::load_config() {
     config.merge_patch(camera_config);
   }
 
+  success = true;
   return config;
 }
 

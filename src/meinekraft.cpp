@@ -106,16 +106,16 @@ MeineKraft::MeineKraft() {
 }
 
 void MeineKraft::init() {
-  const auto config = Config::load_config();
-  const std::string path = config["scene"]["path"].get<std::string>();
-  const std::string name = config["scene"]["name"].get<std::string>();
-	renderer->scene = new Scene{ Filesystem::home + path,  name };
-  // renderer->scene->camera->position.x = config["scene"]["camera"]["position"][0].get<float>();
-  // renderer->scene->camera->position.x = config["scene"]["camera"]["position"][1];
-  // renderer->scene->camera->position.x = config["scene"]["camera"]["position"][2];
-  // renderer->scene->camera->position.x = config["scene"]["camera"]["direction"][0];
-  // renderer->scene->camera->position.x = config["scene"]["camera"]["direction"][1];
-  // renderer->scene->camera->position.x = config["scene"]["camera"]["direction"][2];
+  bool success = false;
+  const auto config = Config::load_config(success);
+  if (success) {
+    const std::string path = config["scene"]["path"].get<std::string>();
+    const std::string name = config["scene"]["name"].get<std::string>();
+    renderer->scene = new Scene{ Filesystem::home + path,  name };
+  } else {
+    // TODO: Load default scene or smt
+    Log::error("Failed to load config.json.");
+  }
 }
 
 MeineKraft::~MeineKraft() {
