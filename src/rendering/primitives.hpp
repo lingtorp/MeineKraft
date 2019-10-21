@@ -326,9 +326,10 @@ struct RenderState {
   bool direct_lighting = false;
   bool indirect_lighting = true;
   bool always_voxelize = false;
+  float shadow_bias = 0.0025f;
 
   RenderState() = default;
-  RenderState(const RenderState& old) : frame(old.frame), shadowmapping(old.shadowmapping), normalmapping(old.normalmapping), camera_selection(old.camera_selection), roughness(old.roughness), roughness_aperature(old.roughness_aperature), metallic(old.metallic), metallic_aperature(old.metallic_aperature), max_cone_sample_steps(old.max_cone_sample_steps), voxelize(old.voxelize), conservative_rasterization(old.conservative_rasterization), direct_lighting(old.direct_lighting), indirect_lighting(old.indirect_lighting), always_voxelize(old.always_voxelize) {}
+  RenderState(const RenderState& old) : frame(old.frame), shadowmapping(old.shadowmapping), normalmapping(old.normalmapping), camera_selection(old.camera_selection), roughness(old.roughness), roughness_aperature(old.roughness_aperature), metallic(old.metallic), metallic_aperature(old.metallic_aperature), max_cone_sample_steps(old.max_cone_sample_steps), voxelize(old.voxelize), conservative_rasterization(old.conservative_rasterization), direct_lighting(old.direct_lighting), indirect_lighting(old.indirect_lighting), always_voxelize(old.always_voxelize), shadow_bias(old.shadow_bias) {}
 };
 
 struct Resolution {
@@ -367,6 +368,11 @@ struct AABB {
 	inline bool is_cubic() const { return width() == height() && height() == breadth(); }
 
 	inline Vec3f center() const { return min + ((max - min) / 2.0f); }
+
+  inline float max_axis() const {
+    std::array<float, 3> axis = {width(), height(), breadth()};
+    return *std::max_element(axis.begin(), axis.end());
+  }
  
   inline float max_dimension() const {
     std::array<float, 6> axis = {std::abs(min.x), std::abs(min.y), std::abs(min.z), std::abs(max.x), std::abs(max.y), std::abs(max.z)};

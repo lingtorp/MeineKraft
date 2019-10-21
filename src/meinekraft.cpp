@@ -254,6 +254,7 @@ void MeineKraft::mainloop() {
         deltas[i] = float(delta);
         ImGui::PlotLines("", deltas, num_deltas, 0, "ms / frame", 0.0f, 50.0f, ImVec2(ImGui::GetWindowWidth(), 100));
 
+        ImGui::InputFloat("Shadow bias", &renderer->state.shadow_bias);
         ImGui::Checkbox("Normal mapping", &renderer->state.normalmapping);
         ImGui::Checkbox("Conservative raster.", &renderer->state.conservative_rasterization);
 

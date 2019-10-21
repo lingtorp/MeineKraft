@@ -73,7 +73,7 @@ private:
   uint32_t gl_shadowmapping_texture = 0;
   uint32_t gl_shadowmapping_texture_unit = 0;
   Shader* shadowmapping_shader = nullptr;
-  const uint32_t SHADOWMAP_W = 1024; // Shadowmap texture dimensions
+  const uint32_t SHADOWMAP_W = 2 * 2048; // Shadowmap texture dimensions
   const uint32_t SHADOWMAP_H = SHADOWMAP_W;
 
   /// Lightning pass related

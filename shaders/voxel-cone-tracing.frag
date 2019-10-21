@@ -92,10 +92,12 @@ vec4 trace_cone(const vec3 origin,
   return vec4(radiance, opacity);
 }
 
+uniform float uShadow_bias;
+uniform vec3 uDirectional_light_direction;
 uniform mat4 uLight_space_transform;
 uniform sampler2D uShadowmap;
 
-bool shadow(const vec3 world_position) {
+bool shadow(const vec3 world_position, const vec3 normal) {
   vec4 lightspace_position = uLight_space_transform * vec4(world_position, 1.0);
   lightspace_position.xyz /= lightspace_position.w;
   lightspace_position = lightspace_position * 0.5 + 0.5;
@@ -105,10 +107,10 @@ bool shadow(const vec3 world_position) {
   if (current_depth < 1.0) { 
     const float closest_shadowmap_depth = texture(uShadowmap, lightspace_position.xy).r;
     
-    // Bias avoids _some_ shadowmap acne
-    const float shadow_bias = 0.005; // max(0.005 * (1.0 - clamp(dot(normal, directional_light_direction), 0.0, 1.0)), 0.0005);
+    // Bias avoids the _majority_ of shadow acne
+    const float bias = uShadow_bias * dot(-uDirectional_light_direction, normal);
 
-    return closest_shadowmap_depth < current_depth - shadow_bias;
+    return closest_shadowmap_depth < current_depth - bias;
   }
   return false;
 }
@@ -120,6 +122,7 @@ void main() {
   const vec3 origin = texture(uPosition, frag_coord).xyz;
 
   vec3 normal = texture(uNormal, frag_coord).xyz;
+  vec3 fNormal = normal; // NOTE: Using geometric normal due to minimal jitter in hard shadows produced
 
   // Tangent normal mapping & TBN tranformation
   const vec3 T = normalize(texture(uTangent, frag_coord).xyz);
@@ -159,7 +162,7 @@ void main() {
   }
 
   if (uDirect_lighting) {
-    if (!shadow(origin)) {
+    if (!shadow(origin, fNormal)) {
       color.rgb += diffuse;
     }
   }
