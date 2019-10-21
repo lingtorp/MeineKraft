@@ -408,6 +408,10 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
                                      Filesystem::base + "shaders/voxelization.geom",
                                      Filesystem::base + "shaders/voxelization.frag");
 
+    if (!voxelization_shader->compiled_successfully) {
+      Log::error("Voxelization shader did not compile successfully"); exit(-1);
+    }
+
     glGenFramebuffers(1, &gl_voxelization_fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, gl_voxelization_fbo);
 		glObjectLabel(GL_FRAMEBUFFER, gl_voxelization_fbo, -1, "Voxelization FBO");

@@ -111,6 +111,8 @@ Shader::Shader(const std::string& vert_shader_file,
     glDeleteShader(gl_geometry_shader);
     glDeleteShader(gl_fragment_shader);
 
+    compiled_successfully = true;
+
     Log::info(vert_shader_file + ", " + frag_shader_file + ", " + geom_shader_file + " compiled successfully.");
   } else {
     GLint err_size = 0;

@@ -40,6 +40,8 @@ struct Shader {
   uint32_t gl_vertex_shader   = 0;
   uint32_t gl_geometry_shader = 0;
   uint32_t gl_fragment_shader = 0;
+
+  bool compiled_successfully = false;
 };
 
 struct ComputeShader {
