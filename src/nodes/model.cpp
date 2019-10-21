@@ -56,6 +56,9 @@ static AABB compute_aabb_from(const std::vector<RenderComponent>& render_compone
 }
 
 Scene::Scene(const std::string& directory, const std::string& file) {
+  // Time scene loading
+  const auto start = std::chrono::high_resolution_clock::now();
+
   std::vector<RenderComponent> render_components = RenderComponent::load_scene_models(directory, file);
 	aabb = compute_aabb_from(render_components);
   for (size_t i = 0; i < render_components.size(); i++) {
@@ -64,14 +67,18 @@ Scene::Scene(const std::string& directory, const std::string& file) {
     NameSystem::instance().add_name_to_entity("mesh-" + std::to_string(i), model.id);
   }
 
-  Log::info(aabb);
-  Log::info("Center: " + aabb.center().to_string());
-  Log::info("Size(dx, dy, dz): " + std::to_string(aabb.width()) + ", " + std::to_string(aabb.height()) + ", " + std::to_string(aabb.breadth()));
+  Log::info_indent(1, aabb);
+  Log::info_indent(1, "Center: " + aabb.center().to_string());
+  Log::info_indent(1, "Size(dx, dy, dz): " + std::to_string(aabb.width()) + ", " + std::to_string(aabb.height()) + ", " + std::to_string(aabb.breadth()));
 
   // Root scene Camera
   const auto position = aabb.center();
   const auto direction = Vec3f(0.0f, 0.0f, 1.0f);
   this->camera = new Camera(position, direction);
+
+  const auto end = std::chrono::high_resolution_clock::now();
+  const auto seconds = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
+  Log::info_indent(1, "scene loaded in: " + std::to_string(seconds) + " seconds");
 }
 
 void Scene::reset_camera() {
