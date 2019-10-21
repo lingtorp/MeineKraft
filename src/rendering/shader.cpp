@@ -33,9 +33,13 @@ ComputeShader::ComputeShader(const std::string& compute_filepath,
   glShaderSource(gl_comp_shader, 1, &raw_str_ptr, nullptr);
   glCompileShader(gl_comp_shader);
 
+  glObjectLabel(GL_SHADER, gl_comp_shader, -1, compute_filepath.c_str());
+
   gl_program = glCreateProgram();
   glAttachShader(gl_program, gl_comp_shader);
   glLinkProgram(gl_program);
+
+  glObjectLabel(GL_PROGRAM, gl_program, -1, compute_filepath.c_str());
 
   GLint compute_shader_status = 0;
   glGetShaderiv(gl_comp_shader, GL_COMPILE_STATUS, &compute_shader_status);
@@ -77,6 +81,11 @@ Shader::Shader(const std::string& vert_shader_file,
   glAttachShader(gl_program, gl_geometry_shader);
   glAttachShader(gl_program, gl_fragment_shader);
   glLinkProgram(gl_program);
+
+  glObjectLabel(GL_SHADER, gl_vertex_shader, -1, vert_shader_file.c_str());
+  glObjectLabel(GL_SHADER, gl_geometry_shader, -1, geom_shader_file.c_str());
+  glObjectLabel(GL_SHADER, gl_fragment_shader, -1, frag_shader_file.c_str());
+  glObjectLabel(GL_PROGRAM, gl_program, -1, frag_shader_file.c_str());
 
   GLint vertex_shader_status = 0;
   glGetShaderiv(gl_vertex_shader, GL_COMPILE_STATUS, &vertex_shader_status);
@@ -174,6 +183,10 @@ std::pair<bool, std::string> Shader::compile() {
   glCompileShader(gl_fragment_shader);
   glAttachShader(gl_shader_program, gl_vertex_shader);
   glAttachShader(gl_shader_program, gl_fragment_shader);
+
+  glObjectLabel(GL_SHADER, gl_vertex_shader, -1, vertex_filepath.c_str());
+  glObjectLabel(GL_SHADER, gl_fragment_shader, -1, fragment_filepath.c_str());
+  glObjectLabel(GL_PROGRAM, gl_shader_program, -1, fragment_filepath.c_str());
 
   GLint vertex_shader_status = 0;
   glGetShaderiv(gl_vertex_shader, GL_COMPILE_STATUS, &vertex_shader_status);
