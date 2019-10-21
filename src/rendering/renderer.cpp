@@ -418,8 +418,8 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glActiveTexture(GL_TEXTURE0 + gl_voxel_radiance_texture_unit);
     glGenTextures(1, &gl_voxel_radiance_texture);
     glBindTexture(GL_TEXTURE_3D, gl_voxel_radiance_texture);
-    glTexStorage3D(GL_TEXTURE_3D, 4, GL_RGBA32F, voxel_grid_dimension, voxel_grid_dimension, voxel_grid_dimension);
-    glBindImageTexture(gl_voxel_radiance_image_unit, gl_voxel_radiance_texture, 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA32F);
+    glTexStorage3D(GL_TEXTURE_3D, 4, GL_RGBA8, voxel_grid_dimension, voxel_grid_dimension, voxel_grid_dimension);
+    glBindImageTexture(gl_voxel_radiance_image_unit, gl_voxel_radiance_texture, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32UI);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glObjectLabel(GL_TEXTURE, gl_voxel_radiance_texture, -1, "Voxel radiance texture");

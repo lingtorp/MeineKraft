@@ -4,7 +4,7 @@ in vec3 fPosition; // World space position
 in vec2 fTextureCoord;
 
 uniform uint voxel_grid_dimension;
-layout(RGBA8) uniform writeonly image3D uVoxelRadiance; 
+layout(R32UI) uniform coherent volatile uimage3D uVoxelRadiance; 
 layout(RGBA8) uniform writeonly image3D uVoxelOpacity; 
 
 uniform sampler2DArray uDiffuse;
@@ -20,30 +20,30 @@ ivec3 voxel_coordinate_from_world_pos(const vec3 pos) {
   return ivec3(vpos);
 }
 
-vec4 conv_RGBA8_to_vec4(uint v) {
-  return vec4(float(v & 0x000000FF), float((v & 0x0000FF00) >> 8U),
-              float((v & 0x00FF0000) >> 16U), float((v & 0xFF000000) >> 24U));
-}
+// Slightly modified and copied from: https://rauwendaal.net/2013/02/07/glslrunningaverage/
+void imageAtomicAverageRGBA8(layout(r32ui) coherent volatile uimage3D voxels,
+                             const vec3 nextVec3,
+                             const ivec3 coord) {
+  uint nextUint = packUnorm4x8(vec4(nextVec3, 1.0f / 255.0f));
+  uint prevUint = 0;
+  uint currUint = 0;
+  vec4 currVec4;
+  vec3 average;
+  uint count;
+ 
+  // Spin while threads are trying to change the voxel
+  while((currUint = imageAtomicCompSwap(voxels, coord, prevUint, nextUint)) != prevUint) {
+    prevUint = currUint;                    // Store packed rgb average and count
+    currVec4 = unpackUnorm4x8(currUint);    // Unpack stored rgb average and count
 
-uint conv_vec4_to_uint(vec4 v) {
-  return uint((uint(v.w) & 0x000000FF) << 24U | (uint(v.z) & 0x000000FF) << 16U |
-              (uint(v.y) & 0x000000FF) << 8U | uint(v.x) & 0x000000FF);
-}
+    average =      currVec4.rgb;          // Extract rgb average
+    count   = uint(currVec4.a * 255.0f);  // Extract count
 
-void atomic_moving_avg_radiance_to_voxel(layout(R32UI) coherent volatile uimage3D voxels,
-                                  const vec4 radiance,
-                                  const ivec3 vpos) {
-  uint new_value = conv_vec4_to_uint(radiance);
-  uint curr_value = 0;
-  uint prev_value = 0;
-  // Compute moving average until value settles
-  while ((curr_value = imageAtomicCompSwap(voxels, vpos, prev_value, new_value)) != prev_value) {
-    prev_value = curr_value;
-    vec4 value = conv_RGBA8_to_vec4(curr_value);
-    value.xyz *= value.w;
-    vec4 valuef = value + new_value;
-    valuef.xyz /= valuef.w;
-    new_value = conv_vec4_to_uint(valuef);
+    // Compute the running average
+    average = (average*count + nextVec3) / (count + 1);
+
+    // Pack new average and incremented count back into a uint
+    nextUint = packUnorm4x8(vec4(average, (count + 1) / 255.0f));
   }
 }
 
@@ -75,10 +75,8 @@ void main() {
 
   // Inject radiance if voxel NOT in shadow
   if (!shadow(fPosition, fNormal)) { 
-    const vec3 diffuse = texture(uDiffuse, vec3(fTextureCoord, 0)).rgb;
-    const vec4 radiance = vec4(diffuse * max(dot(fNormal, vec3(0.0)), 1.0), 1.0);
-    imageStore(uVoxelRadiance, vpos, radiance);
-    // atomic_moving_avg_radiance_to_voxel(uVoxelRadiance, radiance, vpos);
+    const vec3 radiance = texture(uDiffuse, vec3(fTextureCoord, 0)).rgb;
+    imageAtomicAverageRGBA8(uVoxelRadiance, radiance, vpos);
   }
 
   imageStore(uVoxelOpacity, vpos, vec4(1.0)); 
