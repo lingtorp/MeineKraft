@@ -686,8 +686,10 @@ void Renderer::render(const uint32_t delta) {
   }
 
   if (state.voxelize) {
-    state.voxelize = false;
-		pass_started("Voxelization pass");
+    if (!state.always_voxelize) {
+      state.voxelize = false;
+    }
+    pass_started("Voxelization pass");
 		glClearTexImage(gl_voxel_radiance_texture, 0, GL_RGBA, GL_FLOAT, nullptr); // Clear all values
     glClearTexImage(gl_voxel_opacity_texture, 0, GL_RGBA, GL_FLOAT, nullptr);
 		glBindFramebuffer(GL_FRAMEBUFFER, gl_voxelization_fbo);

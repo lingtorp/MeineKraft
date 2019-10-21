@@ -261,6 +261,7 @@ void MeineKraft::mainloop() {
           renderer->state.voxelize = true;
         }
 
+        ImGui::Checkbox("Always voxelize", &renderer->state.always_voxelize);
         ImGui::Checkbox("Direct", &renderer->state.direct_lighting);
         ImGui::Checkbox("Indirect", &renderer->state.indirect_lighting);
 
