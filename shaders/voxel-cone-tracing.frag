@@ -167,9 +167,6 @@ void main() {
     }
   }
 
-  // Gamma correction
-  // color.rgb = pow(color.rgb, vec3(1.0 / 2.2));
-
   // color.rgb = texture(uVoxelRadiance, world_to_voxelspace(origin)).rgb;
 
   // color.rgb = texture(uDiffuse, frag_coord).rgb;
