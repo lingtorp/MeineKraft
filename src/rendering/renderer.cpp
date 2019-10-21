@@ -119,7 +119,7 @@ static glm::mat4 shadowmap_transform(const AABB& aabb, const DirectionalLight& l
 
 // NOTE: AABB passed is assumed to be the Scene AABB
 static glm::mat4 orthographic_projection(const AABB& aabb) {
-  const float voxel_grid_dimension = aabb.max_dimension();
+  const float voxel_grid_dimension = aabb.max_axis();
 	const float left   = -float(voxel_grid_dimension);
 	const float right  =  float(voxel_grid_dimension);
 	const float bottom = -float(voxel_grid_dimension);
@@ -701,7 +701,7 @@ void Renderer::render(const uint32_t delta) {
 		const glm::mat4 ortho = orthographic_projection(scene->aabb);
 		glUniformMatrix4fv(glGetUniformLocation(program, "ortho"), 1, GL_FALSE, glm::value_ptr(ortho));
 
-    const float voxel_scaling_factor = 1.0f / scene->aabb.max_dimension();
+    const float voxel_scaling_factor = 1.0f / scene->aabb.max_axis();
     glUniform1f(glGetUniformLocation(program, "scaling_factor"), voxel_scaling_factor);
 
     const Vec3f aabb_center = scene->aabb.center();
@@ -827,7 +827,7 @@ void Renderer::render(const uint32_t delta) {
 
     glUniform1i(glGetUniformLocation(program, "normalmapping"), state.normalmapping);
 
-    const float voxel_scaling_factor = 1.0f / scene->aabb.max_dimension();
+    const float voxel_scaling_factor = 1.0f / scene->aabb.max_axis();
     glUniform1f(glGetUniformLocation(program, "uScaling_factor"), voxel_scaling_factor);
 
     const Vec3f aabb_center = scene->aabb.center();
