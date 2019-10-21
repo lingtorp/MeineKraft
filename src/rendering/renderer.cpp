@@ -707,12 +707,16 @@ void Renderer::render(const uint32_t delta) {
     const Vec3f aabb_center = scene->aabb.center();
     glUniform3fv(glGetUniformLocation(program, "aabb_center"), 1, &aabb_center.x);
 
+    // Shadowmapping
+    glUniform1f(glGetUniformLocation(program, "uShadow_bias"), state.shadow_bias);
+    glUniform3fv(glGetUniformLocation(program, "uDirectional_light_direction"), 1, &directional_light.direction.x);
+    glUniformMatrix4fv(glGetUniformLocation(program, "uLight_space_transform"), 1, GL_FALSE, glm::value_ptr(light_space_transform));
+    glUniform1i(glGetUniformLocation(program, "uShadowmap"), gl_shadowmapping_texture_unit);
+
     glUniform3fv(glGetUniformLocation(program, "light_direction"), 1, &directional_light.direction.x);
     glUniform1ui(glGetUniformLocation(program, "voxel_grid_dimension"), voxel_grid_dimension);
 		glUniform1i(glGetUniformLocation(program, "uVoxelRadiance"), gl_voxel_radiance_image_unit);
     glUniform1i(glGetUniformLocation(program, "uVoxelOpacity"), gl_voxel_opacity_image_unit);
-    glUniform1i(glGetUniformLocation(program, "uShadowmap"), gl_shadowmapping_texture_unit);
-    glUniformMatrix4fv(glGetUniformLocation(program, "light_space_transform"), 1, GL_FALSE, glm::value_ptr(light_space_transform));
 
     glUniform1i(glGetUniformLocation(program, "conservative_rasterization_enabled"), state.conservative_rasterization);
 

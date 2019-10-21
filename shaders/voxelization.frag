@@ -8,13 +8,9 @@ layout(RGBA8) uniform writeonly image3D uVoxelRadiance;
 layout(RGBA8) uniform writeonly image3D uVoxelOpacity; 
 
 uniform sampler2DArray uDiffuse;
-uniform sampler2D uShadowmap;
-uniform mat4 light_space_transform;
 
 uniform vec3 aabb_center;
 uniform float scaling_factor;
-
-uniform vec3 light_direction; // Directional light direction
 
 ivec3 voxel_coordinate_from_world_pos(const vec3 pos) {
   vec3 vpos = (pos - aabb_center) * scaling_factor;
@@ -51,28 +47,38 @@ void atomic_moving_avg_radiance_to_voxel(layout(R32UI) coherent volatile uimage3
   }
 }
 
+uniform float uShadow_bias;
+uniform vec3 uDirectional_light_direction;
+uniform mat4 uLight_space_transform;
+uniform sampler2D uShadowmap;
+
+bool shadow(const vec3 world_position, const vec3 normal) {
+  vec4 lightspace_position = uLight_space_transform * vec4(world_position, 1.0);
+  lightspace_position.xyz /= lightspace_position.w;
+  lightspace_position = lightspace_position * 0.5 + 0.5;
+
+  const float current_depth = lightspace_position.z;
+
+  if (current_depth < 1.0) { 
+    const float closest_shadowmap_depth = texture(uShadowmap, lightspace_position.xy).r;
+    
+    // Bias avoids the _majority_ of shadow acne
+    const float bias = uShadow_bias * dot(-uDirectional_light_direction, normal);
+
+    return closest_shadowmap_depth < current_depth - bias;
+  }
+  return false;
+}
+
 void main() {
   const ivec3 vpos = voxel_coordinate_from_world_pos(fPosition);
 
-  vec4 lightspace_position = light_space_transform * vec4(fPosition, 1.0);
-  lightspace_position.xyz /= lightspace_position.w;
-  lightspace_position = lightspace_position * 0.5 + 0.5;
-  const float voxel_depth = lightspace_position.z;
-
-  if (voxel_depth < 1.0) { 
-    const float closest_shadowmap_depth = texture(uShadowmap, lightspace_position.xy).r;
-    
-    // Bias avoids _some_ shadowmap acne
-    const float shadow_bias = 0.005; // max(0.005 * (1.0 - clamp(dot(normal, directional_light_direction), 0.0, 1.0)), 0.0005);
-
-    // Inject radiance if voxel NOT in shadow
-    const bool shadow = closest_shadowmap_depth < voxel_depth - shadow_bias;
-    if (!shadow) {
-      const vec3 diffuse = texture(uDiffuse, vec3(fTextureCoord, 0)).rgb;
-      const vec4 radiance = vec4(diffuse * max(dot(fNormal, vec3(0.0)), 1.0), 1.0);
-      imageStore(uVoxelRadiance, vpos, radiance);
-      // atomic_moving_avg_radiance_to_voxel(uVoxelRadiance, radiance, vpos);
-    }
+  // Inject radiance if voxel NOT in shadow
+  if (!shadow(fPosition, fNormal)) { 
+    const vec3 diffuse = texture(uDiffuse, vec3(fTextureCoord, 0)).rgb;
+    const vec4 radiance = vec4(diffuse * max(dot(fNormal, vec3(0.0)), 1.0), 1.0);
+    imageStore(uVoxelRadiance, vpos, radiance);
+    // atomic_moving_avg_radiance_to_voxel(uVoxelRadiance, radiance, vpos);
   }
 
   imageStore(uVoxelOpacity, vpos, vec4(1.0)); 
