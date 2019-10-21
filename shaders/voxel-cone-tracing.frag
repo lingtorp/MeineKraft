@@ -152,7 +152,7 @@ void main() {
   color += trace_cone(origin, reflection, metallic_aperature * metallic); 
 
   const vec3 diffuse = texture(uDiffuse, frag_coord).rgb;
-  // color.rgb *= diffuse;
+  color.rgb *= diffuse;
 
   if (!uIndirect_lighting) {
     color.rgb = vec3(0.0);
