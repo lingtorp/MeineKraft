@@ -101,18 +101,18 @@ void Renderer::load_environment_map(const std::vector<std::string>& faces) {
 
 // NOTE: AABB passed is assumed to be the Scene AABB
 static glm::mat4 shadowmap_transform(const AABB& aabb, const DirectionalLight& light) {
-  const float diameter = aabb.diagonal_lng();
+  const float diameter = aabb.max_axis();
   const float left   = -diameter / 2.0f;
   const float right  =  diameter / 2.0f;
   const float bottom = -diameter / 2.0f; 
   const float top    =  diameter / 2.0f;
   const float znear  = 0.0f;
-  const float zfar   = 2.0f * diameter;
+  const float zfar   = diameter;
 
   const glm::vec3 center = glm::vec3(aabb.center().x, aabb.center().y, aabb.center().z);
   const glm::vec3 light_direction = glm::vec3(light.direction.x, light.direction.y, light.direction.z);
   const glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
-  const glm::mat4 light_view_transform = glm::lookAt(center - aabb.diagonal_lng() * light_direction, center, up);
+  const glm::mat4 light_view_transform = glm::lookAt(center - (diameter / 2.0f) * light_direction, center, up);
 
   return glm::ortho(left, right, bottom, top, znear, zfar) * light_view_transform;
 }
