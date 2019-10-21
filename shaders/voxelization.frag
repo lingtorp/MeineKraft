@@ -66,10 +66,10 @@ void main() {
     const float shadow_bias = 0.005; // max(0.005 * (1.0 - clamp(dot(normal, directional_light_direction), 0.0, 1.0)), 0.0005);
 
     // Inject radiance if voxel NOT in shadow
-    const bool shadow = closest_shadowmap_depth < voxel_depth - shadow_bias ? true : false;
+    const bool shadow = closest_shadowmap_depth < voxel_depth - shadow_bias;
     if (!shadow) {
       const vec3 diffuse = texture(uDiffuse, vec3(fTextureCoord, 0)).rgb;
-      const vec4 radiance = vec4(diffuse * max(dot(light_direction, fNormal), 0.0), 1.0);
+      const vec4 radiance = vec4(diffuse * max(dot(fNormal, vec3(0.0)), 1.0), 1.0);
       imageStore(uVoxelRadiance, vpos, radiance);
       // atomic_moving_avg_radiance_to_voxel(uVoxelRadiance, radiance, vpos);
     }

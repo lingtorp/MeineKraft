@@ -163,7 +163,7 @@ void main() {
 
   if (uDirect_lighting) {
     if (!shadow(origin, fNormal)) {
-      color.rgb += diffuse;
+      color.rgb += diffuse * max(dot(-uDirectional_light_direction, normal), 0.0);
     }
   }
 
