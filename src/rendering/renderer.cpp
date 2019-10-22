@@ -35,19 +35,6 @@ struct DrawElementsIndirectCommand {
   uint32_t padding2 = 0;
 };
 
-/// Pass handling code - used for debuggging at this moment
-inline void pass_started(const std::string &msg) {
-#if defined(__LINUX__) || defined(WIN32)
-  glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, msg.c_str());
-#endif
-}
-
-inline void pass_ended() {
-#if defined(__LINUX__) || defined(WIN32)
-  glPopDebugGroup();
-#endif
-}
-
 // FIXME: Remake this to serve a better purpose (unique per line, file like the log_once)
 uint32_t Renderer::get_next_free_texture_unit() {
   int32_t max_texture_units;
@@ -446,10 +433,8 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
       Log::error("Voxelization FBO not complete"); exit(1);
     }
 
-    // Opacity normalization compute shader subpass
-    voxelization_opacity_norm_shader = new ComputeShader(Filesystem::base + "shaders/opacity-normalization.geom",
-                                                         {"#define VOXEL_GRID_DIMENSION " + std::to_string(voxel_grid_dimension)});
-
+    /// Opacity normalization compute shader subpass
+    voxelization_opacity_norm_shader = new ComputeShader(Filesystem::base + "shaders/voxelization-opacity-normalization.comp");
   }
 
   /// Voxel visualization pass
@@ -745,26 +730,32 @@ void Renderer::render(const uint32_t delta) {
 
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT); // Due to incoherent mem. access need to sync read and usage of voxel data
 
-    glGenerateTextureMipmap(gl_voxel_opacity_texture);
-    glGenerateTextureMipmap(gl_voxel_radiance_texture);
-
 		// Restore modified global state
     glEnable(GL_DEPTH_TEST);
 		glEnable(GL_CULL_FACE);
 		glDepthMask(GL_TRUE);
 		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 		glViewport(0, 0, screen.width, screen.height);
+ 
+    pass_ended();
 
+    // FIXME: Pass does not work for some reason the read-write-back modifies the values and thus the cone tracing becomes messed up
     if (false) {
       pass_started("Opacity normalization subpass");
 
-      glUseProgram(voxelization_opacity_norm_shader->gl_program);
+      const auto program = voxelization_opacity_norm_shader->gl_program;
+      glUseProgram(program);
+      glUniform1i(glGetUniformLocation(program, "voxels_in"), gl_voxel_radiance_image_unit);
+      glUniform1i(glGetUniformLocation(program, "voxels_out"), gl_voxel_radiance_image_unit);
       glDispatchCompute(voxel_grid_dimension, voxel_grid_dimension, voxel_grid_dimension);
 
       pass_ended();
     }
 
-    pass_ended();
+		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT); // Due to incoherent mem. access need to sync read and usage of voxel data
+
+    glGenerateTextureMipmap(gl_voxel_opacity_texture);
+    glGenerateTextureMipmap(gl_voxel_radiance_texture);
   }
 
   if (voxel_visualization_enabled) {

@@ -241,6 +241,8 @@ void MeineKraft::mainloop() {
 
     /// ImGui - Debug instruments
     {
+      pass_started("ImGui");
+
       ImGui_ImplSdlGL3_NewFrame(window);
       auto io = ImGui::GetIO();
       ImGui::Begin("MeineKraft");
@@ -328,6 +330,7 @@ void MeineKraft::mainloop() {
 
         ImGui::End();
         ImGui::Render();
+        pass_ended();
       }
 
     }

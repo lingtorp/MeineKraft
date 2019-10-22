@@ -22,6 +22,10 @@ ComputeShader::ComputeShader(const std::string& compute_filepath,
   GLuint gl_comp_shader = glCreateShader(GL_COMPUTE_SHADER);
   std::string comp_src = Filesystem::read_file(compute_filepath);
 
+  if (comp_src.empty()) {
+    Log::error("Tried to compile empty compute shader .."); exit(-1);
+  }
+
   for (const std::string& define : defines) {
     comp_src.insert(0, define);
   }
@@ -47,7 +51,20 @@ ComputeShader::ComputeShader(const std::string& compute_filepath,
   glDetachShader(gl_program, gl_comp_shader);
   glDeleteShader(gl_comp_shader);
 
-  if (!compute_shader_status) { Log::error("Could not compile compute shader, aborting ... "); exit(-1); }
+  if (compute_shader_status == GL_FALSE) {
+    Log::error("Could not compile compute shader, aborting ... ");
+
+    GLint err_size = 0;
+    glGetProgramiv(gl_program, GL_INFO_LOG_LENGTH, &err_size);
+    char* prog_err_msg = new char[err_size];
+    glGetProgramInfoLog(gl_program, err_size, nullptr, prog_err_msg);
+    if (err_size != 0) {
+      Log::error(compute_filepath + std::string(prog_err_msg));
+    }
+    delete[] prog_err_msg;
+
+    exit(-1);
+  }
 }
 
 Shader::Shader(const std::string& vert_shader_file,

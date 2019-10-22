@@ -95,6 +95,16 @@ struct OpenGLContextInfo {
   int max_texture_array_layers;
   int max_image_texture_units;
 
+  int max_compute_work_grp_size_x;
+  int max_compute_work_grp_size_y;
+  int max_compute_work_grp_size_z;
+
+  int max_compute_local_work_grp_size_x;
+  int max_compute_local_work_grp_size_y;
+  int max_compute_local_work_grp_size_z;
+
+  int max_compute_local_work_grp_invocations;
+
   OpenGLContextInfo(const size_t gl_major_version,
                     const size_t gl_minor_version) {
     #if defined(WIN32) || defined(__LINUX__)
@@ -123,6 +133,19 @@ struct OpenGLContextInfo {
     }
     delete extensions;
     #endif
+
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 0, &max_compute_local_work_grp_size_x);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 1, &max_compute_local_work_grp_size_y);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 2, &max_compute_local_work_grp_size_z);
+    Log::info("Max compute local work grp size (x, y, z): (" + std::to_string(max_compute_local_work_grp_size_x) + ", " + std::to_string(max_compute_local_work_grp_size_y) + ", " + std::to_string(max_compute_local_work_grp_size_z) + ")");
+
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 0, &max_compute_work_grp_size_x);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 1, &max_compute_work_grp_size_y);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 2, &max_compute_work_grp_size_z);
+    Log::info("Max compute work grp size (x, y, z): (" + std::to_string(max_compute_work_grp_size_x) + ", " + std::to_string(max_compute_work_grp_size_y) + ", " + std::to_string(max_compute_work_grp_size_z) + ")");
+
+    glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &max_compute_local_work_grp_invocations);
+    Log::info("Max compute local work grp invocations: " + std::to_string(max_compute_local_work_grp_invocations));
 
     glGetIntegerv(GL_MAX_DRAW_BUFFERS, &max_draw_buffers);
     Log::info("Max draw buffers: " + std::to_string(max_draw_buffers));
@@ -180,6 +203,19 @@ static void log_gl_error() {
   }
   Log::error(glewGetErrorString(err));
   Log::error("OpenGL error " + err_str + ":" + std::to_string(err));
+}
+
+/// Pass handling code - used for debuggging at this moment
+inline void pass_started(const std::string &msg) {
+#if defined(__LINUX__) || defined(WIN32)
+  glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, msg.c_str());
+#endif
+}
+
+inline void pass_ended() {
+#if defined(__LINUX__) || defined(WIN32)
+  glPopDebugGroup();
+#endif
 }
 
 #endif // MEINEKRAFT_DEBUG_OPENGL_HPP
