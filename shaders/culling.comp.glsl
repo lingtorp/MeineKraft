@@ -9,6 +9,7 @@ layout(std140, binding = 5) readonly buffer BoundingVolumeBlock {
 // Plane defined as: Ax + By + Cz = D
 uniform vec4 frustum_planes[6];
 
+// FIXME: Some objects pop in and out of existence in Sponza ...
 uint test(vec4 obj, vec4 plane) {
     const float distance = plane.x * obj.x + plane.y * obj.y + plane.z * obj.z + plane.w;
     if (distance < -obj.w) {

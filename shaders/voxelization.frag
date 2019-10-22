@@ -33,14 +33,14 @@ void imageAtomicAverageRGBA8(layout(r32ui) coherent volatile uimage3D voxels,
  
   // Spin while threads are trying to change the voxel
   while((currUint = imageAtomicCompSwap(voxels, coord, prevUint, nextUint)) != prevUint) {
-    prevUint = currUint;                    // Store packed rgb average and count
-    currVec4 = unpackUnorm4x8(currUint);    // Unpack stored rgb average and count
+    prevUint = currUint;                    // Store packed RGB average and count
+    currVec4 = unpackUnorm4x8(currUint);    // Unpack stored RGB average and count
 
-    average =      currVec4.rgb;          // Extract rgb average
+    average =      currVec4.rgb;          // Extract RGB average
     count   = uint(currVec4.a * 255.0f);  // Extract count
 
     // Compute the running average
-    average = (average*count + nextVec3) / (count + 1);
+    average = (average * count + nextVec3) / (count + 1);
 
     // Pack new average and incremented count back into a uint
     nextUint = packUnorm4x8(vec4(average, (count + 1) / 255.0f));
