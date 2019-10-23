@@ -2,6 +2,7 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 #include <assimp/Importer.hpp>
+#include <assimp/pbrmaterial.h>
 #include "../util/filesystem.hpp"
 #include "../util/logging.hpp"
 
@@ -254,10 +255,21 @@ MeshManager::load_meshes(const std::string& directory, const std::string& file) 
       if (scene->HasMaterials()) {
         auto material = scene->mMaterials[mesh->mMaterialIndex];
 
+        aiColor3D bcf;
+        if (material->Get(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_FACTOR, bcf) == AI_SUCCESS) {
+          const auto base_color_factor = Vec3f(bcf[0], bcf[1], bcf[2]);
+          #ifdef VERBOSE_LEVEL_2
+          Log::info("\t ... base color factor (R, G, B): (" + std::to_string(bcf[0]) + ", " + std::to_string(bcf[1]) + ", " + std::to_string(bcf[2]) + ")");
+          #endif
+        }
+
         #ifdef VERBOSE_LEVEL_1
         aiString material_name;
-        material->Get(AI_MATKEY_NAME, material_name);
-        Log::info("\t ... loading material: " + std::string(material_name.C_Str()));
+        if (material->Get(AI_MATKEY_NAME, material_name) == AI_SUCCESS) {
+          Log::info("\t ... loading material: " + std::string(material_name.C_Str()));
+        } else {
+          Log::info("\t ... loading material of unknown name");
+        }
         #endif
 
         std::vector<std::pair<Texture::Type, std::string>> texture_info;
