@@ -154,16 +154,12 @@ void main() {
     normal = normalize(TBN * tangent_normal);  
   }
 
-  // glTF - metallic, roughness material handling
-  const vec3 F0 = vec3(0.04); // Dielectric specular?
-  const vec3 base_color = sRGB_to_linear(texture(uDiffuse, frag_coord).rgba).rgb;
-  const float roughness = pow(texture(uPBR_parameters, frag_coord).g, 2.0); 
+  // Material parameters
+  const float roughness = texture(uPBR_parameters, frag_coord).g; 
   const float metallic = texture(uPBR_parameters, frag_coord).b;
   const float roughness_aperature = uRoughness_aperature;
   const float metallic_aperature = uMetallic_aperature;
-
-  const vec4 specular = vec4(mix(F0, base_color, metallic), 1.0);
-  const vec4 diffuse  = vec4(base_color * (vec3(1.0) - F0) * (1.0 - metallic), 1.0) / M_PI;
+  const vec4 diffuse = vec4(texture(uDiffuse, frag_coord).rgb, 1.0);
 
   // Diffuse cones
   color += diffuse * trace_cone(origin, normal, roughness_aperature * roughness);
@@ -173,24 +169,17 @@ void main() {
     color += diffuse * trace_cone(origin, direction, roughness_aperature * roughness) * dot(direction, normal);
   }
 
-  // Ambient occlusion from the opacity traced
-  color.rgb *= vec3(color.a);
-
   // Specular cone
   const vec3 reflection = reflect(-normalize(uCamera_position - origin), normal);
-  color += specular * trace_cone(origin, reflection, metallic_aperature);
+  color += metallic * trace_cone(origin, reflection, metallic_aperature);
 
   if (!uIndirect_lighting) {
     color.rgb = vec3(0.0);
   }
 
   if (uDirect_lighting) {
-    // color.rgb += diffuse * (trace_cone(origin, -uDirectional_light_direction, 5.0).a);
     if (!shadow(origin, fNormal)) {
       color.rgb += diffuse.rgb * max(dot(-uDirectional_light_direction, normal), 0.0);
     }
   }
-
-  // TODO: tone map
-  color.rgb = linear_to_sRGB(color.rgb);
 }
