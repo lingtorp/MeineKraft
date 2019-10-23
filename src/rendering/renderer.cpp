@@ -825,6 +825,9 @@ void Renderer::render(const uint32_t delta) {
     const float voxel_scaling_factor = 1.0f / scene->aabb.max_axis();
     glUniform1f(glGetUniformLocation(program, "uScaling_factor"), voxel_scaling_factor);
 
+    const float voxel_size_LOD0 = scene->aabb.max_axis() / float(voxel_grid_dimension);
+    glUniform1f(glGetUniformLocation(program, "uVoxel_size_LOD0"), voxel_size_LOD0);
+
     const Vec3f aabb_center = scene->aabb.center();
     glUniform3fv(glGetUniformLocation(program, "uAABB_center"), 1, &aabb_center.x);
     glUniform3fv(glGetUniformLocation(program, "uAABB_min"), 1, &scene->aabb.min.x);
