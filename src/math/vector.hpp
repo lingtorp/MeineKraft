@@ -5,6 +5,8 @@
 #include <iostream>
 #include <vector>
 
+#include <glm/common.hpp>
+
 #if defined(__APPLE__)
 #include <cmath>
 #endif
@@ -223,6 +225,10 @@ struct Vec3 {
     }
 
     constexpr inline Vec3 operator-() const { return Vec3{-x, -y, -z}; }
+
+    inline glm::vec3 as_glm() const {
+      return glm::vec3(x, y, z);
+    }
 
 private:
   void hash_combine(size_t& seed, const size_t hash) const {

@@ -4,8 +4,6 @@
 Model::Model(const std::string& directory, const std::string& file) {
   NameSystem::instance().add_name_to_entity(file, id);
   TransformComponent transform;
-  transform.position = Vec3f(0.0f, 0.0f, 0.0f);
-  transform.scale = 1.0f;
   attach_component(transform);
   RenderComponent render;
   render.set_mesh(directory, file);
@@ -79,6 +77,18 @@ Scene::Scene(const std::string& directory, const std::string& file) {
   const auto end = std::chrono::high_resolution_clock::now();
   const auto seconds = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
   Log::info_indent(1, "scene loaded in: " + std::to_string(seconds) + " seconds");
+}
+
+void Scene::load_models_from(const std::string& directory, const std::string& file) { 
+  std::vector<RenderComponent> render_components = RenderComponent::load_scene_models(directory, file);
+  for (size_t i = 0; i < render_components.size(); i++) {
+    render_components[i].set_shading_model(ShadingModel::PhysicallyBased);
+    Model model(render_components[i]);
+    auto transform = TransformSystem::instance().lookup_referenced(model.id);
+    transform->scale = 4000.0f;
+    transform->position.y += 0.1f;
+    NameSystem::instance().add_name_to_entity("2-mesh-" + std::to_string(i), model.id);
+  }
 }
 
 void Scene::reset_camera() {

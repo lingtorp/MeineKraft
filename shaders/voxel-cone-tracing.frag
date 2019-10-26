@@ -1,5 +1,3 @@
-// #version 450                     
-
 const float M_PI = 3.141592653589793;
 
 uniform float uScreen_height;
@@ -84,28 +82,27 @@ vec4 trace_cone(const vec3 origin,
                 const float half_angle) {
   const float voxel_size_LOD0 = uVoxel_size_LOD0;
 
-  float opacity = 0.0;
+  float occlusion = 0.0;
   vec3 radiance = vec3(0.0);
   float cone_distance = voxel_size_LOD0; // Avoid self-occlusion
 
-  while (cone_distance < 100.0 && opacity < 1.0) {
+  while (cone_distance < 100.0 && occlusion < 1.0) {
     const vec3 world_position = origin + cone_distance * direction;
     if (!is_inside_scene(world_position)) { break; }
     
     const float cone_diameter = max(2.0 * tan(half_angle) * cone_distance, voxel_size_LOD0);
-    cone_distance += cone_diameter * 0.5;
+    cone_distance += cone_diameter * 0.5; // Smoother result than whole cone diameter
 
     const float mip = log2(cone_distance / voxel_size_LOD0);
-
     const vec3 p = world_to_voxelspace(world_position);
-    const float a = textureLod(uVoxelOpacity, p, mip).r;
 
-    // Front-to-back acculumation
-    radiance += (1.0 - opacity) * a * textureLod(uVoxelRadiance, p, mip).rgb;
-    opacity += (1.0 - opacity) * a;
+    // Front-to-back acculumation with pre-multiplied alpha
+    const float a = textureLod(uVoxelOpacity, p, mip).r;
+    radiance += (1.0 - occlusion) * a * textureLod(uVoxelRadiance, p, mip).rgb;
+    occlusion += (1.0 - occlusion) * a;
   }
 
-  return vec4(radiance, opacity);
+  return vec4(radiance, occlusion);
 }
 
 uniform float uShadow_bias;

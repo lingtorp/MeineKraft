@@ -16,6 +16,7 @@ struct Scene {
 	AABB aabb;
   Camera* camera;
   Scene(const std::string& directory, const std::string& file);
+  void load_models_from(const std::string& directory, const std::string& file);
   void reset_camera();  
 };
 

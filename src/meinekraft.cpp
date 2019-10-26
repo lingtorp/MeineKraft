@@ -112,6 +112,8 @@ void MeineKraft::init() {
     const std::string path = config["scene"]["path"].get<std::string>();
     const std::string name = config["scene"]["name"].get<std::string>();
     renderer->scene = new Scene{ Filesystem::home + path,  name };
+    // renderer->scene->load_models_from("/home/alexander/Desktop/Meinekraft/MetalRoughSpheres/", "MetalRoughSpheres.gltf");
+    renderer->scene->load_models_from("/home/alexander/Desktop/Meinekraft/BoomBox/", "BoomBox.gltf");
   } else {
     // TODO: Load default scene or smt
     Log::error("Failed to load config.json.");
@@ -268,7 +270,6 @@ void MeineKraft::mainloop() {
         ImGui::Checkbox("Direct", &renderer->state.direct_lighting);
         ImGui::Checkbox("Indirect", &renderer->state.indirect_lighting);
 
-        ImGui::InputInt("Cone steps", &renderer->state.max_cone_sample_steps);
         ImGui::InputFloat("Roughness", &renderer->state.roughness);
         ImGui::InputFloat("Metallic", &renderer->state.metallic);
         ImGui::InputFloat("Roughness aperature (deg.)", &renderer->state.roughness_aperature);
@@ -285,7 +286,6 @@ void MeineKraft::mainloop() {
         // Directional light
         const std::string directional_light_title = "Directional light";
         if (ImGui::CollapsingHeader(directional_light_title.c_str())) {
-          ImGui::InputFloat3("Position##directional_light", &renderer->directional_light.position.x);
           ImGui::InputFloat3("Direction##directional_light", &renderer->directional_light.direction.x);
         }
 

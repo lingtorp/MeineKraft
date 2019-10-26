@@ -92,17 +92,18 @@ bool is_inside_scene(const vec3 p) {
 
 out vec4 color;
 
+uniform float uVoxel_size_LOD0;
+
 vec4 trace_cone(const vec3 origin,
                 const vec3 direction,
                 const float half_angle) {
-  const float voxel_size_LOD0 = uScaling_factor;
+  const float voxel_size_LOD0 = uVoxel_size_LOD0;
 
-  float opacity = 0.0;
+  float occlusion = 0.0;
   vec3 radiance = vec3(0.0);
   float cone_distance = voxel_size_LOD0; // Avoid self-occlusion
 
-  uint s = 0;
-  while (s < uMax_steps && opacity < 1.0) {
+  while (cone_distance < 10.0 && occlusion < 1.0) {
 
     const vec3 world_position = origin + cone_distance * direction;
     if (!is_inside_scene(world_position)) { break; }
@@ -110,19 +111,17 @@ vec4 trace_cone(const vec3 origin,
     const float cone_diameter = max(2.0 * tan(half_angle) * cone_distance, voxel_size_LOD0);
     cone_distance += cone_diameter;
 
-    const float mip = clamp(log2(cone_diameter / voxel_size_LOD0), 1.0, 4.0);
+    const float mip = log2(cone_diameter / voxel_size_LOD0);
 
     const vec3 p = world_to_voxelspace(world_position);
     const float a = textureLod(uVoxelOpacity, p, mip).r;
 
     // Front-to-back acculumation
-    radiance += (1.0 - opacity) * a * textureLod(uVoxelRadiance, p, mip).rgb;
-    opacity += (1.0 - opacity) * a;
-
-    s++;
+    radiance += (1.0 - occlusion) * a * textureLod(uVoxelRadiance, p, mip).rgb;
+    occlusion += (1.0 - occlusion) * a;
   }
 
-  return vec4(radiance, opacity);
+  return vec4(radiance, occlusion);
 }
 
 uniform float uShadow_bias;

@@ -320,12 +320,13 @@ MeshManager::load_meshes(const std::string& directory, const std::string& file) 
         }
 
         // NOTE: Lightmap is usually the ambient occlusion map ...
+        // NOTE: .. and some times the (occlusion, roughness, metallic) parameter texture for glTF models ...
         aiString lightmap_filepath;
         if (material->GetTexture(aiTextureType_LIGHTMAP, 0, &lightmap_filepath) == AI_SUCCESS) {
           Log::info("Lightmap texture name: " + std::string(directory.c_str()) + std::string(lightmap_filepath.data));
           std::string texture_filepath(lightmap_filepath.data);
           texture_filepath.insert(0, directory);
-          texture_info.push_back({ Texture::Type::AmbientOcclusion, texture_filepath });
+          texture_info.push_back({ Texture::Type::MetallicRoughness, texture_filepath });
         }
 
         aiString normals_filepath;

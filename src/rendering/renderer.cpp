@@ -798,7 +798,6 @@ void Renderer::render(const uint32_t delta) {
     // User customizable
     glUniform1i(glGetUniformLocation(program, "uDirect_lighting"), state.direct_lighting);
     glUniform1i(glGetUniformLocation(program, "uIndirect_lighting"), state.indirect_lighting);
-    glUniform1i(glGetUniformLocation(program, "uMax_steps"), state.max_cone_sample_steps);
     glUniform1f(glGetUniformLocation(program, "uRoughness"), state.roughness);
     const float roughness_aperature = glm::radians(state.roughness_aperature);
     glUniform1f(glGetUniformLocation(program, "uRoughness_aperature"), roughness_aperature);

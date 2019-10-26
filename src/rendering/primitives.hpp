@@ -8,6 +8,9 @@
 
 #include "../math/vector.hpp"
 
+#include <glm/glm.hpp>
+#include <glm/common.hpp>
+
 /// Mathematical constants
 constexpr double PI  = 3.1415926535897932384626433832795;
 constexpr float PI_F = 3.141592653589f;
@@ -46,8 +49,8 @@ struct Vertex {
   Vec3f normal    = {};
   Vec3f tangent   = {};
   Vertex() = default;
-  explicit Vertex(Vec3f position): position(position), tex_coord{}, normal{}, tangent{} {};
-  Vertex(Vec3f position, Vec2f tex_coord): position(position), tex_coord(tex_coord), normal{}, tangent{} {};
+  explicit Vertex(const Vec3f position): position(position), tex_coord{}, normal{}, tangent{} {};
+  Vertex(const Vec3f position, const Vec2f tex_coord): position(position), tex_coord(tex_coord), normal{}, tangent{} {};
 
   bool operator==(const Vertex& rhs) const {
       return position == rhs.position && tex_coord == rhs.tex_coord && normal == rhs.normal && tangent == rhs.tangent;
@@ -120,8 +123,8 @@ enum class MeshPrimitive: uint32_t {
 };
 
 struct Mesh {
-  std::vector<Vertex> vertices{};
-  std::vector<uint32_t> indices{};
+  std::vector<Vertex> vertices  = {};
+  std::vector<uint32_t> indices = {};
 
   Mesh() = default;
   Mesh(const Mesh& mesh): vertices(mesh.vertices), indices(mesh.indices) {};
@@ -239,7 +242,7 @@ struct Sphere: public Mesh {
 struct Quad: public Mesh {
   Quad(): Mesh() {
     Vertex a;
-    a.position = {-1.0f, -1.0f, 1.0f};
+    a.position = {-1.0f, -1.0f, 0.0f};
     a.tex_coord = {0.0f, 1.0f};
     Vertex b;
     b.position = {-1.0f, -1.0f, 0.0f};
@@ -291,7 +294,7 @@ struct Plane {
   /// distance = 0, then point lies in the plane
   /// distance > 0, then point lies in the positive halfspace
   inline double distance_to_point(const Vec3<T>& point) const {
-      return a*point.x + b*point.y + c*point.z + d;
+      return a * point.x + b * point.y + c * point.z + d;
   }
 };
 
@@ -316,7 +319,6 @@ struct RenderState {
   bool normalmapping = true;
 
   // Voxel cone tracing related
-  int32_t max_cone_sample_steps = 10;
   float roughness = 1.0f;
   float metallic = 1.0f;
   float roughness_aperature = 60.0f;
