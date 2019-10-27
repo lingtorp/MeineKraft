@@ -5,6 +5,8 @@
 #include <iostream>
 #include <vector>
 
+#include <glm/common.hpp>
+
 #if defined(__APPLE__)
 #include <cmath>
 #endif
@@ -13,7 +15,7 @@
 #include <math.h>
 #endif
 
-inline float mk_cos(const float x) {
+inline float mk_cosf(const float x) {
 #if defined(__APPLE__)
   return std::cos(x);
 #elif defined(__linux__)
@@ -23,7 +25,7 @@ inline float mk_cos(const float x) {
 #endif
 }
 
-inline float mk_sin(const float x) {
+inline float mk_sinf(const float x) {
 #if defined(__APPLE__)
   return std::sin(x);
 #elif defined(__linux__)
@@ -62,6 +64,7 @@ struct Vec4 {
     Vec4(): x(0.0f), y(0.0f), z(0.0f), w(0.0f) { };
     explicit Vec4(T val): x(val), y(val), z(val), w(val) { };
     explicit Vec4(Vec3<T> vec): x(vec.x), y(vec.y), z(vec.z), w(0.0f) { };
+    explicit Vec4(Vec3<T> vec, T w) : x(vec.x), y(vec.y), z(vec.z), w(w) {};
 
     /************ Operators ************/
     /// Returns the members x, y, z, w in index order (invalid indexes returns w)
@@ -107,6 +110,10 @@ struct Vec4 {
     friend std::ostream &operator<<(std::ostream &os, const Vec4 &vec) {
         return os << "(x:" << vec.x << " y:" << vec.y << " z:" << vec.z << " w:" << vec.w << ")";
     }
+
+    inline std::string to_string() const {
+      return "(x:" + std::to_string(x) + " y:" + std::to_string(y) + " z:" + std::to_string(z) + " w:" + std::to_string(w) + ")";
+    }
 };
 
 template<typename T>
@@ -130,10 +137,10 @@ struct Vec3 {
     constexpr inline static Vec3 Z() { return Vec3(0.0f, 0.0f, 1.0f); }
 
     /// Length of the vector
-    constexpr inline float length() const { return mk_sqrtf(x * x + y * y + z * z); }
+    constexpr inline T length() const { return mk_sqrtf(x * x + y * y + z * z); }
 
     /// Squared length of the vector
-    constexpr inline float sqr_length() const { return x * x + y * y + z * z; }
+    constexpr inline T sqr_length() const { return x * x + y * y + z * z; }
 
     /// Normalizes a copy of this vector and returns it
     constexpr inline Vec3<T> normalize() const {
@@ -219,6 +226,10 @@ struct Vec3 {
 
     constexpr inline Vec3 operator-() const { return Vec3{-x, -y, -z}; }
 
+    inline glm::vec3 as_glm() const {
+      return glm::vec3(x, y, z);
+    }
+
 private:
   void hash_combine(size_t& seed, const size_t hash) const {
     seed ^= hash + 0x9e3779b9 + (seed << 6) + (seed >> 2);
@@ -265,6 +276,10 @@ struct Vec2 {
     constexpr inline double length() const { return std::sqrt(std::pow(x, 2) + std::pow(y, 2)); }
 
     friend std::ostream &operator<<(std::ostream& os, const Vec2& v) { return os << "(x: " << v.x << ", y: " << v.y << std::endl; }
+
+    inline std::string to_string() const {
+      return "(x:" + std::to_string(x) + " y:" + std::to_string(y) + ")";
+    }
 };
 
 template<typename T>
@@ -375,6 +390,10 @@ public:
 };
 
 /// Convenience type declarations
+using Vec2b = Vec2<bool>;
+using Vec3b = Vec3<bool>;
+using Vec4b = Vec4<bool>;
+
 using Vec2i = Vec2<int32_t>;
 using Vec3i = Vec3<int32_t>;
 using Vec4i = Vec4<int32_t>;

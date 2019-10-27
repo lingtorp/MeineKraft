@@ -4,13 +4,15 @@ const float M_PI = 3.141592653589793;
 uniform float screen_width;
 uniform float screen_height;
 
-uniform sampler2D normal_sampler;
+uniform sampler2D tangent_sampler;
+uniform sampler2D tangent_normal_sampler;
+uniform sampler2D geometric_normal_sampler;
 uniform sampler2D depth_sampler;
 uniform sampler2D position_sampler;
 uniform sampler2D diffuse_sampler;
 uniform sampler2D pbr_parameters_sampler;
 uniform sampler2D ambient_occlusion_sampler;
-uniform sampler2D emissive_sampler;
+// uniform sampler2D emissive_sampler;
 uniform usampler2D shading_model_id_sampler;
 uniform samplerCubeArray environment_map_sampler;
 uniform sampler2D shadow_map_sampler;
@@ -19,6 +21,8 @@ uniform sampler2D shadow_map_sampler;
 uniform bool shadowmapping;
 uniform mat4 light_space_transform;
 uniform vec3 directional_light_direction;
+
+uniform bool normalmapping;
 
 uniform vec3 camera; // TEST
 
@@ -40,13 +44,13 @@ struct PBRInputs {
     vec3 base_color;
 };
 
-struct PointLight {
+struct PointLight { // NOTE: Defined in voxelization.frag also
     vec4 position;  // (X, Y, Z, padding)
     vec4 intensity; // (R, G, B, padding)
 };
 
 layout(std140, binding = 4) buffer PointLightBlock {
-    PointLight lights[];
+    PointLight pointlights[];
 };
 
 /// Approximation of the Fresnel factor: Expresses the reflection of light reflected by each microfacet
@@ -74,8 +78,9 @@ float microfaced_distribution_trowbridge_reitz(PBRInputs inputs) {
     return (a * a) / (M_PI * f * f);
 }
 
-vec3 diffuse_lambertian(PBRInputs inputs) {
-    return inputs.base_color / M_PI;
+/// Lambertian diffuse BRDF
+vec3 diffuse_lambertian(vec3 rgb) {
+    return rgb / M_PI;
 }
 
 /// Disney Implementation of diffuse from Physically-Based Shading at Disney by Brent Burley. See Section 5.3. 
@@ -92,8 +97,7 @@ vec3 schlick_brdf(PBRInputs inputs) {
     inputs.base_color = mix(inputs.base_color * (1.0 - f0), black, inputs.metallic);
 
     const vec3 F = fresnel_schlick(normal_incidence, inputs);
-    const vec3 diffuse = diffuse_lambertian(inputs); 
-    const vec3 fdiffuse = (1.0 - F) * diffuse;
+    const vec3 fdiffuse = (1.0 - F) * diffuse_lambertian(inputs.base_color); 
 
     const float G = geometric_occlusion_schlick(inputs);
     const float D = microfaced_distribution_trowbridge_reitz(inputs);
@@ -108,16 +112,16 @@ vec3 schlick_render(vec2 frag_coord, vec3 position, vec3 normal, vec3 diffuse, v
     pbr_inputs.metallic = texture(pbr_parameters_sampler, frag_coord).b;
     pbr_inputs.roughness *= pbr_inputs.roughness; // Convert to material roughness from perceptual roughness
     pbr_inputs.base_color = diffuse.rgb;  
-    pbr_inputs.N = normalize(normal);
+    pbr_inputs.N = normal;
 
     vec3 L0 = vec3(0.0);
-    for (int i = 0; i < lights.length(); i++) {
-        const PointLight light = lights[i];
+    for (int i = 0; i < pointlights.length(); i++) {
+        const PointLight pointlight = pointlights[i];
 
-        pbr_inputs.L = normalize(light.position.xyz - position);
-        const float distance = length(light.position.xyz - position);
+        pbr_inputs.L = normalize(pointlight.position.xyz - position);
+        const float distance = length(pointlight.position.xyz - position);
         const float attenuation = 1.0 / (distance * distance);
-        const vec3 radiance = attenuation * light.intensity.rgb;
+        const vec3 radiance = attenuation * pointlight.intensity.rgb;
 
         // Metallic roughness material model glTF specific 
         pbr_inputs.V = normalize(camera - position);
@@ -134,13 +138,9 @@ vec3 schlick_render(vec2 frag_coord, vec3 position, vec3 normal, vec3 diffuse, v
     // TODO: Seperate diffuse and specular terms from the irradiance
     // TODO: Lookup whether or not the irradiance comes in sRGB 
     const vec3 irradiance = texture(environment_map_sampler, vec4(pbr_inputs.N, 0)).rgb;
-    const vec3 ambient = irradiance * diffuse_lambertian(pbr_inputs) * ambient_occlusion; 
+    const vec3 ambient = irradiance * diffuse_lambertian(pbr_inputs.base_color) * (1.0 - ambient_occlusion);
     L0 += ambient;
     return L0;
-}
-
-vec3 unlit_render(vec3 diffuse) {
-    return diffuse;
 }
 
 vec3 SRGB_to_linear(vec3 srgb) {
@@ -152,12 +152,23 @@ vec3 SRGB_to_linear(vec3 srgb) {
 
 void main() {
     const vec2 frag_coord = vec2(gl_FragCoord.x / screen_width, gl_FragCoord.y / screen_height);
-    const vec3 normal = texture(normal_sampler, frag_coord).xyz;
+    vec3 normal = normalize(texture(geometric_normal_sampler, frag_coord).xyz);
+    const vec3 tangent_normal = normalize(2 * (texture(tangent_normal_sampler, frag_coord).xyz - vec3(0.5)));
+    const vec3 tangent = normalize(texture(tangent_sampler, frag_coord).xyz);
     const vec3 position = texture(position_sampler, frag_coord).xyz;
     const vec3 diffuse = SRGB_to_linear(texture(diffuse_sampler, frag_coord).rgb); // Mandated by glTF 2.0
     const vec3 ambient_occlusion = texture(ambient_occlusion_sampler, frag_coord).rgb;
-    const vec3 emissive = texture(emissive_sampler, frag_coord).rgb;
+    // const vec3 emissive = texture(emissive_sampler, frag_coord).rgb;
     const int  shading_model_id = int(texture(shading_model_id_sampler, frag_coord).r);
+
+    // Tangent normal mapping
+    if (normalmapping) {
+        const vec3 T = tangent;
+        const vec3 B = normalize(cross(normal, tangent));
+        const vec3 N = normal;
+        mat3 TBN = mat3(T, B, N);
+        normal = normalize(TBN * tangent_normal);
+    }
 
     // Shadowmap calculations
     // Avoids _some_ shadowmap acne
@@ -177,13 +188,13 @@ void main() {
     vec3 color = vec3(0.0);
     switch (shading_model_id) {
         case 1: // Unlit
-        color = (1.0 - shadow) * unlit_render(diffuse);
+        color = (1.0 - shadow) * diffuse_lambertian(diffuse);
         break;     
         case 2: // Physically based rendering with parameters sourced from textures
         case 3: // Physically based rendering with parameters sourced from scalars
         color = (1.0 - shadow) * schlick_render(frag_coord, position, normal, diffuse, ambient_occlusion);
         // Emissive
-        color += emissive; // TODO: Emissive factor missing
+        // color += emissive; // TODO: Emissive factor missing
         break;
     }
 

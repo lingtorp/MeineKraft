@@ -47,6 +47,7 @@ private:
   std::vector<TransformComponent> data; // Raw data storage
   std::unordered_map<ID, ID> data_idxs; // Entity ID to index into data
   size_t dirty_idx = 0;                 // Number of modified Transforms
+  // FIXME: Dirty idx or # of modified Transforms?
 public:
   /// Singleton instance of TransformSystem
   static TransformSystem& instance() {
@@ -59,6 +60,10 @@ public:
   }
 
   std::vector<ID> get_dirty_transform_ids() const {
+    if (data_ids.size() == 0) {
+      return {};
+    }
+
     std::vector<ID> dirty_ids(dirty_idx + 1);
     for (size_t i = 0; i <= dirty_idx; i++) {
       dirty_ids[i] = data_ids[i];

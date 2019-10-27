@@ -2,7 +2,7 @@
 #ifndef MEINEKRAFT_APPLICATION_HPP
 #define MEINEKRAFT_APPLICATION_HPP
 
-/// NOTE: This header is forbidden from including other headers (except those already included here)
+/// NOTE: This header is forbidden from including other headers
 
 #if defined(WIN32)
 #define OPENGL_MINOR_VERSION 6 // Windows 10
@@ -15,6 +15,7 @@
 struct Renderer;
 struct SDL_Window;
 
+/// Main struct of the engine
 struct MeineKraft {
     MeineKraft();
     ~MeineKraft();

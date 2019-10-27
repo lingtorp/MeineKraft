@@ -83,6 +83,7 @@ public:
   std::unordered_map<Vec3<int>, Chunk> chunks;
   
   explicit World(): chunks{} {
+	return;
     std::mt19937 engine(1337);
     std::uniform_real_distribution<> distr(0.0, 1.0);
 
@@ -103,7 +104,7 @@ public:
 
         const int32_t y_max = 20 * noise.fbm(Vec2d(x, z), 64);
         for (int32_t y = 1; y < y_max; y++) {
-          Vec3f position = { Vec3f(x, y, z) };
+          Vec3f position(x, y, z);
           Block* block = new Block(position, block_type);
         }
       }

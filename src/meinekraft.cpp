@@ -12,6 +12,7 @@
 #include "nodes/skybox.hpp"
 #include "scene/world.hpp"
 #include "rendering/graphicsbatch.hpp"
+#include "util/config.hpp"
 
 void imgui_styling() {
   ImGuiStyle* style = &ImGui::GetStyle();
@@ -74,7 +75,7 @@ void imgui_styling() {
   // TODO: Change PlotLines color depending on the value (set thresholds for the different colors)
 }
 
-MeineKraft::MeineKraft() {  
+MeineKraft::MeineKraft() {
   SDL_Init(SDL_INIT_EVERYTHING);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
@@ -83,21 +84,21 @@ MeineKraft::MeineKraft() {
   SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
   auto window_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_MOUSE_CAPTURE;
-  window = SDL_CreateWindow("MeineKraft", 100, 100, HD.width, HD.height, window_flags);
+  window = SDL_CreateWindow("MeineKraft", 0, 0, HD.width, HD.height, window_flags);
   SDL_GLContext context = SDL_GL_CreateContext(window);
   if (!context) { Log::error(std::string(SDL_GetError())); }
   SDL_GL_SetSwapInterval(0); // Disables vsync
 
+  glewExperimental = (GLboolean) true;
+  glewInit();
+
   OpenGLContextInfo gl_context_info(4, OPENGL_MINOR_VERSION);
 
-  // Init sdl2_image
   atexit(IMG_Quit);
-  IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG);
-
-  // Init ImGui
+  IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG); 
+  
   ImGui_ImplSdlGL3_Init(window);
 
-  // Inits GLEW
   renderer = new Renderer(HD);
   renderer->update_projection_matrix(70.0f, HD);
 
@@ -105,8 +106,18 @@ MeineKraft::MeineKraft() {
 }
 
 void MeineKraft::init() {
-  Skybox skybox;
-  Model model{ Filesystem::home + "Desktop/Meinekraft/", "DamagedHelmet.gltf" };
+  bool success = false;
+  const auto config = Config::load_config(success);
+  if (success) {
+    const std::string path = config["scene"]["path"].get<std::string>();
+    const std::string name = config["scene"]["name"].get<std::string>();
+    renderer->scene = new Scene{ Filesystem::home + path,  name };
+    // renderer->scene->load_models_from("/home/alexander/Desktop/Meinekraft/MetalRoughSpheres/", "MetalRoughSpheres.gltf");
+    renderer->scene->load_models_from("/home/alexander/Desktop/Meinekraft/BoomBox/", "BoomBox.gltf");
+  } else {
+    // TODO: Load default scene or smt
+    Log::error("Failed to load config.json.");
+  }
 }
 
 MeineKraft::~MeineKraft() {
@@ -117,7 +128,7 @@ MeineKraft::~MeineKraft() {
 }
 
 void MeineKraft::mainloop() {
-  World world; 
+  World world;
 
   bool toggle_mouse_capture = true;
   bool DONE = false;
@@ -141,60 +152,70 @@ void MeineKraft::mainloop() {
         switch (event.type) {
         case SDL_MOUSEMOTION:
           if (toggle_mouse_capture) { break; }
-          // renderer.camera->pitch = 0;
-          // renderer.camera->yaw = 0;
-          renderer->camera->pitch += event.motion.yrel;
-          renderer->camera->yaw += event.motion.xrel;
-          renderer->camera->direction = renderer->camera->recalculate_direction();
+          renderer->scene->camera->pitch += event.motion.yrel;
+          renderer->scene->camera->yaw += event.motion.xrel;
+          renderer->scene->camera->direction = renderer->scene->camera->recalculate_direction();
           break;
+
         case SDL_KEYDOWN:
           switch (event.key.keysym.sym) {
-            case SDLK_w:
-              renderer->camera->move_forward(true);
-              break;
-            case SDLK_a:
-              renderer->camera->move_left(true);
-              break;
-            case SDLK_s:
-              renderer->camera->move_backward(true);
-              break;
-            case SDLK_d:
-              renderer->camera->move_right(true);
-              break;
-            case SDLK_q:
-              renderer->camera->move_down(true);
-              break;
-            case SDLK_e:
-              renderer->camera->move_up(true);
-              break;
-            case SDLK_TAB:
-              toggle_mouse_capture = !toggle_mouse_capture;
-              break;
-            case SDLK_ESCAPE:
-              DONE = true;
-              break;
+					case SDLK_1:
+						renderer->state.camera_selection = 0;
+						break;
+					case SDLK_2:
+						renderer->state.camera_selection = 1;
+						break;
+					case SDLK_3:
+						renderer->state.camera_selection = 2;
+						break;
+          case SDLK_w:
+            renderer->scene->camera->move_forward(true);
+            break;
+          case SDLK_a:
+            renderer->scene->camera->move_left(true);
+            break;
+          case SDLK_s:
+            renderer->scene->camera->move_backward(true);
+            break;
+          case SDLK_d:
+            renderer->scene->camera->move_right(true);
+            break;
+          case SDLK_q:
+            renderer->scene->camera->move_down(true);
+            break;
+          case SDLK_e:
+            renderer->scene->camera->move_up(true);
+            break;
+          case SDLK_TAB:
+            toggle_mouse_capture = !toggle_mouse_capture;
+            break;
+          case SDLK_ESCAPE:
+            DONE = true;
+            break;
           }
           break;
+
         case SDL_KEYUP:
           switch (event.key.keysym.sym) {
-            case SDLK_w:
-              renderer->camera->move_forward(false);
-              break;
-            case SDLK_a:
-              renderer->camera->move_left(false);
-              break;
-            case SDLK_s:
-              renderer->camera->move_backward(false);
-              break;
-            case SDLK_d:
-              renderer->camera->move_right(false);
-              break;
-            case SDLK_q:
-              renderer->camera->move_down(false);
-              break;
-            case SDLK_e:
-              renderer->camera->move_up(false);
+          case SDLK_w:
+            renderer->scene->camera->move_forward(false);
+            break;
+          case SDLK_a:
+            renderer->scene->camera->move_left(false);
+            break;
+          case SDLK_s:
+            renderer->scene->camera->move_backward(false);
+            break;
+          case SDLK_d:
+            renderer->scene->camera->move_right(false);
+            break;
+          case SDLK_q:
+            renderer->scene->camera->move_down(false);
+            break;
+          case SDLK_e:
+            renderer->scene->camera->move_up(false);
           }
+
         case SDL_WINDOWEVENT:
           switch (event.window.event) {
             case SDL_WINDOWEVENT_RESIZED:
@@ -209,7 +230,7 @@ void MeineKraft::mainloop() {
           break;
       }
     }
-    renderer->camera->position = renderer->camera->update(delta);
+    renderer->scene->camera->position = renderer->scene->camera->update(delta);
 
     /// Run all actions
     ActionSystem::instance().execute_actions(renderer->state.frame, delta);
@@ -222,6 +243,8 @@ void MeineKraft::mainloop() {
 
     /// ImGui - Debug instruments
     {
+      pass_started("ImGui");
+
       ImGui_ImplSdlGL3_NewFrame(window);
       auto io = ImGui::GetIO();
       ImGui::Begin("MeineKraft");
@@ -230,26 +253,65 @@ void MeineKraft::mainloop() {
         ImGui::Text("Frame: %lu", renderer->state.frame);
         ImGui::Text("Entities: %lu", renderer->state.entities);
         ImGui::Text("Average %lu ms / frame (%.1f FPS)", delta, io.Framerate);
-        ImGui::Checkbox("Shadowmapping", &renderer->state.shadowmapping);
 
         static size_t i = -1; i = (i + 1) % num_deltas;
         deltas[i] = float(delta);
         ImGui::PlotLines("", deltas, num_deltas, 0, "ms / frame", 0.0f, 50.0f, ImVec2(ImGui::GetWindowWidth(), 100));
 
-        if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
-          ImGui::InputFloat3("Position", &renderer->camera->position.x);
-          ImGui::InputFloat3("Direction", &renderer->camera->direction.x);
+        ImGui::InputFloat("Shadow bias", &renderer->state.shadow_bias);
+        ImGui::Checkbox("Normal mapping", &renderer->state.normalmapping);
+        ImGui::Checkbox("Conservative raster.", &renderer->state.conservative_rasterization);
+
+        if (ImGui::Button("Voxelize")) {
+          renderer->state.voxelize = true;
         }
 
-        if (ImGui::CollapsingHeader("Graphics batches")) {
-          ImGui::Text("Graphics batches: %lu", renderer->state.graphic_batches);
+        ImGui::Checkbox("Always voxelize", &renderer->state.always_voxelize);
+        ImGui::Checkbox("Direct", &renderer->state.direct_lighting);
+        ImGui::Checkbox("Indirect", &renderer->state.indirect_lighting);
+
+        ImGui::InputFloat("Roughness", &renderer->state.roughness);
+        ImGui::InputFloat("Metallic", &renderer->state.metallic);
+        ImGui::InputFloat("Roughness aperature (deg.)", &renderer->state.roughness_aperature);
+        ImGui::InputFloat("Metallic aperature (deg.)", &renderer->state.metallic_aperature);
+
+        if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
+          ImGui::InputFloat3("Position##camera", &renderer->scene->camera->position.x);
+          ImGui::InputFloat3("Direction##camera", &renderer->scene->camera->direction.x);
+          if (ImGui::Button("Reset camera")) {
+            renderer->scene->reset_camera();
+          }
+        }
+
+        // Directional light
+        const std::string directional_light_title = "Directional light";
+        if (ImGui::CollapsingHeader(directional_light_title.c_str())) {
+          ImGui::InputFloat3("Direction##directional_light", &renderer->directional_light.direction.x);
+        }
+
+        // Point lights
+        const std::string pointlights_title = "Point lights (" + std::to_string(renderer->pointlights.size()) + ")";
+        if (ImGui::CollapsingHeader(pointlights_title.c_str())) {
+          for (size_t i = 0; i < renderer->pointlights.size(); i++) {
+            ImGui::PushID(&renderer->pointlights[i]);
+            const std::string str = std::to_string(i);
+            if (ImGui::CollapsingHeader(str.c_str())) {
+              ImGui::InputFloat3("Position", &renderer->pointlights[i].position.x);
+              ImGui::InputFloat3("Intensity", &renderer->pointlights[i].intensity.x);
+            }
+            ImGui::PopID();
+          }
+        }
+
+        // Graphics batches
+        const std::string graphicsbatches_title = "Graphics batches (" + std::to_string(renderer->graphics_batches.size()) + ")";
+        if (ImGui::CollapsingHeader(graphicsbatches_title.c_str())) {
           for (size_t batch_num = 0; batch_num < renderer->graphics_batches.size(); batch_num++) {
             const auto& batch = renderer->graphics_batches[batch_num];
-            const std::string batch_title = "Batch #" + std::to_string(batch_num) + " (" + std::to_string(batch.entity_ids.size()) + ")";
+            const std::string batch_title = "Batch #" + std::to_string(batch_num + 1) + " (" + std::to_string(batch.entity_ids.size()) + ")";
 
             if (ImGui::CollapsingHeader(batch_title.c_str())) {
               const std::string member_title = "Members##" + batch_title;
-
               if (ImGui::CollapsingHeader(member_title.c_str())) {
                 for (const auto& id : batch.entity_ids) {
                   const std::string* name = NameSystem::instance().get_name_from_entity_referenced(id);
@@ -268,9 +330,11 @@ void MeineKraft::mainloop() {
 
         ImGui::End();
         ImGui::Render();
+        pass_ended();
       }
 
     }
     SDL_GL_SwapWindow(window);
   }
+  Config::save_scene(renderer->scene);
 }

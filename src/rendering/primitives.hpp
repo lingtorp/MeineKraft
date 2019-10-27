@@ -3,11 +3,17 @@
 #define MEINEKRAFT_PRIMITIVES_HPP
 
 #include <vector>
+#include <array>
+#include <algorithm>
 
 #include "../math/vector.hpp"
 
+#include <glm/glm.hpp>
+#include <glm/common.hpp>
+
 /// Mathematical constants
-constexpr double PI = 3.1415926535897932384626433832795;
+constexpr double PI  = 3.1415926535897932384626433832795;
+constexpr float PI_F = 3.141592653589f;
 
 /// Linear interpolation of a, b given t
 static float lerp(const float a, const float b, const float t) {
@@ -41,12 +47,13 @@ struct Vertex {
   Vec3f position  = {};
   Vec2f tex_coord = {};
   Vec3f normal    = {};
+  Vec3f tangent   = {};
   Vertex() = default;
-  explicit Vertex(Vec3f position): position(position), tex_coord{}, normal{} {};
-  Vertex(Vec3f position, Vec2f tex_coord): position(position), tex_coord(tex_coord), normal{} {};
+  explicit Vertex(const Vec3f position): position(position), tex_coord{}, normal{}, tangent{} {};
+  Vertex(const Vec3f position, const Vec2f tex_coord): position(position), tex_coord(tex_coord), normal{}, tangent{} {};
 
   bool operator==(const Vertex& rhs) const {
-      return position == rhs.position && tex_coord == rhs.tex_coord && normal == rhs.normal;
+      return position == rhs.position && tex_coord == rhs.tex_coord && normal == rhs.normal && tangent == rhs.tangent;
   }
 };
 
@@ -69,6 +76,9 @@ namespace std {
           auto hashed_normal_x = hasher(vertex.normal.x);
           auto hashed_normal_y = hasher(vertex.normal.y);
           auto hashed_normal_z = hasher(vertex.normal.z);
+          auto hashed_tangent_x = hasher(vertex.tangent.x);
+          auto hashed_tangent_y = hasher(vertex.tangent.y);
+          auto hashed_tangent_z = hasher(vertex.tangent.z);
 
           size_t seed = 0;
           hash_combine(seed, hashed_x);
@@ -79,6 +89,9 @@ namespace std {
           hash_combine(seed, hashed_normal_x);
           hash_combine(seed, hashed_normal_y);
           hash_combine(seed, hashed_normal_z);
+          hash_combine(seed, hashed_tangent_x);
+          hash_combine(seed, hashed_tangent_y);
+          hash_combine(seed, hashed_tangent_z);
           return seed;
       }
   };
@@ -110,8 +123,8 @@ enum class MeshPrimitive: uint32_t {
 };
 
 struct Mesh {
-  std::vector<Vertex> vertices{};
-  std::vector<uint32_t> indices{};
+  std::vector<Vertex> vertices  = {};
+  std::vector<uint32_t> indices = {};
 
   Mesh() = default;
   Mesh(const Mesh& mesh): vertices(mesh.vertices), indices(mesh.indices) {};
@@ -198,9 +211,9 @@ struct Sphere: public Mesh {
       for (uint32_t i = 0; i <= X_SEGMENTS; ++i) {
         const float x_segment = (float)i / (float)X_SEGMENTS;
         const float y_segment = (float)j / (float)Y_SEGMENTS;
-        const float x = mk_cos(x_segment * 2.0f * PI) * mk_sin(y_segment * PI);
-        const float y = mk_cos(y_segment * PI);
-        const float z = mk_sin(x_segment * 2.0f * PI) * mk_sin(y_segment * PI);
+        const float x = mk_cosf(x_segment * 2.0f * PI_F) * mk_sinf(y_segment * PI_F);
+        const float y = mk_cosf(y_segment * PI_F);
+        const float z = mk_sinf(x_segment * 2.0f * PI_F) * mk_sinf(y_segment * PI_F);
         Vertex vertex;
         vertex.position = Vec3f{x, y, z} * radius;
         vertex.normal = Vec3f{x, y, z} * radius;
@@ -229,7 +242,7 @@ struct Sphere: public Mesh {
 struct Quad: public Mesh {
   Quad(): Mesh() {
     Vertex a;
-    a.position = {-1.0f, -1.0f, 1.0f};
+    a.position = {-1.0f, -1.0f, 0.0f};
     a.tex_coord = {0.0f, 1.0f};
     Vertex b;
     b.position = {-1.0f, -1.0f, 0.0f};
@@ -281,7 +294,7 @@ struct Plane {
   /// distance = 0, then point lies in the plane
   /// distance > 0, then point lies in the positive halfspace
   inline double distance_to_point(const Vec3<T>& point) const {
-      return a*point.x + b*point.y + c*point.z + d;
+      return a * point.x + b * point.y + c * point.z + d;
   }
 };
 
@@ -296,13 +309,29 @@ enum class ShadingModel: uint32_t {
 
 /// Represents the state of the Render, used for ImGUI debug panes
 struct RenderState {
+	uint32_t camera_selection = 0;
+
   uint64_t frame           = 0;
   uint64_t entities        = 0;
   uint64_t graphic_batches = 0;
   uint64_t draw_calls      = 0;
-  bool shadowmapping = false;
+  bool shadowmapping = true;
+  bool normalmapping = true;
+
+  // Voxel cone tracing related
+  float roughness = 1.0f;
+  float metallic = 1.0f;
+  float roughness_aperature = 60.0f;
+  float metallic_aperature = 10.0f;
+  bool voxelize = true;                     // NOTE: Toggled by the Renderer (a.k.a executed once)
+  bool conservative_rasterization = true;
+  bool direct_lighting = false;
+  bool indirect_lighting = true;
+  bool always_voxelize = false;
+  float shadow_bias = 0.0025f;
+
   RenderState() = default;
-  RenderState(const RenderState& old): frame(old.frame), shadowmapping(old.shadowmapping) {}
+  RenderState(const RenderState& old) : frame(old.frame), shadowmapping(old.shadowmapping), normalmapping(old.normalmapping), camera_selection(old.camera_selection), roughness(old.roughness), roughness_aperature(old.roughness_aperature), metallic(old.metallic), metallic_aperature(old.metallic_aperature), max_cone_sample_steps(old.max_cone_sample_steps), voxelize(old.voxelize), conservative_rasterization(old.conservative_rasterization), direct_lighting(old.direct_lighting), indirect_lighting(old.indirect_lighting), always_voxelize(old.always_voxelize), shadow_bias(old.shadow_bias) {}
 };
 
 struct Resolution {
@@ -311,5 +340,60 @@ struct Resolution {
 
 static auto HD      = Resolution{1280, 720};
 static auto FULL_HD = Resolution{1920, 1080};
+
+struct DirectionalLight {
+  Vec3f position;
+  Vec3f direction;
+  DirectionalLight(const Vec3f& position, const Vec3f& direction): position(position), direction(direction) {}
+
+  friend std::ostream &operator<<(std::ostream &os, const DirectionalLight& l) {
+    return os << "DirectionalLight(direction: " << l.direction << ", postiion: " << l.position << ")";
+  }
+};
+
+struct AABB {
+	Vec3f max;
+	Vec3f min;
+	AABB() = default;
+
+	AABB(const Vec3f& min, const Vec3f& max): max(max), min(min) {}
+
+	// Along the diagonal (from min to max) of the AABB
+	inline float diagonal_lng() const { return (max - min).length(); }
+	// Along x-axis
+	inline float width() const { return std::abs(max.x - min.x); }
+	// Along y-axis
+	inline float height() const { return std::abs(max.y - min.y); }
+	// Along z-axis
+	inline float breadth() const { return std::abs(max.z - min.z); }
+
+	inline bool is_cubic() const { return width() == height() && height() == breadth(); }
+
+	inline Vec3f center() const { return min + ((max - min) / 2.0f); }
+
+  inline float max_axis() const {
+    std::array<float, 3> axis = {width(), height(), breadth()};
+    return *std::max_element(axis.begin(), axis.end());
+  }
+ 
+  inline float max_dimension() const {
+    std::array<float, 6> axis = {std::abs(min.x), std::abs(min.y), std::abs(min.z), std::abs(max.x), std::abs(max.y), std::abs(max.z)};
+    return *std::max_element(axis.begin(), axis.end());
+  }
+
+  inline AABB unit_scaled() const { return AABB(min / max_dimension(), max / max_dimension()); }
+
+  friend AABB operator+(const AABB& lhs, const Vec3f& rhs) {
+    return AABB(lhs.min + rhs, lhs.max + rhs);
+  }
+
+  friend AABB operator-(const AABB& lhs, const Vec3f& rhs) {
+    return AABB(lhs.min - rhs, lhs.max - rhs);
+  }
+
+	friend std::ostream& operator<<(std::ostream& os, const AABB& aabb) {
+		return os << "AABB(min: " << aabb.min << ", max: " << aabb.max << ")";
+	}
+};
 
 #endif // MEINEKRAFT_PRIMITIVES_HPP

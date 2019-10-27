@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.13)
 project(MeineKraft)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
@@ -7,13 +7,14 @@ if(UNIX)
 endif(UNIX)
 
 set(CMAKE_CXX_STANDARD 14)
-
 set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if(WIN32)
         # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /d2cgsummary") # 
         # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Bt") #  time spent in frontend (c1xx.dll) vs backend (c2.dll)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4") # Enable warning level 4
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP") # MultiProcessor compilation
 endif(WIN32)
 
 file(GLOB IMGUI_SRC "include/imgui/*.cpp" "include/imgui/*.h") # Adds all imgui related files into the application
@@ -23,6 +24,7 @@ include_directories(include/assimp)
 include_directories(include/glew)
 include_directories(include/sdl2)
 include_directories(include/sdl2-image)
+include_directories(include/json)
 
 set(MATH_SRC_FILES "src/math/noise.hpp" "src/math/vector.hpp" "src/math/quaternion.hpp")
 source_group("math" FILES ${MATH_SRC_FILES})
@@ -34,21 +36,25 @@ set(RENDER_SRC_FILES "src/rendering/shader.cpp" "src/rendering/shader.hpp" "src/
         "src/rendering/rendercomponent.cpp" "src/rendering/rendercomponent.hpp" "src/rendering/ray.hpp" "src/rendering/graphicsbatch.hpp"
         "src/rendering/renderer.cpp" "src/rendering/renderer.hpp"    "src/rendering/primitives.hpp"
         "src/rendering/camera.cpp"   "src/rendering/camera.hpp"      "src/rendering/debug_opengl.hpp"
-        "src/rendering/light.hpp"    "src/rendering/meshmanager.cpp" "src/rendering/meshmanager.hpp" "src/rendering/texturemanager.hpp")
+        "src/rendering/light.hpp"    "src/rendering/meshmanager.cpp" "src/rendering/meshmanager.hpp" "src/rendering/texturemanager.hpp"
+        "src/rendering/renderpass.hpp" "src/rendering/renderpass.cpp")
 source_group("render" FILES ${RENDER_SRC_FILES})
 
-set(UTIL_SRC_FILES "src/util/filemonitor.cpp" "src/util/filemonitor.hpp" "src/util/filesystem.hpp" "src/util/stb_image.h" "src/util/logging.hpp")
+set(UTIL_SRC_FILES "src/util/filemonitor.cpp" "src/util/filemonitor.hpp" "src/util/filesystem.hpp" "src/util/logging.hpp" "src/util/config.hpp" "src/util/config.cpp")
 source_group("util" FILES ${UTIL_SRC_FILES})
 
 set(SCENE_SRC_FILES "src/scene/world.cpp" "src/scene/world.hpp")
 source_group("scene" FILES ${SCENE_SRC_FILES})
 
-set(SHADER_SRC_FILES "shaders/blur-fragment.glsl" "shaders/blur-vertex.glsl" "shaders/geometry-fragment.glsl"
-        "shaders/geometry-vertex.glsl" "shaders/lightning-fragment.glsl" "shaders/lightning-vertex.glsl"
-        "shaders/ssao-fragment.glsl" "shaders/ssao-vertex.glsl" "shaders/culling.comp.glsl")
+# NOTE: Not needed for compilation but its nice to have the shaders visible in Visual Studio
+set(SHADER_SRC_FILES "shaders/blur.vert" "shaders/blur.frag" "shaders/geometry.vert"
+        "shaders/geometry.frag" "shaders/lightning.vert" "shaders/lightning.frag"
+        "shaders/ssao.frag" "shaders/ssao.vert" "shaders/culling.comp.glsl"
+        "shaders/voxel-cone-tracing.vert" "shaders/voxel-cone-tracing.frag" "shaders/voxelization.vert"
+        "shaders/voxelization.geom" "shaders/voxelization.frag" "shaders/voxelization-opacity-normalization.geom")
 source_group("shaders" FILES ${SHADER_SRC_FILES})
 
-set(SOURCE_FILES main.cpp src/meinekraft.hpp src/meinekraft.cpp ${MATH_SRC_FILES} ${NODES_SRC_FILES} ${RENDER_SRC_FILES} ${UTIL_SRC_FILES} ${SCENE_SRC_FILES} ${IMGUI_SRC})
+set(SOURCE_FILES main.cpp src/meinekraft.hpp src/meinekraft.cpp ${MATH_SRC_FILES} ${NODES_SRC_FILES} ${RENDER_SRC_FILES} ${UTIL_SRC_FILES} ${SCENE_SRC_FILES} ${IMGUI_SRC} ${SHADER_SRC_FILES})
 add_executable(MeineKraft ${SOURCE_FILES})
 
 if(WIN32)
@@ -79,7 +85,7 @@ if(WIN32)
         find_library(SDL2IMAGE_LIBRARIES NAMES sdl2_image SDL2_image.dll PATHS ${CMAKE_SOURCE_DIR}/libs)
         target_link_libraries(MeineKraft ${SDL2IMAGE_LIBRARIES})
 else(WIN32)
-        find_package(ASSIMP REQUIRED)
+        find_package(ASSIMP 5.0.0 REQUIRED)
         include_directories(${ASSIMP_INCLUDE_DIRS})
         target_link_libraries(MeineKraft ${ASSIMP_LIBRARIES})
 

@@ -5,30 +5,14 @@
 #include <glew.h>
 #include <SDL_opengl.h> 
 
-/// Gathers information about the OpenGL context 
-struct OpenGLContextInfo {
-  // TODO: Document each of the member variables??
-  int max_texture_units;
-  int max_color_attachments;
-  int max_draw_buffers;
-  int max_texture_array_layers;
+#include "../util/logging.hpp"
 
-  OpenGLContextInfo(const size_t gl_major_version, const size_t gl_minor_version) {
-    Log::info("OpenGL version: " + std::string(reinterpret_cast<const char*>(glGetString(GL_VERSION))));
-    Log::info("GLSL: " + std::string(reinterpret_cast<const char*>(glGetString(GL_SHADING_LANGUAGE_VERSION))));
-    Log::info("Vendor: " + std::string(reinterpret_cast<const char*>(glGetString(GL_VENDOR))));
-    Log::info("Renderer: " + std::string(reinterpret_cast<const char*>(glGetString(GL_RENDERER))));
+#include <sstream>
 
-    glGetIntegerv(GL_MAX_DRAW_BUFFERS, &max_draw_buffers);
-    Log::info("Max draw buffers: " + std::to_string(max_draw_buffers));
-
-    glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &max_color_attachments);
-    Log::info("Max color attachments: " + std::to_string(max_color_attachments));
-
-    glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &max_texture_array_layers);
-    Log::info("Max texture array layers/elements: " + std::to_string(max_texture_array_layers));
-  }
-};
+// Prints debug messages - notifications
+// #define DEBUG_NOTIFICATIONS
+// Prints debug messages - performance
+// #define DEBUG_PERFORMANCE
 
 static void GLAPIENTRY gl_debug_callback(
   GLenum source,
@@ -39,57 +23,152 @@ static void GLAPIENTRY gl_debug_callback(
   const GLchar* message,
   const void* user_param)
 {
-  std::cerr << " ----- GL ERROR CALLBACK ----- " << std::endl;
+  std::stringstream ss;
+  ss << " ----- GL ERROR CALLBACK ----- " << std::endl;
   
-  std::cerr << "Type: ";
+  ss << "Type: ";
   switch (type) {
   case GL_DEBUG_TYPE_ERROR:
-    std::cerr << "GL ERROR";
+    ss << "GL ERROR";
     break;
   case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
-    std::cerr << "DEPRECATED_BEHAVIOR";
+    ss << "DEPRECATED_BEHAVIOR";
     break;
   case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
-    std::cerr << "UNDEFINED_BEHAVIOR";
+    ss << "UNDEFINED_BEHAVIOR";
     break;
   case GL_DEBUG_TYPE_PORTABILITY:
-    std::cerr << "PORTABILITY";
+    ss << "PORTABILITY";
     break;
   case GL_DEBUG_TYPE_PERFORMANCE:
-    std::cerr << "PERFORMANCE";
+    ss << "PERFORMANCE";
+#ifndef DEBUG_PERFORMANCE
+    return;
+#endif
     break;
   case GL_DEBUG_TYPE_OTHER:
-    std::cerr << "OTHER";
+    ss << "OTHER";
     break;
   default:
-    std::cerr << "?";
+    ss << "?";
   }
-  std::cerr << std::endl;
+  ss << std::endl;
 
-  std::cerr << "Severity: ";
+  ss << "Severity: ";
   switch (severity) {
   case GL_DEBUG_SEVERITY_LOW:
-    std::cerr << "LOW";
+    ss << "LOW";
     break;
   case GL_DEBUG_SEVERITY_MEDIUM:
-    std::cerr << "MEDIUM";
+    ss << "MEDIUM";
     break;
   case GL_DEBUG_SEVERITY_HIGH:
-    std::cerr << "HIGH";
+    ss << "HIGH";
     break;
   case GL_DEBUG_SEVERITY_NOTIFICATION:
-	  std::cerr << "NOTIFICATION";
+	  ss << "NOTIFICATION";
+#ifndef DEBUG_NOTIFICATION
+    return;
+#endif
 	  break;
   default: 
-    std::cerr << "?";
+    ss << "?";
   }
-  std::cerr << std::endl;
+  ss << std::endl;
 
-  std::cerr << "Type: " << glewGetErrorString(type) << std::endl;
-  std::cerr << "Message: " << message << std::endl;
-  std::cerr << " ----- ----- ----- ----- ----- " << std::endl;  
-  std::cerr << std::endl;
+  ss << "Type: " << glewGetErrorString(type) << std::endl;
+  ss << "Message: " << message << std::endl;
+  ss << " ----- ----- ----- ----- ----- " << std::endl;  
+  ss << std::endl;
+  Log::error(ss.str());
 }
+
+/// Gathers information about the OpenGL context 
+struct OpenGLContextInfo {
+  // TODO: Document each of the member variables??
+  int max_texture_units;
+  int max_fbo_color_attachments;
+  int max_fbo_attachment_width;
+  int max_fbo_attachment_height;
+  int max_fbo_layers;
+  int max_draw_buffers;
+  int max_texture_array_layers;
+  int max_image_texture_units;
+
+  int max_compute_work_grp_size_x;
+  int max_compute_work_grp_size_y;
+  int max_compute_work_grp_size_z;
+
+  int max_compute_local_work_grp_size_x;
+  int max_compute_local_work_grp_size_y;
+  int max_compute_local_work_grp_size_z;
+
+  int max_compute_local_work_grp_invocations;
+
+  OpenGLContextInfo(const size_t gl_major_version,
+                    const size_t gl_minor_version) {
+    #if defined(WIN32) || defined(__LINUX__)
+    // OpenGL debug output
+    glEnable(GL_DEBUG_OUTPUT);
+    glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+    glDebugMessageCallback(gl_debug_callback, 0);
+    glDebugMessageControl(GL_DEBUG_SOURCE_APPLICATION, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_FALSE);
+    #endif
+
+    Log::info("OpenGL version: " + std::string(reinterpret_cast<const char*>(glGetString(GL_VERSION))));
+    Log::info("GLSL: " + std::string(reinterpret_cast<const char*>(glGetString(GL_SHADING_LANGUAGE_VERSION))));
+    Log::info("Vendor: " + std::string(reinterpret_cast<const char*>(glGetString(GL_VENDOR))));
+    Log::info("Renderer: " + std::string(reinterpret_cast<const char*>(glGetString(GL_RENDERER))));
+
+    // #define VERBOSE
+    #ifdef VERBOSE
+    GLint n = 0;
+    glGetIntegerv(GL_NUM_EXTENSIONS, &n);
+    const char **extensions = (const char **)malloc(n * sizeof(char *));
+    if (n > 0) {
+      for (GLint i = 0; i < n; i++) {
+        extensions[i] = (char*)glGetStringi(GL_EXTENSIONS, i);
+        Log::info(std::string(extensions[i]));
+      }
+    }
+    delete extensions;
+    #endif
+
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 0, &max_compute_local_work_grp_size_x);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 1, &max_compute_local_work_grp_size_y);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 2, &max_compute_local_work_grp_size_z);
+    Log::info("Max compute local work grp size (x, y, z): (" + std::to_string(max_compute_local_work_grp_size_x) + ", " + std::to_string(max_compute_local_work_grp_size_y) + ", " + std::to_string(max_compute_local_work_grp_size_z) + ")");
+
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 0, &max_compute_work_grp_size_x);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 1, &max_compute_work_grp_size_y);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 2, &max_compute_work_grp_size_z);
+    Log::info("Max compute work grp size (x, y, z): (" + std::to_string(max_compute_work_grp_size_x) + ", " + std::to_string(max_compute_work_grp_size_y) + ", " + std::to_string(max_compute_work_grp_size_z) + ")");
+
+    glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &max_compute_local_work_grp_invocations);
+    Log::info("Max compute local work grp invocations: " + std::to_string(max_compute_local_work_grp_invocations));
+
+    glGetIntegerv(GL_MAX_DRAW_BUFFERS, &max_draw_buffers);
+    Log::info("Max draw buffers: " + std::to_string(max_draw_buffers));
+
+    glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &max_fbo_color_attachments);
+    Log::info("Max FBO color attachments: " + std::to_string(max_fbo_color_attachments));
+
+    glGetIntegerv(GL_MAX_FRAMEBUFFER_WIDTH, &max_fbo_attachment_width);
+    Log::info("Max FBO attachment width and height: " + std::to_string(max_fbo_attachment_width) + " / " + std::to_string(max_fbo_attachment_height));
+
+    glGetIntegerv(GL_MAX_FRAMEBUFFER_LAYERS, &max_fbo_layers);
+    Log::info("Max FBO layers: " + std::to_string(max_fbo_layers));
+
+    glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &max_texture_array_layers);
+    Log::info("Max texture array layers/elements: " + std::to_string(max_texture_array_layers));
+
+    glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max_texture_units);
+    Log::info("Max texture units: " + std::to_string(max_texture_units));
+
+    glGetIntegerv(GL_MAX_IMAGE_UNITS, &max_image_texture_units);
+    Log::info("Max image texture units: " + std::to_string(max_image_texture_units));
+  }
+};
 
 static void log_gl_error() {
   GLenum err = glGetError();
@@ -124,6 +203,19 @@ static void log_gl_error() {
   }
   Log::error(glewGetErrorString(err));
   Log::error("OpenGL error " + err_str + ":" + std::to_string(err));
+}
+
+/// Pass handling code - used for debuggging at this moment
+inline void pass_started(const std::string &msg) {
+#if defined(__LINUX__) || defined(WIN32)
+  glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, msg.c_str());
+#endif
+}
+
+inline void pass_ended() {
+#if defined(__LINUX__) || defined(WIN32)
+  glPopDebugGroup();
+#endif
 }
 
 #endif // MEINEKRAFT_DEBUG_OPENGL_HPP

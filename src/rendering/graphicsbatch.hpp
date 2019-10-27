@@ -35,7 +35,7 @@ struct Material {
 };
 
 /// Computes the largest sphere radius fully containing the mesh [Ritter's algorithm]
-static float compute_bounding_volume_radius(const Mesh& mesh) {
+static BoundingVolume compute_bounding_volume(const Mesh& mesh) {
   // Compute extreme values along the axis
   float min_x = std::numeric_limits<float>::max();
   float min_y = std::numeric_limits<float>::max();
@@ -81,20 +81,23 @@ static float compute_bounding_volume_radius(const Mesh& mesh) {
       sphere.radius = (d + sphere.radius) / 2.0f;
     }
   }
-  Log::info("Bounding Volume sphere position: " + sphere.position.to_string());
-  return sphere.radius;
+  // Log::info("Bounding Volume sphere: " + sphere.position.to_string() + ", " + std::to_string(sphere.radius));
+  return sphere;
 }
 
 struct GraphicsBatch {
   explicit GraphicsBatch(const ID mesh_id): mesh_id(mesh_id), objects{}, mesh{MeshManager::mesh_from_id(mesh_id)}, 
-    layer_idxs{}, bounding_volume_radius(compute_bounding_volume_radius(mesh)) {};
+    layer_idxs{}, bounding_volume(compute_bounding_volume(mesh)) {};
   
   void init_buffer(const Texture& texture, uint32_t* gl_buffer, const uint32_t gl_texture_unit, uint32_t* buffer_capacity) {
     glActiveTexture(GL_TEXTURE0 + gl_texture_unit);
     glGenTextures(1, gl_buffer);
     glBindTexture(texture.gl_texture_target, *gl_buffer);
     const int default_buffer_size = 1;
-    glTexStorage3D(texture.gl_texture_target, 1, GL_RGB8, texture.data.width, texture.data.height, texture.data.faces * default_buffer_size); // depth = layer faces
+    const GLuint texture_format = texture.data.bytes_per_pixel == 3 ? GL_RGB8 : GL_RGBA8;
+    const uint8_t mipmap_levels = uint8_t(std::log(std::max(texture.data.width, texture.data.height))) + 1;
+    glTexStorage3D(texture.gl_texture_target, mipmap_levels, texture_format, texture.data.width, texture.data.height, texture.data.faces * default_buffer_size); // depth = layer faces
+    glGenerateMipmap(texture.gl_texture_target);
     *buffer_capacity = default_buffer_size;
   }
 
@@ -107,7 +110,9 @@ struct GraphicsBatch {
     glBindTexture(texture.gl_texture_target, gl_new_texture_array);
     uint32_t old_capacity = *texture_array_capacity;
     *texture_array_capacity = (uint32_t) std::ceil(*texture_array_capacity * 1.5f);
-    glTexStorage3D(texture.gl_texture_target, 1, GL_RGB8, texture.data.width, texture.data.height, texture.data.faces * *texture_array_capacity);
+    const GLuint texture_format = texture.data.bytes_per_pixel == 3 ? GL_RGB8 : GL_RGBA8;
+    const uint8_t mipmap_levels = std::log(std::max(texture.data.width, texture.data.height)) + 1;
+    glTexStorage3D(texture.gl_texture_target, mipmap_levels, texture_format, texture.data.width, texture.data.height, texture.data.faces * *texture_array_capacity);
     
     glCopyImageSubData(*gl_buffer, texture.gl_texture_target, 0, 0, 0, 0, // src parameters
       gl_new_texture_array, texture.gl_texture_target, 0, 0, 0, 0, texture.data.width, texture.data.height, texture.data.faces * old_capacity);
@@ -119,15 +124,17 @@ struct GraphicsBatch {
   
   /// Upload a texture to the diffuse array
   void upload(const Texture& texture, const uint32_t gl_texture_unit, const uint32_t gl_texture_array) {
+    const GLuint texture_format = texture.data.bytes_per_pixel == 3 ? GL_RGB : GL_RGBA;
     glActiveTexture(GL_TEXTURE0 + gl_texture_unit);
     glBindTexture(texture.gl_texture_target, gl_texture_array);
     glTexSubImage3D(texture.gl_texture_target,
       0,                     // Mipmap number (a.k.a level)
       0, 0, layer_idxs[texture.id] *  texture.data.faces, // xoffset, yoffset, zoffset = layer face
       texture.data.width, texture.data.height, texture.data.faces, // width, height, depth = faces
-      GL_RGB,                // format
+      texture_format,        // format
       GL_UNSIGNED_BYTE,      // type
       texture.data.pixels);  // pointer to data
+    glGenerateMipmap(texture.gl_texture_target);
   }
 
   void increase_entity_buffers() {
@@ -157,20 +164,20 @@ struct GraphicsBatch {
     glGenBuffers(1, &new_gl_depth_models_buffer_object);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, new_gl_depth_models_buffer_object);
     glBufferStorage(GL_SHADER_STORAGE_BUFFER, new_buffer_size * sizeof(Mat4f), nullptr, flags);
-    gl_depth_model_buffer_object_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, new_buffer_size * sizeof(Mat4f), flags);
-    glCopyNamedBufferSubData(gl_depth_models_buffer_object, new_gl_depth_models_buffer_object, 0, 0, buffer_size * sizeof(Mat4f));
-    glInvalidateBufferData(gl_depth_models_buffer_object);
-    glDeleteBuffers(1, &gl_depth_models_buffer_object);
+    gl_depth_model_buffer_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, new_buffer_size * sizeof(Mat4f), flags);
+    glCopyNamedBufferSubData(gl_depth_model_buffer, new_gl_depth_models_buffer_object, 0, 0, buffer_size * sizeof(Mat4f));
+    glInvalidateBufferData(gl_depth_model_buffer);
+    glDeleteBuffers(1, &gl_depth_model_buffer);
     
     // Material buffer
     uint32_t new_gl_mbo = 0;
     glGenBuffers(1, &new_gl_mbo);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, new_gl_mbo);
     glBufferStorage(GL_SHADER_STORAGE_BUFFER, new_buffer_size * sizeof(Material), nullptr, flags);
-    gl_mbo_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, new_buffer_size * sizeof(Material), flags);
-    glCopyNamedBufferSubData(gl_mbo, new_gl_mbo, 0, 0, buffer_size * sizeof(Material));
-    glInvalidateBufferData(gl_mbo);
-    glDeleteBuffers(1, &gl_mbo);
+    gl_material_buffer_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, new_buffer_size * sizeof(Material), flags);
+    glCopyNamedBufferSubData(gl_material_buffer, new_gl_mbo, 0, 0, buffer_size * sizeof(Material));
+    glInvalidateBufferData(gl_material_buffer);
+    glDeleteBuffers(1, &gl_material_buffer);
 
     // Batch instance idx buffer
     uint32_t new_gl_instance_idx_buffer = 0;
@@ -187,8 +194,8 @@ struct GraphicsBatch {
 
     // Update state
     gl_bounding_volume_buffer = new_gl_bounding_volume_buffer;
-    gl_mbo = new_gl_mbo;
-    gl_depth_models_buffer_object = new_gl_depth_models_buffer_object;
+    gl_material_buffer = new_gl_mbo;
+    gl_depth_model_buffer = new_gl_depth_models_buffer_object;
     gl_instance_idx_buffer = new_gl_instance_idx_buffer;
     buffer_size = new_buffer_size;
   }
@@ -215,12 +222,17 @@ struct GraphicsBatch {
   
   /// Physically based rendering related
   uint32_t gl_metallic_roughness_texture_unit = 0;  // Metallic roughness texture buffer
+  uint32_t gl_metallic_roughness_texture = 0;
+
+  uint32_t gl_tangent_normal_texture_unit = 0;      // Tangent space normal map
+  uint32_t gl_tangent_normal_texture = 0;
+
   uint32_t gl_ambient_occlusion_texture_unit  = 0;  // Ambient occlusion map
   uint32_t gl_emissive_texture_unit           = 0;  // Emissive map
     
   /// General
-  static const uint32_t INIT_BUFFER_SIZE = 100;  // In # of elements 
-  uint32_t buffer_size = INIT_BUFFER_SIZE;       // Current buffer size (of ALL buffers) for the batch 
+  static const uint32_t INIT_BUFFER_SIZE = 10;  // In # of elements 
+  uint32_t buffer_size = INIT_BUFFER_SIZE;      // Current buffer size (of ALL buffers) for the batch 
 
   uint32_t gl_ebo = 0;            // Elements b.o
   uint8_t* gl_ebo_ptr = nullptr;  // Ptr to mapped GL_ELEMENTS_ARRAY_BUFFER
@@ -233,24 +245,26 @@ struct GraphicsBatch {
   uint32_t gl_bounding_volume_buffer = 0;           // Bounding volume buffer
   uint8_t* gl_bounding_volume_buffer_ptr = nullptr; // Ptr to the mapped bounding volume buffer
   
-  // FIXME: Bounding volume geometry is the same across the batch, share this geometry instead
-  float bounding_volume_radius = 0.0f; // Computed based on the batch geometry at batch creation 
+  BoundingVolume bounding_volume; // Computed based on the batch geometry at batch creation 
 
   uint32_t gl_instance_idx_buffer = 0; // Instance indices passed along the shader pipeline for fetching per instance data from various buffers
 
-  uint32_t gl_mbo = 0;           // Material b.o
-  uint8_t* gl_mbo_ptr = nullptr; // Ptr to mapped material buffer
+  uint32_t gl_material_buffer = 0;           // Material b.o
+  uint8_t* gl_material_buffer_ptr = nullptr; // Ptr to mapped material buffer
 
   /// Depth pass variables
   uint32_t gl_depth_vao = 0;
   uint32_t gl_depth_vbo = 0;
-  uint32_t gl_depth_models_buffer_object  = 0;  // Models b.o (holds all objects model matrices / transforms)
-  uint8_t* gl_depth_model_buffer_object_ptr = nullptr; // Model b.o ptr
+  uint32_t gl_depth_model_buffer  = 0;          // Models b.o (holds all objects model matrices / transforms)
+  uint8_t* gl_depth_model_buffer_ptr = nullptr; // Model b.o ptr
 
   Shader depth_shader;  // Shader used to render all the components in this batch
 
   /// Shadow mapping pass variables
   uint32_t gl_shadowmapping_vao = 0;
+
+  /// Voxelization pass variables
+  uint32_t gl_voxelization_vao = 0;
 };
 
 #endif // MEINEKRAFT_GRAPHICSBATCH_HPP
