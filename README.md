@@ -3,21 +3,30 @@
 [![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](https://lbesson.mit-license.org/)
 [![](https://img.shields.io/badge/twitter-follow-blue.svg)](https://twitter.com/ALingtorp)
 
-![](/resources/screenshots/pbr-1.png)
+![](/resources/screenshots/sponza.png)
 
-**MeineKraft** is a **physically based rendering engine** written in **C++14** & **OpenGL 4.6**.
+**MeineKraft** is a **physically based rendering engine** written in **C++17** & **OpenGL 4.6**.
+
+The rendering engine is built around a core Entity-Component-System
+architecture. The main game struct in the engine is a object-oriented layer
+on top of the ECS core in order to make it slightly easier to write
+gameplay code while keeping the performance and data-oriented architecture intact.
+
 My intent is to follow up the implementation of the most interesting parts with some articles relating to my learning experience,
 these articles can be found on my personal [site](http://lingtorp.com) with the tag *MeineKraft*.
 
-| Various | GIFs |
-| ------------- | ------------- |
-| Perlin noise ![Perlin Noise generated terrain](/resources/screenshots/perlin-hills.gif) | Linear fog![Linear fog](/resources/screenshots/linear-fog.gif) |
-| Dynamic shader reloading![Dynamic shader editing, with reloading!](/resources/screenshots/dynamic-shader-editing.gif) | Phong reflection model ![Basic lighting](/resources/screenshots/moving-lights.gif) |
-
-It does include some game engine related tech as well such as a Entity-Component-System
-architecture. The main game object in the engine is a object-oriented layer
-on top of the ECS architecture in order to make it slightly easier to write
-gameplay code while keeping the performance and data-oriented architecture intact.
+## Features
+- [X] Voxel cone tracing based global illumination
+- - [X] normal mapping
+- - [X] 3D texture
+- - [ ] 3D clipmap
+- - [X] isotropic voxels
+- - [ ] emissive materials
+- - [X] (_optional_) opacity normalization subpass 
+- [X] Physically based BRDF
+- [X] glTF roughness, metallic material model
+- [X] ECS-architecture
+- [X] JSON-based configuration
 
 ## Dependencies
 * [dear imgui](https://github.com/ocornut/imgui) - editor GUI
@@ -27,10 +36,10 @@ gameplay code while keeping the performance and data-oriented architecture intac
 * [GLEW](https://duckduckgo.com/?q=GLEW&t=ffab&ia=web) - OpenGL function loader
 * [GLM](https://glm.g-truc.net/0.9.8/index.html) - various mathmatical utilities
 
-Platforms supported: Windows and Linux, macOS (_barely_)
+Platforms supported: Windows and Linux
 
 ## Build
-**NOTE:** Before continueing go to the file filesystem.h and adjust the filepaths so that they match your system.
+**NOTE:** Before continueing go to the file util/filesystem.hpp and adjust the filepaths so that they match your system.
 ### Linux (Ubuntu 18.10)
 ```bash
 sudo apt install libsdl2-dev libsdl2-image-dev libassimp-dev libglew-dev
@@ -46,15 +55,6 @@ Clone Vcpkg, build it, then run.
 ```
 Launch CMake-GUI and select MeineKraft repository and then create a build directory and select it.
 Generate the Visual Studio 2017/2019 solution and simply build and run it via Visual Studio.
-### macOS
-#### Install [Homebrew](https://brew.sh/)
-Since OpenGL is deprecated on macOS this will probably not work in the future.
-```bash
-sudo brew install glew sdl2 assimp
-cmake --build .
-cmake . 
-./MeineKraft
-```
 
 # License
 The MIT License (MIT)
