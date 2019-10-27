@@ -28,6 +28,9 @@ these articles can be found on my personal [site](http://lingtorp.com) with the 
 - [X] ECS-architecture
 - [X] JSON-based configuration
 
+## Documentation
+Relevant documentation folder located in the /documentation folder. 
+
 ## Dependencies
 * [dear imgui](https://github.com/ocornut/imgui) - editor GUI
 * [assimp](https://github.com/syoyo/assimp) - model/scene importing
