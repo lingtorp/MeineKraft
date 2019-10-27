@@ -331,7 +331,7 @@ struct RenderState {
   float shadow_bias = 0.0025f;
 
   RenderState() = default;
-  RenderState(const RenderState& old) : frame(old.frame), shadowmapping(old.shadowmapping), normalmapping(old.normalmapping), camera_selection(old.camera_selection), roughness(old.roughness), roughness_aperature(old.roughness_aperature), metallic(old.metallic), metallic_aperature(old.metallic_aperature), max_cone_sample_steps(old.max_cone_sample_steps), voxelize(old.voxelize), conservative_rasterization(old.conservative_rasterization), direct_lighting(old.direct_lighting), indirect_lighting(old.indirect_lighting), always_voxelize(old.always_voxelize), shadow_bias(old.shadow_bias) {}
+  RenderState(const RenderState& old) : frame(old.frame), shadowmapping(old.shadowmapping), normalmapping(old.normalmapping), camera_selection(old.camera_selection), roughness(old.roughness), roughness_aperature(old.roughness_aperature), metallic(old.metallic), metallic_aperature(old.metallic_aperature), voxelize(old.voxelize), conservative_rasterization(old.conservative_rasterization), direct_lighting(old.direct_lighting), indirect_lighting(old.indirect_lighting), always_voxelize(old.always_voxelize), shadow_bias(old.shadow_bias) {}
 };
 
 struct Resolution {
