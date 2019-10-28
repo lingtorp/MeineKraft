@@ -8,6 +8,7 @@ layout(R32UI) uniform coherent volatile uimage3D uVoxelRadiance;
 layout(RGBA8) uniform writeonly image3D uVoxelOpacity; 
 
 uniform sampler2DArray uDiffuse;
+uniform sampler2D uEmissive;
 
 uniform vec3 aabb_center;
 uniform float scaling_factor;
@@ -72,11 +73,16 @@ bool shadow(const vec3 world_position, const vec3 normal) {
 
 void main() {
   const ivec3 vpos = voxel_coordinate_from_world_pos(fPosition);
+  const vec3 radiance = texture(uDiffuse, vec3(fTextureCoord, 0)).rgb;
+  const vec3 emissive = texture(uEmissive, fTextureCoord).rgb;
 
   // Inject radiance if voxel NOT in shadow
   if (!shadow(fPosition, fNormal)) { 
-    const vec3 radiance = texture(uDiffuse, vec3(fTextureCoord, 0)).rgb;
-    imageAtomicAverageRGBA8(uVoxelRadiance, radiance, vpos);
+    imageAtomicAverageRGBA8(uVoxelRadiance, radiance + emissive, vpos);
+  } else {
+    if (dot(emissive, vec3(1.0)) > 0.0) {      
+      imageAtomicAverageRGBA8(uVoxelRadiance, emissive, vpos);
+    }
   }
 
   imageStore(uVoxelOpacity, vpos, vec4(1.0)); 

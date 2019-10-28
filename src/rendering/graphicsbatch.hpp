@@ -227,11 +227,11 @@ struct GraphicsBatch {
   uint32_t gl_tangent_normal_texture_unit = 0;      // Tangent space normal map
   uint32_t gl_tangent_normal_texture = 0;
 
-  uint32_t gl_ambient_occlusion_texture_unit  = 0;  // Ambient occlusion map
-  uint32_t gl_emissive_texture_unit           = 0;  // Emissive map
+  uint32_t gl_emissive_texture_unit = 0;            // Emissive map
+  uint32_t gl_emissive_texture = 0;                  
     
   /// General
-  static const uint32_t INIT_BUFFER_SIZE = 10;  // In # of elements 
+  static const uint32_t INIT_BUFFER_SIZE = 5;   // In # of elements 
   uint32_t buffer_size = INIT_BUFFER_SIZE;      // Current buffer size (of ALL buffers) for the batch 
 
   uint32_t gl_ebo = 0;            // Elements b.o

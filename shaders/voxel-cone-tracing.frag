@@ -14,10 +14,12 @@ uniform vec3[4] uCone_directions;
 
 uniform vec3 uCamera_position;
 
+// General textures
 uniform sampler2D uDiffuse;
 uniform sampler2D uPosition; // World space
 uniform sampler2D uNormal;
 uniform sampler2D uPBR_parameters;
+uniform sampler2D uEmissive;
 
 uniform float uScaling_factor;
 uniform uint uVoxel_grid_dimension;
@@ -174,4 +176,6 @@ void main() {
       color.rgb += diffuse.rgb * max(dot(-uDirectional_light_direction, normal), 0.0);
     }
   }
+
+  color.rgb += texture(uEmissive, frag_coord).rgb;
 }

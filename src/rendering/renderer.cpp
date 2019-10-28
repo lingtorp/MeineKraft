@@ -224,29 +224,16 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, gl_pbr_parameters_texture, 0);
   glObjectLabel(GL_TEXTURE, gl_pbr_parameters_texture, -1, "GBuffer PBR parameters texture");
 
-  // Global ambient occlusion map
-  gl_ambient_occlusion_texture_unit = Renderer::get_next_free_texture_unit();
-  glActiveTexture(GL_TEXTURE0 + gl_ambient_occlusion_texture_unit);
-  glGenTextures(1, &gl_ambient_occlusion_texture);
-  glBindTexture(GL_TEXTURE_2D, gl_ambient_occlusion_texture);
+  // Global emissive map
+  gl_emissive_texture_unit = Renderer::get_next_free_texture_unit();
+  glActiveTexture(GL_TEXTURE0 + gl_emissive_texture_unit);
+  glGenTextures(1, &gl_emissive_texture);
+  glBindTexture(GL_TEXTURE_2D, gl_emissive_texture);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, gl_ambient_occlusion_texture, 0);
-  glObjectLabel(GL_TEXTURE, gl_ambient_occlusion_texture, -1, "GBuffer AO texture");
-
-  if (false) {
-    // Global emissive map
-    gl_emissive_texture_unit = Renderer::get_next_free_texture_unit();
-    glActiveTexture(GL_TEXTURE0 + gl_emissive_texture_unit);
-    glGenTextures(1, &gl_emissive_texture);
-    glBindTexture(GL_TEXTURE_2D, gl_emissive_texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT5, gl_emissive_texture, 0);
-    glObjectLabel(GL_TEXTURE, gl_emissive_texture, -1, "GBuffer emissive texture");
-  }
+  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, gl_emissive_texture, 0);
+  glObjectLabel(GL_TEXTURE, gl_emissive_texture, -1, "GBuffer emissive texture");
 
   // Global shading model id
   gl_shading_model_texture_unit = Renderer::get_next_free_texture_unit();
@@ -667,6 +654,11 @@ void Renderer::render(const uint32_t delta) {
         glBindTexture(GL_TEXTURE_2D, batch.gl_tangent_normal_texture);
       }
 
+      if (batch.gl_emissive_texture != 0) {
+        glActiveTexture(GL_TEXTURE0 + batch.gl_emissive_texture_unit);
+        glBindTexture(GL_TEXTURE_2D, batch.gl_emissive_texture);
+      }
+
       const uint64_t draw_cmd_offset = batch.gl_curr_ibo_idx * sizeof(DrawElementsIndirectCommand);
       glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (const void*) draw_cmd_offset, 1, sizeof(DrawElementsIndirectCommand));
     }
@@ -723,6 +715,13 @@ void Renderer::render(const uint32_t delta) {
       glActiveTexture(GL_TEXTURE0 + batch.gl_diffuse_texture_unit);
       glBindTexture(GL_TEXTURE_2D_ARRAY, batch.gl_diffuse_texture_array);
       glUniform1i(glGetUniformLocation(program, "uDiffuse"), batch.gl_diffuse_texture_unit);
+
+      glActiveTexture(GL_TEXTURE0 + batch.gl_emissive_texture_unit);
+      glBindTexture(GL_TEXTURE_2D, batch.gl_emissive_texture);
+      glUniform1i(glGetUniformLocation(program, "uEmissive"), batch.gl_emissive_texture_unit);
+
+      const uint32_t gl_models_binding_point = 2; // Defaults to 2 in geometry.vert shader
+      glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_models_binding_point, batch.gl_depth_model_buffer);
 
       const uint64_t draw_cmd_offset = batch.gl_curr_ibo_idx * sizeof(DrawElementsIndirectCommand);
       glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (const void *)draw_cmd_offset, 1, sizeof(DrawElementsIndirectCommand));
@@ -843,6 +842,7 @@ void Renderer::render(const uint32_t delta) {
     glUniform1i(glGetUniformLocation(program, "uPBR_parameters"), gl_pbr_parameters_texture_unit);
     glUniform1i(glGetUniformLocation(program, "uTangent_normal"), gl_tangent_normal_texture_unit);
     glUniform1i(glGetUniformLocation(program, "uTangent"), gl_tangent_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "uEmissive"), gl_emissive_texture_unit); 
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
@@ -865,7 +865,6 @@ void Renderer::render(const uint32_t delta) {
     glUniform1i(glGetUniformLocation(program, "environment_map_sampler"), gl_environment_map_texture_unit);
     glUniform1i(glGetUniformLocation(program, "shading_model_id_sampler"), gl_shading_model_texture_unit);
     // glUniform1i(glGetUniformLocation(program, "emissive_sampler"), gl_emissive_texture_unit); // NOTE: Disabled due to too many FBO attachments used (max 8)
-    glUniform1i(glGetUniformLocation(program, "ambient_occlusion_sampler"), gl_ambient_occlusion_texture_unit);
     glUniform1i(glGetUniformLocation(program, "pbr_parameters_sampler"), gl_pbr_parameters_texture_unit);
     glUniform1i(glGetUniformLocation(program, "diffuse_sampler"), gl_diffuse_texture_unit);
     glUniform1i(glGetUniformLocation(program, "geometric_normal_sampler"), gl_geometric_normal_texture_unit);
@@ -925,8 +924,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     
     glUniform1i(glGetUniformLocation(program, "diffuse"), batch.gl_diffuse_texture_unit);
     glUniform1i(glGetUniformLocation(program, "pbr_parameters"), batch.gl_metallic_roughness_texture_unit);
-    glUniform1i(glGetUniformLocation(program, "ambient_occlusion"), batch.gl_ambient_occlusion_texture_unit);
-    // glUniform1i(glGetUniformLocation(program, "emissive"), batch.gl_emissive_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "emissive"), batch.gl_emissive_texture_unit);
     glUniform1i(glGetUniformLocation(program, "tangent_normal"), batch.gl_tangent_normal_texture_unit);
 
     glGenVertexArrays(1, &batch.gl_depth_vao);
@@ -1067,6 +1065,10 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
     }
   }
 
+  if (comp.emissive_texture.data.pixels) {
+    comp_shader_config.insert(Shader::Defines::Emissive);
+  }
+
   Material material;
 
   // Shader configuration and mesh id defines the uniqueness of a GBatch
@@ -1111,7 +1113,7 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
   }
 
   if (comp.diffuse_texture.data.pixels) {
-    batch.gl_diffuse_texture_unit = 11;
+    batch.gl_diffuse_texture_unit = 13;
 
     batch.init_buffer(comp.diffuse_texture, &batch.gl_diffuse_texture_array, batch.gl_diffuse_texture_unit, &batch.diffuse_textures_capacity);
 
@@ -1125,7 +1127,7 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
 
   if (comp.metallic_roughness_texture.data.pixels) {
     const Texture& texture = comp.metallic_roughness_texture;
-    batch.gl_metallic_roughness_texture_unit = 13;
+    batch.gl_metallic_roughness_texture_unit = 14;
     glActiveTexture(GL_TEXTURE0 + batch.gl_metallic_roughness_texture_unit);
     glGenTextures(1, &batch.gl_metallic_roughness_texture);
     glBindTexture(texture.gl_texture_target, batch.gl_metallic_roughness_texture);
@@ -1137,7 +1139,7 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
 
   if (comp.normal_texture.data.pixels) {
     const Texture& texture = comp.normal_texture;
-    batch.gl_tangent_normal_texture_unit = 14;
+    batch.gl_tangent_normal_texture_unit = 15;
     glActiveTexture(GL_TEXTURE0 + batch.gl_tangent_normal_texture_unit);
     glGenTextures(1, &batch.gl_tangent_normal_texture);
     glBindTexture(texture.gl_texture_target, batch.gl_tangent_normal_texture);
@@ -1147,25 +1149,12 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
     glGenerateMipmap(GL_TEXTURE_2D);
   }
 
-  if (comp.ambient_occlusion_texture.data.pixels) {
-    const Texture& texture = comp.ambient_occlusion_texture;
-    batch.gl_ambient_occlusion_texture_unit = 15;
-    glActiveTexture(GL_TEXTURE0 + batch.gl_ambient_occlusion_texture_unit);
-    uint32_t gl_ambient_occlusion_texture = 0;
-    glGenTextures(1, &gl_ambient_occlusion_texture);
-    glBindTexture(texture.gl_texture_target, gl_ambient_occlusion_texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexImage2D(texture.gl_texture_target, 0, GL_RGB, texture.data.width, texture.data.height, 0, GL_RGB, GL_UNSIGNED_BYTE, texture.data.pixels);
-  }
-
-  if (comp.emissive_texture.data.pixels && false) {
+  if (comp.emissive_texture.data.pixels) {
     const Texture& texture = comp.emissive_texture;
     batch.gl_emissive_texture_unit = 16;
     glActiveTexture(GL_TEXTURE0 + batch.gl_emissive_texture_unit);
-    uint32_t gl_emissive_texture = 0;
-    glGenTextures(1, &gl_emissive_texture);
-    glBindTexture(texture.gl_texture_target, gl_emissive_texture);
+    glGenTextures(1, &batch.gl_emissive_texture);
+    glBindTexture(texture.gl_texture_target, batch.gl_emissive_texture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexImage2D(texture.gl_texture_target, 0, GL_RGB, texture.data.width, texture.data.height, 0, GL_RGB, GL_UNSIGNED_BYTE, texture.data.pixels);

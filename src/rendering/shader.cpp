@@ -267,6 +267,9 @@ std::string Shader::shader_define_to_string(const Shader::Defines define) {
   case Shader::Defines::DiffuseRGBA:
     return "#define DIFFUSE_RGBA \n";
     break;
+  case Shader::Defines::Emissive:
+    return "#define HAS_EMISSIVE_TEXTURE \n";
+    break;
   default:
     Log::error("Invalid shader define passed");
     return "This will ensure that shader compilation does not work :)";
