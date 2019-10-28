@@ -24,11 +24,11 @@ out vec3 local_space_position;
 flat out uint fInstance_idx;
 
 void main() {
-    gl_Position = camera_view * models[instance_idx] * vec4(position, 1.0);
-
+    const vec4 p = models[instance_idx] * vec4(position, 1.0); 
+    gl_Position = camera_view * p;
     fTangent = tangent;
     fGeometricNormal = normal;
-    fPosition = vec3(models[instance_idx] * vec4(position, 1.0));
+    fPosition = p.xyz;
     fTexcoord = texcoord;
     fInstance_idx = instance_idx;
     #ifdef DIFFUSE_CUBEMAP
