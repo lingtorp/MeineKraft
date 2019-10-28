@@ -38,7 +38,7 @@ struct TransformComponent {
 
 // FIXME
 inline static Mat4f compute_transform(const TransformComponent& comp) {
-  return rotate(comp.rotation).translate(comp.position).scale(comp.scale);
+  return rotate(comp.rotation).scale(comp.scale).translate(comp.position);
 }
 
 struct TransformSystem {
