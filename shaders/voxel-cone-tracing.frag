@@ -6,11 +6,9 @@ uniform float uScreen_width;
 uniform sampler3D uVoxelRadiance;
 uniform sampler3D uVoxelOpacity;
 
-uniform bool normalmapping;
+uniform bool uNormalmapping;
 uniform sampler2D uTangent;
 uniform sampler2D uTangent_normal;
-
-uniform vec3[4] uCone_directions;
 
 uniform vec3 uCamera_position;
 
@@ -31,10 +29,16 @@ uniform vec3 uAABB_max;
 uniform int   uMax_steps;
 uniform float uRoughness;
 uniform float uMetallic;
-uniform float uRoughness_aperature; // Radians
-uniform float uMetallic_aperature;  // Radians
+uniform float uRoughness_aperature; // Radians (half-angle of cone)
+uniform float uMetallic_aperature;  // Radians (half-angle of cone)
 uniform bool  uDirect_lighting;
 uniform bool  uIndirect_lighting;
+
+uniform uint uNum_diffuse_cones;
+// (Vec3, float) = (direction, weight) for each cone
+layout(std140, binding = 8) buffer DiffuseCones {
+  vec4 cones[];
+};
 
 // Material handling related stuff
 const float GAMMA = 2.2;
@@ -142,7 +146,7 @@ void main() {
   const vec3 N = normal;
   mat3 TBN = mat3(1.0);
 
-  if (normalmapping) {
+  if (uNormalmapping) {
     TBN = mat3(T, B, N);
     const vec3 tangent_normal = normalize(2.0 * (texture(uTangent_normal, frag_coord).xyz - vec3(0.5)));
     normal = normalize(TBN * tangent_normal);  
@@ -156,11 +160,11 @@ void main() {
   const vec4  diffuse = sRGB_to_linear(texture(uDiffuse, frag_coord));
 
   // Diffuse cones
-  color += diffuse * trace_cone(origin, normal, roughness_aperature);
-  #define NUM_DIFFUSE_CONES 4
-  for (uint i = 0; i < NUM_DIFFUSE_CONES; i++) {
-    const vec3 direction = (TBN * normalize(uCone_directions[i]));
-    color += diffuse * trace_cone(origin, direction, roughness_aperature) * dot(direction, normal);
+  color += cones[0].w * diffuse * trace_cone(origin, normal, roughness_aperature);
+  for (uint i = 1; i < uNum_diffuse_cones; i++) {
+    const vec3 direction = (TBN * normalize(cones[i].xyz));
+    const float weight = cones[i].w; 
+    color += weight * diffuse * trace_cone(origin, direction, roughness_aperature) * max(dot(direction, normal), 0.0);
   }
 
   // Specular cone

@@ -99,6 +99,9 @@ private:
   uint32_t gl_vct_vao = 0;
   uint32_t gl_vct_texture = 0;  // texture unit the same as gl_lightning_texture_unit
 
+  uint32_t gl_vct_diffuse_cones_ssbo = 0;
+  uint8_t* gl_vct_diffuse_cones_ssbo_ptr = nullptr;
+
   // Voxels
   uint32_t gl_voxel_radiance_texture = 0;
   uint32_t gl_voxel_radiance_image_unit = 0;

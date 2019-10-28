@@ -270,6 +270,8 @@ void MeineKraft::mainloop() {
         ImGui::Checkbox("Direct", &renderer->state.direct_lighting);
         ImGui::Checkbox("Indirect", &renderer->state.indirect_lighting);
 
+        ImGui::SliderInt("# diffuse cones", &renderer->state.num_diffuse_cones, 1, 12);
+
         ImGui::InputFloat("Roughness", &renderer->state.roughness);
         ImGui::InputFloat("Metallic", &renderer->state.metallic);
         ImGui::InputFloat("Roughness aperature (deg.)", &renderer->state.roughness_aperature);

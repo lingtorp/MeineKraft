@@ -160,6 +160,33 @@ std::array<glm::vec4, 6> extract_planes(const glm::mat4& mat) {
   return { normalize(left_plane), normalize(right_plane), normalize(bot_plane), normalize(top_plane), normalize(near_plane), normalize(far_plane) };
 }
 
+/// Generates (cone-direction, cone-weight) list
+void generate_diffuse_cones(const size_t count,
+                            std::vector<Vec4f>& cones) {
+  assert(count >= 0); assert(cones.size() == count);
+
+  if (count == 0) {
+    return;
+  }
+
+  if (count == 1) {
+    cones[0] = Vec4f(0.0f, 1.0f, 0.0f, 1.0f);
+    return;
+  }
+
+  const float rad_delta = 2.0f * M_PI / (count - 1.0f);
+  const float theta = glm::radians(45.0f);
+
+  // Normal cone
+  cones[0] = Vec4f(0.0f, 1.0f, 0.0f, 1.0f / (count - 1.0f));
+  for (size_t i = 0; i < count - 1; i++) {
+    const Vec3f direction = Vec3f(std::sin(theta) * std::cos(i * rad_delta),
+                                  std::cos(theta),
+                                  std::sin(theta) * std::sin(i * rad_delta));
+    cones[i + 1] = Vec4f(direction, (1.0f - cones[0].w) / (count - 1.0f));
+  }
+}
+
 Renderer::~Renderer() = default;
 
 Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{} {
@@ -467,6 +494,23 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
 
   /// Voxel cone tracing pass
   if (true) {
+    /// Create SSBO for the diffuse cones
+    const size_t MAX_CONES = 12; 
+
+    std::vector<Vec4f> cones(state.num_diffuse_cones);
+    generate_diffuse_cones(state.num_diffuse_cones, cones);
+
+    glGenBuffers(1, &gl_vct_diffuse_cones_ssbo);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, gl_vct_diffuse_cones_ssbo);
+    const auto flags = GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT | GL_MAP_WRITE_BIT;
+    glBufferStorage(GL_SHADER_STORAGE_BUFFER, MAX_CONES * sizeof(Vec4f), nullptr, flags);
+    gl_vct_diffuse_cones_ssbo_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, MAX_CONES * sizeof(Vec4f), flags);
+
+    const uint32_t gl_diffuse_cones_ssbo_binding_point_idx = 8; // Default value in voxel-cone-tracing.frag
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_diffuse_cones_ssbo_binding_point_idx, gl_vct_diffuse_cones_ssbo);
+    std::memcpy(gl_vct_diffuse_cones_ssbo_ptr, cones.data(), cones.size() * sizeof(Vec4f));
+
+
     vct_shader = new Shader(Filesystem::base + "shaders/voxel-cone-tracing.vert", 
                             Filesystem::base + "shaders/voxel-cone-tracing.frag");
     std::tie(success, err_msg) = vct_shader->compile();
@@ -738,15 +782,16 @@ void Renderer::render(const uint32_t delta) {
  
     pass_ended();
 
-    // FIXME: Pass does not work for some reason the read-write-back modifies the values and thus the cone tracing becomes messed up
-    if (false) {
+    // NOTE: Opacity normalization subpass is way too slow around 12.7 ms (26% of frame time)
+    if constexpr(false) {
       pass_started("Opacity normalization subpass");
 
       const auto program = voxelization_opacity_norm_shader->gl_program;
       glUseProgram(program);
-      glUniform1i(glGetUniformLocation(program, "voxels_in"), gl_voxel_radiance_image_unit);
-      glUniform1i(glGetUniformLocation(program, "voxels_out"), gl_voxel_radiance_image_unit);
+      glBindImageTexture(gl_voxel_radiance_image_unit, gl_voxel_radiance_texture, 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA8);
+      glUniform1i(glGetUniformLocation(program, "voxels"), gl_voxel_radiance_image_unit);
       glDispatchCompute(voxel_grid_dimension, voxel_grid_dimension, voxel_grid_dimension);
+      glBindImageTexture(gl_voxel_radiance_image_unit, gl_voxel_radiance_texture, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32UI);
 
       pass_ended();
     }
@@ -812,13 +857,12 @@ void Renderer::render(const uint32_t delta) {
 
     glUniform3fv(glGetUniformLocation(program, "uCamera_position"), 1, &scene->camera->position.x);
 
-    const Vec3f cone_directions[4] = {Vec3f( 0.5f,  0.0f, 0.5f),
-                                      Vec3f( 0.0f,  0.5f, 0.5f),
-                                      Vec3f(-0.5f,  0.0f, 0.5f),
-                                      Vec3f( 0.0f, -0.5f, 0.5f)};
-    glUniform3fv(glGetUniformLocation(program, "uCone_directions"), 4, &cone_directions[0].x);
+    glUniform1ui(glGetUniformLocation(program, "uNum_diffuse_cones"), state.num_diffuse_cones);
+    std::vector<Vec4f> cones(state.num_diffuse_cones);
+    generate_diffuse_cones(state.num_diffuse_cones, cones);
+    std::memcpy(gl_vct_diffuse_cones_ssbo_ptr, cones.data(), cones.size() * sizeof(Vec4f));
 
-    glUniform1i(glGetUniformLocation(program, "normalmapping"), state.normalmapping);
+    glUniform1i(glGetUniformLocation(program, "uNormalmapping"), state.normalmapping);
 
     const float voxel_scaling_factor = 1.0f / scene->aabb.max_axis();
     glUniform1f(glGetUniformLocation(program, "uScaling_factor"), voxel_scaling_factor);
