@@ -6,7 +6,7 @@ if(UNIX)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread") # pthread for Linux
 endif(UNIX)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -51,7 +51,7 @@ set(SHADER_SRC_FILES "shaders/blur.vert" "shaders/blur.frag" "shaders/geometry.v
         "shaders/geometry.frag" "shaders/lightning.vert" "shaders/lightning.frag"
         "shaders/ssao.frag" "shaders/ssao.vert" "shaders/culling.comp.glsl"
         "shaders/voxel-cone-tracing.vert" "shaders/voxel-cone-tracing.frag" "shaders/voxelization.vert"
-        "shaders/voxelization.geom" "shaders/voxelization.frag" "shaders/voxelization-opacity-normalization.geom")
+        "shaders/voxelization.geom" "shaders/voxelization.frag" "shaders/voxelization-opacity-normalization.comp")
 source_group("shaders" FILES ${SHADER_SRC_FILES})
 
 set(SOURCE_FILES main.cpp src/meinekraft.hpp src/meinekraft.cpp ${MATH_SRC_FILES} ${NODES_SRC_FILES} ${RENDER_SRC_FILES} ${UTIL_SRC_FILES} ${SCENE_SRC_FILES} ${IMGUI_SRC} ${SHADER_SRC_FILES})
