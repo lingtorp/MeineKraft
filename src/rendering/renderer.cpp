@@ -1072,6 +1072,12 @@ void Renderer::link_batch(GraphicsBatch& batch) {
 
 	  glVertexAttribPointer(glGetAttribLocation(program, "texcoord"), 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void*)offsetof(Vertex, tex_coord));
 	  glEnableVertexAttribArray(glGetAttribLocation(program, "texcoord"));
+    
+    // Batch instance idx buffer
+    glBindBuffer(GL_ARRAY_BUFFER, batch.gl_instance_idx_buffer);
+    glVertexAttribIPointer(glGetAttribLocation(program, "instance_idx"), 1, GL_UNSIGNED_INT, sizeof(GLuint), nullptr);
+    glEnableVertexAttribArray(glGetAttribLocation(program, "instance_idx"));
+    glVertexAttribDivisor(glGetAttribLocation(program, "instance_idx"), 1);
   }
 }
 
