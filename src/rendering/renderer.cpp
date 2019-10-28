@@ -119,12 +119,6 @@ static glm::mat4 orthographic_projection(const AABB& aabb) {
   return ortho * glm::lookAt(center - offset, center, glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
-/// Normalizes the plane's equation and returns it
-static inline glm::vec4 normalize(const glm::vec4& p) {
-  const float mag = std::sqrt(p.x * p.x + p.y * p.y + p.z * p.z);
-  return glm::vec4(p.x / mag, p.y / mag, p.z / mag, p.w / mag);
-}
-
 /// Returns the planes from the frustrum matrix in order; {left, right, bottom, top, near, far} (MV = world space with normal poiting to positive halfspace)
 /// See: http://gamedevs.org/uploads/fast-extraction-viewing-frustum-planes-from-world-view-projection-matrix.pdf
 std::array<glm::vec4, 6> extract_planes(const glm::mat4& mat) {
@@ -352,12 +346,8 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
   }
 
-  pointlights.emplace_back(PointLight(Vec3f(0.0f, 500.0f, 150.0f)));
-  pointlights.emplace_back(PointLight(Vec3f(100.0f, 100.0f, 100.0f)));
-  pointlights.emplace_back(PointLight(Vec3f(0.0f, 300.0f, 50.0f)));
-  pointlights.emplace_back(PointLight(Vec3f(400.0f, 200.0f, 500.0f)));
-
   /// Create SSBO for the PointLights
+  pointlights.emplace_back(PointLight(Vec3f(200.0f)));
   glGenBuffers(1, &gl_pointlights_ssbo);
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, gl_pointlights_ssbo);
   const auto flags = GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT | GL_MAP_WRITE_BIT;
@@ -675,8 +665,6 @@ void Renderer::render(const uint32_t delta) {
       glBindVertexArray(batch.gl_depth_vao);
       glBindBuffer(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo); // GL_DRAW_INDIRECT_BUFFER is global context state
 
-			const glm::mat4 ortho = orthographic_projection(scene->aabb);
-			glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(ortho));
 			glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(camera_transform));
 
       const uint32_t gl_models_binding_point = 2; // Defaults to 2 in geometry.vert shader
@@ -827,7 +815,7 @@ void Renderer::render(const uint32_t delta) {
     pass_ended();
   }
 
-  if (true) {
+  {
     pass_started("Voxel cone tracing pass");
 
     const auto program = vct_shader->gl_program;
@@ -1039,6 +1027,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, batch.gl_instance_idx_buffer);
     glObjectLabel(GL_BUFFER, batch.gl_instance_idx_buffer, -1, "Instance idx SSBO");
     glBufferStorage(GL_SHADER_STORAGE_BUFFER, GraphicsBatch::INIT_BUFFER_SIZE * sizeof(GLuint), nullptr, 0);
+
     glBindBuffer(GL_ARRAY_BUFFER, batch.gl_instance_idx_buffer);
     glVertexAttribIPointer(glGetAttribLocation(program, "instance_idx"), 1, GL_UNSIGNED_INT, sizeof(GLuint), nullptr);
     glEnableVertexAttribArray(glGetAttribLocation(program, "instance_idx"));

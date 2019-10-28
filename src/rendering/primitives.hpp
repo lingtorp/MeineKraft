@@ -296,6 +296,12 @@ struct Plane {
   inline double distance_to_point(const Vec3<T>& point) const {
       return a * point.x + b * point.y + c * point.z + d;
   }
+
+  /// Normalizes the plane's equation and returns it
+  static inline Vec4f normalize(const Vec4f& p) {
+    const float mag = std::sqrt(p.x * p.x + p.y * p.y + p.z * p.z);
+    return Vec4f(p.x / mag, p.y / mag, p.z / mag, p.w / mag);
+  }
 };
 
 /// Opaque ID type used to reference resources throughout the engine
