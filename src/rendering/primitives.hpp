@@ -333,7 +333,7 @@ struct RenderState {
   bool conservative_rasterization = true;
   bool direct_lighting = true;
   bool indirect_lighting = true;
-  bool always_voxelize = false;
+  bool always_voxelize = true;
   float shadow_bias = 0.0025f;
   int num_diffuse_cones = 4;
 

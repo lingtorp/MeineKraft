@@ -101,8 +101,8 @@ static glm::mat4 shadowmap_transform(const AABB& aabb, const DirectionalLight& l
   const float znear  = 0.0f;
   const float zfar   = diameter;
 
-  const glm::vec3 center = glm::vec3(aabb.center().x, aabb.center().y, aabb.center().z);
-  const glm::vec3 light_direction = glm::vec3(light.direction.x, light.direction.y, light.direction.z);
+  const glm::vec3 center = aabb.center().as_glm();
+  const glm::vec3 light_direction = light.direction.as_glm();
   const glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
   const glm::mat4 light_view_transform = glm::lookAt(center - (diameter / 2.0f) * light_direction, center, up);
 
@@ -112,15 +112,15 @@ static glm::mat4 shadowmap_transform(const AABB& aabb, const DirectionalLight& l
 // NOTE: AABB passed is assumed to be the Scene AABB
 static glm::mat4 orthographic_projection(const AABB& aabb) {
   const float voxel_grid_dimension = aabb.max_axis();
-	const float left   = -float(voxel_grid_dimension);
-	const float right  =  float(voxel_grid_dimension);
-	const float bottom = -float(voxel_grid_dimension);
-	const float top    =  float(voxel_grid_dimension);
+	const float left   = -voxel_grid_dimension;
+	const float right  =  voxel_grid_dimension;
+	const float bottom = -voxel_grid_dimension;
+	const float top    =  voxel_grid_dimension;
 	const float znear  =  0.0f;
-	const float zfar   =  2.0f * float(voxel_grid_dimension);
+	const float zfar   =  2.0f * voxel_grid_dimension;
 	const glm::mat4 ortho  = glm::ortho(left, right, bottom, top, znear, zfar);
-  const glm::vec3 center = glm::vec3(aabb.center().x, aabb.center().y, aabb.center().z);
-  const glm::vec3 offset = glm::vec3(0.0f, 0.0f,  float(voxel_grid_dimension));
+  const glm::vec3 center = aabb.center().as_glm();
+  const glm::vec3 offset = glm::vec3(0.0f, 0.0f, voxel_grid_dimension);
   return ortho * glm::lookAt(center - offset, center, glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
@@ -184,6 +184,23 @@ void generate_diffuse_cones(const size_t count,
                                   std::sin(theta) * std::sin(i * rad_delta));
     cones[i + 1] = Vec4f(direction, (1.0f - cones[0].w) / (count - 1.0f));
   }
+}
+
+std::vector<AABB> generate_clipmaps_from_scene_aabb(const AABB& scene,
+                                                    const size_t num_clipmaps) {
+  assert(num_clipmaps > 1);
+
+  std::vector<AABB> clipmaps(num_clipmaps);
+  clipmaps[0] = scene;
+
+  const float scaling_factor = (1.0f - (1.0f / num_clipmaps)) / (num_clipmaps - 1.0f);
+  for (size_t i = 1; i < num_clipmaps; i++) {
+    clipmaps[i] = scene;
+    clipmaps[i].max *= ((num_clipmaps - i) * scaling_factor);
+    clipmaps[i].min *= ((num_clipmaps - i) * scaling_factor);
+  }
+
+  return clipmaps;
 }
 
 Renderer::~Renderer() = default;
@@ -412,29 +429,35 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glBindFramebuffer(GL_FRAMEBUFFER, gl_voxelization_fbo);
 		glObjectLabel(GL_FRAMEBUFFER, gl_voxelization_fbo, -1, "Voxelization FBO");
 
-    // Global radiance voxel buffer
-    gl_voxel_radiance_image_unit = get_next_free_image_unit();
-    gl_voxel_radiance_texture_unit = get_next_free_texture_unit();
-    glActiveTexture(GL_TEXTURE0 + gl_voxel_radiance_texture_unit);
-    glGenTextures(1, &gl_voxel_radiance_texture);
-    glBindTexture(GL_TEXTURE_3D, gl_voxel_radiance_texture);
-    glTexStorage3D(GL_TEXTURE_3D, 4, GL_RGBA8, voxel_grid_dimension, voxel_grid_dimension, voxel_grid_dimension);
-    glBindImageTexture(gl_voxel_radiance_image_unit, gl_voxel_radiance_texture, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32UI);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glObjectLabel(GL_TEXTURE, gl_voxel_radiance_texture, -1, "Voxel radiance texture");
+    for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
+      // Global radiance voxel buffer
+      gl_voxel_radiance_image_units[i] = get_next_free_image_unit();
+      gl_voxel_radiance_texture_units[i] = get_next_free_texture_unit();
+      glActiveTexture(GL_TEXTURE0 + gl_voxel_radiance_texture_units[i]);
+      glGenTextures(1, &gl_voxel_radiance_textures[i]);
+      glBindTexture(GL_TEXTURE_3D, gl_voxel_radiance_textures[i]);
+      glTexStorage3D(GL_TEXTURE_3D, 1, GL_RGBA8, clipmaps.size[i], clipmaps.size[i], clipmaps.size[i]);
+      glBindImageTexture(gl_voxel_radiance_image_units[i], gl_voxel_radiance_textures[i], 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32UI);
+      glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+      glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-    // Global opacity voxel buffer
-    gl_voxel_opacity_image_unit = get_next_free_image_unit();
-    gl_voxel_opacity_texture_unit = get_next_free_texture_unit();
-    glActiveTexture(GL_TEXTURE0 + gl_voxel_opacity_texture_unit);
-    glGenTextures(1, &gl_voxel_opacity_texture);
-    glBindTexture(GL_TEXTURE_3D, gl_voxel_opacity_texture);
-    glTexStorage3D(GL_TEXTURE_3D, 4, GL_RGBA8, voxel_grid_dimension, voxel_grid_dimension, voxel_grid_dimension);
-    glBindImageTexture(gl_voxel_opacity_image_unit, gl_voxel_opacity_texture, 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA8);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glObjectLabel(GL_TEXTURE, gl_voxel_opacity_texture, -1, "Voxel opacity texture");
+      const std::string radiance_object_label = "Clipmap #" + std::to_string(i) + " radiance texture";
+      glObjectLabel(GL_TEXTURE, gl_voxel_radiance_textures[i], -1, radiance_object_label.c_str());
+ 
+      // Global opacity voxel buffer
+      gl_voxel_opacity_image_units[i] = get_next_free_image_unit();
+      gl_voxel_opacity_texture_units[i] = get_next_free_texture_unit();
+      glActiveTexture(GL_TEXTURE0 + gl_voxel_opacity_texture_units[i]);
+      glGenTextures(1, &gl_voxel_opacity_textures[i]);
+      glBindTexture(GL_TEXTURE_3D, gl_voxel_opacity_textures[i]);
+      glTexStorage3D(GL_TEXTURE_3D, 1, GL_RGBA8, clipmaps.size[i], clipmaps.size[i], clipmaps.size[i]);
+      glBindImageTexture(gl_voxel_opacity_image_units[i], gl_voxel_opacity_textures[i], 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA8);
+      glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+      glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+      const std::string opacity_object_label = "Clipmap #" + std::to_string(i) + " opacity texture";
+      glObjectLabel(GL_TEXTURE, gl_voxel_opacity_textures[i], -1, opacity_object_label.c_str());
+    }
 
     // Reuse shadowmap depth attachment for FBO completeness (disabled anyway)
     glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, gl_shadowmapping_texture, 0);
@@ -505,7 +528,6 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_diffuse_cones_ssbo_binding_point_idx, gl_vct_diffuse_cones_ssbo);
     std::memcpy(gl_vct_diffuse_cones_ssbo_ptr, cones.data(), cones.size() * sizeof(Vec4f));
 
-
     vct_shader = new Shader(Filesystem::base + "shaders/voxel-cone-tracing.vert", 
                             Filesystem::base + "shaders/voxel-cone-tracing.frag");
     std::tie(success, err_msg) = vct_shader->compile();
@@ -518,14 +540,6 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
 
     glGenFramebuffers(1, &gl_vct_fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, gl_vct_fbo);
-
-    // TODO: Can be removed (along with other pointlight vestiges)
-    GLuint gl_vct_rbo = 0;
-    glGenRenderbuffers(1, &gl_vct_rbo);
-    glBindRenderbuffer(GL_RENDERBUFFER, gl_vct_rbo);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, screen.width, screen.height);
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, gl_vct_rbo);
-    glObjectLabel(GL_TEXTURE, gl_vct_rbo, -1, "VCT Depth RBO");
 
 		glActiveTexture(GL_TEXTURE0 + gl_lightning_texture_unit);
 		glGenTextures(1, &gl_vct_texture);
@@ -717,41 +731,55 @@ void Renderer::render(const uint32_t delta) {
       state.voxelize = false;
     }
     pass_started("Voxelization pass");
-		glClearTexImage(gl_voxel_radiance_texture, 0, GL_RGBA, GL_FLOAT, nullptr); // Clear all values
-    glClearTexImage(gl_voxel_opacity_texture, 0, GL_RGBA, GL_FLOAT, nullptr);
-		glBindFramebuffer(GL_FRAMEBUFFER, gl_voxelization_fbo);
+    for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
+      glClearTexImage(gl_voxel_radiance_textures[i], 0, GL_RGBA, GL_FLOAT, nullptr); 
+      glClearTexImage(gl_voxel_opacity_textures[i], 0, GL_RGBA, GL_FLOAT, nullptr);
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, gl_voxelization_fbo);
 
 		const auto program = voxelization_shader->gl_program;
 		glUseProgram(program);
 
 		// Orthogonal projection along +z-axis
-		const glm::mat4 ortho = orthographic_projection(scene->aabb);
-		glUniformMatrix4fv(glGetUniformLocation(program, "ortho"), 1, GL_FALSE, glm::value_ptr(ortho));
+		glm::mat4 orthos[NUM_CLIPMAPS];
+    for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
+      orthos[i] = orthographic_projection(clipmaps.aabb[i]);
+    }
+		glUniformMatrix4fv(glGetUniformLocation(program, "uOrthos"), NUM_CLIPMAPS, GL_FALSE, glm::value_ptr(orthos[0]));
 
-    const float voxel_scaling_factor = 1.0f / scene->aabb.max_axis();
-    glUniform1f(glGetUniformLocation(program, "scaling_factor"), voxel_scaling_factor);
+    float scaling_factors[NUM_CLIPMAPS];
+    for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
+      scaling_factors[i] = 1.0f / clipmaps.aabb[i].max_axis();
+    }
+    glUniform1fv(glGetUniformLocation(program, "uScaling_factors"), NUM_CLIPMAPS, scaling_factors);
 
-    const Vec3f aabb_center = scene->aabb.center();
-    glUniform3fv(glGetUniformLocation(program, "aabb_center"), 1, &aabb_center.x);
+    Vec3f aabb_centers[NUM_CLIPMAPS];
+    for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
+      aabb_centers[i] = clipmaps.aabb[i].center();
+    }
+    glUniform3fv(glGetUniformLocation(program, "uAABB_centers"), NUM_CLIPMAPS, &aabb_centers[0].x);
 
     // Shadowmapping
     glUniform1f(glGetUniformLocation(program, "uShadow_bias"), state.shadow_bias);
     glUniform3fv(glGetUniformLocation(program, "uDirectional_light_direction"), 1, &directional_light.direction.x);
     glUniformMatrix4fv(glGetUniformLocation(program, "uLight_space_transform"), 1, GL_FALSE, glm::value_ptr(light_space_transform));
     glUniform1i(glGetUniformLocation(program, "uShadowmap"), gl_shadowmapping_texture_unit);
-
-    glUniform3fv(glGetUniformLocation(program, "light_direction"), 1, &directional_light.direction.x);
-    glUniform1ui(glGetUniformLocation(program, "voxel_grid_dimension"), voxel_grid_dimension);
-		glUniform1i(glGetUniformLocation(program, "uVoxelRadiance"), gl_voxel_radiance_image_unit);
-    glUniform1i(glGetUniformLocation(program, "uVoxelOpacity"), gl_voxel_opacity_image_unit);
-
-    glUniform1i(glGetUniformLocation(program, "conservative_rasterization_enabled"), state.conservative_rasterization);
+    glUniform3fv(glGetUniformLocation(program, "uLight_direction"), 1, &directional_light.direction.x);
+    glUniform1iv(glGetUniformLocation(program, "uClipmap_sizes"), NUM_CLIPMAPS, clipmaps.size);
+		glUniform1iv(glGetUniformLocation(program, "uVoxelRadiance"), NUM_CLIPMAPS, gl_voxel_radiance_image_units);
+    glUniform1iv(glGetUniformLocation(program, "uVoxelOpacity"), NUM_CLIPMAPS, gl_voxel_opacity_image_units);
+    glUniform1i(glGetUniformLocation(program, "uConservative_rasterization_enabled"), state.conservative_rasterization);
 
     glDisable(GL_DEPTH_TEST);
     glDepthMask(GL_FALSE);
     glDisable(GL_CULL_FACE);
     glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-    glViewport(0, 0, voxel_grid_dimension, voxel_grid_dimension);
+    Vec4f viewports[NUM_CLIPMAPS];
+    for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
+      viewports[i] = Vec4f(0.0f, 0.0f, clipmaps.size[i], clipmaps.size[i]);
+    }
+    glViewportArrayv(0, NUM_CLIPMAPS, &viewports[0].x);
 
     for (size_t i = 0; i < graphics_batches.size(); i++) {
       const auto &batch = graphics_batches[i];
@@ -790,18 +818,17 @@ void Renderer::render(const uint32_t delta) {
 
       const auto program = voxelization_opacity_norm_shader->gl_program;
       glUseProgram(program);
-      glBindImageTexture(gl_voxel_radiance_image_unit, gl_voxel_radiance_texture, 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA8);
-      glUniform1i(glGetUniformLocation(program, "voxels"), gl_voxel_radiance_image_unit);
-      glDispatchCompute(voxel_grid_dimension, voxel_grid_dimension, voxel_grid_dimension);
-      glBindImageTexture(gl_voxel_radiance_image_unit, gl_voxel_radiance_texture, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32UI);
+      for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
+        glBindImageTexture(gl_voxel_radiance_image_units[i], gl_voxel_radiance_textures[i], 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA8);
+        glUniform1i(glGetUniformLocation(program, "voxels"), gl_voxel_radiance_image_units[i]);
+        glDispatchCompute(clipmaps.size[i], clipmaps.size[i], clipmaps.size[i]);
+        glBindImageTexture(gl_voxel_radiance_image_units[i], gl_voxel_radiance_textures[i], 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32UI);
+      }
+      
+      glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT); // Due to incoherent mem. access need to sync read and usage of voxel data
 
       pass_ended();
     }
-
-		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT); // Due to incoherent mem. access need to sync read and usage of voxel data
-
-    glGenerateTextureMipmap(gl_voxel_opacity_texture);
-    glGenerateTextureMipmap(gl_voxel_radiance_texture);
   }
 
   if (voxel_visualization_enabled) {
@@ -815,16 +842,15 @@ void Renderer::render(const uint32_t delta) {
     glActiveTexture(GL_TEXTURE0 + gl_lightning_texture_unit);
     glBindTexture(GL_TEXTURE_2D, gl_voxel_visualization_texture);
 
-
-    glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(camera_transform));
-    glUniform1i(glGetUniformLocation(program, "uVoxelOpacity"), gl_voxel_opacity_image_unit);
-    glUniform1i(glGetUniformLocation(program, "uVoxelRadiance"), gl_voxel_radiance_image_unit);
-    glUniform1f(glGetUniformLocation(program, "aabb_max_dimension"), scene->aabb.max_dimension());
-    glUniform1ui(glGetUniformLocation(program, "voxel_grid_dimension"), voxel_grid_dimension);
-    glUniform3fv(glGetUniformLocation(program, "aabb_min"), 1, &scene->aabb.min.x);
+    // TODO: Uniforms are not up to date here
+    glUniformMatrix4fv(glGetUniformLocation(program, "uCamera_view"), 1, GL_FALSE, glm::value_ptr(camera_transform));
+    glUniform1iv(glGetUniformLocation(program, "uVoxelOpacity"), NUM_CLIPMAPS, gl_voxel_opacity_image_units);
+    glUniform1iv(glGetUniformLocation(program, "uVoxelRadiance"), NUM_CLIPMAPS, gl_voxel_radiance_image_units);
+    glUniform1iv(glGetUniformLocation(program, "uClipmap_sizes"), NUM_CLIPMAPS, clipmaps.size);
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glDrawArraysInstanced(GL_POINTS, 0, 1, voxel_grid_dimension * voxel_grid_dimension * voxel_grid_dimension);
+    // TODO: Per clipmap visualization?
+    // glDrawArraysInstanced(GL_POINTS, 0, 1, );
 
     pass_ended();
   }
@@ -866,31 +892,42 @@ void Renderer::render(const uint32_t delta) {
 
     glUniform1i(glGetUniformLocation(program, "uNormalmapping"), state.normalmapping);
 
-    const float voxel_scaling_factor = 1.0f / scene->aabb.max_axis();
-    glUniform1f(glGetUniformLocation(program, "uScaling_factor"), voxel_scaling_factor);
+    float scaling_factors[NUM_CLIPMAPS];
+    for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
+      scaling_factors[i] = 1.0f / clipmaps.aabb[i].max_dimension();
+    }
+    glUniform1fv(glGetUniformLocation(program, "uScaling_factors"), NUM_CLIPMAPS, scaling_factors);
 
-    const float voxel_size_LOD0 = scene->aabb.max_axis() / float(voxel_grid_dimension);
+    const float voxel_size_LOD0 = clipmaps.aabb[0].max_axis() / float(clipmaps.size[0]);
     glUniform1f(glGetUniformLocation(program, "uVoxel_size_LOD0"), voxel_size_LOD0);
 
-    const Vec3f aabb_center = scene->aabb.center();
-    glUniform3fv(glGetUniformLocation(program, "uAABB_center"), 1, &aabb_center.x);
-    glUniform3fv(glGetUniformLocation(program, "uAABB_min"), 1, &scene->aabb.min.x);
-    glUniform3fv(glGetUniformLocation(program, "uAABB_max"), 1, &scene->aabb.max.x);
+    Vec3f clipmap_aabb_centers[NUM_CLIPMAPS];
+    Vec3f clipmap_aabb_mins[NUM_CLIPMAPS];
+    Vec3f clipmap_aabb_maxs[NUM_CLIPMAPS];
+    for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
+      clipmap_aabb_centers[i] = clipmaps.aabb[i].center();
+      clipmap_aabb_mins[i] = clipmaps.aabb[i].min;
+      clipmap_aabb_maxs[i] = clipmaps.aabb[i].max;
+    }
+    glUniform3fv(glGetUniformLocation(program, "uAABB_centers"), NUM_CLIPMAPS, &clipmap_aabb_centers[0].x);
+    glUniform3fv(glGetUniformLocation(program, "uAABB_mins"), NUM_CLIPMAPS, &clipmap_aabb_mins[0].x);
+    glUniform3fv(glGetUniformLocation(program, "uAABB_maxs"), NUM_CLIPMAPS, &clipmap_aabb_maxs[0].x);
 
-    glUniform1ui(glGetUniformLocation(program, "uVoxel_grid_dimension"), voxel_grid_dimension);
+    glUniform1iv(glGetUniformLocation(program, "uVoxel_grid_dimensions"), NUM_CLIPMAPS, clipmaps.size);
+		glUniform1iv(glGetUniformLocation(program, "uVoxelRadiance"), NUM_CLIPMAPS, gl_voxel_radiance_image_units);
+    glUniform1iv(glGetUniformLocation(program, "uVoxelOpacity"), NUM_CLIPMAPS, gl_voxel_opacity_image_units);
+
     glUniform1f(glGetUniformLocation(program, "uScreen_width"), (float)screen.width);
     glUniform1f(glGetUniformLocation(program, "uScreen_height"), (float)screen.height);
     glUniform1i(glGetUniformLocation(program, "uDiffuse"), gl_diffuse_texture_unit);
     glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
     glUniform1i(glGetUniformLocation(program, "uNormal"), gl_geometric_normal_texture_unit);
-    glUniform1i(glGetUniformLocation(program, "uVoxelRadiance"), gl_voxel_radiance_texture_unit);
-    glUniform1i(glGetUniformLocation(program, "uVoxelOpacity"), gl_voxel_opacity_texture_unit);
     glUniform1i(glGetUniformLocation(program, "uPBR_parameters"), gl_pbr_parameters_texture_unit);
     glUniform1i(glGetUniformLocation(program, "uTangent_normal"), gl_tangent_normal_texture_unit);
     glUniform1i(glGetUniformLocation(program, "uTangent"), gl_tangent_texture_unit);
     glUniform1i(glGetUniformLocation(program, "uEmissive"), gl_emissive_texture_unit); 
 
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
     pass_ended();

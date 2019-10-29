@@ -23,8 +23,8 @@ struct Texture;
 struct Scene;
 
 struct Renderer {
-  /// Create a renderer with a given window/screen size/resolution
-  explicit Renderer(const Resolution& screen);
+  /// Create a renderer with a given window/screen size/resolution 
+  Renderer(const Resolution& screen);
   ~Renderer();
 
   /// Post allocation initialization
@@ -41,24 +41,18 @@ struct Renderer {
   /// Updates all the shaders projection matrices in order to support resizing of the window
   void update_projection_matrix(const float fov, const Resolution& screen);
 
-  /// Returns the next unused texture unit
-  static uint32_t get_next_free_texture_unit();
-
   void load_environment_map(const std::vector<std::string>& faces);
 
-  // Rudimentary rendering pipeline for now
-  std::vector<RenderPass> render_passes;
-
-	Scene *scene = nullptr;
   RenderState state;
-  glm::mat4 projection_matrix; 
   Resolution screen;
   std::vector<GraphicsBatch> graphics_batches;
-  std::vector<PointLight> pointlights; 
 
-  // Shadow mapping
+	Scene *scene = nullptr;
+  std::vector<PointLight> pointlights;
   DirectionalLight directional_light = DirectionalLight(Vec3f(0.0f, 0.5f, 0.5f), Vec3f(0.0f, -1.0f, -0.1f));
 private:
+  glm::mat4 projection_matrix; 
+
   void add_graphics_state(GraphicsBatch& batch, const RenderComponent& comp, Material material, ID entity_id);
   void update_transforms();
   void link_batch(GraphicsBatch& batch);
@@ -91,8 +85,12 @@ private:
   uint8_t* gl_pointlights_ssbo_ptr = nullptr;
 
   /// Voxelization pipeline related
-  const uint32_t voxel_grid_dimension = 128; // 256 ~ 60MB, 512 ~ 540MB (not counting mipmaps, adds ~33%)
-  
+  static const uint32_t NUM_CLIPMAPS = 4;
+  struct {
+    AABB aabb[NUM_CLIPMAPS];
+    int32_t size[NUM_CLIPMAPS] = {64, 64, 32, 16};
+  } clipmaps;
+
   Shader* voxelization_shader = nullptr;
   uint32_t gl_voxelization_fbo = 0;
   ComputeShader* voxelization_opacity_norm_shader = nullptr;
@@ -106,13 +104,13 @@ private:
   uint8_t* gl_vct_diffuse_cones_ssbo_ptr = nullptr;
 
   // Voxels
-  uint32_t gl_voxel_radiance_texture = 0;
-  uint32_t gl_voxel_radiance_image_unit = 0;
-  uint32_t gl_voxel_radiance_texture_unit = 0;
+  uint32_t gl_voxel_radiance_textures[NUM_CLIPMAPS] = {};
+  int32_t gl_voxel_radiance_image_units[NUM_CLIPMAPS] = {};
+  int32_t gl_voxel_radiance_texture_units[NUM_CLIPMAPS] = {};
 
-  uint32_t gl_voxel_opacity_texture = 0;
-  uint32_t gl_voxel_opacity_image_unit = 0;
-  uint32_t gl_voxel_opacity_texture_unit = 0;
+  uint32_t gl_voxel_opacity_textures[NUM_CLIPMAPS] = {};
+  int32_t gl_voxel_opacity_image_units[NUM_CLIPMAPS] = {};
+  int32_t gl_voxel_opacity_texture_units[NUM_CLIPMAPS] = {};
 
   // Voxel visualization pass
   bool voxel_visualization_enabled = false;
@@ -140,9 +138,6 @@ private:
   // PBR Parameters
   uint32_t gl_pbr_parameters_texture = 0;
   uint32_t gl_pbr_parameters_texture_unit = 0;
-  // Ambient occlusion map
-  uint32_t gl_ambient_occlusion_texture = 0;
-  uint32_t gl_ambient_occlusion_texture_unit = 0;
   // Emissive map
   uint32_t gl_emissive_texture_unit = 0;
   uint32_t gl_emissive_texture = 0;
@@ -153,6 +148,9 @@ private:
   // Environment map
   Texture environment_map; 
   uint32_t gl_environment_map_texture_unit = 0;
+
+  static uint32_t get_next_free_texture_unit(bool peek = false);
+  static uint32_t get_next_free_image_unit(bool peek = false);
 };
 
 #endif // MEINEKRAFT_RENDERER_HPP
