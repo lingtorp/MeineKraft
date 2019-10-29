@@ -84,9 +84,6 @@ void Scene::load_models_from(const std::string& directory, const std::string& fi
   for (size_t i = 0; i < render_components.size(); i++) {
     render_components[i].set_shading_model(ShadingModel::PhysicallyBased);
     Model model(render_components[i]);
-    auto transform = TransformSystem::instance().lookup_referenced(model.id);
-    transform->scale = 4000.0f;
-    transform->position.y += 0.1f;
     NameSystem::instance().add_name_to_entity("2-mesh-" + std::to_string(i), model.id);
   }
 }

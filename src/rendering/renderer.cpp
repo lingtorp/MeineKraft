@@ -483,7 +483,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   }
 
   /// Voxel cone tracing pass
-  if (true) {
+  {
     /// Create SSBO for the diffuse cones
     const size_t MAX_CONES = 12; 
 
