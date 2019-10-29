@@ -1,10 +1,14 @@
+// #version 450 core
+
+#define NUM_CLIPMAPS 4
+
 const float M_PI = 3.141592653589793;
 
 uniform float uScreen_height;
 uniform float uScreen_width;
 
-uniform sampler3D uVoxelRadiance;
-uniform sampler3D uVoxelOpacity;
+uniform sampler3D uVoxelRadiance[NUM_CLIPMAPS];
+uniform sampler3D uVoxelOpacity[NUM_CLIPMAPS];
 
 uniform bool uNormalmapping;
 uniform sampler2D uTangent;
@@ -19,14 +23,13 @@ uniform sampler2D uNormal;
 uniform sampler2D uPBR_parameters;
 uniform sampler2D uEmissive;
 
-uniform float uScaling_factor;
-uniform uint uVoxel_grid_dimension;
-uniform vec3 uAABB_center;
-uniform vec3 uAABB_min;
-uniform vec3 uAABB_max;
+uniform float uScaling_factors[NUM_CLIPMAPS];
+uniform int   uClipmap_sizes[NUM_CLIPMAPS];
+uniform vec3  uAABB_centers[NUM_CLIPMAPS];
+uniform vec3  uAABB_mins[NUM_CLIPMAPS];
+uniform vec3  uAABB_maxs[NUM_CLIPMAPS];
 
 // User customizable
-uniform int   uMax_steps;
 uniform float uRoughness;
 uniform float uMetallic;
 uniform float uRoughness_aperature; // Radians (half-angle of cone)
@@ -58,25 +61,34 @@ vec4 sRGB_to_linear(const vec4 sRGB) {
   return vec4(pow(sRGB.xyz, vec3(GAMMA)), sRGB.w);
 }
 
-ivec3 voxel_coordinate_from_world_pos(const vec3 pos) {
-  vec3 vpos = (pos - uAABB_center) * uScaling_factor;
+ivec3 voxel_coordinate_from_world_pos(const vec3 pos,
+                                      const vec3 aabb_center,
+                                      const uint voxel_grid_dimension,
+                                      const float scaling_factor) {
+  vec3 vpos = (pos - aabb_center) * scaling_factor;
   vpos = clamp(vpos, vec3(-1.0), vec3(1.0));
-  const vec3 vgrid = vec3(uVoxel_grid_dimension);
+  const vec3 vgrid = vec3(voxel_grid_dimension);
   vpos = vgrid * (vpos * vec3(0.5) + vec3(0.5));
   return ivec3(vpos);
 }
 
-vec3 world_to_voxelspace(const vec3 pos) {
-  vec3 vpos = (pos - uAABB_center) * uScaling_factor;
+vec3 world_to_clipmap_voxelspace(const vec3 pos,
+                                 const float scaling_factor,
+                                 const vec3 aabb_center) {
+  vec3 vpos = (pos - aabb_center) * scaling_factor;
   vpos = clamp(vpos, vec3(-1.0), vec3(1.0));
   return vpos * vec3(0.5) + vec3(0.5);
 }
 
-bool is_inside_scene(const vec3 p) {
-  if (p.x > uAABB_max.x || p.x < uAABB_min.x) { return false; }
-  if (p.y > uAABB_max.y || p.y < uAABB_min.y) { return false; }
-  if (p.z > uAABB_max.z || p.z < uAABB_min.z) { return false; }
+bool is_inside_AABB(const vec3 aabb_min, const vec3 aabb_max, const vec3 p) {
+  if (p.x > aabb_max.x || p.x < aabb_min.x) { return false; }
+  if (p.y > aabb_max.y || p.y < aabb_min.y) { return false; }
+  if (p.z > aabb_max.z || p.z < aabb_min.z) { return false; }
   return true;
+}
+
+float clipmap_lvl_from_distance() {
+  
 }
 
 out vec4 color;
@@ -86,25 +98,25 @@ uniform float uVoxel_size_LOD0;
 vec4 trace_cone(const vec3 origin,
                 const vec3 direction,
                 const float half_angle) {
-  const float voxel_size_LOD0 = uVoxel_size_LOD0;
+  const float start_clipmap = clipmap_lvl_from_distance(origin, clipmap_origin); // TODO: Impl.
 
   float occlusion = 0.0;
   vec3 radiance = vec3(0.0);
-  float cone_distance = voxel_size_LOD0; // Avoid self-occlusion
+  float cone_distance = uVoxel_size_LOD0; // Avoid self-occlusion
 
   while (cone_distance < 100.0 && occlusion < 1.0) {
     const vec3 world_position = origin + cone_distance * direction;
-    if (!is_inside_scene(world_position)) { break; }
+    if (!is_inside_AABB(uAABB_mins[0], uAABB_maxs[0], world_position)) { break; }
     
     const float cone_diameter = max(2.0 * tan(half_angle) * cone_distance, voxel_size_LOD0);
     cone_distance += cone_diameter * 0.5; // Smoother result than whole cone diameter
 
-    const float mip = log2(cone_distance / voxel_size_LOD0);
-    const vec3 p = world_to_voxelspace(world_position);
+    const uint clipmap = start_clipmap + log2(cone_distance / uVoxel_size_LOD0);
+    const vec3 p = world_to_clipmap_voxelspace(world_position, uScaling_factors[clipmap], uAABB_centers[clipmap]);
 
     // Front-to-back acculumation with pre-multiplied alpha
-    const float a = textureLod(uVoxelOpacity, p, mip).r;
-    radiance += (1.0 - occlusion) * a * textureLod(uVoxelRadiance, p, mip).rgb;
+    const float a = texture(uVoxelOpacity[clipmap], p).r;
+    radiance += (1.0 - occlusion) * a * texture(uVoxelRadiance[clipmap], p).rgb;
     occlusion += (1.0 - occlusion) * a;
   }
 
