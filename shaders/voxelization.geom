@@ -1,8 +1,9 @@
 
-uniform bool conservative_rasterization_enabled;
+#define NUM_CLIPMAPS 4
 
-layout(triangles) in;
+uniform bool uConservative_rasterization_enabled;
 
+layout(triangles, invocations = NUM_CLIPMAPS) in;
 layout(triangle_strip, max_vertices = 3) out;
 
 in VS_OUT {
@@ -11,12 +12,13 @@ in VS_OUT {
     in vec3 gsPosition;
 } gs_in[];
 
-uniform mat4 ortho;
-uniform uint voxel_grid_dimension;
+uniform mat4 uOrthos[NUM_CLIPMAPS];
+uniform int uClipmap_sizes[NUM_CLIPMAPS];
 
 out vec3 fNormal;   
 out vec3 fPosition; // World space position
 out vec2 fTextureCoord;
+flat out uint fInvocationID;
 
 void main() {
     const vec3 x = vec3(1.0, 0.0, 0.0);
@@ -40,7 +42,7 @@ void main() {
     // Conservative Rasterization setup
     vec4 gs_out[3];
     for (uint i = 0; i < 3; i++) {
-      gs_out[i] = ortho * gl_in[i].gl_Position;
+      gs_out[i] = uOrthos[gl_InvocationID] * gl_in[i].gl_Position;
 
       if (dominant_axis_projected == 0) {
         gs_out[i].xyz = gs_out[i].zyx;
@@ -49,12 +51,12 @@ void main() {
       }
     }
 
-    if (conservative_rasterization_enabled) {
+    if (uConservative_rasterization_enabled) {
       // Enlarge the triangle with one texel size
       vec2 side0N = normalize(gs_out[1].xy - gs_out[0].xy);
       vec2 side1N = normalize(gs_out[2].xy - gs_out[1].xy);
       vec2 side2N = normalize(gs_out[0].xy - gs_out[2].xy);
-      const float texel_size = 1.0 / float(voxel_grid_dimension);
+      const float texel_size = 1.0f / float(uClipmap_sizes[gl_InvocationID]);
       gs_out[0].xy += normalize(-side0N + side2N) * texel_size;
       gs_out[1].xy += normalize(side0N - side1N)  * texel_size;
       gs_out[2].xy += normalize(side1N - side2N)  * texel_size;
@@ -66,6 +68,7 @@ void main() {
         fNormal = gs_in[i].gsNormal;
         fPosition = gs_in[i].gsPosition;
         fTextureCoord = gs_in[i].gsTextureCoord;
+        fInvocationID = gl_InvocationID;
         EmitVertex();
     }
 
