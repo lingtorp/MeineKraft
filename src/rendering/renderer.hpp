@@ -27,6 +27,9 @@ struct Renderer {
   explicit Renderer(const Resolution& screen);
   ~Renderer();
 
+  /// Post allocation initialization
+  bool init();
+
   /// Main render function, renders all the graphics batches
   void render(const uint32_t delta);
   

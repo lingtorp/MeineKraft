@@ -559,6 +559,15 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   glCullFace(GL_BACK);
 }
 
+bool Renderer::init() {
+  std::vector<AABB> aabbs = generate_clipmaps_from_scene_aabb(scene->aabb, NUM_CLIPMAPS);
+  for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
+    clipmaps.aabb[i] = aabbs[i];
+    Log::info(aabbs[i]);
+  }
+  return true;
+}
+
 void Renderer::render(const uint32_t delta) {
   state = RenderState(state);
   state.frame++;

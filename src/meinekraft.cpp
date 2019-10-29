@@ -111,13 +111,18 @@ void MeineKraft::init() {
   if (success) {
     const std::string path = config["scene"]["path"].get<std::string>();
     const std::string name = config["scene"]["name"].get<std::string>();
-    renderer->scene = new Scene{ Filesystem::home + path,  name };
+    // renderer->scene = new Scene("/home/alexander/Desktop/Meinekraft/BoomBox/", "BoomBox.gltf");
+    renderer->scene = new Scene(Filesystem::home + path, name);
+    // renderer->scene = new Scene("/home/alexander/Desktop/Meinekraft/MetalRoughSpheres/", "MetalRoughSpheres.gltf");
+    // renderer->scene->load_models_from("/home/alexander/Desktop/Meinekraft/Suzanne/", "Suzanne.gltf");
     // renderer->scene->load_models_from("/home/alexander/Desktop/Meinekraft/MetalRoughSpheres/", "MetalRoughSpheres.gltf");
     renderer->scene->load_models_from("/home/alexander/Desktop/Meinekraft/BoomBox/", "BoomBox.gltf");
   } else {
     // TODO: Load default scene or smt
     Log::error("Failed to load config.json.");
   }
+
+  renderer->init();
 }
 
 MeineKraft::~MeineKraft() {
