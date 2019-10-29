@@ -189,23 +189,19 @@ struct Vec3 {
     }
 
     constexpr inline Vec3<T> operator+(const Vec3& rhs) const {
-        return Vec3<T>{x + rhs.x, y + rhs.y, z + rhs.z};
+        return Vec3{x + rhs.x, y + rhs.y, z + rhs.z};
     }
 
     constexpr inline Vec3<T> operator+(const T rhs) const {
-        return Vec3<T>{x + rhs, y + rhs, z + rhs};
+        return Vec3{x + rhs, y + rhs, z + rhs};
     }
 
     constexpr inline Vec3<T> operator*(const Vec3& rhs) const {
-        return Vec3<T>{x * rhs.x, y * rhs.y, z * rhs.z};
+        return Vec3{x * rhs.x, y * rhs.y, z * rhs.z};
     }
 
     constexpr inline Vec3<T> operator*(const T s) const {
-        return Vec3<T>{x * s, y * s, z * s};
-    }
-
-    constexpr inline Vec3<T> operator*=(const T rhs) const {
-      return Vec3<T>{x * rhs, y * rhs, z * rhs};
+        return Vec3{x * s, y * s, z * s};
     }
 
     constexpr inline bool operator==(const Vec3& rhs) const {
@@ -225,6 +221,10 @@ struct Vec3 {
     }
 
     constexpr inline Vec3 operator-() const { return Vec3{-x, -y, -z}; }
+
+    constexpr inline void operator*=(const T rhs) {
+      x *= rhs; y *= rhs; z *= rhs;
+    }
 
     inline glm::vec3 as_glm() const {
       return glm::vec3(x, y, z);
