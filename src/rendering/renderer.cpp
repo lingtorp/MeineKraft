@@ -972,6 +972,12 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glBufferData(GL_ARRAY_BUFFER, batch.mesh.byte_size_of_vertices(), batch.mesh.vertices.data(), GL_STATIC_DRAW);
 		glObjectLabel(GL_BUFFER, batch.gl_depth_vbo, -1, "Batch gl_depth_vbo");
 
+    // Element buffer
+    glGenBuffers(1, &batch.gl_ebo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, batch.gl_ebo);
+    glBufferStorage(GL_ELEMENT_ARRAY_BUFFER, batch.mesh.byte_size_of_indices(), batch.mesh.indices.data(), 0);
+    glObjectLabel(GL_BUFFER, batch.gl_ebo, -1, "Elements SSBO");
+
     const auto position_attrib = glGetAttribLocation(program, "position");
     glVertexAttribPointer(position_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void *) offsetof(Vertex, position));
     glEnableVertexAttribArray(position_attrib);
@@ -1010,15 +1016,6 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glBufferStorage(GL_SHADER_STORAGE_BUFFER, GraphicsBatch::INIT_BUFFER_SIZE * sizeof(Material), nullptr, flags);
     batch.gl_material_buffer_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, GraphicsBatch::INIT_BUFFER_SIZE * sizeof(Material), flags);
     glObjectLabel(GL_BUFFER, batch.gl_material_buffer, -1, "Material SSBO");
-
-    // Element buffer
-    // FIXME: Does not need to be mapped (remove)
-    glGenBuffers(1, &batch.gl_ebo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, batch.gl_ebo);
-    glBufferStorage(GL_ELEMENT_ARRAY_BUFFER, batch.mesh.byte_size_of_indices(), nullptr, flags);
-    batch.gl_ebo_ptr = (uint8_t*) glMapBufferRange(GL_ELEMENT_ARRAY_BUFFER, 0, batch.mesh.byte_size_of_indices(), flags);
-    std::memcpy(batch.gl_ebo_ptr, batch.mesh.indices.data(), batch.mesh.byte_size_of_indices());
-    glObjectLabel(GL_BUFFER, batch.gl_ebo, -1, "Elements SSBO");
 
     // Setup GL_DRAW_INDIRECT_BUFFER for indirect drawing (basically a command buffer)
     glGenBuffers(1, &batch.gl_ibo);
