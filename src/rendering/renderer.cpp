@@ -28,18 +28,20 @@ struct DrawElementsIndirectCommand {
   uint32_t instanceCount = 0; // # instances (kind of drawcalls)
   uint32_t firstIndex = 0;    // index of the first element in the EBO
   uint32_t baseVertex = 0;    // indices[i] + baseVertex
-  uint32_t baseInstance =
-      0;                 // instance = [gl_InstanceID / divisor] + baseInstance
-  uint32_t padding0 = 0; // Padding due to GLSL layout std140 16B alignment rule
+  uint32_t baseInstance = 0;  // instance = [gl_InstanceID / divisor] + baseInstance
+  uint32_t padding0 = 0;      // Padding due to GLSL layout std140 16B alignment rule
   uint32_t padding1 = 0;
   uint32_t padding2 = 0;
 };
 
 // FIXME: Remake this to serve a better purpose (unique per line, file like the log_once)
-uint32_t Renderer::get_next_free_texture_unit() {
+uint32_t Renderer::get_next_free_texture_unit(bool peek) {
   int32_t max_texture_units;
   glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max_texture_units);
   static int32_t next_texture_unit = -1;
+  if (peek) {
+    return next_texture_unit + 1;
+  }
   next_texture_unit++;
   if (next_texture_unit >= max_texture_units) {
     Log::error("Reached max texture units: " + std::to_string(max_texture_units));
@@ -49,10 +51,13 @@ uint32_t Renderer::get_next_free_texture_unit() {
 }
 
 // FIXME: Remake this to serve a better purpose (unique per line, file like the log_once)
-static uint32_t get_next_free_image_unit() {
+uint32_t Renderer::get_next_free_image_unit(bool peek) {
   int32_t max_image_units;
   glGetIntegerv(GL_MAX_IMAGE_UNITS, &max_image_units);
   static int32_t next_image_unit = -1;
+  if (peek) {
+    return next_image_unit + 1;
+  }
   next_image_unit++;
   if (next_image_unit >= max_image_units) {
     Log::error("Reached max image units: " + std::to_string(max_image_units));
@@ -1025,8 +1030,8 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     // Batch instance idx buffer
     glGenBuffers(1, &batch.gl_instance_idx_buffer);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, batch.gl_instance_idx_buffer);
-    glObjectLabel(GL_BUFFER, batch.gl_instance_idx_buffer, -1, "Instance idx SSBO");
     glBufferStorage(GL_SHADER_STORAGE_BUFFER, GraphicsBatch::INIT_BUFFER_SIZE * sizeof(GLuint), nullptr, 0);
+    glObjectLabel(GL_BUFFER, batch.gl_instance_idx_buffer, -1, "Instance idx SSBO");
 
     glBindBuffer(GL_ARRAY_BUFFER, batch.gl_instance_idx_buffer);
     glVertexAttribIPointer(glGetAttribLocation(program, "instance_idx"), 1, GL_UNSIGNED_INT, sizeof(GLuint), nullptr);
@@ -1151,8 +1156,9 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
     return;
   }
 
+  const uint32_t next_free_texture_unit = Renderer::get_next_free_image_unit(true);
   if (comp.diffuse_texture.data.pixels) {
-    batch.gl_diffuse_texture_unit = 13;
+    batch.gl_diffuse_texture_unit = next_free_texture_unit;
 
     batch.init_buffer(comp.diffuse_texture, &batch.gl_diffuse_texture_array, batch.gl_diffuse_texture_unit, &batch.diffuse_textures_capacity);
 
@@ -1166,7 +1172,7 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
 
   if (comp.metallic_roughness_texture.data.pixels) {
     const Texture& texture = comp.metallic_roughness_texture;
-    batch.gl_metallic_roughness_texture_unit = 14;
+    batch.gl_metallic_roughness_texture_unit = next_free_texture_unit + 1;
     glActiveTexture(GL_TEXTURE0 + batch.gl_metallic_roughness_texture_unit);
     glGenTextures(1, &batch.gl_metallic_roughness_texture);
     glBindTexture(texture.gl_texture_target, batch.gl_metallic_roughness_texture);
@@ -1178,7 +1184,7 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
 
   if (comp.normal_texture.data.pixels) {
     const Texture& texture = comp.normal_texture;
-    batch.gl_tangent_normal_texture_unit = 15;
+    batch.gl_tangent_normal_texture_unit = next_free_texture_unit + 2;
     glActiveTexture(GL_TEXTURE0 + batch.gl_tangent_normal_texture_unit);
     glGenTextures(1, &batch.gl_tangent_normal_texture);
     glBindTexture(texture.gl_texture_target, batch.gl_tangent_normal_texture);
@@ -1190,7 +1196,7 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
 
   if (comp.emissive_texture.data.pixels) {
     const Texture& texture = comp.emissive_texture;
-    batch.gl_emissive_texture_unit = 16;
+    batch.gl_emissive_texture_unit = next_free_texture_unit + 3;
     glActiveTexture(GL_TEXTURE0 + batch.gl_emissive_texture_unit);
     glGenTextures(1, &batch.gl_emissive_texture);
     glBindTexture(texture.gl_texture_target, batch.gl_emissive_texture);
