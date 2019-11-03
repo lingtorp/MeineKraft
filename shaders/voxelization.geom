@@ -69,6 +69,7 @@ void main() {
         fPosition = gs_in[i].gsPosition;
         fTextureCoord = gs_in[i].gsTextureCoord;
         fInvocationID = gl_InvocationID;
+        gl_ViewportIndex = gl_InvocationID;
         EmitVertex();
     }
 
