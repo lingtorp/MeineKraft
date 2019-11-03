@@ -1199,7 +1199,7 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
     return;
   }
 
-  const uint32_t next_free_texture_unit = Renderer::get_next_free_image_unit(true);
+  const uint32_t next_free_texture_unit = Renderer::get_next_free_texture_unit(true);
   if (comp.diffuse_texture.data.pixels) {
     batch.gl_diffuse_texture_unit = next_free_texture_unit;
 
