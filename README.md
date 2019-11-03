@@ -21,15 +21,16 @@ these articles can be found on my personal [site](http://lingtorp.com) with the 
 - - [X] 3D texture
 - - [ ] 3D clipmap
 - - [X] isotropic voxels
-- - [ ] emissive materials
+- - [X] emissive materials
 - - [X] (_optional_) opacity normalization subpass 
+- - [X] second-depth shadow mapping
 - [X] Physically based BRDF
 - [X] glTF roughness, metallic material model
 - [X] ECS-architecture
 - [X] JSON-based configuration
 
 ## Documentation
-Relevant documentation folder located in the /documentation folder. 
+Relevant documentation for each part of the engine is located in the /documentation folder. 
 
 ## Dependencies
 * [dear imgui](https://github.com/ocornut/imgui) - editor GUI
