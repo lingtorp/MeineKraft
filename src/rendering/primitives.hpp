@@ -328,7 +328,7 @@ struct RenderState {
   float roughness = 1.0f;
   float metallic = 1.0f;
   float roughness_aperature = 60.0f;
-  float metallic_aperature = 10.0f;
+  float metallic_aperature = 10.0f;  // 10 deg specular cone from [Crassin11]
   bool voxelize = true;                     // NOTE: Toggled by the Renderer (a.k.a executed once)
   bool conservative_rasterization = true;
   bool direct_lighting = true;
@@ -362,7 +362,6 @@ struct AABB {
 	Vec3f max;
 	Vec3f min;
 	AABB() = default;
-
 	AABB(const Vec3f& min, const Vec3f& max): max(max), min(min) {}
 
 	// Along the diagonal (from min to max) of the AABB
@@ -379,24 +378,11 @@ struct AABB {
 	inline Vec3f center() const { return min + ((max - min) / 2.0f); }
 
   inline float max_axis() const {
-    std::array<float, 3> axis = {width(), height(), breadth()};
+    const std::array<float, 3> axis = {width(), height(), breadth()};
     return *std::max_element(axis.begin(), axis.end());
   }
  
-  inline float max_dimension() const {
-    std::array<float, 6> axis = {std::abs(min.x), std::abs(min.y), std::abs(min.z), std::abs(max.x), std::abs(max.y), std::abs(max.z)};
-    return *std::max_element(axis.begin(), axis.end());
-  }
-
-  inline AABB unit_scaled() const { return AABB(min / max_dimension(), max / max_dimension()); }
-
-  friend AABB operator+(const AABB& lhs, const Vec3f& rhs) {
-    return AABB(lhs.min + rhs, lhs.max + rhs);
-  }
-
-  friend AABB operator-(const AABB& lhs, const Vec3f& rhs) {
-    return AABB(lhs.min - rhs, lhs.max - rhs);
-  }
+  inline AABB unit_scaled() const { return AABB(min / max_axis(), max / max_axis()); }
 
 	friend std::ostream& operator<<(std::ostream& os, const AABB& aabb) {
 		return os << "AABB(min: " << aabb.min << ", max: " << aabb.max << ")";
