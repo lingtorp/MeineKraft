@@ -102,7 +102,7 @@ static glm::mat4 shadowmap_transform(const AABB& aabb, const DirectionalLight& l
   const float zfar   = diameter;
 
   const glm::vec3 center = aabb.center().as_glm();
-  const glm::vec3 light_direction = light.direction.as_glm();
+  const glm::vec3 light_direction = light.direction.normalize().as_glm();
   const glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
   const glm::mat4 light_view_transform = glm::lookAt(center - (diameter / 2.0f) * light_direction, center, up);
 
@@ -186,6 +186,7 @@ void generate_diffuse_cones(const size_t count,
   }
 }
 
+// Center perserved generation of scaled AABBs of the Scene AABB
 std::vector<AABB> generate_clipmaps_from_scene_aabb(const AABB& scene,
                                                     const size_t num_clipmaps) {
   assert(num_clipmaps > 1);
@@ -195,9 +196,8 @@ std::vector<AABB> generate_clipmaps_from_scene_aabb(const AABB& scene,
 
   const float scaling_factor = (1.0f - (1.0f / num_clipmaps)) / (num_clipmaps - 1.0f);
   for (size_t i = 1; i < num_clipmaps; i++) {
-    clipmaps[i] = scene;
-    clipmaps[i].max *= ((num_clipmaps - i) * scaling_factor);
-    clipmaps[i].min *= ((num_clipmaps - i) * scaling_factor);
+    clipmaps[i].max = (scene.max - scene.center()) * ((num_clipmaps - i) * scaling_factor) + scene.center();
+    clipmaps[i].min = (scene.min - scene.center()) * ((num_clipmaps - i) * scaling_factor) + scene.center();
   }
 
   return clipmaps;
@@ -894,11 +894,11 @@ void Renderer::render(const uint32_t delta) {
 
     float scaling_factors[NUM_CLIPMAPS];
     for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
-      scaling_factors[i] = 1.0f / clipmaps.aabb[i].max_dimension();
+      scaling_factors[i] = 1.0f / clipmaps.aabb[i].max_axis();
     }
     glUniform1fv(glGetUniformLocation(program, "uScaling_factors"), NUM_CLIPMAPS, scaling_factors);
 
-    const float voxel_size_LOD0 = clipmaps.aabb[0].max_axis() / float(clipmaps.size[0]);
+    const float voxel_size_LOD0 = clipmaps.aabb[NUM_CLIPMAPS - 1].max_axis() / float(clipmaps.size[NUM_CLIPMAPS - 1]);
     glUniform1f(glGetUniformLocation(program, "uVoxel_size_LOD0"), voxel_size_LOD0);
 
     Vec3f clipmap_aabb_centers[NUM_CLIPMAPS];
