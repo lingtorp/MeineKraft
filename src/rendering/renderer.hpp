@@ -85,11 +85,13 @@ private:
   uint8_t* gl_pointlights_ssbo_ptr = nullptr;
 
   /// Voxelization pipeline related
-  static const uint32_t NUM_CLIPMAPS = 4;
+  // NOTE: = 1 --> simple 3D texture, >1 --> 3D clipmaps 
+  static const uint32_t NUM_CLIPMAPS = 1;
   // In order from smallest to largest in term of space occupied
   struct {
+    const size_t num_mipmaps = 4; // NUM_CLIPMAPS == 1
     AABB aabb[NUM_CLIPMAPS];
-    int32_t size[NUM_CLIPMAPS] = {64, 64, 64, 64};
+    int32_t size[NUM_CLIPMAPS] = {64};
   } clipmaps;
 
   Shader* voxelization_shader = nullptr;
@@ -106,12 +108,12 @@ private:
 
   // Voxels
   uint32_t gl_voxel_radiance_textures[NUM_CLIPMAPS] = {};
-  int32_t gl_voxel_radiance_image_units[NUM_CLIPMAPS] = {};
-  int32_t gl_voxel_radiance_texture_units[NUM_CLIPMAPS] = {};
+  int32_t  gl_voxel_radiance_image_units[NUM_CLIPMAPS] = {};
+  int32_t  gl_voxel_radiance_texture_units[NUM_CLIPMAPS] = {};
 
   uint32_t gl_voxel_opacity_textures[NUM_CLIPMAPS] = {};
-  int32_t gl_voxel_opacity_image_units[NUM_CLIPMAPS] = {};
-  int32_t gl_voxel_opacity_texture_units[NUM_CLIPMAPS] = {};
+  int32_t  gl_voxel_opacity_image_units[NUM_CLIPMAPS] = {};
+  int32_t  gl_voxel_opacity_texture_units[NUM_CLIPMAPS] = {};
 
   // Voxel visualization pass
   // TODO: Voxel visualization does not work ...

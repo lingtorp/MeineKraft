@@ -12,17 +12,19 @@ struct Shader {
     DiffuseCubemap,   // OpenGL texture target (GL_TEXTURE_CUBE_MAP)
     DiffuseRGB,       // Diffuse texture format 24 bit depth
     DiffuseRGBA,      // Diffuse texture format 32 bit depth
-    Emissive          // Has emissive texture 
+    Emissive          // Has emissive texture
   };
   // Configuration of the shader a la Ubershader
-  std::set<Shader::Defines> defines;
+  std::set<Shader::Defines> defines = {};
 
   Shader() = default;
   Shader(const std::string& vert_shader_file,
-         const std::string& frag_shader_file);
+         const std::string& frag_shader_file,
+         const std::vector<std::string>& defs = {});
   Shader(const std::string& vert_shader_file,
          const std::string& geom_shader_file,
-         const std::string& frag_shader_file);
+         const std::string& frag_shader_file,
+         const std::vector<std::string>& defs = {});
 
   bool operator==(const Shader& rhs);
 
@@ -43,6 +45,9 @@ struct Shader {
   uint32_t gl_fragment_shader = 0;
 
   bool compiled_successfully = false;
+
+private:
+  std::vector<std::string> raw_defines = {};
 };
 
 struct ComputeShader {

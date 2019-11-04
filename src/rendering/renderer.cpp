@@ -189,10 +189,14 @@ void generate_diffuse_cones(const size_t count,
 // Center perserved generation of scaled AABBs of the Scene AABB
 std::vector<AABB> generate_clipmaps_from_scene_aabb(const AABB& scene,
                                                     const size_t num_clipmaps) {
-  assert(num_clipmaps > 1);
+  assert(num_clipmaps > 0);
 
   std::vector<AABB> clipmaps(num_clipmaps);
   clipmaps[num_clipmaps - 1] = scene;
+
+  if (num_clipmaps == 1) {
+    return clipmaps;
+  }
 
   for (size_t i = 0; i < num_clipmaps - 1; i++) {
     const float scaling_factor = 1.0f / (std::pow(2.0f, (num_clipmaps - i)));
@@ -417,9 +421,11 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
 
   /// Voxelization pass
   {
+    const std::vector<std::string> defines = {"#define NUM_CLIPMAPS " + std::to_string(NUM_CLIPMAPS) + "\n"};
     voxelization_shader = new Shader(Filesystem::base + "shaders/voxelization.vert",
                                      Filesystem::base + "shaders/voxelization.geom",
-                                     Filesystem::base + "shaders/voxelization.frag");
+                                     Filesystem::base + "shaders/voxelization.frag",
+                                     defines);
 
     if (!voxelization_shader->compiled_successfully) {
       Log::error("Voxelization shader did not compile successfully"); exit(-1);
@@ -436,7 +442,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
       glActiveTexture(GL_TEXTURE0 + gl_voxel_radiance_texture_units[i]);
       glGenTextures(1, &gl_voxel_radiance_textures[i]);
       glBindTexture(GL_TEXTURE_3D, gl_voxel_radiance_textures[i]);
-      glTexStorage3D(GL_TEXTURE_3D, 1, GL_RGBA8, clipmaps.size[i], clipmaps.size[i], clipmaps.size[i]);
+      glTexStorage3D(GL_TEXTURE_3D, clipmaps.num_mipmaps, GL_RGBA8, clipmaps.size[i], clipmaps.size[i], clipmaps.size[i]);
       glBindImageTexture(gl_voxel_radiance_image_units[i], gl_voxel_radiance_textures[i], 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32UI);
       glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
       glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -450,7 +456,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
       glActiveTexture(GL_TEXTURE0 + gl_voxel_opacity_texture_units[i]);
       glGenTextures(1, &gl_voxel_opacity_textures[i]);
       glBindTexture(GL_TEXTURE_3D, gl_voxel_opacity_textures[i]);
-      glTexStorage3D(GL_TEXTURE_3D, 1, GL_RGBA8, clipmaps.size[i], clipmaps.size[i], clipmaps.size[i]);
+      glTexStorage3D(GL_TEXTURE_3D, clipmaps.num_mipmaps, GL_RGBA8, clipmaps.size[i], clipmaps.size[i], clipmaps.size[i]);
       glBindImageTexture(gl_voxel_opacity_image_units[i], gl_voxel_opacity_textures[i], 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA8);
       glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
       glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -532,8 +538,10 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_diffuse_cones_ssbo_binding_point_idx, gl_vct_diffuse_cones_ssbo);
     std::memcpy(gl_vct_diffuse_cones_ssbo_ptr, cones.data(), cones.size() * sizeof(Vec4f));
 
+    const std::vector<std::string> defines = {"#define NUM_CLIPMAPS " + std::to_string(NUM_CLIPMAPS) + "\n"};
     vct_shader = new Shader(Filesystem::base + "shaders/voxel-cone-tracing.vert", 
-                            Filesystem::base + "shaders/voxel-cone-tracing.frag");
+                            Filesystem::base + "shaders/voxel-cone-tracing.frag",
+                            defines);
     std::tie(success, err_msg) = vct_shader->compile();
     if (!success) {
       Log::error("Could not compile voxel-cone-tracing shaders"); exit(-1);
@@ -578,6 +586,10 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
 }
 
 bool Renderer::init() {
+  if (NUM_CLIPMAPS > 1) {
+    assert(clipmaps.num_mipmaps != 0 && "Clipmaps dont need mipmaps, set to 0."); exit(-1);
+  }
+
   std::vector<AABB> aabbs = generate_clipmaps_from_scene_aabb(scene->aabb, NUM_CLIPMAPS);
   for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
     clipmaps.aabb[i] = aabbs[i];
@@ -774,6 +786,7 @@ void Renderer::render(const uint32_t delta) {
     glUniform3fv(glGetUniformLocation(program, "uDirectional_light_direction"), 1, &directional_light.direction.x);
     glUniformMatrix4fv(glGetUniformLocation(program, "uLight_space_transform"), 1, GL_FALSE, glm::value_ptr(light_space_transform));
     glUniform1i(glGetUniformLocation(program, "uShadowmap"), gl_shadowmapping_texture_unit);
+
     glUniform1iv(glGetUniformLocation(program, "uClipmap_sizes"), NUM_CLIPMAPS, clipmaps.size);
 		glUniform1iv(glGetUniformLocation(program, "uVoxelRadiance"), NUM_CLIPMAPS, gl_voxel_radiance_image_units);
     glUniform1iv(glGetUniformLocation(program, "uVoxelOpacity"), NUM_CLIPMAPS, gl_voxel_opacity_image_units);
@@ -808,6 +821,11 @@ void Renderer::render(const uint32_t delta) {
       const uint64_t draw_cmd_offset = batch.gl_curr_ibo_idx * sizeof(DrawElementsIndirectCommand);
       glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (const void *)draw_cmd_offset, 1, sizeof(DrawElementsIndirectCommand));
 		}
+
+    if (NUM_CLIPMAPS == 1) {
+      glGenerateTextureMipmap(gl_voxel_radiance_textures[0]);
+      glGenerateTextureMipmap(gl_voxel_opacity_textures[0]);
+    }
 
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT); // Due to incoherent mem. access need to sync read and usage of voxel data
 
@@ -929,8 +947,8 @@ void Renderer::render(const uint32_t delta) {
     glUniform3fv(glGetUniformLocation(program, "uAABB_maxs"), NUM_CLIPMAPS, &clipmap_aabb_maxs[0].x);
 
     glUniform1iv(glGetUniformLocation(program, "uVoxel_grid_dimensions"), NUM_CLIPMAPS, clipmaps.size);
-		glUniform1iv(glGetUniformLocation(program, "uVoxelRadiance"), NUM_CLIPMAPS, gl_voxel_radiance_image_units);
-    glUniform1iv(glGetUniformLocation(program, "uVoxelOpacity"), NUM_CLIPMAPS, gl_voxel_opacity_image_units);
+		glUniform1iv(glGetUniformLocation(program, "uVoxelRadiance"), NUM_CLIPMAPS, gl_voxel_radiance_texture_units);
+    glUniform1iv(glGetUniformLocation(program, "uVoxelOpacity"), NUM_CLIPMAPS, gl_voxel_opacity_texture_units);
 
     glUniform1f(glGetUniformLocation(program, "uScreen_width"), (float)screen.width);
     glUniform1f(glGetUniformLocation(program, "uScreen_height"), (float)screen.height);

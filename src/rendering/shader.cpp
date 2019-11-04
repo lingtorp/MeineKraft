@@ -69,7 +69,8 @@ ComputeShader::ComputeShader(const std::string& compute_filepath,
 
 Shader::Shader(const std::string& vert_shader_file,
                const std::string& geom_shader_file,
-               const std::string& frag_shader_file) {
+               const std::string& frag_shader_file,
+               const std::vector<std::string>& defs) {
   std::string vertex_src   = Filesystem::read_file(vert_shader_file);
   std::string geometry_src = Filesystem::read_file(geom_shader_file);
   std::string fragment_src = Filesystem::read_file(frag_shader_file);
@@ -85,6 +86,12 @@ Shader::Shader(const std::string& vert_shader_file,
   if (fragment_src.empty()) {
     Log::error("Fragment shader passed could not be opened or is empty");
     return;
+  }
+
+  for (const auto& define : defs) {
+    vertex_src.insert(0, define);
+    geometry_src.insert(0, define);
+    fragment_src.insert(0, define);
   }
 
   vertex_src.insert(0, GLSL_VERSION);
@@ -180,9 +187,11 @@ Shader::Shader(const std::string& vert_shader_file,
   }
 }
 
-Shader::Shader(const std::string& vertex_filepath, const std::string& fragment_filepath):
-  vertex_filepath(vertex_filepath), fragment_filepath(fragment_filepath),
-  gl_vertex_shader(0), gl_fragment_shader(0), gl_program(0), defines{} {}
+Shader::Shader(const std::string& vertex_filepath,
+               const std::string& fragment_filepath,
+               const std::vector<std::string>& defs): vertex_filepath(vertex_filepath),
+                                                      fragment_filepath(fragment_filepath),
+                                                      raw_defines{defs} {}
 
 std::pair<bool, std::string> Shader::compile() {
   if (!Filesystem::file_exists(vertex_filepath) || !Filesystem::file_exists(fragment_filepath)) {
@@ -195,8 +204,14 @@ std::pair<bool, std::string> Shader::compile() {
   if (vertex_src.empty()) {
     return {false, "Vertex shader passed could not be opened or is empty"};
   }
+
   if (fragment_src.empty()) {
     return {false, "Fragment shader passed could not be opened or is empty"};
+  }
+
+  for (const auto& define : raw_defines) {
+    vertex_src.insert(0, define);
+    fragment_src.insert(0, define);
   }
 
   for (const auto& define : defines) {

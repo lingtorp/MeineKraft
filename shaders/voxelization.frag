@@ -1,6 +1,4 @@
 
-#define NUM_CLIPMAPS 4
-
 in vec3 fNormal;   
 in vec3 fPosition; // World space position
 in vec2 fTextureCoord;

@@ -1,6 +1,4 @@
 
-#define NUM_CLIPMAPS 4
-
 uniform bool uConservative_rasterization_enabled;
 
 layout(triangles, invocations = NUM_CLIPMAPS) in;

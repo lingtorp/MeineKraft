@@ -1,6 +1,4 @@
 
-#define NUM_CLIPMAPS 4
-
 layout(points) in;
 layout(triangle_strip, max_vertices = 14) out;
 
