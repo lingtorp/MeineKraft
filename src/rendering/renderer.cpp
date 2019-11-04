@@ -662,7 +662,7 @@ void Renderer::render(const uint32_t delta) {
     glClear(GL_DEPTH_BUFFER_BIT); // Always update the depth buffer with the new values
     const uint32_t program = shadowmapping_shader->gl_program;
     glUseProgram(program);
-    glUniformMatrix4fv(glGetUniformLocation(program, "light_space_transform"), 1, GL_FALSE, glm::value_ptr(light_space_transform));
+    glUniformMatrix4fv(glGetUniformLocation(program, "uLight_space_transform"), 1, GL_FALSE, glm::value_ptr(light_space_transform));
     for (size_t i = 0; i < graphics_batches.size(); i++) {
       const auto& batch = graphics_batches[i];
       glBindVertexArray(batch.gl_shadowmapping_vao);
@@ -765,7 +765,6 @@ void Renderer::render(const uint32_t delta) {
     glUniform3fv(glGetUniformLocation(program, "uDirectional_light_direction"), 1, &directional_light.direction.x);
     glUniformMatrix4fv(glGetUniformLocation(program, "uLight_space_transform"), 1, GL_FALSE, glm::value_ptr(light_space_transform));
     glUniform1i(glGetUniformLocation(program, "uShadowmap"), gl_shadowmapping_texture_unit);
-    glUniform3fv(glGetUniformLocation(program, "uLight_direction"), 1, &directional_light.direction.x);
     glUniform1iv(glGetUniformLocation(program, "uClipmap_sizes"), NUM_CLIPMAPS, clipmaps.size);
 		glUniform1iv(glGetUniformLocation(program, "uVoxelRadiance"), NUM_CLIPMAPS, gl_voxel_radiance_image_units);
     glUniform1iv(glGetUniformLocation(program, "uVoxelOpacity"), NUM_CLIPMAPS, gl_voxel_opacity_image_units);
