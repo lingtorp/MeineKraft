@@ -136,7 +136,7 @@ void MeineKraft::mainloop() {
   World world;
 
   bool toggle_mouse_capture = true;
-  bool DONE = false;
+  bool done = false;
   auto last_tick = std::chrono::high_resolution_clock::now();
   auto current_tick = last_tick;
   int64_t delta = 0;
@@ -145,10 +145,13 @@ void MeineKraft::mainloop() {
   const int num_deltas = 100;
   float deltas[num_deltas];
 
-  while (!DONE) {
+  while (!done) {
       current_tick = std::chrono::high_resolution_clock::now();
       delta = std::chrono::duration_cast<std::chrono::milliseconds>(current_tick - last_tick).count();
       last_tick = current_tick;
+
+      /// Window handling
+      static bool throttle_rendering = false;
 
       /// Process input
       SDL_Event event{};
@@ -195,7 +198,7 @@ void MeineKraft::mainloop() {
             toggle_mouse_capture = !toggle_mouse_capture;
             break;
           case SDLK_ESCAPE:
-            DONE = true;
+            done = true;
             break;
           }
           break;
@@ -228,10 +231,16 @@ void MeineKraft::mainloop() {
               SDL_GetWindowSize(window, &screen.width, &screen.height);
               renderer->update_projection_matrix(70.0f, screen);
               break;
+            case SDL_WINDOWEVENT_FOCUS_GAINED:
+              throttle_rendering = false;
+              break;
+            case SDL_WINDOWEVENT_FOCUS_LOST:
+              // throttle_rendering = true;
+              break;
           }
           break;
         case SDL_QUIT:
-          DONE = true;
+          done = true;
           break;
       }
     }
@@ -244,10 +253,12 @@ void MeineKraft::mainloop() {
     world.tick();
 
     /// Render the world
-    renderer->render(delta);
+    if (!throttle_rendering) {      
+      renderer->render(delta);
+    }
 
     /// ImGui - Debug instruments
-    {
+    if (!throttle_rendering) {
       pass_started("ImGui");
 
       ImGui_ImplSdlGL3_NewFrame(window);
