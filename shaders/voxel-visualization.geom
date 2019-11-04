@@ -1,20 +1,21 @@
 
+#define NUM_CLIPMAPS 4
+
 layout(points) in;
 layout(triangle_strip, max_vertices = 14) out;
 
 flat in uint vertex_ids[];
 
-layout(RGBA8) uniform readonly image3D uVoxelRadiance;
-layout(RGBA8) uniform readonly image3D uVoxelOpacity;
+layout(RGBA8) uniform readonly image3D uVoxelRadiance[NUM_CLIPMAPS];
+layout(RGBA8) uniform readonly image3D uVoxelOpacity[NUM_CLIPMAPS];
 
-uniform mat4 camera_view;
+uniform mat4 uCamera_view;
+uniform uint uClipmap_idx;
+uniform int  uClipmap_sizes[NUM_CLIPMAPS];
+uniform vec3 uAABB_mins[NUM_CLIPMAPS];
+uniform float uScaling_factors[NUM_CLIPMAPS];
 
-uniform uint voxel_grid_dimension;
-uniform float aabb_max_dimension;
-uniform vec3 aabb_min;
-
-out vec4 voxel_color;
-
+#define NUM_VERTICES_CUBE 14
 const vec3 cube_strip[14] = vec3[14](
   vec3(-1.0, 1.0, 1.0),     // Front-top-left
   vec3(1.0, 1.0, 1.0),      // Front-top-right
@@ -32,24 +33,30 @@ const vec3 cube_strip[14] = vec3[14](
   vec3(1.0, 1.0, -1.0)      // Back-top-right
 );
 
+out vec4 voxel_color;
+
 void main() {
-  const uint vertex_id = vertex_ids[0];
+  const uint vertex_id = vertex_ids[0]; // Only one per point anyways
+
+  const uint voxel_grid_dimension = uClipmap_sizes[uClipmap_idx];
   const uint X = vertex_id % voxel_grid_dimension;
   const uint Y = (vertex_id / voxel_grid_dimension) % voxel_grid_dimension;
   const uint Z = (vertex_id / (voxel_grid_dimension * voxel_grid_dimension)) % voxel_grid_dimension;
   const ivec3 vpos = ivec3(X, Y, Z);
 
-  const vec4 opacity = imageLoad(uVoxelOpacity, vpos);
+  const vec4 opacity = imageLoad(uVoxelOpacity[uClipmap_idx], vpos);
   if (opacity == vec4(1.0)) {
-    voxel_color = vec4(imageLoad(uVoxelRadiance, vpos).rgb, 1.0);
-    voxel_color = vec4(1.0);
-    const float voxel_size = float(aabb_max_dimension) / float(voxel_grid_dimension);
-    const vec3 voxel_center = vec3(vpos * voxel_size) + aabb_min + vec3(voxel_size / 2.0);
-    for (uint i = 0; i < 14; i++) {
+    voxel_color = vec4(imageLoad(uVoxelRadiance[uClipmap_idx], vpos).rgb, 1.0);
+
+    const float voxel_size = (1.0f / float(uScaling_factors[uClipmap_idx])) / float(voxel_grid_dimension);
+    const vec3 voxel_center = vec3(vpos * voxel_size) + uAABB_mins[uClipmap_idx] + vec3(voxel_size / 2.0);
+
+    for (uint i = 0; i < NUM_VERTICES_CUBE; i++) {
       const vec3 vertex = voxel_center + voxel_size * cube_strip[i];
-      gl_Position = camera_view * vec4(vertex, 1.0);
+      gl_Position = uCamera_view * vec4(vertex, 1.0);
       EmitVertex();
     }
+
     EndPrimitive();
   }
 }
