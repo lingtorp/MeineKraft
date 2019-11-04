@@ -331,7 +331,7 @@ struct RenderState {
   float metallic_aperature = 10.0f;  // 10 deg specular cone from [Crassin11]
   bool voxelize = true;                     // NOTE: Toggled by the Renderer (a.k.a executed once)
   bool conservative_rasterization = true;
-  bool direct_lighting = true;
+  bool direct_lighting = false;
   bool indirect_lighting = true;
   bool always_voxelize = true;
   float shadow_bias = 0.0025f;

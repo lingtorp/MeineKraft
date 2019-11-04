@@ -192,12 +192,12 @@ std::vector<AABB> generate_clipmaps_from_scene_aabb(const AABB& scene,
   assert(num_clipmaps > 1);
 
   std::vector<AABB> clipmaps(num_clipmaps);
-  clipmaps[0] = scene;
+  clipmaps[num_clipmaps - 1] = scene;
 
-  const float scaling_factor = (1.0f - (1.0f / num_clipmaps)) / (num_clipmaps - 1.0f);
-  for (size_t i = 1; i < num_clipmaps; i++) {
-    clipmaps[i].max = (scene.max - scene.center()) * ((num_clipmaps - i) * scaling_factor) + scene.center();
-    clipmaps[i].min = (scene.min - scene.center()) * ((num_clipmaps - i) * scaling_factor) + scene.center();
+  for (size_t i = 0; i < num_clipmaps - 1; i++) {
+    const float scaling_factor = 1.0f / (std::pow(2.0f, (num_clipmaps - i)));
+    clipmaps[i].max = (scene.max - scene.center()) * scaling_factor + scene.center();
+    clipmaps[i].min = (scene.min - scene.center()) * scaling_factor + scene.center();
   }
 
   return clipmaps;
@@ -475,6 +475,10 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
                                             Filesystem::base + "shaders/voxel-visualization.geom",
                                             Filesystem::base + "shaders/voxel-visualization.frag");
 
+    if (!voxel_visualization_shader->compiled_successfully) {
+      Log::error("Failed to compile voxel visualization shaders"); exit(-1);
+    } 
+
     const auto program = voxel_visualization_shader->gl_program;
     glUseProgram(program);
 
@@ -504,10 +508,10 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     GLuint gl_vbo = 0;
     glGenBuffers(1, &gl_vbo);
     glBindBuffer(GL_ARRAY_BUFFER, gl_vbo);
-    const Vec3f vertex = Vec3f(1.0f, 1.0f, 1.0f);
+    const Vec3f vertex(1.0f, 1.0f, 1.0f);
     glBufferData(GL_ARRAY_BUFFER, sizeof(Vec3f), &vertex, GL_STATIC_DRAW);
     glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
-    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), nullptr);
+    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 0, nullptr);
   }
 
   /// Voxel cone tracing pass
@@ -577,7 +581,10 @@ bool Renderer::init() {
   std::vector<AABB> aabbs = generate_clipmaps_from_scene_aabb(scene->aabb, NUM_CLIPMAPS);
   for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
     clipmaps.aabb[i] = aabbs[i];
+    Log::info("--------------------");
     Log::info(aabbs[i]);
+    Log::info(aabbs[i].center());
+    Log::info(aabbs[i].max_axis());
   }
   return true;
 }
@@ -730,7 +737,9 @@ void Renderer::render(const uint32_t delta) {
     if (!state.always_voxelize) {
       state.voxelize = false;
     }
+
     pass_started("Voxelization pass");
+
     for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
       glClearTexImage(gl_voxel_radiance_textures[i], 0, GL_RGBA, GL_FLOAT, nullptr); 
       glClearTexImage(gl_voxel_opacity_textures[i], 0, GL_RGBA, GL_FLOAT, nullptr);
@@ -841,15 +850,22 @@ void Renderer::render(const uint32_t delta) {
     glActiveTexture(GL_TEXTURE0 + gl_lightning_texture_unit);
     glBindTexture(GL_TEXTURE_2D, gl_voxel_visualization_texture);
 
-    // TODO: Uniforms are not up to date here
     glUniformMatrix4fv(glGetUniformLocation(program, "uCamera_view"), 1, GL_FALSE, glm::value_ptr(camera_transform));
     glUniform1iv(glGetUniformLocation(program, "uVoxelOpacity"), NUM_CLIPMAPS, gl_voxel_opacity_image_units);
     glUniform1iv(glGetUniformLocation(program, "uVoxelRadiance"), NUM_CLIPMAPS, gl_voxel_radiance_image_units);
     glUniform1iv(glGetUniformLocation(program, "uClipmap_sizes"), NUM_CLIPMAPS, clipmaps.size);
 
+    Vec3f clipmap_aabb_mins[NUM_CLIPMAPS];
+    for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
+      clipmap_aabb_mins[i] = clipmaps.aabb[i].min;
+    }
+    glUniform3fv(glGetUniformLocation(program, "uAABB_mins"), NUM_CLIPMAPS, &clipmap_aabb_mins[0].x);
+
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    // TODO: Per clipmap visualization?
-    // glDrawArraysInstanced(GL_POINTS, 0, 1, );
+    for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
+      glUniform1ui(glGetUniformLocation(program, "uClipmapIdx"), i);
+      glDrawArrays(GL_POINTS, 0, clipmaps.size[i] * clipmaps.size[i] * clipmaps.size[i]);
+    }
 
     pass_ended();
   }
@@ -897,7 +913,7 @@ void Renderer::render(const uint32_t delta) {
     }
     glUniform1fv(glGetUniformLocation(program, "uScaling_factors"), NUM_CLIPMAPS, scaling_factors);
 
-    const float voxel_size_LOD0 = clipmaps.aabb[NUM_CLIPMAPS - 1].max_axis() / float(clipmaps.size[NUM_CLIPMAPS - 1]);
+    const float voxel_size_LOD0 = clipmaps.aabb[0].max_axis() / float(clipmaps.size[0]);
     glUniform1f(glGetUniformLocation(program, "uVoxel_size_LOD0"), voxel_size_LOD0);
 
     Vec3f clipmap_aabb_centers[NUM_CLIPMAPS];

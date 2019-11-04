@@ -86,9 +86,10 @@ private:
 
   /// Voxelization pipeline related
   static const uint32_t NUM_CLIPMAPS = 4;
+  // In order from smallest to largest in term of space occupied
   struct {
     AABB aabb[NUM_CLIPMAPS];
-    int32_t size[NUM_CLIPMAPS] = {64, 64, 32, 16};
+    int32_t size[NUM_CLIPMAPS] = {64, 64, 64, 64};
   } clipmaps;
 
   Shader* voxelization_shader = nullptr;
@@ -113,7 +114,8 @@ private:
   int32_t gl_voxel_opacity_texture_units[NUM_CLIPMAPS] = {};
 
   // Voxel visualization pass
-  bool voxel_visualization_enabled = false;
+  // TODO: Voxel visualization does not work ...
+  const bool voxel_visualization_enabled = false;
   Shader* voxel_visualization_shader = nullptr;
   uint32_t gl_voxel_visualization_vao = 0;
   uint32_t gl_voxel_visualization_fbo = 0;
