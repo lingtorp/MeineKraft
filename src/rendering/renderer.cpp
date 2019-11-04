@@ -929,8 +929,8 @@ void Renderer::render(const uint32_t delta) {
     glUniform3fv(glGetUniformLocation(program, "uAABB_maxs"), NUM_CLIPMAPS, &clipmap_aabb_maxs[0].x);
 
     glUniform1iv(glGetUniformLocation(program, "uVoxel_grid_dimensions"), NUM_CLIPMAPS, clipmaps.size);
-		glUniform1iv(glGetUniformLocation(program, "uVoxelRadiance"), NUM_CLIPMAPS, gl_voxel_radiance_image_units);
-    glUniform1iv(glGetUniformLocation(program, "uVoxelOpacity"), NUM_CLIPMAPS, gl_voxel_opacity_image_units);
+		glUniform1iv(glGetUniformLocation(program, "uVoxelRadiance"), NUM_CLIPMAPS, gl_voxel_radiance_texture_units);
+    glUniform1iv(glGetUniformLocation(program, "uVoxelOpacity"), NUM_CLIPMAPS, gl_voxel_opacity_texture_units);
 
     glUniform1f(glGetUniformLocation(program, "uScreen_width"), (float)screen.width);
     glUniform1f(glGetUniformLocation(program, "uScreen_height"), (float)screen.height);
