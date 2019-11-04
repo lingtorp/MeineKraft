@@ -74,6 +74,19 @@ Shader::Shader(const std::string& vert_shader_file,
   std::string geometry_src = Filesystem::read_file(geom_shader_file);
   std::string fragment_src = Filesystem::read_file(frag_shader_file);
 
+  if (vertex_src.empty()) {
+    Log::error("Vertex shader passed could not be opened or is empty");
+    return;
+  }
+  if (geometry_src.empty()) {
+    Log::error("Geometry shader passed could not be opened or is empty");
+    return;
+  }
+  if (fragment_src.empty()) {
+    Log::error("Fragment shader passed could not be opened or is empty");
+    return;
+  }
+
   vertex_src.insert(0, GLSL_VERSION);
   geometry_src.insert(0, GLSL_VERSION);
   fragment_src.insert(0, GLSL_VERSION);
@@ -117,7 +130,7 @@ Shader::Shader(const std::string& vert_shader_file,
   glGetProgramiv(gl_program, GL_INFO_LOG_LENGTH, &err_size);
   char* prog_err_msg = new char[err_size];
   glGetProgramInfoLog(gl_program, err_size, nullptr, prog_err_msg);
-	if (err_size != 0) { Log::error(vert_shader_file + " / " + frag_shader_file + prog_err_msg); }
+	if (err_size != 0) { Log::error(vert_shader_file + " / " + frag_shader_file + "\n" + prog_err_msg); }
   delete[] prog_err_msg;
 
   if (vertex_shader_status == GL_TRUE && fragment_shader_status == GL_TRUE && geometry_shader_status == GL_TRUE) {    
@@ -129,8 +142,6 @@ Shader::Shader(const std::string& vert_shader_file,
     glDeleteShader(gl_fragment_shader);
 
     compiled_successfully = true;
-
-    Log::info(vert_shader_file + ", " + frag_shader_file + ", " + geom_shader_file + " compiled successfully.");
   } else {
     GLint err_size = 0;
     glGetProgramiv(gl_program, GL_INFO_LOG_LENGTH, &err_size);
@@ -180,6 +191,13 @@ std::pair<bool, std::string> Shader::compile() {
 
   vertex_src   = Filesystem::read_file(vertex_filepath);
   fragment_src = Filesystem::read_file(fragment_filepath);
+
+  if (vertex_src.empty()) {
+    return {false, "Vertex shader passed could not be opened or is empty"};
+  }
+  if (fragment_src.empty()) {
+    return {false, "Fragment shader passed could not be opened or is empty"};
+  }
 
   for (const auto& define : defines) {
     vertex_src.insert(0, Shader::shader_define_to_string(define));
