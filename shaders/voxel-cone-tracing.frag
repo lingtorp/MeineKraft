@@ -130,7 +130,6 @@ vec4 trace_cone(const vec3 origin,
     const uint curr_clipmap = uint(floor(log2(cone_diameter / uVoxel_size_LOD0)));
     const uint clipmap = min(max(start_clipmap, curr_clipmap), NUM_CLIPMAPS - 1);
 
-    if (!is_inside_AABB(uAABB_mins[clipmap], uAABB_maxs[clipmap], world_position)) { break; }
     
     const vec3 p = world_to_clipmap_voxelspace(world_position, uScaling_factors[clipmap], uAABB_centers[clipmap]);
 
