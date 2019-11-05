@@ -119,6 +119,7 @@ vec4 trace_cone(const vec3 origin,
   float cone_distance = uVoxel_size_LOD0; // Avoids self-occlusion/accumlation
 
   const uint start_clipmap = clipmap_lvl_from_distance(origin);
+  float cone_distance = uVoxel_size_LOD0 * exp2(start_lvl); // Avoids self-occlusion/accumulation
 
   while (cone_distance < 100.0 && occlusion < 1.0) {
     const vec3 world_position = origin + cone_distance * direction;
