@@ -24,6 +24,7 @@ these articles can be found on my personal [site](http://lingtorp.com) with the 
 - - [X] emissive materials
 - - [X] (_optional_) opacity normalization subpass 
 - - [X] second-depth shadow mapping
+- - [X] percentage-closer filtering shadow mapping 
 - [X] Physically based BRDF
 - [X] glTF roughness, metallic material model
 - [X] ECS-architecture
