@@ -112,15 +112,17 @@ static glm::mat4 shadowmap_transform(const AABB& aabb, const DirectionalLight& l
 // NOTE: AABB passed is assumed to be the Scene AABB
 static glm::mat4 orthographic_projection(const AABB& aabb) {
   const float voxel_grid_dimension = aabb.max_axis();
-	const float left   = -voxel_grid_dimension;
-	const float right  =  voxel_grid_dimension;
-	const float bottom = -voxel_grid_dimension;
-	const float top    =  voxel_grid_dimension;
+	const float left   = -voxel_grid_dimension / 2.0f;
+	const float right  =  voxel_grid_dimension / 2.0f;
+	const float bottom = -voxel_grid_dimension / 2.0f;
+	const float top    =  voxel_grid_dimension / 2.0f;
 	const float znear  =  0.0f;
-	const float zfar   =  2.0f * voxel_grid_dimension;
-	const glm::mat4 ortho  = glm::ortho(left, right, bottom, top, znear, zfar);
+	const float zfar   =  voxel_grid_dimension;
+
   const glm::vec3 center = aabb.center().as_glm();
+	const glm::mat4 ortho  = glm::ortho(left, right, bottom, top, znear, zfar);
   const glm::vec3 offset = glm::vec3(0.0f, 0.0f, voxel_grid_dimension);
+  
   return ortho * glm::lookAt(center - offset, center, glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
