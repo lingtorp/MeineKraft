@@ -81,6 +81,29 @@ uint clipmap_lvl_from_distance(const vec3 position) {
   const vec3 clipmap_origin = uAABB_centers[0];
   const float AABB_LOD0_radius = (1.0f / uScaling_factors[0]) / 2.0f;
   return uint(log2((distance(position, clipmap_origin) / AABB_LOD0_radius) + 1));
+// Sample point in world space
+vec4 sample_clipmap_linearly(const vec3 p, const float level) {
+  const uint lower_lvl = uint(floor(level));
+
+  const vec3 p0 = world_to_clipmap_voxelspace(p, uScaling_factors[lower_lvl], uAABB_centers[lower_lvl]);
+
+  const vec3  lower_sample_radiance = texture(uVoxelRadiance[lower_lvl], p0).rgb;
+  const float lower_sample_opacity  = texture(uVoxelOpacity[lower_lvl], p0).r;
+
+  const uint upper_lvl = uint(ceil(level));
+
+  if (lower_lvl == upper_lvl) {
+    return vec4(lower_sample_radiance, lower_sample_opacity);
+  }
+
+  const vec3 p1 = world_to_clipmap_voxelspace(p, uScaling_factors[upper_lvl], uAABB_centers[upper_lvl]);
+
+  const vec3  upper_sample_radiance = texture(uVoxelRadiance[upper_lvl], p1).rgb;
+  const float upper_sample_opacity  = texture(uVoxelOpacity[upper_lvl], p1).r;
+
+  const vec3  radiance = mix(lower_sample_radiance, upper_sample_radiance, fract(level));
+  const float opacity  = mix(lower_sample_opacity, upper_sample_opacity, fract(level));
+  return vec4(radiance, opacity);
 }
 
 out vec4 color;
@@ -111,9 +134,9 @@ vec4 trace_cone(const vec3 origin,
     const vec3 p = world_to_clipmap_voxelspace(world_position, uScaling_factors[clipmap], uAABB_centers[clipmap]);
 
     // Front-to-back acculumation with pre-multiplied alpha
-    const float a = texture(uVoxelOpacity[clipmap], p).r;
-    radiance += (1.0 - occlusion) * a * texture(uVoxelRadiance[clipmap], p).rgb;
-    occlusion += (1.0 - occlusion) * a;
+    const vec4 sampled = sample_clipmap_linearly(cone_position, lvl);
+    radiance += (1.0 - occlusion) * sampled.a * sampled.rgb;
+    occlusion += (1.0 - occlusion) * sampled.a;
 
     cone_distance += cone_diameter * 0.5; // Smoother result than whole cone diameter
   }
