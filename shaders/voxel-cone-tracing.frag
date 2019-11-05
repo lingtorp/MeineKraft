@@ -219,10 +219,11 @@ void main() {
   // FIXME: Weights should be the Lambertian cosine factor? 
   color += diffuse * trace_cone(origin, normal, roughness_aperature);
   for (uint i = 1; i < uNum_diffuse_cones; i++) {
-    const vec3 direction = (TBN * normalize(cones[i].xyz));
-    const float weight = cones[i].w; 
-    color += diffuse * trace_cone(origin, normalize(direction), roughness_aperature) * max(dot(direction, normal), 0.0);
+    const vec3 direction = normalize(TBN * cones[i].xyz);
+    color += diffuse * trace_cone(origin, direction, roughness_aperature) * max(dot(direction, normal), 0.0);
   }
+  // color /= uNum_diffuse_cones + 1; // ??
+  // color *= (1.0f / M_PI); // ??
 
   // Specular cone
   const vec3 reflection = normalize(reflect(-(uCamera_position - origin), normal));
