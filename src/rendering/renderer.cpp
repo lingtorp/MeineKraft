@@ -592,7 +592,7 @@ bool Renderer::init() {
     assert(clipmaps.num_mipmaps != 0 && "Clipmaps dont need mipmaps, set to 0."); exit(-1);
   }
 
-  std::vector<AABB> aabbs = generate_clipmaps_from_scene_aabb(scene->aabb, NUM_CLIPMAPS);
+  const std::vector<AABB> aabbs = generate_clipmaps_from_scene_aabb(scene->aabb, NUM_CLIPMAPS);
   for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
     clipmaps.aabb[i] = aabbs[i];
     Log::info("--------------------");
