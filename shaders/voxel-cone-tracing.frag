@@ -77,10 +77,12 @@ vec3 world_to_clipmap_voxelspace(const vec3 pos,
 }
 
 // Clipmap level passed on log2 assumption between levels
-uint clipmap_lvl_from_distance(const vec3 position) {
+float clipmap_lvl_from_distance(const vec3 position) {
   const vec3 clipmap_origin = uAABB_centers[0];
   const float AABB_LOD0_radius = (1.0f / uScaling_factors[0]) / 2.0f;
-  return uint(log2((distance(position, clipmap_origin) / AABB_LOD0_radius) + 1));
+  return log2(distance(position, clipmap_origin) / AABB_LOD0_radius);
+}
+
 // Sample point in world space
 vec4 sample_clipmap_linearly(const vec3 p, const float level) {
   const uint lower_lvl = uint(floor(level));
