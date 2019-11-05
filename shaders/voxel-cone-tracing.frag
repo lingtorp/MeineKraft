@@ -118,22 +118,20 @@ vec4 trace_cone(const vec3 origin,
   float occlusion = 0.0;
   vec3 radiance = vec3(0.0);
 
-  float cone_distance = uVoxel_size_LOD0; // Avoids self-occlusion/accumlation
+  const float start_lvl = clipmap_lvl_from_distance(origin);
 
-  const uint start_clipmap = clipmap_lvl_from_distance(origin);
   float cone_distance = uVoxel_size_LOD0 * exp2(start_lvl); // Avoids self-occlusion/accumulation
 
   while (cone_distance < 100.0 && occlusion < 1.0) {
-    const vec3 world_position = origin + cone_distance * direction;
+    const vec3 cone_position = origin + cone_distance * direction;
+
+    const float min_lvl = clipmap_lvl_from_distance(cone_position);
 
     const float cone_diameter = max(2.0 * tan(half_angle) * cone_distance, uVoxel_size_LOD0);
 
-    // uint clipmap = start_clipmap + uint(log2(cone_distance / uVoxel_size_LOD0));
-    const uint curr_clipmap = uint(floor(log2(cone_diameter / uVoxel_size_LOD0)));
-    const uint clipmap = min(max(start_clipmap, curr_clipmap), NUM_CLIPMAPS - 1);
+    const float curr_lvl = log2(cone_diameter / uVoxel_size_LOD0);
 
-    
-    const vec3 p = world_to_clipmap_voxelspace(world_position, uScaling_factors[clipmap], uAABB_centers[clipmap]);
+    const float lvl = min(max(max(start_lvl, curr_lvl), min_lvl), NUM_CLIPMAPS - 1);
 
     // Front-to-back acculumation with pre-multiplied alpha
     const vec4 sampled = sample_clipmap_linearly(cone_position, lvl);
