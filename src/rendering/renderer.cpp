@@ -897,6 +897,8 @@ void Renderer::render(const uint32_t delta) {
     glUniform3fv(glGetUniformLocation(program, "uDirectional_light_direction"), 1, &directional_light.direction.x);
     glUniformMatrix4fv(glGetUniformLocation(program, "uLight_space_transform"), 1, GL_FALSE, glm::value_ptr(light_space_transform));
     glUniform1i(glGetUniformLocation(program, "uShadowmap"), gl_shadowmapping_texture_unit);
+    glUniform1ui(glGetUniformLocation(program, "uShadowmap_width"), SHADOWMAP_W);
+    glUniform1ui(glGetUniformLocation(program, "uShadowmap_height"), SHADOWMAP_H);
 
     glUniform3fv(glGetUniformLocation(program, "uCamera_position"), 1, &scene->camera->position.x);
 
