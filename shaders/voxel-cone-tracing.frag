@@ -125,6 +125,8 @@ uniform float uShadow_bias;
 uniform vec3 uDirectional_light_direction;
 uniform mat4 uLight_space_transform;
 uniform sampler2D uShadowmap;
+uniform uint uShadowmap_width;
+uniform uint uShadowmap_height;
 
 bool shadow(const vec3 world_position, const vec3 normal) {
   vec4 lightspace_position = uLight_space_transform * vec4(world_position, 1.0);
@@ -142,6 +144,27 @@ bool shadow(const vec3 world_position, const vec3 normal) {
     return closest_shadowmap_depth < current_depth - bias;
   }
   return false;
+}
+
+// Percentage-close filtering shadow technique
+float pcf_shadow(const vec3 world_position, const vec3 normal) {
+  vec4 s = uLight_space_transform * vec4(world_position, 1.0);
+  s.xyz /= s.w;
+  s = s * 0.5 + 0.5;
+
+  const float current_depth = s.z;
+
+  const float num_samples = 2; // 2 ==> 4x4 kernel, n ==> nxn kernel
+  float shadowing = 0.0;
+  for (float x = -num_samples + 0.5; x < num_samples - 0.5; x += 1.0) {
+    for (float y = -num_samples + 0.5; y < num_samples - 0.5; y += 1.0) {
+      const vec2 p = vec2(s.x + x * (1.0 / float(uShadowmap_width)),
+                          s.y + y * (1.0 / float(uShadowmap_height)));
+      const float depth = texture(uShadowmap, p).r;
+      shadowing += depth < current_depth ? 0.0 : 1.0;
+    }
+  }
+  return shadowing / (4.0 * num_samples * num_samples);
 }
   
 void main() {
@@ -191,6 +214,12 @@ void main() {
       color.rgb += diffuse.rgb * max(dot(-uDirectional_light_direction, normal), 0.0);
     }
   }
+
+  // Percentage-closer filtering shadows
+  // if (uDirect_lighting) {
+  //   const float shadowing = pcf_shadow(origin, normal);
+  //   color.rgb += shadowing * diffuse.rgb * max(dot(-uDirectional_light_direction, normal), 0.0);
+  // }
 
   color.rgb += texture(uEmissive, frag_coord).rgb;
 }
