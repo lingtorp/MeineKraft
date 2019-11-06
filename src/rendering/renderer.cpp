@@ -121,7 +121,7 @@ static glm::mat4 orthographic_projection(const AABB& aabb) {
 
   const glm::vec3 center = aabb.center().as_glm();
 	const glm::mat4 ortho  = glm::ortho(left, right, bottom, top, znear, zfar);
-  const glm::vec3 offset = glm::vec3(0.0f, 0.0f, voxel_grid_dimension);
+  const glm::vec3 offset = glm::vec3(0.0f, 0.0f, voxel_grid_dimension / 2.0f);
   
   return ortho * glm::lookAt(center - offset, center, glm::vec3(0.0f, 1.0f, 0.0f));
 }
