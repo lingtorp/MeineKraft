@@ -102,11 +102,10 @@ static glm::mat4 shadowmap_transform(const AABB& aabb, const DirectionalLight& l
   const float zfar   = diameter;
 
   const glm::vec3 center = aabb.center().as_glm();
-  const glm::vec3 light_direction = light.direction.normalize().as_glm();
-  const glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
-  const glm::mat4 light_view_transform = glm::lookAt(center - (diameter / 2.0f) * light_direction, center, up);
+  const glm::mat4 ortho  = glm::ortho(left, right, bottom, top, znear, zfar);
+  const glm::vec3 offset = (diameter / 2.0f) * light.direction.normalize().as_glm();
 
-  return glm::ortho(left, right, bottom, top, znear, zfar) * light_view_transform;
+  return ortho * glm::lookAt(center - offset, center, glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
 // NOTE: AABB passed is assumed to be the Scene AABB
