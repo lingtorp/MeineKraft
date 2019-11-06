@@ -91,7 +91,7 @@ vec4 trace_cone(const vec3 origin,
     if (!is_inside_AABB(uAABB_mins[0], uAABB_maxs[0], world_position)) { break; }
     
     const float cone_diameter = max(2.0 * tan(half_angle) * cone_distance, uVoxel_size_LOD0);
-    // cone_distance += cone_diameter * 0.5; // Smoother result than whole cone diameter
+    cone_distance += cone_diameter * 0.5; // Smoother result than whole cone diameter
 
     const float mip = log2(cone_distance / uVoxel_size_LOD0);
     const vec3 p = world_to_clipmap_voxelspace(world_position, uScaling_factors[0], uAABB_centers[0]);
@@ -100,8 +100,6 @@ vec4 trace_cone(const vec3 origin,
     const float a = textureLod(uVoxelOpacity[0], p, mip).r;
     radiance += (1.0 - occlusion) * a * textureLod(uVoxelRadiance[0], p, mip).rgb;
     occlusion += (1.0 - occlusion) * a;
-
-    cone_distance += cone_diameter * 0.5; // Smoother result than whole cone diameter
   }
 
   return vec4(radiance, occlusion);
