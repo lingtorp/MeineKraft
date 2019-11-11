@@ -265,6 +265,8 @@ void MeineKraft::mainloop() {
       auto io = ImGui::GetIO();
       ImGui::Begin("MeineKraft");
 
+      ImGui::PushItemWidth(90.0f);
+
       if (ImGui::CollapsingHeader("Render System", ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::Text("Frame: %lu", renderer->state.frame);
         ImGui::Text("Entities: %lu", renderer->state.entities);
@@ -281,10 +283,16 @@ void MeineKraft::mainloop() {
         if (ImGui::Button("Voxelize")) {
           renderer->state.voxelize = true;
         }
-
         ImGui::Checkbox("Always voxelize", &renderer->state.always_voxelize);
+
         ImGui::Checkbox("Direct", &renderer->state.direct_lighting);
+        ImGui::SameLine();
         ImGui::Checkbox("Indirect", &renderer->state.indirect_lighting);
+
+
+        ImGui::Checkbox("Diffuse", &renderer->state.diffuse_lighting);
+        ImGui::SameLine();
+        ImGui::Checkbox("Specular", &renderer->state.specular_lighting);
 
         ImGui::SliderInt("# diffuse cones", &renderer->state.num_diffuse_cones, 1, 12);
 
@@ -294,8 +302,11 @@ void MeineKraft::mainloop() {
         ImGui::InputFloat("Metallic aperature (deg.)", &renderer->state.metallic_aperature);
 
         if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
+          ImGui::PushItemWidth(200.0f);
           ImGui::InputFloat3("Position##camera", &renderer->scene->camera->position.x);
           ImGui::InputFloat3("Direction##camera", &renderer->scene->camera->direction.x);
+          ImGui::PopItemWidth();
+          // ImGui::InputFloat("FoV", camera->FoV); // TODO: Camera adjustable FoV
           if (ImGui::Button("Reset camera")) {
             renderer->scene->reset_camera();
           }
@@ -345,6 +356,8 @@ void MeineKraft::mainloop() {
             }
           }
         }
+
+        ImGui::PopItemWidth();
 
         ImGui::End();
         ImGui::Render();
