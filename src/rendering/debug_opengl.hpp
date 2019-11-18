@@ -105,6 +105,8 @@ struct OpenGLContextInfo {
 
   int max_compute_local_work_grp_invocations;
 
+  float largest_supported_anisotropy = 0.0f;
+
   OpenGLContextInfo(const size_t gl_major_version,
                     const size_t gl_minor_version) {
     #if defined(WIN32) || defined(__LINUX__)
@@ -167,6 +169,9 @@ struct OpenGLContextInfo {
 
     glGetIntegerv(GL_MAX_IMAGE_UNITS, &max_image_texture_units);
     Log::info("Max image texture units: " + std::to_string(max_image_texture_units));
+
+    glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &largest_supported_anisotropy);
+    Log::info("Anisotropy supported: " + std::to_string(largest_supported_anisotropy));
   }
 };
 
