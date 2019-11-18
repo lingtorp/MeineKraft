@@ -24,7 +24,6 @@ uniform sampler2D uPBR_parameters;
 uniform sampler2D uEmissive;
 
 uniform float uScaling_factors[NUM_CLIPMAPS];
-uniform int   uClipmap_sizes[NUM_CLIPMAPS];
 uniform vec3  uAABB_centers[NUM_CLIPMAPS];
 uniform vec3  uAABB_mins[NUM_CLIPMAPS];
 uniform vec3  uAABB_maxs[NUM_CLIPMAPS];
@@ -80,34 +79,32 @@ vec3 world_to_clipmap_voxelspace(const vec3 pos,
 
 // Clipmap level passed on log2 assumption between levels
 float clipmap_lvl_from_distance(const vec3 position) {
-  const vec3 clipmap_origin = uAABB_centers[0];
   const float AABB_LOD0_radius = (1.0f / uScaling_factors[0]) / 2.0f;
-  return log2(distance(position, clipmap_origin) / AABB_LOD0_radius);
+  return log2((distance(position, uAABB_centers[0]) / AABB_LOD0_radius) - 0); // FIXME: Whats up here ..?
+}
+
+// Beware of sampling outside the clipmap!
+vec4 sample_clipmap(const vec3 wp, const uint lvl) {
+  const vec3 p = world_to_clipmap_voxelspace(wp, uScaling_factors[lvl], uAABB_centers[lvl]);
+  const vec3 radiance = texture(uVoxelRadiance[lvl], p).rgb;
+  const float opacity = texture(uVoxelOpacity[lvl], p).r;
+  return vec4(radiance, opacity);
 }
 
 // Sample point in world space
-vec4 sample_clipmap_linearly(const vec3 p, const float level) {
-  const uint lower_lvl = uint(floor(level));
+vec4 sample_clipmap_linearly(const vec3 wp, const float lvl) {
+  const uint lvl0 = uint(floor(lvl));
 
-  const vec3 p0 = world_to_clipmap_voxelspace(p, uScaling_factors[lower_lvl], uAABB_centers[lower_lvl]);
+  const vec4 s0 = sample_clipmap(wp, lvl0);
 
-  const vec3  lower_sample_radiance = texture(uVoxelRadiance[lower_lvl], p0).rgb;
-  const float lower_sample_opacity  = texture(uVoxelOpacity[lower_lvl], p0).r;
+  const uint lvl1 = uint(ceil(lvl));
 
-  const uint upper_lvl = uint(ceil(level));
+  if (lvl0 == lvl1) { return s0; }
+  if (lvl1 == NUM_CLIPMAPS) { return s0; }
 
-  if (lower_lvl == upper_lvl) {
-    return vec4(lower_sample_radiance, lower_sample_opacity);
-  }
+  const vec4 s1 = sample_clipmap(wp, lvl1);
 
-  const vec3 p1 = world_to_clipmap_voxelspace(p, uScaling_factors[upper_lvl], uAABB_centers[upper_lvl]);
-
-  const vec3  upper_sample_radiance = texture(uVoxelRadiance[upper_lvl], p1).rgb;
-  const float upper_sample_opacity  = texture(uVoxelOpacity[upper_lvl], p1).r;
-
-  const vec3  radiance = mix(lower_sample_radiance, upper_sample_radiance, fract(level));
-  const float opacity  = mix(lower_sample_opacity, upper_sample_opacity, fract(level));
-  return vec4(radiance, opacity);
+  return mix(s0, s1, fract(lvl));
 }
 
 out vec4 color;
@@ -117,30 +114,29 @@ uniform float uVoxel_size_LOD0;
 vec4 trace_cone(const vec3 origin,
                 const vec3 direction,
                 const float half_angle) {
+  const float max_distance = (1.0 / uScaling_factors[NUM_CLIPMAPS - 1]) / 1.0; 
+  const float start_lvl = floor(clipmap_lvl_from_distance(origin));
+
   float occlusion = 0.0;
   vec3 radiance = vec3(0.0);
+  float cone_distance = uVoxel_size_LOD0 * exp2(floor(start_lvl)); // Avoids self-occlusion/accumulation
 
-  const float start_lvl = clipmap_lvl_from_distance(origin);
-
-  float cone_distance = uVoxel_size_LOD0 * exp2(start_lvl); // Avoids self-occlusion/accumulation
-
-  while (cone_distance < 100.0 && occlusion < 1.0) {
+  while (cone_distance < max_distance && occlusion < 1.0) {
     const vec3 cone_position = origin + cone_distance * direction;
 
-    const float min_lvl = clipmap_lvl_from_distance(cone_position);
+    const float min_lvl = floor(clipmap_lvl_from_distance(cone_position));
 
     const float cone_diameter = max(2.0 * tan(half_angle) * cone_distance, uVoxel_size_LOD0);
+    cone_distance += cone_diameter * 0.5; // Smoother result than whole cone diameter
 
     const float curr_lvl = log2(cone_diameter / uVoxel_size_LOD0);
 
-    const float lvl = min(max(max(start_lvl, curr_lvl), min_lvl), NUM_CLIPMAPS - 1);
+    const float lvl = min(max(max(start_lvl, curr_lvl), min_lvl), NUM_CLIPMAPS);
 
     // Front-to-back acculumation with pre-multiplied alpha
     const vec4 sampled = sample_clipmap_linearly(cone_position, lvl);
-    radiance += (1.0 - occlusion) * sampled.a * sampled.rgb;
+    radiance += (1.0 - occlusion) * sampled.rgb;
     occlusion += (1.0 - occlusion) * sampled.a;
-
-    cone_distance += cone_diameter * 0.5; // Smoother result than whole cone diameter
   }
 
   return vec4(radiance, occlusion);
