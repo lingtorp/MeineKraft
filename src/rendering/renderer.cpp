@@ -198,7 +198,7 @@ std::vector<AABB> generate_clipmaps_from_scene_aabb(const AABB& scene,
   clipmaps[num_clipmaps - 1] = scene;
 
   for (size_t i = 0; i < num_clipmaps - 1; i++) {
-    const float scaling_factor = 1.0f / (std::pow(2.0f, (num_clipmaps - i)));
+    const float scaling_factor = 1.0f / (std::pow(2.0f, (num_clipmaps - i - 1)));
     clipmaps[i].max = (scene.max - scene.center()) * scaling_factor + scene.center();
     clipmaps[i].min = (scene.min - scene.center()) * scaling_factor + scene.center();
   }
