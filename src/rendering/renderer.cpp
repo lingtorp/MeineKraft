@@ -586,6 +586,7 @@ bool Renderer::init() {
     Log::info(aabbs[i]);
     Log::info(aabbs[i].center());
     Log::info(aabbs[i].max_axis());
+    Log::info(aabbs[i].max_axis() / clipmaps.size[i]);
   }
   return true;
 }
@@ -930,7 +931,6 @@ void Renderer::render(const uint32_t delta) {
     glUniform3fv(glGetUniformLocation(program, "uAABB_mins"), NUM_CLIPMAPS, &clipmap_aabb_mins[0].x);
     glUniform3fv(glGetUniformLocation(program, "uAABB_maxs"), NUM_CLIPMAPS, &clipmap_aabb_maxs[0].x);
 
-    glUniform1iv(glGetUniformLocation(program, "uVoxel_grid_dimensions"), NUM_CLIPMAPS, clipmaps.size);
 		glUniform1iv(glGetUniformLocation(program, "uVoxelRadiance"), NUM_CLIPMAPS, gl_voxel_radiance_texture_units);
     glUniform1iv(glGetUniformLocation(program, "uVoxelOpacity"), NUM_CLIPMAPS, gl_voxel_opacity_texture_units);
 
