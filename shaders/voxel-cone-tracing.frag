@@ -34,8 +34,10 @@ uniform float uRoughness;
 uniform float uMetallic;
 uniform float uRoughness_aperature; // Radians (half-angle of cone)
 uniform float uMetallic_aperature;  // Radians (half-angle of cone)
-uniform bool  uDirect_lighting;
-uniform bool  uIndirect_lighting;
+uniform bool  uDirect_lighting;  
+uniform bool  uIndirect_lighting;  
+uniform bool  uDiffuse_lighting;
+uniform bool  uSpecular_lighting; 
 
 uniform uint uNum_diffuse_cones;
 // (Vec3, float) = (direction, weight) for each cone
@@ -169,7 +171,7 @@ bool shadow(const vec3 world_position, const vec3 normal) {
   return false;
 }
 
-// Percentage-close filtering shadow technique
+// Percentage-closer filtering shadow technique
 float pcf_shadow(const vec3 world_position, const vec3 normal) {
   vec4 s = uLight_space_transform * vec4(world_position, 1.0);
   s.xyz /= s.w;
@@ -194,7 +196,8 @@ void main() {
   const vec2 frag_coord = vec2(gl_FragCoord.x / uScreen_width, gl_FragCoord.y / uScreen_height);
 
   const vec3 origin = texture(uPosition, frag_coord).xyz;
-  vec3 normal = texture(uNormal, frag_coord).xyz;
+  const vec3 fNormal = texture(uNormal, frag_coord).xyz; 
+  vec3 normal = fNormal;
 
   // Tangent normal mapping & TBN tranformation
   const vec3 T = normalize(texture(uTangent, frag_coord).xyz);
@@ -225,9 +228,16 @@ void main() {
   // color /= uNum_diffuse_cones + 1; // ??
   // color *= (1.0f / M_PI); // ??
 
-  // Specular cone
-  const vec3 reflection = normalize(reflect(-(uCamera_position - origin), normal));
-  color += trace_cone(origin, reflection, metallic_aperature);
+  if (!uDiffuse_lighting) {
+    color.rgb = vec3(0.0);
+  }
+
+  if (uSpecular_lighting) {
+    // Specular cone
+    const float aperture = metallic_aperature; // max(0.10 * roughness, 0.05);
+    const vec3 reflection = normalize(reflect(-(uCamera_position - origin), fNormal));
+    color += trace_cone(origin, reflection, aperture);
+  }
 
   if (!uIndirect_lighting) {
     color.rgb = vec3(0.0);
