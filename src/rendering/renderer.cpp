@@ -160,17 +160,18 @@ std::array<glm::vec4, 6> extract_planes(const glm::mat4& mat) {
 }
 
 /// Generates (cone-direction, cone-weight) list
-void generate_diffuse_cones(const size_t count,
-                            std::vector<Vec4f>& cones) {
-  assert(count >= 0); assert(cones.size() == count);
+std::vector<Vec4f> generate_diffuse_cones(const size_t count) {
+  assert(count >= 0);
 
   if (count == 0) {
-    return;
+    return {};
   }
+
+  std::vector<Vec4f> cones(count);
 
   if (count == 1) {
     cones[0] = Vec4f(0.0f, 1.0f, 0.0f, 1.0f);
-    return;
+    return cones;
   }
 
   const float rad_delta = 2.0f * M_PI / (count - 1.0f);
@@ -184,6 +185,8 @@ void generate_diffuse_cones(const size_t count,
                                   std::sin(theta) * std::sin(i * rad_delta));
     cones[i + 1] = Vec4f(direction, (1.0f - cones[0].w) / (count - 1.0f));
   }
+
+  return cones;
 }
 
 // Center perserved generation of scaled AABBs of the Scene AABB
@@ -518,9 +521,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   {
     /// Create SSBO for the diffuse cones
     const size_t MAX_CONES = 12; 
-
-    std::vector<Vec4f> cones(state.num_diffuse_cones);
-    generate_diffuse_cones(state.num_diffuse_cones, cones);
+    const std::vector<Vec4f> cones = generate_diffuse_cones(state.num_diffuse_cones);
 
     glGenBuffers(1, &gl_vct_diffuse_cones_ssbo);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, gl_vct_diffuse_cones_ssbo);
@@ -903,8 +904,7 @@ void Renderer::render(const uint32_t delta) {
     glUniform3fv(glGetUniformLocation(program, "uCamera_position"), 1, &scene->camera->position.x);
 
     glUniform1ui(glGetUniformLocation(program, "uNum_diffuse_cones"), state.num_diffuse_cones);
-    std::vector<Vec4f> cones(state.num_diffuse_cones);
-    generate_diffuse_cones(state.num_diffuse_cones, cones);
+    const std::vector<Vec4f> cones = generate_diffuse_cones(state.num_diffuse_cones);
     std::memcpy(gl_vct_diffuse_cones_ssbo_ptr, cones.data(), cones.size() * sizeof(Vec4f));
 
     glUniform1i(glGetUniformLocation(program, "uNormalmapping"), state.normalmapping);
