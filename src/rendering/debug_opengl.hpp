@@ -2,8 +2,9 @@
 #ifndef MEINEKRAFT_DEBUG_OPENGL_HPP
 #define MEINEKRAFT_DEBUG_OPENGL_HPP
 
-#include <glew.h>
-#include <SDL_opengl.h> 
+#include <GL/glew.h>
+#include <GL/gl.h>
+#include <SDL2/SDL_opengl.h> 
 
 #include "../util/logging.hpp"
 
