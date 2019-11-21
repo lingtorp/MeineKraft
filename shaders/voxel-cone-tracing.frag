@@ -80,7 +80,13 @@ vec3 world_to_clipmap_voxelspace(const vec3 pos,
 // Clipmap level passed on log2 assumption between levels
 float clipmap_lvl_from_distance(const vec3 position) {
   const float AABB_LOD0_radius = (1.0f / uScaling_factors[0]) / 2.0f;
-  return log2((distance(position, uAABB_centers[0]) / AABB_LOD0_radius) - 0); // FIXME: Whats up here ..?
+  const float d = distance(position, uAABB_centers[0]) / AABB_LOD0_radius;
+  // d in [0, 2)
+  if (d < 2.0) {
+    return d;
+  }
+  // d in [2, inf] from 2 hence log2(2) + 1 = 2
+  return log2(d) + 1;
 }
 
 // Beware of sampling outside the clipmap!
@@ -127,7 +133,7 @@ vec4 trace_cone(const vec3 origin,
     const float min_lvl = floor(clipmap_lvl_from_distance(cone_position));
 
     const float cone_diameter = max(2.0 * tan(half_angle) * cone_distance, uVoxel_size_LOD0);
-    cone_distance += cone_diameter * 0.5; // Smoother result than whole cone diameter
+    cone_distance += cone_diameter * 1.0; // Smoother result than whole cone diameter
 
     const float curr_lvl = log2(cone_diameter / uVoxel_size_LOD0);
 
@@ -252,4 +258,8 @@ void main() {
   // }
 
   color.rgb += texture(uEmissive, frag_coord).rgb;
+  
+  // color.rgb = sample_clipmap(origin, uint(floor(clipmap_lvl_from_distance(origin)))).rgb;
+  color.rgb = sample_clipmap_linearly(origin, clipmap_lvl_from_distance(origin)).rgb;
+  // color.rgb = vec3(floor(clipmap_lvl_from_distance(origin)) == 3.0 ? 1.0 : 0.0);
 }
