@@ -754,8 +754,11 @@ void Renderer::render(const uint32_t delta) {
     pass_started("Voxelization pass");
 
     for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
-      glClearTexImage(gl_voxel_radiance_textures[i], 0, GL_RGBA, GL_FLOAT, nullptr); 
-      glClearTexImage(gl_voxel_opacity_textures[i], 0, GL_RGBA, GL_FLOAT, nullptr);
+      // Clear all mipmaps if 3D texture is used
+      for (size_t j = 0; j < clipmaps.num_mipmaps; j++) {
+        glClearTexImage(gl_voxel_radiance_textures[i], j, GL_RGBA, GL_FLOAT, nullptr); 
+        glClearTexImage(gl_voxel_opacity_textures[i], j, GL_RGBA, GL_FLOAT, nullptr);
+      }
     }
 
     glBindFramebuffer(GL_FRAMEBUFFER, gl_voxelization_fbo);
@@ -823,7 +826,7 @@ void Renderer::render(const uint32_t delta) {
       glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (const void *)draw_cmd_offset, 1, sizeof(DrawElementsIndirectCommand));
 		}
 
-    if (NUM_CLIPMAPS == 1) {
+    if (NUM_CLIPMAPS == 1 && clipmaps.num_mipmaps > 1) {
       glGenerateTextureMipmap(gl_voxel_radiance_textures[0]);
       glGenerateTextureMipmap(gl_voxel_opacity_textures[0]);
     }
