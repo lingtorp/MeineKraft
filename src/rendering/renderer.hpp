@@ -49,7 +49,7 @@ struct Renderer {
 
 	Scene *scene = nullptr;
   std::vector<PointLight> pointlights;
-  DirectionalLight directional_light = DirectionalLight(Vec3f(0.0f, 0.5f, 0.5f), Vec3f(0.0f, -1.0f, -0.1f));
+  DirectionalLight directional_light = DirectionalLight(Vec3f(0.0f, 0.5f, 0.5f), Vec3f(0.0f, -1.0f, -0.3f));
 private:
   glm::mat4 projection_matrix; 
 
