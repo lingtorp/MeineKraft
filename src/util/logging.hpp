@@ -3,6 +3,7 @@
 #define MEINEKRAFT_LOGGING_HPP
 
 #include <iostream>
+#include <vector>
 
 namespace Log {
   template<typename T>
@@ -17,6 +18,15 @@ namespace Log {
       std::cerr << "\t";
     }
     std::cerr << msg << std::endl;
+  }
+
+  // Template specialization over std::vector<T>
+  template<typename T>
+  static inline void log_to_console(const size_t indent, const std::vector<T>&msg, const std::string& type,
+                                    const char* file, const int line) {
+    for (const auto& item : msg) {
+      log_to_console(indent, item, type, file, line);
+    }
   }
 
   // Non-indented versions
