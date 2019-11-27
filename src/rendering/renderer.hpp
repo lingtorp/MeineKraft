@@ -89,7 +89,7 @@ private:
   // In order from smallest to largest in term of space occupied
   struct {
     AABB aabb[NUM_CLIPMAPS];
-    int32_t size[NUM_CLIPMAPS] = {64, 64, 64, 64};
+    int32_t size[NUM_CLIPMAPS] = {64, 64, 64, 32};
   } clipmaps;
 
   Shader* voxelization_shader = nullptr;
