@@ -327,9 +327,9 @@ struct RenderState {
   // Voxel cone tracing related
   float roughness = 1.0f;
   float metallic = 1.0f;
-  float roughness_aperature = 60.0f;
-  float metallic_aperature = 10.0f;  // 10 deg specular cone from [Crassin11]
-  bool voxelize = true;                     // NOTE: Toggled by the Renderer (a.k.a executed once)
+  float roughness_aperature = 60.0f; // 60 deg diffuse cone from [Rauwendaal, Crassin11]
+  float metallic_aperature   = 0.1f; // 10 deg specular cone from [Crassin11]
+  bool voxelize = true;              // NOTE: Toggled by the Renderer (a.k.a executed once)
   bool conservative_rasterization = true;
   bool direct_lighting = false;
   bool indirect_lighting = true;
@@ -337,7 +337,7 @@ struct RenderState {
   bool specular_lighting = true;
   bool always_voxelize = true;
   float shadow_bias = 0.0025f;
-  int num_diffuse_cones = 4;
+  int num_diffuse_cones = 6;  // Crassin11, Yeu13 suggest similiar 
 
   RenderState() = default;
   RenderState(const RenderState& old) : frame(old.frame), shadowmapping(old.shadowmapping), normalmapping(old.normalmapping), camera_selection(old.camera_selection), roughness(old.roughness), roughness_aperature(old.roughness_aperature), metallic(old.metallic), metallic_aperature(old.metallic_aperature), voxelize(old.voxelize), conservative_rasterization(old.conservative_rasterization), direct_lighting(old.direct_lighting), indirect_lighting(old.indirect_lighting), always_voxelize(old.always_voxelize), shadow_bias(old.shadow_bias), num_diffuse_cones(old.num_diffuse_cones), diffuse_lighting(old.diffuse_lighting), specular_lighting(old.specular_lighting) {}
