@@ -159,7 +159,8 @@ std::array<glm::vec4, 6> extract_planes(const glm::mat4& mat) {
   return { normalize(left_plane), normalize(right_plane), normalize(bot_plane), normalize(top_plane), normalize(near_plane), normalize(far_plane) };
 }
 
-/// Generates (cone-direction, cone-weight) list
+/// Generates (cone-direction, cone-weight)
+/// NOTE: Weights does NOT sum to 2PI, the steradians of a hemisphere, but PI
 std::vector<Vec4f> generate_diffuse_cones(const size_t count) {
   assert(count >= 0);
 
@@ -170,7 +171,7 @@ std::vector<Vec4f> generate_diffuse_cones(const size_t count) {
   std::vector<Vec4f> cones(count);
 
   if (count == 1) {
-    cones[0] = Vec4f(0.0f, 1.0f, 0.0f, 1.0f);
+    cones[0] = Vec4f(0.0f, 1.0f, 0.0f, M_PI);
     return cones;
   }
 
