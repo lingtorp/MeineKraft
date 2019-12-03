@@ -13,6 +13,7 @@ layout(RGBA8) uniform writeonly image3D uVoxelOpacity[NUM_CLIPMAPS];
 uniform sampler2DArray uDiffuse;
 uniform sampler2D uEmissive;
 
+uniform vec3 uCamera_position;
 uniform vec3 uAABB_centers[NUM_CLIPMAPS];
 uniform float uScaling_factors[NUM_CLIPMAPS];
 
@@ -54,27 +55,25 @@ void imageAtomicAverageRGBA8(layout(r32ui) coherent volatile uimage3D voxels,
   }
 }
 
+// TODO: Add directional light color
 uniform float uShadow_bias;
 uniform vec3 uDirectional_light_direction;
 uniform mat4 uLight_space_transform;
 uniform sampler2D uShadowmap;
 
-bool shadow(const vec3 world_position, const vec3 normal) {
+float shadow(const vec3 world_position, const vec3 normal) {
   vec4 lightspace_position = uLight_space_transform * vec4(world_position, 1.0);
   lightspace_position.xyz /= lightspace_position.w;
   lightspace_position = lightspace_position * 0.5 + 0.5;
 
   const float current_depth = lightspace_position.z;
 
-  if (current_depth < 1.0) { 
-    const float closest_shadowmap_depth = texture(uShadowmap, lightspace_position.xy).r;
+  const float closest_shadowmap_depth = texture(uShadowmap, lightspace_position.xy).r;
     
-    // Bias avoids the _majority_ of shadow acne
-    const float bias = uShadow_bias * dot(-uDirectional_light_direction, normal);
+  // Bias avoids the _majority_ of shadow acne
+  const float bias = uShadow_bias * dot(-uDirectional_light_direction, normal);
 
-    return closest_shadowmap_depth < current_depth - bias;
-  }
-  return false;
+  return (closest_shadowmap_depth < current_depth - bias) ? 0.0 : 1.0;
 }
 
 void main() {
@@ -87,13 +86,9 @@ void main() {
   const vec3 emissive = texture(uEmissive, fTextureCoord).rgb;
 
   // Inject radiance if voxel NOT in shadow
-  if (!shadow(fPosition, fNormal)) { 
-    imageAtomicAverageRGBA8(uVoxelRadiance[clipmap], radiance + emissive, vpos);
-  } else {
-    if (dot(emissive, vec3(1.0)) > 0.0) {      
-      imageAtomicAverageRGBA8(uVoxelRadiance[clipmap], emissive, vpos);
-    }
+  const vec3 value = shadow(fPosition, fNormal) * radiance + emissive;
+  if (abs(dot(value, vec3(1.0))) {
+      imageAtomicAverageRGBA8(uVoxelRadiance[clipmap], value, vpos);
   }
-
-  imageStore(uVoxelOpacity[clipmap], vpos, vec4(1.0)); 
+  imageStore(uVoxelOpacity[clipmap], vpos, vec4(1.0));
 }
