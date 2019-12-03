@@ -179,13 +179,27 @@ std::vector<Vec4f> generate_diffuse_cones(const size_t count) {
   const float theta = glm::radians(45.0f);
 
   // Normal cone
-  cones[0] = Vec4f(0.0f, 1.0f, 0.0f, 1.0f / (count - 1.0f));
+  // NOTE: Weight derived from integration of theta: [0, 2pi], psi: [0, pi/count] of sin(theta) * cos(theta)
+  const float w0 = 2.0f * M_PI * (-0.5 * std::cos(M_PI / count) * std::cos(M_PI / count) + 0.5);
+  cones[0] = Vec4f(0.0f, 1.0f, 0.0f, w0);
+
+  // Diffuse cones from [Yeu13]
+  // cones.push_back(Vec4f(0.0f, 0.5f, 0.866025f, w0));
+  // cones.push_back(Vec4f(0.823639f, 0.5f, 0.267617f, w0));
+  // cones.push_back(Vec4f(0.509037f, 0.5f, -0.700629f, w0));
+  // cones.push_back(Vec4f(-0.509037f, 0.5f, -0.700629f, w0));
+  // cones.push_back(Vec4f(-0.823639f, 0.5f, 0.267617f, w0));
+  // return cones;
+
   for (size_t i = 0; i < count - 1; i++) {
-    const Vec3f direction = Vec3f(std::sin(theta) * std::cos(i * rad_delta),
-                                  std::cos(theta),
-                                  std::sin(theta) * std::sin(i * rad_delta));
-    cones[i + 1] = Vec4f(direction, (1.0f - cones[0].w) / (count - 1.0f));
+    const Vec3f direction = Vec3f(std::cos(theta) * std::sin(i * rad_delta),
+                                  std::sin(theta) * std::sin(theta),
+                                  std::cos(i * rad_delta));
+    cones[i + 1] = Vec4f(direction, (M_PI - cones[0].w) / (count - 1.0f));
   }
+
+  // Log::info(cones);
+  // exit(0);
 
   return cones;
 }
@@ -199,7 +213,8 @@ std::vector<AABB> generate_clipmaps_from_scene_aabb(const AABB& scene,
   clipmaps[num_clipmaps - 1] = scene;
 
   for (size_t i = 0; i < num_clipmaps - 1; i++) {
-    const float scaling_factor = 1.0f / (std::pow(2.0f, (num_clipmaps - i - 1)));
+    const float scaling_factor = 1.0f / std::pow(2.0f, num_clipmaps - i - 2);
+    clipmaps[i].scaling_factor = scaling_factor;
     clipmaps[i].max = (scene.max - scene.center()) * scaling_factor + scene.center();
     clipmaps[i].min = (scene.min - scene.center()) * scaling_factor + scene.center();
   }
