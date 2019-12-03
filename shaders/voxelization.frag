@@ -87,7 +87,7 @@ void main() {
 
   // Inject radiance if voxel NOT in shadow
   const vec3 value = shadow(fPosition, fNormal) * radiance + emissive;
-  if (abs(dot(value, vec3(1.0))) {
+  if (abs(dot(value, vec3(1.0))) > 0.0) {
       imageAtomicAverageRGBA8(uVoxelRadiance[clipmap], value, vpos);
   }
   imageStore(uVoxelOpacity[clipmap], vpos, vec4(1.0));
