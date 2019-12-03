@@ -1,6 +1,7 @@
 #include "renderer.hpp"
 
 #include <array>
+#include <cmath>
 
 #ifdef WIN32
 #include <glew.h>
@@ -411,8 +412,8 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glActiveTexture(GL_TEXTURE0 + gl_shadowmapping_texture_unit);
     glGenTextures(1, &gl_shadowmapping_texture);
     glBindTexture(GL_TEXTURE_2D, gl_shadowmapping_texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // FIXME: GL_LINEAR??
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); // SAME
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexStorage2D(GL_TEXTURE_2D, 1, GL_DEPTH_COMPONENT16, SHADOWMAP_W, SHADOWMAP_H);
@@ -458,7 +459,9 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
       glTexStorage3D(GL_TEXTURE_3D, 1, GL_RGBA8, clipmaps.size[i], clipmaps.size[i], clipmaps.size[i]);
       glBindImageTexture(gl_voxel_radiance_image_units[i], gl_voxel_radiance_textures[i], 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32UI);
       glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-      glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+      glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+      glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 
       const std::string radiance_object_label = "Clipmap #" + std::to_string(i) + " radiance texture";
       glObjectLabel(GL_TEXTURE, gl_voxel_radiance_textures[i], -1, radiance_object_label.c_str());
@@ -472,7 +475,9 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
       glTexStorage3D(GL_TEXTURE_3D, 1, GL_RGBA8, clipmaps.size[i], clipmaps.size[i], clipmaps.size[i]);
       glBindImageTexture(gl_voxel_opacity_image_units[i], gl_voxel_opacity_textures[i], 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA8);
       glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-      glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+      glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+      glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 
       const std::string opacity_object_label = "Clipmap #" + std::to_string(i) + " opacity texture";
       glObjectLabel(GL_TEXTURE, gl_voxel_opacity_textures[i], -1, opacity_object_label.c_str());
@@ -600,9 +605,11 @@ bool Renderer::init() {
     clipmaps.aabb[i] = aabbs[i];
     Log::info("--------------------");
     Log::info(aabbs[i]);
-    Log::info(aabbs[i].center());
-    Log::info(aabbs[i].max_axis());
-    Log::info(aabbs[i].max_axis() / clipmaps.size[i]);
+    Log::info("AABB center: "   + aabbs[i].center().to_string());
+    Log::info("AABB max axis: " + std::to_string(aabbs[i].max_axis()));
+    Log::info("AABB scaling_factor: " + std::to_string(aabbs[i].scaling_factor));
+    Log::info("Voxel size: "    + std::to_string(aabbs[i].max_axis() / clipmaps.size[i]));
+    Log::info("Voxel d^3: "     + std::to_string(clipmaps.size[i]));
   }
   return true;
 }
@@ -786,6 +793,7 @@ void Renderer::render(const uint32_t delta) {
       aabb_centers[i] = clipmaps.aabb[i].center();
     }
     glUniform3fv(glGetUniformLocation(program, "uAABB_centers"), NUM_CLIPMAPS, &aabb_centers[0].x);
+    glUniform3fv(glGetUniformLocation(program, "uCamera_position"), 1, &scene->camera->position.x);
 
     // Shadowmapping
     glUniform1f(glGetUniformLocation(program, "uShadow_bias"), state.shadow_bias);
@@ -905,6 +913,7 @@ void Renderer::render(const uint32_t delta) {
     glUniform1i(glGetUniformLocation(program, "uIndirect_lighting"), state.indirect_lighting);
     glUniform1i(glGetUniformLocation(program, "uDiffuse_lighting"), state.diffuse_lighting);
     glUniform1i(glGetUniformLocation(program, "uSpecular_lighting"), state.specular_lighting);
+    glUniform1i(glGetUniformLocation(program, "uAmbient_lighting"), state.ambient_lighting);
     glUniform1f(glGetUniformLocation(program, "uRoughness"), state.roughness);
     const float roughness_aperature = glm::radians(state.roughness_aperature);
     glUniform1f(glGetUniformLocation(program, "uRoughness_aperature"), roughness_aperature);
