@@ -3,6 +3,7 @@
 #define NUM_CLIPMAPS 4
 
 const float M_PI = 3.141592653589793;
+const float M_PI_INV = 1.0 / M_PI;
 
 uniform float uScreen_height;
 uniform float uScreen_width;
@@ -86,8 +87,8 @@ float clipmap_lvl_from_distance(const vec3 position) {
   if (d < 2.0) {
     return d;
   }
-  // d in [2, inf] from 2 hence log2(2) + 1 = 2
-  return log2(d) + 1;
+  // d in [2, inf] from 2 hence log2(x) + 1 >= 2 where x >= 2	
+  return log2(d);
 }
 
 // Beware of sampling outside the clipmap!
@@ -107,15 +108,9 @@ vec4 sample_clipmap_linearly(const vec3 wp, const float lvl) {
   const uint lvl1 = uint(ceil(lvl));
 
   if (lvl0 == lvl1) { return s0; }
-  if (lvl1 == NUM_CLIPMAPS) { return s0; }
-
-  // NOTE: Cool little hack mixes in Ambient lighting when clipmaps are exhausted.
-  // This is just another way to provide ambient lighting for the scene
-  // const vec4 AMBIENT = vec4(0.1); // Scene dependent of course
-  // if (lvl1 == NUM_CLIPMAPS) { return mix(s0, AMBIENT, fract(lvl)); }
+  // if (lvl1 == NUM_CLIPMAPS) { return s0; } // FIXME: ? 
 
   const vec4 s1 = sample_clipmap(wp, lvl1);
-
   return mix(s0, s1, fract(lvl));
 }
 
@@ -141,7 +136,7 @@ vec4 trace_diffuse_cone(const vec3 origin,
     const float cone_diameter = max(2.0 * tan(half_angle) * cone_distance, uVoxel_size_LOD0);
     cone_distance += cone_diameter * 1.0; // 0.5 for cone tracing with radius step size
     
-    const float min_lvl = floor(clipmap_lvl_from_distance(cone_position));
+    const float min_lvl  = floor(clipmap_lvl_from_distance(cone_position));
     const float curr_lvl = log2(cone_diameter / uVoxel_size_LOD0);
     const float lvl = min(max(max(start_lvl, curr_lvl), min_lvl), float(NUM_CLIPMAPS));
 
@@ -150,7 +145,6 @@ vec4 trace_diffuse_cone(const vec3 origin,
     radiance  += (1.0 - opacity) * sampled.a * sampled.rgb;
     opacity   += (1.0 - opacity) * sampled.a;
 
-    const float voxel_size = uVoxel_size_LOD0 * exp2(floor(lvl));
     const float decay = 0.1; // Crassin11 mentions but does not specify
     occlusion += (1.0 - occlusion) * sampled.a / (1.0 + cone_distance * decay);
   }
@@ -264,23 +258,33 @@ void main() {
   const float roughness_aperature = uRoughness_aperature;
   const float metallic_aperature = uMetallic_aperature;
   const vec4  diffuse = sRGB_to_linear(vec4(texture(uDiffuse, frag_coord).rgb, 1.0));
-
+ 
+  uint traced_cones = 1;
   if (uDiffuse_lighting) {
-    color += cones[0].w * diffuse * trace_diffuse_cone(origin, normal, roughness_aperature);
+    // Offset origin to avoid self-sampling
+    const float start_lvl = floor(clipmap_lvl_from_distance(origin));
+    const vec3 o = origin + (uVoxel_size_LOD0 * 1.5 * exp2(start_lvl)) * fNormal; 
+    const vec4 radiance = cones[0].w * diffuse * trace_diffuse_cone(o, normal, roughness_aperature);
+    color += radiance;
+
     for (uint i = 1; i < uNum_diffuse_cones; i++) {
-	  // Offset origin to avoid self-occlusion/accumulation
-	  const float start_lvl = floor(clipmap_lvl_from_distance(origin));
-	  const vec3 o = origin + (uVoxel_size_LOD0 * 1.5 * exp2(start_lvl)) * fNormal; 
-      const vec3 direction = normalize(TBN * cones[i].xyz);
-      color += 2.0 * cones[i].w * diffuse * trace_diffuse_cone(o, direction, roughness_aperature); // * max(dot(direction, normal), 0.0);
+      // Offset origin to avoid self-sampling
+      const vec3 d = normalize(TBN * cones[i].xyz);
+      if (dot(d, normal) < 0.0) { continue; }
+      const vec4 radiance = 2.0 * cones[i].w * diffuse * trace_diffuse_cone(o, d, roughness_aperature);
+      color.rgb += radiance.rgb * max(dot(d, normal), 0.0);
+      color.a   += radiance.a;
+      traced_cones++;
     }
   }
 
   if (uAmbient_lighting) {
-    color.rgb = vec3(0.0);
-    color.rgb += vec3(color.a / 2.0) / uNum_diffuse_cones;
+    color.rgb += diffuse.rgb * vec3(color.a * M_PI_INV) / traced_cones;
+
+    // color.rgb = vec3(0.0);
+    // color.rgb += vec3(color.a) / traced_cones;
     // NOTE: See generate_diffuse_cones for details about the division
-  }
+  } 	
 
   if (uSpecular_lighting) {
     const float aperture = metallic_aperature; 
