@@ -99,6 +99,9 @@ struct GraphicsBatch {
     glTexStorage3D(texture.gl_texture_target, mipmap_levels, texture_format, texture.data.width, texture.data.height, texture.data.faces * default_buffer_size); // depth = layer faces
     glGenerateMipmap(texture.gl_texture_target);
     *buffer_capacity = default_buffer_size;
+    float aniso = 0.0f;
+    glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &aniso);
+    glTexParameterf(texture.gl_texture_target, GL_TEXTURE_MAX_ANISOTROPY_EXT, aniso);
   }
 
   /// Increases the texture buffer and copies over the old texture buffer (this seems to be the only way to do it)
