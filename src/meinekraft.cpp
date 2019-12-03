@@ -83,7 +83,7 @@ MeineKraft::MeineKraft() {
   SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
   SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
-  auto window_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_MOUSE_CAPTURE;
+  auto window_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_MOUSE_CAPTURE;
   window = SDL_CreateWindow("MeineKraft", 0, 0, HD.width, HD.height, window_flags);
   SDL_GLContext context = SDL_GL_CreateContext(window);
   if (!context) { Log::error(std::string(SDL_GetError())); }
@@ -293,6 +293,8 @@ void MeineKraft::mainloop() {
         ImGui::Checkbox("Diffuse", &renderer->state.diffuse_lighting);
         ImGui::SameLine();
         ImGui::Checkbox("Specular", &renderer->state.specular_lighting);
+        ImGui::SameLine();
+        ImGui::Checkbox("Ambient", &renderer->state.ambient_lighting);
 
         ImGui::SliderInt("# diffuse cones", &renderer->state.num_diffuse_cones, 1, 12);
 
