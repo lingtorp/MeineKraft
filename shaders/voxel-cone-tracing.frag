@@ -128,7 +128,6 @@ vec4 trace_diffuse_cone(const vec3 origin,
   float opacity = 0.0;
   vec3 radiance = vec3(0.0);
   float cone_distance = 0.0;
-  float ambient_occlusion = 0.0;
 
   while (cone_distance < max_distance && opacity < 1.0) {
     const vec3 cone_position = origin + cone_distance * direction;
@@ -162,7 +161,6 @@ vec4 trace_specular_cone(const vec3 origin,
   float occlusion = 0.0;
   vec3 radiance = vec3(0.0);
   float cone_distance = uVoxel_size_LOD0 * exp2(start_lvl); // Avoids self-occlusion/accumulation
-  float ambient_occlusion = 0.0;
 
   while (cone_distance < max_distance && occlusion < 1.0) {
     const vec3 cone_position = origin + cone_distance * direction;
@@ -228,13 +226,39 @@ float pcf_shadow(const vec3 world_position, const vec3 normal) {
   return shadowing / (4.0 * num_samples * num_samples);
 }
 
-float vct_shadow(const vec3 world_position, const vec3 normal) {
-  // TODO: Implement VCT for shadows 
-  return 0.0;
+float vct_shadow(const vec3 origin, const vec3 normal, const vec3 direction) {
+  const float half_angle = 0.0050; // Shadow cone aperature
+
+  const float max_distance = (1.0 / uScaling_factors[NUM_CLIPMAPS - 1]) / 8.0; 
+  const float start_lvl = floor(clipmap_lvl_from_distance(origin));
+
+  float occlusion = 0.0;
+  float cone_distance = 0.0; 
+  const vec3 o = origin + (uVoxel_size_LOD0 * 1.5 * exp2(start_lvl)) * normal; // Avoids self-occlusion/accumulation
+
+  while (cone_distance < max_distance) {
+    const vec3 cone_position = o + cone_distance * direction;
+	if (!is_inside_AABB(vec3(-50000), vec3(50000), cone_position)) {
+		return occlusion; 
+	}
+
+    const float cone_diameter = max(2.0 * tan(half_angle) * cone_distance, uVoxel_size_LOD0);
+    cone_distance += cone_diameter * 1.0;
+    
+    const float min_lvl = floor(clipmap_lvl_from_distance(cone_position));
+    const float curr_lvl = log2(cone_diameter / uVoxel_size_LOD0);
+    const float lvl = min(max(max(start_lvl, curr_lvl), min_lvl), float(NUM_CLIPMAPS));
+
+    // Front-to-back acculumation 
+    occlusion += (1.0 - occlusion) * sample_clipmap_linearly(cone_position, lvl).a;
+  }
+
+  return 1.0 - occlusion;
 }
   
 void main() {
   const vec2 frag_coord = vec2(gl_FragCoord.x / uScreen_width, gl_FragCoord.y / uScreen_height);
+  
 
   const vec3 origin = texture(uPosition, frag_coord).xyz;
   const vec3 fNormal = texture(uNormal, frag_coord).xyz; 
@@ -298,7 +322,8 @@ void main() {
 
   if (uDirect_lighting) { // TODO: fNormal vs. normal?
     float shadow = 0.0;
-    switch (1) {
+	vec3 dir = vec3(0.0, -1.0, -0.25);
+    switch (2) {
       case 0:
         shadow = plain_shadow(origin, normal);
         break;
@@ -306,10 +331,11 @@ void main() {
         shadow = pcf_shadow(origin, normal);
         break;
       case 2:
-        shadow = vct_shadow(origin, normal);
+        shadow = vct_shadow(origin, normal, -dir);
         break;
     }
     color.rgb += shadow * diffuse.rgb * max(dot(-uDirectional_light_direction, normal), 0.0);
+    // color.rgb += vec3(shadow);
   }
 
   color.rgb += texture(uEmissive, frag_coord).rgb;
