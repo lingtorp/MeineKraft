@@ -307,10 +307,16 @@ struct Plane {
 /// Opaque ID type used to reference resources throughout the engine
 typedef uint64_t ID;
 
-enum class ShadingModel: uint32_t {
+enum class ShadingModel: uint8_t {
   Unlit = 1,                        // Unlit, using its surface color 
   PhysicallyBased = 2,              // PBR using textures (default)
   PhysicallyBasedScalars = 3        // PBR using scalars instead of textures
+};
+
+enum class ShadowAlgorithm : uint8_t {
+  Plain = 0,                     // Normal shadowmapping
+  PercentageCloserFiltering = 1, // PCF shadowing
+  VCT = 2                        // Voxel cone tracing based shadowing
 };
 
 /// Represents the state of the Render, used for ImGUI debug panes
@@ -336,12 +342,13 @@ struct RenderState {
   bool diffuse_lighting = false;
   bool specular_lighting = true;
   bool ambient_lighting  = false;
-  bool always_voxelize = true;
+  bool always_voxelize = false;
+  uint8_t shadow_algorithm = 0; // See enum class ShadowAlgorithm
   float shadow_bias = 0.00025f;
-  int num_diffuse_cones = 6;  // Crassin11, Yeu13 suggest similiar 
+  int num_diffuse_cones = 6;  // [Crassin11], [Yeu13] suggests 5
 
   RenderState() = default;
-  RenderState(const RenderState& old) : frame(old.frame), shadowmapping(old.shadowmapping), normalmapping(old.normalmapping), camera_selection(old.camera_selection), roughness(old.roughness), roughness_aperature(old.roughness_aperature), metallic(old.metallic), metallic_aperature(old.metallic_aperature), voxelize(old.voxelize), conservative_rasterization(old.conservative_rasterization), direct_lighting(old.direct_lighting), indirect_lighting(old.indirect_lighting), always_voxelize(old.always_voxelize), shadow_bias(old.shadow_bias), num_diffuse_cones(old.num_diffuse_cones), diffuse_lighting(old.diffuse_lighting), specular_lighting(old.specular_lighting), ambient_lighting(old.ambient_lighting) {}
+  RenderState(const RenderState& old) : frame(old.frame), shadowmapping(old.shadowmapping), normalmapping(old.normalmapping), camera_selection(old.camera_selection), roughness(old.roughness), roughness_aperature(old.roughness_aperature), metallic(old.metallic), metallic_aperature(old.metallic_aperature), voxelize(old.voxelize), conservative_rasterization(old.conservative_rasterization), direct_lighting(old.direct_lighting), indirect_lighting(old.indirect_lighting), always_voxelize(old.always_voxelize), shadow_bias(old.shadow_bias), num_diffuse_cones(old.num_diffuse_cones), diffuse_lighting(old.diffuse_lighting), specular_lighting(old.specular_lighting), ambient_lighting(old.ambient_lighting), shadow_algorithm(old.shadow_algorithm) {}
 };
 
 struct Resolution {
