@@ -464,6 +464,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
       glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
       glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
       glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+      glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
 
       const std::string radiance_object_label = "Clipmap #" + std::to_string(i) + " radiance texture";
       glObjectLabel(GL_TEXTURE, gl_voxel_radiance_textures[i], -1, radiance_object_label.c_str());
@@ -480,6 +481,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
       glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
       glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
       glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+      glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
 
       const std::string opacity_object_label = "Clipmap #" + std::to_string(i) + " opacity texture";
       glObjectLabel(GL_TEXTURE, gl_voxel_opacity_textures[i], -1, opacity_object_label.c_str());
@@ -602,7 +604,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
 }
 
 bool Renderer::init() {
-  std::vector<AABB> aabbs = generate_clipmaps_from_scene_aabb(scene->aabb, NUM_CLIPMAPS);
+  const std::vector<AABB> aabbs = generate_clipmaps_from_scene_aabb(scene->aabb, NUM_CLIPMAPS);
   for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
     clipmaps.aabb[i] = aabbs[i];
     Log::info("--------------------");
@@ -924,6 +926,7 @@ void Renderer::render(const uint32_t delta) {
     glUniform1f(glGetUniformLocation(program, "uMetallic_aperature"), metallic_aperature);
 
     // Shadowmapping
+    glUniform1ui(glGetUniformLocation(program, "uShadowAlgorithm"), state.shadow_algorithm);
     glUniform1f(glGetUniformLocation(program, "uShadow_bias"), state.shadow_bias);
     glUniform3fv(glGetUniformLocation(program, "uDirectional_light_direction"), 1, &directional_light.direction.x);
     glUniformMatrix4fv(glGetUniformLocation(program, "uLight_space_transform"), 1, GL_FALSE, glm::value_ptr(light_space_transform));
