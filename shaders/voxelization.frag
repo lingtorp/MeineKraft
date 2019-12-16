@@ -1,10 +1,12 @@
+// #version 450 core 
 
 #define NUM_CLIPMAPS 4
 
+// layout (pixel_center_integer) in vec4 gl_FragCoord; // Conserv. raster. 
 in vec3 fNormal;   
 in vec3 fPosition; // World space position
 in vec2 fTextureCoord;
-flat in uint fInvocationID;
+in vec4 fAABB;    // Bounding triangle (conservative rasterization)
 
 uniform int uClipmap_sizes[NUM_CLIPMAPS];
 layout(R32UI) uniform coherent volatile uimage3D uVoxelRadiance[NUM_CLIPMAPS]; 
@@ -13,21 +15,19 @@ layout(RGBA8) uniform writeonly image3D uVoxelOpacity[NUM_CLIPMAPS];
 uniform sampler2DArray uDiffuse;
 uniform sampler2D uEmissive;
 
+uniform bool uConservative_rasterization;
 uniform vec3 uCamera_position;
 uniform vec3 uAABB_centers[NUM_CLIPMAPS];
 uniform float uScaling_factors[NUM_CLIPMAPS];
 
-ivec3 voxel_coordinate_from_world_pos(const vec3 pos,
-                                      const vec3 aabb_center,
-                                      const uint voxel_grid_dimension,
-                                      const float scaling_factor) {
-  vec3 vpos = (pos - aabb_center) * scaling_factor;
-  vpos = clamp(vpos, vec3(-1.0), vec3(1.0));
-  const vec3 vgrid = vec3(voxel_grid_dimension);
-  vpos = vgrid * (vpos * vec3(0.5) + vec3(0.5));
-  return ivec3(vpos);
+ivec3 voxel_coordinate_from_world_pos(const vec3  p,   // World position
+                                      const vec3  c,   // AABB center
+                                      const uint  d,   // Voxel grid dimension
+                                      const float s) { // Voxel grid scaling  
+  const float offset = 0.5 / float(d); // Voxel grid offset
+  return ivec3(d * ((p - c) * s + 0.5) + offset);
 }
-
+	
 // Slightly modified and copied from: https://rauwendaal.net/2013/02/07/glslrunningaverage/
 void imageAtomicAverageRGBA8(layout(r32ui) coherent volatile uimage3D voxels,
                              const vec3 nextVec3,
@@ -77,7 +77,16 @@ float shadow(const vec3 world_position, const vec3 normal) {
 }
 
 void main() {
-  const uint clipmap = fInvocationID;
+  const uint clipmap = gl_ViewportIndex;
+
+  // FIXME: Used in Nopper's (non-working) conservative rasterization
+   if (uConservative_rasterization) {
+     const vec2 p = (gl_FragCoord.xy / vec2(uClipmap_sizes[clipmap])) * 2.0 - 1.0;
+     if (p.x < fAABB.x || p.y < fAABB.y || p.x > fAABB.z || p.y > fAABB.w) {
+       discard;
+     }
+   }
+
   const ivec3 vpos = voxel_coordinate_from_world_pos(fPosition,
                                                      uAABB_centers[clipmap],
                                                      uClipmap_sizes[clipmap],
@@ -88,7 +97,7 @@ void main() {
   // Inject radiance if voxel NOT in shadow
   const vec3 value = shadow(fPosition, fNormal) * radiance + emissive;
   if (abs(dot(value, vec3(1.0))) > 0.0) {
-      imageAtomicAverageRGBA8(uVoxelRadiance[clipmap], value, vpos);
+      imageAtomicAverageRGBA8(uVoxelRadiance[clipmap], radiance + emissive, vpos);
   }
   imageStore(uVoxelOpacity[clipmap], vpos, vec4(1.0));
 }
