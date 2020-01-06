@@ -336,7 +336,7 @@ struct RenderState {
   float roughness_aperature = 60.0f; // 60 deg diffuse cone from [Rauwendaal, Crassin11]
   float metallic_aperature   = 0.1f; // 10 deg specular cone from [Crassin11]
   bool voxelize = true;              // NOTE: Toggled by the Renderer (a.k.a executed once)
-  bool conservative_rasterization = true;
+  bool conservative_rasterization = false;
   bool direct_lighting = false;
   bool indirect_lighting = true;
   bool diffuse_lighting = false;
@@ -347,8 +347,13 @@ struct RenderState {
   float shadow_bias = 0.00025f;
   int num_diffuse_cones = 6;  // [Crassin11], [Yeu13] suggests 5
 
+  // Voxel cone tracing compute related
+  bool vct_compute = true;       // Use VCT compute or fullscreen fragment shader
+  int vct_compute_nth_pixel = 2; // Used in VCT compute shader (shades every Nth pixel)
+  bool vct_compute_bfs = true;   // Use bilateral filtering subpass to produce a smooth image
+  int vct_compute_bfs_kernel_size = 2;
+
   RenderState() = default;
-  RenderState(const RenderState& old) : frame(old.frame), shadowmapping(old.shadowmapping), normalmapping(old.normalmapping), camera_selection(old.camera_selection), roughness(old.roughness), roughness_aperature(old.roughness_aperature), metallic(old.metallic), metallic_aperature(old.metallic_aperature), voxelize(old.voxelize), conservative_rasterization(old.conservative_rasterization), direct_lighting(old.direct_lighting), indirect_lighting(old.indirect_lighting), always_voxelize(old.always_voxelize), shadow_bias(old.shadow_bias), num_diffuse_cones(old.num_diffuse_cones), diffuse_lighting(old.diffuse_lighting), specular_lighting(old.specular_lighting), ambient_lighting(old.ambient_lighting), shadow_algorithm(old.shadow_algorithm) {}
 };
 
 struct Resolution {

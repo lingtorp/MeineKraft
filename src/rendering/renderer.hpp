@@ -95,7 +95,15 @@ private:
   Shader* voxelization_shader = nullptr;
   uint32_t gl_voxelization_fbo = 0;
   ComputeShader* voxelization_opacity_norm_shader = nullptr;
-  
+
+  // Compute VCT pass related
+  ComputeShader* vct_compute_shader = nullptr;
+  uint32_t gl_vct_compute_image_unit = 0;      // Bound to gl_lightning_texture
+
+  // Bilateral filtering compute shader subpass related
+  ComputeShader* vct_bfs_compute_shader = nullptr;
+
+  // Rasterization based VCT pass related
   Shader* vct_shader = nullptr;
   uint32_t gl_vct_fbo = 0;
   uint32_t gl_vct_vao = 0;
@@ -150,9 +158,6 @@ private:
   // Environment map
   Texture environment_map; 
   uint32_t gl_environment_map_texture_unit = 0;
-
-  static uint32_t get_next_free_texture_unit(bool peek = false);
-  static uint32_t get_next_free_image_unit(bool peek = false);
 };
 
 #endif // MEINEKRAFT_RENDERER_HPP

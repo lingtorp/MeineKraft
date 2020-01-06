@@ -1,9 +1,14 @@
-// NOTE: Performs fullscreen VCT
+// NOTE: Performs voxel cone tracing for every Nth pixel
 
-#define NUM_CLIPMAPS 4
+// #version 450 core
+layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
-uniform uint uScreen_height;
-uniform uint uScreen_width;
+uniform uint uNth_pixel;
+
+layout(RGBA8) uniform restrict volatile writeonly image2D uScreen;
+
+uniform uint uScreen_height; // Pixels
+uniform uint uScreen_width;  // Pixels
 
 uniform sampler3D uVoxelRadiance[NUM_CLIPMAPS];
 uniform sampler3D uVoxelOpacity[NUM_CLIPMAPS];
@@ -31,8 +36,8 @@ uniform float uRoughness;
 uniform float uMetallic;
 uniform float uRoughness_aperature; // Radians (half-angle of cone)
 uniform float uMetallic_aperature;  // Radians (half-angle of cone)
-uniform bool  uDirect_lighting;  
-uniform bool  uIndirect_lighting;  
+uniform bool  uDirect_lighting;
+uniform bool  uIndirect_lighting;
 uniform bool  uDiffuse_lighting;
 uniform bool  uSpecular_lighting;
 uniform bool  uAmbient_lighting;
@@ -52,7 +57,7 @@ float clipmap_lvl_from_distance(const vec3 position) {
   if (d < 2.0) {
     return d;
   }
-  // d in [2, inf] from 2 hence log2(x) + 1 >= 2 where x >= 2	
+  // d in [2, inf] from 2 hence log2(x) + 1 >= 2 where x >= 2
   return log2(d) + 1;
 }
 
@@ -80,14 +85,12 @@ vec4 sample_clipmap_linearly(const vec3 wp, const float lvl) {
   return vec4(s0s1.rgb * (lvl - fract(lvl)) * 0.1, s0s1.a); // NOTE: Deals with the rings
 }
 
-out vec4 color;
-
 uniform float uVoxel_size_LOD0;
 
 vec4 trace_diffuse_cone(const vec3 origin,
                         const vec3 direction,
                         const float half_angle) {
-  const float max_distance = (1.0 / uScaling_factors[NUM_CLIPMAPS - 1]) / 1.0; 
+  const float max_distance = (1.0 / uScaling_factors[NUM_CLIPMAPS - 1]) / 1.0;
   const float start_lvl = floor(clipmap_lvl_from_distance(origin));
 
   float occlusion = 0.0;
@@ -100,7 +103,7 @@ vec4 trace_diffuse_cone(const vec3 origin,
 
     const float cone_diameter = max(2.0 * tan(half_angle) * cone_distance, uVoxel_size_LOD0);
     cone_distance += cone_diameter * 1.0; // 0.5 for cone tracing with radius step size
-    
+
     const float min_lvl  = floor(clipmap_lvl_from_distance(cone_position));
     const float curr_lvl = log2(cone_diameter / uVoxel_size_LOD0);
     const float lvl = min(max(max(start_lvl, curr_lvl), min_lvl), float(NUM_CLIPMAPS - 1));
@@ -121,7 +124,7 @@ vec4 trace_diffuse_cone(const vec3 origin,
 vec4 trace_specular_cone(const vec3 origin,
                          const vec3 direction,
                          const float half_angle) {
-  const float max_distance = (1.0 / uScaling_factors[NUM_CLIPMAPS - 1]) / 4.0; 
+  const float max_distance = (1.0 / uScaling_factors[NUM_CLIPMAPS - 1]) / 4.0;
   const float start_lvl = floor(clipmap_lvl_from_distance(origin));
 
   float occlusion = 0.0;
@@ -133,7 +136,7 @@ vec4 trace_specular_cone(const vec3 origin,
 
     const float cone_diameter = max(2.0 * tan(half_angle) * cone_distance, uVoxel_size_LOD0);
     cone_distance += cone_diameter;
-    
+
     const float min_lvl = floor(clipmap_lvl_from_distance(cone_position));
     const float curr_lvl = log2(cone_diameter / uVoxel_size_LOD0);
     const float lvl = min(max(max(start_lvl, curr_lvl), min_lvl), float(NUM_CLIPMAPS - 1));
@@ -147,7 +150,7 @@ vec4 trace_specular_cone(const vec3 origin,
   return vec4(radiance, 1.0 - occlusion);
 }
 
-uniform uint uShadowAlgorithm;
+uniform uint uShadow_algorithm;
 uniform float uShadow_bias;
 uniform vec3 uDirectional_light_direction;
 uniform mat4 uLight_space_transform;
@@ -163,7 +166,7 @@ float plain_shadow(const vec3 world_position, const vec3 normal) {
   const float current_depth = lightspace_position.z;
 
   const float closest_shadowmap_depth = texture(uShadowmap, lightspace_position.xy).r;
-    
+
   // Bias avoids the _majority_ of shadow acne
   const float bias = uShadow_bias * dot(-uDirectional_light_direction, normal);
 
@@ -197,11 +200,11 @@ float pcf_shadow(const vec3 world_position, const vec3 normal) {
 float vct_shadow(const vec3 origin, const vec3 normal, const vec3 direction) {
   const float half_angle = 0.0050; // Shadow cone aperature
 
-  const float max_distance = (1.0 / uScaling_factors[NUM_CLIPMAPS - 1]) / 8.0; 
+  const float max_distance = (1.0 / uScaling_factors[NUM_CLIPMAPS - 1]) / 8.0;
   const float start_lvl = floor(clipmap_lvl_from_distance(origin));
 
   float occlusion = 0.0;
-  float cone_distance = 0.0; 
+  float cone_distance = 0.0;
   const vec3 o = origin + (uVoxel_size_LOD0 * 1.5 * exp2(start_lvl)) * normal; // Avoids self-occlusion/accumulation
 
   while (cone_distance < max_distance) {
@@ -214,23 +217,26 @@ float vct_shadow(const vec3 origin, const vec3 normal, const vec3 direction) {
 
     const float cone_diameter = max(2.0 * tan(half_angle) * cone_distance, uVoxel_size_LOD0);
     cone_distance += cone_diameter * 1.0;
-    
+
     const float min_lvl = floor(clipmap_lvl_from_distance(cone_position));
     const float curr_lvl = log2(cone_diameter / uVoxel_size_LOD0);
     const float lvl = min(max(max(start_lvl, curr_lvl), min_lvl), float(NUM_CLIPMAPS - 1));
 
-    // Front-to-back acculumation 
+    // Front-to-back acculumation
     occlusion += (1.0 - occlusion) * sample_clipmap_linearly(cone_position, lvl).a;
   }
 
   return 1.0 - smoothstep(0.1, 0.95, occlusion);
 }
-  
+
 void main() {
-  const vec2 frag_coord = vec2(gl_FragCoord.x / float(uScreen_width), gl_FragCoord.y / float(uScreen_height));
-  
+  vec4 color = vec4(0.0); // (RGB, Opacity/Occlusion)
+
+  const vec2 screen_dims = vec2(uScreen_width, uScreen_height);
+  const vec2 frag_coord = (uNth_pixel * gl_GlobalInvocationID.xy) / screen_dims;
+
   const vec3 origin = texture(uPosition, frag_coord).xyz;
-  const vec3 fNormal = texture(uNormal, frag_coord).xyz; 
+  const vec3 fNormal = texture(uNormal, frag_coord).xyz;
   vec3 normal = fNormal;
 
   // Tangent normal mapping & TBN tranformation
@@ -242,21 +248,21 @@ void main() {
   if (uNormalmapping) {
     TBN = mat3(T, B, N);
     const vec3 tangent_normal = normalize(2.0 * (texture(uTangent_normal, frag_coord).xyz - vec3(0.5)));
-    normal = normalize(TBN * tangent_normal);  
+    normal = normalize(TBN * tangent_normal);
   }
 
   // Material parameters
-  const float roughness = texture(uPBR_parameters, frag_coord).g; 
+  const float roughness = texture(uPBR_parameters, frag_coord).g;
   const float metallic = texture(uPBR_parameters, frag_coord).b;
   const float roughness_aperature = uRoughness_aperature;
   const float metallic_aperature = uMetallic_aperature;
   const vec4  diffuse = sRGB_to_linear(vec4(texture(uDiffuse, frag_coord).rgb, 1.0));
- 
+
   uint traced_cones = 1;
   if (uDiffuse_lighting) {
     // Offset origin to avoid self-sampling
     const float start_lvl = floor(clipmap_lvl_from_distance(origin));
-    const vec3 o = origin + (uVoxel_size_LOD0 * 1.5 * exp2(start_lvl)) * fNormal; 
+    const vec3 o = origin + (uVoxel_size_LOD0 * 1.5 * exp2(start_lvl)) * fNormal;
     const vec4 radiance = cones[0].w * diffuse * trace_diffuse_cone(o, normal, roughness_aperature);
     color += radiance;
 
@@ -277,21 +283,17 @@ void main() {
     // color.rgb = vec3(0.0);
     // color.rgb += vec3(color.a) / traced_cones;
     // NOTE: See generate_diffuse_cones for details about the division
-  } 	
+  }
 
   if (uSpecular_lighting) {
-    const float aperture = metallic_aperature; 
+    const float aperture = metallic_aperature;
     const vec3 reflection = normalize(reflect(-(uCamera_position - origin), fNormal));
     color += metallic * trace_specular_cone(origin, reflection, aperture);
   }
 
-  if (!uIndirect_lighting) {
-    color.rgb = vec3(0.0);
-  }
-
   if (uDirect_lighting) { // TODO: fNormal vs. normal?
     float shadow = 0.0;
-    switch (uShadowAlgorithm) {
+    switch (uShadow_algorithm) {
       case 0:
         shadow = plain_shadow(origin, normal);
         break;
@@ -322,4 +324,6 @@ void main() {
   // color.rgb = vec3(world_to_clipmap_voxelspace(origin, uScaling_factors[0], uAABB_centers[0]));
   // color.rgb = sample_clipmap_linearly(origin, clipmap_lvl_from_distance(origin)).rgb;
   // color.rgb = vec3(floor(clipmap_lvl_from_distance(origin)) / NUM_CLIPMAPS);
+
+  imageStore(uScreen, ivec2(frag_coord * screen_dims), color);
 }
