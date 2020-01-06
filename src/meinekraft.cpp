@@ -303,6 +303,9 @@ void MeineKraft::mainloop() {
         ImGui::InputFloat("Roughness aperature (deg.)", &renderer->state.roughness_aperature);
         ImGui::InputFloat("Metallic aperature (deg.)", &renderer->state.metallic_aperature);
 
+        ImGui::Checkbox("VCT Compute", &renderer->state.vct_compute);
+        ImGui::SliderInt("N:th pixel: ", &renderer->state.vct_compute_nth_pixel, 1, 16);
+
         if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
           ImGui::PushItemWidth(200.0f);
           ImGui::InputFloat3("Position##camera", &renderer->scene->camera->position.x);

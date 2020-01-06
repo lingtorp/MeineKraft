@@ -9,8 +9,8 @@ in vec2 fTextureCoord;
 in vec4 fAABB;    // Bounding triangle (conservative rasterization)
 
 uniform int uClipmap_sizes[NUM_CLIPMAPS];
-layout(R32UI) uniform coherent volatile uimage3D uVoxelRadiance[NUM_CLIPMAPS]; 
-layout(RGBA8) uniform writeonly image3D uVoxelOpacity[NUM_CLIPMAPS]; 
+layout(R32UI) uniform restrict coherent volatile uimage3D uVoxelRadiance[NUM_CLIPMAPS];
+layout(RGBA8) uniform restrict writeonly image3D uVoxelOpacity[NUM_CLIPMAPS];
 
 uniform sampler2DArray uDiffuse;
 uniform sampler2D uEmissive;

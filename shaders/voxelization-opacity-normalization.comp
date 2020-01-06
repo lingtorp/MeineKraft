@@ -2,7 +2,7 @@
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
 // NOTE: (radiance, atomic_counter) --> (radiance, opacity)
-layout(RGBA8) uniform coherent volatile image3D voxels;
+layout(RGBA8) uniform restrict volatile image3D voxels;
 
 void main() {
   const ivec3 vpos = ivec3(gl_GlobalInvocationID.xyz); 

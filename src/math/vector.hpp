@@ -275,7 +275,7 @@ struct Vec2 {
     /// Length of the vector
     constexpr inline double length() const { return std::sqrt(std::pow(x, 2) + std::pow(y, 2)); }
 
-    friend std::ostream &operator<<(std::ostream& os, const Vec2& v) { return os << "(x: " << v.x << ", y: " << v.y << std::endl; }
+    friend std::ostream &operator<<(std::ostream& os, const Vec2& v) { return os << "(x: " << v.x << ", y: " << v.y << ")" << std::endl; }
 
     inline std::string to_string() const {
       return "(x:" + std::to_string(x) + " y:" + std::to_string(y) + ")";
