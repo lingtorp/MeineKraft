@@ -11,48 +11,75 @@ layout(RGBA8) uniform restrict volatile writeonly image2D uOutput;
 uniform uint uScreen_width;
 uniform uint uScreen_height;
 
-uniform uint uKernel_size; // Kernel box size
+// Bilateral filtering related
+uniform uint uKernel_size;   // Kernel box size
+uniform float uSigmaSpatial; // Spatial kernel Gaussian sigma
+uniform float uSigmaRange;   // Range kernel Gaussian sigma
+
+// def T === ([0, 1], [0, 1]) <-- ([0, W], [0, H])
+vec2 pixel_to_texture_space(const ivec2 p) {
+  const vec2 screen_dims = vec2(uScreen_width, uScreen_height);
+  return p / screen_dims;
+}
+
+// def T === ([0, 1], [0, 1]) --> ([0, W], [0, H])
+ivec2 texture_to_pixel_space(const vec2 p) {
+  const vec2 screen_dims = vec2(uScreen_width, uScreen_height);
+  return ivec2(p * screen_dims);
+}
 
 // 1D Gaussian function
 // Src: https://people.csail.mit.edu/sparis/bf_course/course_notes.pdf
-float gaussian(const float sigma, const float x) {
+float gaussian_1d(const float sigma, const float x) {
   const float factor = 1.0 / (M_2PI * sigma * sigma);
   return factor * exp(- x * x / (2.0 * sigma * sigma));
 }
 
 // Range (a.k.a domain/value) kernel function
-float range(const float p, const float q) {
-  const float d = p - q;
-  return gaussian(0.1, d);
+// NOTE: Euclidean distance in RGB space
+// TODO: Are there better ways to measure color difference?
+float range(const vec3 p, const vec3 q) {
+  const float d = distance(p, q);
+  return gaussian_1d(uSigmaRange, d);
 }
 
-float spatial(const float p, const float q) {
-  const float d = abs(p - q);
-  return gaussian(0.1, d);
+// Computes spatial likeness with Euclidean distance in texture space
+// Input p, q are in kernel/image space
+float spatial(const ivec2 p, const ivec2 q) {
+  const vec2 tp = pixel_to_texture_space(p);
+  const vec2 tq = pixel_to_texture_space(q);
+  const float d = distance(tp, tq);
+  return gaussian_1d(uSigmaSpatial, d);
 }
+
+// TODO: Euclidean distance in WORLD SPACE
+// float spatial_ws(const ivec2p, const ivec2 q) {}
+
+// void main() {
+//   const ivec2 p = ivec2(uNth_pixel * gl_GlobalInvocationID.xy);
+//   imageStore(uOutput, p, imageLoad(uInput, p));
+// }
 
 void main() {
-  const vec2 screen_dims = vec2(uScreen_width, uScreen_height);
-  const vec2 frag_coord = (uNth_pixel * gl_GlobalInvocationID.xy) / screen_dims;
+  vec4 color = vec4(0.0);
 
   // Current pixel
-  const vec3 p = imageLoad(uInput, ivec2(frag_coord * screen_dims));
-
-  vec4 color = vec4(0.0);
+  const ivec2 p = ivec2(uNth_pixel * gl_GlobalInvocationID.xy);
+  const vec3 ip = imageLoad(uInput, p).rgb;
 
   float intensity = 0.0;
   float weight = 0.0;
 
-  for (uint i = -uKernel_size; i < uKernel_size; i++) {
-    for (uint j = -uKernel_size; j < uKernel_size; j++) {
+  // TODO: const float kernel_radius = 2.0 * uSigmaSpatial; // Texture space
 
-      const vec2 q = p + vec2(i, j); // Kernel space? Texture space not pixel space??
-      const vec3 iq = 0.0; // intensity of pixel q
-      const vec3 ip = imageLoad(uInput, ivec2(frag_coord * screen_dims));
-
+  // Box kernel domain
+  for (uint i = -uKernel_size / 2; i < uKernel_size / 2; i++) {
+    for (uint j = -uKernel_size / 2; j < uKernel_size / 2; j++) {
+      // Kernel space kernel
+      const ivec2 q = p + ivec2(i, j);
+      const vec3 iq = imageLoad(uInput, q).rgb;
       const float w = spatial(p, q) * range(ip, iq);
-
-      color += vec4(vec3(w * iq), 0.0);
+      color.rgb += w * iq;
       weight += w;
     }
   }
@@ -60,5 +87,5 @@ void main() {
   // Normalization
   color /= weight;
 
-  imageStore(uOutput, ivec2(frag_coord * screen_dims), color);
+  imageStore(uOutput, p, color);
 }
