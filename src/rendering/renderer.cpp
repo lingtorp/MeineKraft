@@ -550,7 +550,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   /// Voxel cone tracing pass
   {
     /// Create SSBO for the diffuse cones
-    const size_t MAX_CONES = 12; 
+    const size_t MAX_CONES = RenderState::MAX_VCT_DIFFUSE_CONES;
     const std::vector<Vec4f> cones = generate_diffuse_cones(state.num_diffuse_cones);
 
     glGenBuffers(1, &gl_vct_diffuse_cones_ssbo);
@@ -616,10 +616,18 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   }
 
   /// Bilateral filtering compute pass
-  if (false) {
+  if (state.vct_compute) {
     const std::string includes = Filesystem::read_file(Filesystem::base + "shaders/voxel-cone-tracing-utils.glsl");
-    vct_bfs_compute_shader = new ComputeShader(Filesystem::base + "shaders/bfs.comp.glsl",
-                                                        std::vector{includes});
+    vct_bf_compute_shader = new ComputeShader(Filesystem::base + "shaders/bfs.comp.glsl",
+                                              std::vector{includes});
+
+		glActiveTexture(GL_TEXTURE0 + gl_lightning_texture_unit);
+		glGenTextures(1, &gl_vct_bf_in_texture);
+		glBindTexture(GL_TEXTURE_2D, gl_vct_bf_in_texture);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, screen.width, screen.height, 0, GL_RGBA, GL_FLOAT, nullptr);
+		glObjectLabel(GL_TEXTURE, gl_vct_texture, -1, "Bilateral filtering input texture");
   }
 
   glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
@@ -1024,7 +1032,11 @@ void Renderer::render(const uint32_t delta) {
       const uint32_t nth_pixel = state.vct_compute_nth_pixel;
       glUniform1ui(glGetUniformLocation(program, "uNth_pixel"), nth_pixel);
 
-      glBindImageTexture(gl_vct_compute_image_unit, gl_vct_texture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA8);
+      if (state.vct_compute_bilateral_filter) {
+        glBindImageTexture(gl_vct_compute_image_unit, gl_vct_bf_in_texture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA8);
+      } else {
+        glBindImageTexture(gl_vct_compute_image_unit, gl_vct_texture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA8);
+      }
       glUniform1i(glGetUniformLocation(program, "uScreen"), gl_vct_compute_image_unit);
 
       const auto space = Vec2<uint32_t>(screen.width / nth_pixel, screen.height / nth_pixel);
@@ -1040,22 +1052,29 @@ void Renderer::render(const uint32_t delta) {
   }
 
   {
-    if (false) {
+    if (state.vct_compute && state.vct_compute_bilateral_filter) {
       pass_started("Bilateral filtering subpass");
 
-      const auto program = vct_bfs_compute_shader->gl_program;
+      const auto program = vct_bf_compute_shader->gl_program;
 
       glUniform1ui(glGetUniformLocation(program, "uScreen_width"), screen.width);
       glUniform1ui(glGetUniformLocation(program, "uScreen_height"), screen.height);
 
-      const uint32_t kernel_size = state.vct_compute_bfs_kernel_size;
+      const uint32_t kernel_size = state.vct_compute_bf_kernel_size;
       glUniform1ui(glGetUniformLocation(program, "uKernel_size"), kernel_size);
+
+      const float sigma = 0.2;
+      glUniform1f(glGetUniformLocation(program, "uSigmaSpatial"), sigma);
+      glUniform1f(glGetUniformLocation(program, "uSigmaRange"), sigma);
 
       const uint32_t nth_pixel = state.vct_compute_nth_pixel;
       glUniform1ui(glGetUniformLocation(program, "uNth_pixel"), nth_pixel);
 
+      glBindImageTexture(gl_vct_compute_image_unit, gl_vct_bf_in_texture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA8);
+      glUniform1i(glGetUniformLocation(program, "uInput"), gl_vct_compute_image_unit);
+
       glBindImageTexture(gl_vct_compute_image_unit, gl_vct_texture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA8);
-      glUniform1i(glGetUniformLocation(program, "uScreen"), gl_vct_compute_image_unit);
+      glUniform1i(glGetUniformLocation(program, "uOutput"), gl_vct_compute_image_unit);
 
       const auto space = Vec2<uint32_t>(screen.width / nth_pixel, screen.height / nth_pixel);
       glDispatchCompute(space.x, space.y, 1);

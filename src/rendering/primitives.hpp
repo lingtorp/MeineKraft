@@ -331,6 +331,7 @@ struct RenderState {
   bool normalmapping = true;
 
   // Voxel cone tracing related
+  static const uint32_t MAX_VCT_DIFFUSE_CONES = 12;
   float roughness = 1.0f;
   float metallic = 1.0f;
   float roughness_aperature = 60.0f; // 60 deg diffuse cone from [Rauwendaal, Crassin11]
@@ -350,10 +351,15 @@ struct RenderState {
   // Voxel cone tracing compute related
   bool vct_compute = true;       // Use VCT compute or fullscreen fragment shader
   int vct_compute_nth_pixel = 2; // Used in VCT compute shader (shades every Nth pixel)
-  bool vct_compute_bfs = true;   // Use bilateral filtering subpass to produce a smooth image
-  int vct_compute_bfs_kernel_size = 2;
+  bool vct_compute_bilateral_filter = true;    // Use bilateral filtering subpass to produce a smooth image
+  int vct_compute_bf_kernel_size = 2;
 
   RenderState() = default;
+
+  friend std::ostream &operator<<(std::ostream &os, const RenderState& state) {
+    // TODO: Implement ...
+    return os;
+  }
 };
 
 struct Resolution {

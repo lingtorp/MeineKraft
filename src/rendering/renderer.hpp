@@ -101,7 +101,8 @@ private:
   uint32_t gl_vct_compute_image_unit = 0;      // Bound to gl_lightning_texture
 
   // Bilateral filtering compute shader subpass related
-  ComputeShader* vct_bfs_compute_shader = nullptr;
+  ComputeShader* vct_bf_compute_shader = nullptr;
+  uint32_t gl_vct_bf_in_texture = 0;
 
   // Rasterization based VCT pass related
   Shader* vct_shader = nullptr;

@@ -296,15 +296,18 @@ void MeineKraft::mainloop() {
         ImGui::SameLine();
         ImGui::Checkbox("Ambient", &renderer->state.ambient_lighting);
 
-        ImGui::SliderInt("# diffuse cones", &renderer->state.num_diffuse_cones, 1, 12);
+        ImGui::SliderInt("# diffuse cones", &renderer->state.num_diffuse_cones, 1, RenderState::MAX_VCT_DIFFUSE_CONES);
 
         ImGui::InputFloat("Roughness", &renderer->state.roughness);
         ImGui::InputFloat("Metallic", &renderer->state.metallic);
         ImGui::InputFloat("Roughness aperature (deg.)", &renderer->state.roughness_aperature);
         ImGui::InputFloat("Metallic aperature (deg.)", &renderer->state.metallic_aperature);
 
+        // Voxel cone tracing compute related settings
         ImGui::Checkbox("VCT Compute", &renderer->state.vct_compute);
         ImGui::SliderInt("N:th pixel: ", &renderer->state.vct_compute_nth_pixel, 1, 16);
+
+        ImGui::Checkbox("VCT filtering", &renderer->state.vct_compute_bilateral_filter);
 
         if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
           ImGui::PushItemWidth(200.0f);
