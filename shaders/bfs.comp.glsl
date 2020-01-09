@@ -55,6 +55,8 @@ float spatial(const ivec2 p, const ivec2 q) {
 // TODO: Euclidean distance in WORLD SPACE
 // float spatial_ws(const ivec2p, const ivec2 q) {}
 
+// FIXME: Something is wrong in the way the kernel reads from the input texture
+// imageLoad(uInput, p + ivec2(1,0)) does not seem to return the rightmost pixel value
 void main() {
   vec4 color = vec4(0.0);
 

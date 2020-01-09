@@ -9,7 +9,6 @@
 #include "texture.hpp"
 #include "light.hpp"
 #include "../rendering/primitives.hpp"
-#include "renderpass.hpp"
 
 #include <glm/mat4x4.hpp>
 
