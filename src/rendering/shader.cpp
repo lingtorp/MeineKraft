@@ -3,6 +3,8 @@
 #include "../util/filesystem.hpp"
 #include "debug_opengl.hpp"
 
+#include <string>
+
 #ifdef _WIN32
 #include <glew.h>
 #else
@@ -36,6 +38,21 @@ static std::string shader_define_to_string(const Shader::Defines define) {
     Log::error("Invalid shader define passed");
     return "This will ensure that shader compilation does not work :)";
   }
+}
+
+static std::string shader_compilation_err_msg(const GLuint shader) {
+  GLint max_lng = 0;
+  glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &max_lng);
+
+  if (max_lng == 0) {
+    return "";
+  }
+
+  // The max_lng includes the NULL character
+  char *err_log[max_lng];
+  glGetShaderInfoLog(shader, max_lng, &max_lng, err_log[0]);
+
+  return std::string(err_log[0]);
 }
 
 ComputeShader::ComputeShader(const std::string &compute_filepath,
@@ -79,7 +96,8 @@ ComputeShader::ComputeShader(const std::string &compute_filepath,
     char *prog_err_msg = new char[err_size];
     glGetProgramInfoLog(gl_program, err_size, nullptr, prog_err_msg);
     if (err_size != 0) {
-      Log::error("Could not compile compute shader: " + compute_filepath + "\n" + std::string(prog_err_msg));
+      Log::error("Could not compile compute shader: " + compute_filepath +
+                 "\n" + std::string(prog_err_msg));
     }
     delete[] prog_err_msg;
 
@@ -134,12 +152,6 @@ std::pair<bool, std::string> Shader::compile() {
     glObjectLabel(GL_SHADER, gl_vertex_shader, -1, vertex_filepath.c_str());
 
     glGetShaderiv(gl_vertex_shader, GL_COMPILE_STATUS, &vertex_shader_compiled);
-
-    if (vertex_shader_compiled == GL_FALSE) {
-      const auto err_msg =
-          "Vertex shader (" + vertex_filepath + ") failed to compile";
-      return {false, err_msg};
-    }
   }
 
   if (!geometry_filepath.empty()) {
@@ -164,12 +176,6 @@ std::pair<bool, std::string> Shader::compile() {
 
     glGetShaderiv(gl_geometry_shader, GL_COMPILE_STATUS,
                   &geometry_shader_compiled);
-
-    if (geometry_shader_compiled == GL_FALSE) {
-      const auto err_msg =
-          "Geometry shader (" + geometry_filepath + ") failed to compile";
-      return {false, err_msg};
-    }
   }
 
   if (!fragment_filepath.empty()) {
@@ -194,12 +200,6 @@ std::pair<bool, std::string> Shader::compile() {
 
     glGetShaderiv(gl_fragment_shader, GL_COMPILE_STATUS,
                   &fragment_shader_compiled);
-
-    if (fragment_shader_compiled == GL_FALSE) {
-      const auto err_msg =
-          "Fragment shader (" + fragment_filepath + ") failed to compile";
-      return {false, err_msg};
-    }
   }
 
   const std::string program_label =
@@ -214,50 +214,34 @@ std::pair<bool, std::string> Shader::compile() {
       (fragment_included ? fragment_shader_compiled : true);
 
   if (!all_shaders_compiled) {
-    GLint err_size = 0;
-    char *err_msg = nullptr;
-
     std::string total_err_msg = "";
 
     if (vertex_included) {
-      glGetShaderiv(gl_vertex_shader, GL_INFO_LOG_LENGTH, &err_size);
-
-      err_msg = new char[err_size];
-      glGetShaderInfoLog(gl_vertex_shader, err_size, nullptr, err_msg);
-      total_err_msg += std::string(err_msg);
-      delete[] err_msg;
-
+      total_err_msg += "Vertex shader (" + vertex_filepath + "): \n" +
+                       shader_compilation_err_msg(gl_vertex_shader);
       glDetachShader(gl_program, gl_vertex_shader);
       glDeleteShader(gl_vertex_shader);
     }
 
     if (geometry_included) {
-      glGetShaderiv(gl_fragment_shader, GL_INFO_LOG_LENGTH, &err_size);
-      err_msg = new char[err_size];
-      glGetShaderInfoLog(gl_fragment_shader, err_size, nullptr, err_msg);
-      total_err_msg += std::string(err_msg);
-      delete[] err_msg;
-
+      total_err_msg += "Geometry shader (" + geometry_filepath + "): \n" +
+                       shader_compilation_err_msg(gl_geometry_shader);
       glDetachShader(gl_program, gl_geometry_shader);
       glDeleteShader(gl_geometry_shader);
     }
 
     if (fragment_included) {
-      glGetShaderiv(gl_fragment_shader, GL_INFO_LOG_LENGTH, &err_size);
-      err_msg = new char[err_size];
-      glGetShaderInfoLog(gl_fragment_shader, err_size, nullptr, err_msg);
-      total_err_msg += std::string(err_msg);
-      delete[] err_msg;
-
+      total_err_msg += "Fragment shader (" + fragment_filepath + "): \n" +
+                       shader_compilation_err_msg(gl_fragment_shader);
       glDetachShader(gl_program, gl_fragment_shader);
       glDeleteShader(gl_fragment_shader);
     }
 
+    GLint err_size = 0;
     glGetProgramiv(gl_program, GL_INFO_LOG_LENGTH, &err_size);
-    err_msg = new char[err_size];
+    char err_msg[err_size];
     glGetProgramInfoLog(gl_program, err_size, nullptr, err_msg);
     total_err_msg += std::string(err_msg);
-    delete[] err_msg;
 
     glDeleteProgram(gl_program);
 
