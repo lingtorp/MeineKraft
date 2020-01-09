@@ -308,6 +308,8 @@ void MeineKraft::mainloop() {
         ImGui::SliderInt("N:th pixel: ", &renderer->state.vct_compute_nth_pixel, 1, 16);
 
         ImGui::Checkbox("VCT filtering", &renderer->state.vct_compute_bilateral_filter);
+        ImGui::InputFloat("Spatial sigma", &renderer->state.vct_compute_spatial_sigma);
+        ImGui::InputFloat("Range sigma", &renderer->state.vct_compute_range_sigma);
 
         if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
           ImGui::PushItemWidth(200.0f);

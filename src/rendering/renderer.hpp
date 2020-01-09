@@ -103,6 +103,7 @@ private:
   // Bilateral filtering compute shader subpass related
   ComputeShader* vct_bf_compute_shader = nullptr;
   uint32_t gl_vct_bf_in_texture = 0;
+  uint32_t gl_vct_compute_bf_image_unit = 0;
 
   // Rasterization based VCT pass related
   Shader* vct_shader = nullptr;

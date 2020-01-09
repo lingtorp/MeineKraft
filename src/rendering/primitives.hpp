@@ -338,21 +338,23 @@ struct RenderState {
   float metallic_aperature   = 0.1f; // 10 deg specular cone from [Crassin11]
   bool voxelize = true;              // NOTE: Toggled by the Renderer (a.k.a executed once)
   bool conservative_rasterization = false;
-  bool direct_lighting = false;
+  bool direct_lighting = true;
   bool indirect_lighting = true;
-  bool diffuse_lighting = false;
+  bool diffuse_lighting = true;
   bool specular_lighting = true;
-  bool ambient_lighting  = false;
+  bool ambient_lighting  = true;
   bool always_voxelize = false;
   uint8_t shadow_algorithm = 0; // See enum class ShadowAlgorithm
   float shadow_bias = 0.00025f;
   int num_diffuse_cones = 6;  // [Crassin11], [Yeu13] suggests 5
 
   // Voxel cone tracing compute related
-  bool vct_compute = true;       // Use VCT compute or fullscreen fragment shader
-  int vct_compute_nth_pixel = 2; // Used in VCT compute shader (shades every Nth pixel)
-  bool vct_compute_bilateral_filter = true;    // Use bilateral filtering subpass to produce a smooth image
-  int vct_compute_bf_kernel_size = 2;
+  bool vct_compute = true;                  // Use VCT compute or fullscreen fragment shader
+  int vct_compute_nth_pixel = 4;            // Used in VCT compute shader (shades every Nth pixel)
+  bool vct_compute_bilateral_filter = true; // Use bilateral filtering subpass to produce a smooth image
+  int vct_compute_bf_kernel_size = 4;
+  float vct_compute_spatial_sigma = 0.2;    // Variance used in spatial Gaussian kernel
+  float vct_compute_range_sigma = 0.2;      // Variance used in range Gaussian kernel
 
   RenderState() = default;
 

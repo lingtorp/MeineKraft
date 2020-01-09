@@ -108,6 +108,7 @@ static glm::mat4 shadowmap_transform(const AABB& aabb, const DirectionalLight& l
   return glm::ortho(left, right, bottom, top, znear, zfar) * light_view_transform;
 }
 
+// FIXME: Use the same form as above or vice versa
 // NOTE: AABB passed is assumed to be the Scene AABB
 static glm::mat4 orthographic_projection(const AABB& aabb) {
   const float voxel_grid_dimension = aabb.max_axis() / 2.0f;
@@ -198,9 +199,6 @@ std::vector<Vec4f> generate_diffuse_cones(const size_t count) {
                                   std::cos(i * rad_delta));
     cones[i + 1] = Vec4f(direction, (M_PI - cones[0].w) / (count - 1.0f));
   }
-
-  // Log::info(cones);              
-  // exit(0);
 
   return cones;
 }
@@ -402,13 +400,13 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   // View frustum culling shader
   cull_shader = new ComputeShader(Filesystem::base + "shaders/culling.comp.glsl");
 
-  // Directional shadow mapping setup
+  /// Directional shadow mapping setup
   {
     glGenFramebuffers(1, &gl_shadowmapping_fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, gl_shadowmapping_fbo);
 		glObjectLabel(GL_FRAMEBUFFER, gl_shadowmapping_fbo, -1, "Shadowmap FBO");
     gl_shadowmapping_texture_unit = get_next_free_texture_unit();
-    glActiveTexture(GL_TEXTURE0 + gl_shadowmapping_texture_unit);
+    glActiveTexture(GL_TEXTURE0 + gl_shadowmapping_texture_unit); // FIXME: These are not neccessary when creating the texture only when they are used
     glGenTextures(1, &gl_shadowmapping_texture);
     glBindTexture(GL_TEXTURE_2D, gl_shadowmapping_texture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST); 
@@ -580,14 +578,13 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glGenFramebuffers(1, &gl_vct_fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, gl_vct_fbo);
 
-		glActiveTexture(GL_TEXTURE0 + gl_lightning_texture_unit);
-		glGenTextures(1, &gl_vct_texture);
-		glBindTexture(GL_TEXTURE_2D, gl_vct_texture);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, screen.width, screen.height, 0, GL_RGBA, GL_FLOAT, nullptr);
-		glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_vct_texture, 0);
-		glObjectLabel(GL_TEXTURE, gl_vct_texture, -1, "VCT lighting texture");
+    glGenTextures(1, &gl_vct_texture);
+    glBindTexture(GL_TEXTURE_2D, gl_vct_texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, screen.width, screen.height, 0, GL_RGBA, GL_FLOAT, nullptr);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_vct_texture, 0);
+    glObjectLabel(GL_TEXTURE, gl_vct_texture, -1, "VCT lighting texture");
 
     uint32_t fbo_attachments[1] = { GL_COLOR_ATTACHMENT0 };
     glDrawBuffers(1, fbo_attachments);
@@ -616,18 +613,18 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   }
 
   /// Bilateral filtering compute pass
-  if (state.vct_compute) {
+  {
     const std::string includes = Filesystem::read_file(Filesystem::base + "shaders/voxel-cone-tracing-utils.glsl");
     vct_bf_compute_shader = new ComputeShader(Filesystem::base + "shaders/bfs.comp.glsl",
                                               std::vector{includes});
+    gl_vct_compute_bf_image_unit = get_next_free_image_unit();
 
-		glActiveTexture(GL_TEXTURE0 + gl_lightning_texture_unit);
-		glGenTextures(1, &gl_vct_bf_in_texture);
-		glBindTexture(GL_TEXTURE_2D, gl_vct_bf_in_texture);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, screen.width, screen.height, 0, GL_RGBA, GL_FLOAT, nullptr);
-		glObjectLabel(GL_TEXTURE, gl_vct_texture, -1, "Bilateral filtering input texture");
+    glGenTextures(1, &gl_vct_bf_in_texture);
+    glBindTexture(GL_TEXTURE_2D, gl_vct_bf_in_texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, screen.width, screen.height, 0, GL_RGBA, GL_FLOAT, nullptr);
+    glObjectLabel(GL_TEXTURE, gl_vct_bf_in_texture, -1, "Bilateral filtering input texture");
   }
 
   glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
@@ -946,21 +943,15 @@ void Renderer::render(const uint32_t delta) {
     uint32_t program = 0;
     if (state.vct_compute) {
       pass_started("Voxel cone tracing compute pass");
-
       program = vct_compute_shader->gl_program;
     } else {
       pass_started("Voxel cone tracing pass");
-
       program = vct_shader->gl_program;
-      glBindFramebuffer(GL_FRAMEBUFFER, gl_vct_fbo);
-
-      glBindVertexArray(gl_vct_vao);
     }
 
-    glActiveTexture(GL_TEXTURE0 + gl_lightning_texture_unit);
-    glBindTexture(GL_TEXTURE_2D, gl_vct_texture);
-
     glUseProgram(program);
+    glBindFramebuffer(GL_FRAMEBUFFER, gl_vct_fbo);
+    glBindVertexArray(gl_vct_vao);
 
     // User customizable
     glUniform1i(glGetUniformLocation(program, "uDirect_lighting"), state.direct_lighting);
@@ -1032,11 +1023,8 @@ void Renderer::render(const uint32_t delta) {
       const uint32_t nth_pixel = state.vct_compute_nth_pixel;
       glUniform1ui(glGetUniformLocation(program, "uNth_pixel"), nth_pixel);
 
-      if (state.vct_compute_bilateral_filter) {
-        glBindImageTexture(gl_vct_compute_image_unit, gl_vct_bf_in_texture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA8);
-      } else {
-        glBindImageTexture(gl_vct_compute_image_unit, gl_vct_texture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA8);
-      }
+      const uint32_t vct_texture = state.vct_compute_bilateral_filter ? gl_vct_bf_in_texture : gl_vct_texture;
+      glBindImageTexture(gl_vct_compute_image_unit, vct_texture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA8);
       glUniform1i(glGetUniformLocation(program, "uScreen"), gl_vct_compute_image_unit);
 
       const auto space = Vec2<uint32_t>(screen.width / nth_pixel, screen.height / nth_pixel);
@@ -1055,7 +1043,11 @@ void Renderer::render(const uint32_t delta) {
     if (state.vct_compute && state.vct_compute_bilateral_filter) {
       pass_started("Bilateral filtering subpass");
 
+      glActiveTexture(GL_TEXTURE0 + gl_lightning_texture_unit);
+      glBindTexture(GL_TEXTURE_2D, gl_vct_bf_in_texture);
+
       const auto program = vct_bf_compute_shader->gl_program;
+      glUseProgram(program);
 
       glUniform1ui(glGetUniformLocation(program, "uScreen_width"), screen.width);
       glUniform1ui(glGetUniformLocation(program, "uScreen_height"), screen.height);
@@ -1063,15 +1055,14 @@ void Renderer::render(const uint32_t delta) {
       const uint32_t kernel_size = state.vct_compute_bf_kernel_size;
       glUniform1ui(glGetUniformLocation(program, "uKernel_size"), kernel_size);
 
-      const float sigma = 0.2;
-      glUniform1f(glGetUniformLocation(program, "uSigmaSpatial"), sigma);
-      glUniform1f(glGetUniformLocation(program, "uSigmaRange"), sigma);
+      glUniform1f(glGetUniformLocation(program, "uSigmaSpatial"), state.vct_compute_spatial_sigma);
+      glUniform1f(glGetUniformLocation(program, "uSigmaRange"), state.vct_compute_range_sigma);
 
       const uint32_t nth_pixel = state.vct_compute_nth_pixel;
       glUniform1ui(glGetUniformLocation(program, "uNth_pixel"), nth_pixel);
 
-      glBindImageTexture(gl_vct_compute_image_unit, gl_vct_bf_in_texture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA8);
-      glUniform1i(glGetUniformLocation(program, "uInput"), gl_vct_compute_image_unit);
+      glBindImageTexture(gl_vct_compute_bf_image_unit, gl_vct_bf_in_texture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA8);
+      glUniform1i(glGetUniformLocation(program, "uInput"), gl_vct_compute_bf_image_unit);
 
       glBindImageTexture(gl_vct_compute_image_unit, gl_vct_texture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA8);
       glUniform1i(glGetUniformLocation(program, "uOutput"), gl_vct_compute_image_unit);
