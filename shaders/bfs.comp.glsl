@@ -55,11 +55,6 @@ float spatial(const ivec2 p, const ivec2 q) {
 // TODO: Euclidean distance in WORLD SPACE
 // float spatial_ws(const ivec2p, const ivec2 q) {}
 
-// void main() {
-//   const ivec2 p = ivec2(uNth_pixel * gl_GlobalInvocationID.xy);
-//   imageStore(uOutput, p, imageLoad(uInput, p));
-// }
-
 void main() {
   vec4 color = vec4(0.0);
 
@@ -70,6 +65,7 @@ void main() {
   float intensity = 0.0;
   float weight = 0.0;
 
+  // TODO: const vec2 texture_scale = 1.0 / vec2(uScreen_width, uScreen_height);
   // TODO: const float kernel_radius = 2.0 * uSigmaSpatial; // Texture space
 
   // Box kernel domain

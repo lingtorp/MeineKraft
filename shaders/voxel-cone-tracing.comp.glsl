@@ -44,7 +44,7 @@ uniform bool  uAmbient_lighting;
 
 uniform uint uNum_diffuse_cones;
 // (Vec3, float) = (direction, weight) for each cone
-layout(std140, binding = 8) buffer DiffuseCones {
+layout(std140, binding = 8) readonly buffer DiffuseCones {
   vec4 cones[];
 };
 
