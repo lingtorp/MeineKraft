@@ -84,6 +84,6 @@ void main() {
 
   // Normalization
   color /= weight;
-
+  // color = vec4(1.0);
   imageStore(uOutput, p, color);
 }

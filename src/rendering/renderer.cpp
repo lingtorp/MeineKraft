@@ -65,6 +65,181 @@ static uint32_t get_next_free_image_unit(bool peek = false) {
   return next_image_unit;
 }
 
+// TODO: Ensure this compiles as markdown documentation (like with Rust..)
+// A Renderpass is a operation in the chain of passes that makes up the Rendergraph
+// which is the operations that are used to render a single frame.
+//
+// Rendergraph does a topological sort during the compiliation.
+//
+// 1. Create your own Renderpasses .. by inheriting from Renderpass and implementing all the pure virtual functions
+// ```cpp
+// class SSAOPass: public Renderpass {
+//    // TODO: Implement setup(), render(), etc
+// }
+// ```
+//
+// 2. Create a RendergraphNodes from your Renderpasses
+// ```cpp
+// auto ssao_node = RendergraphNode::from(ssao_renderpass);
+// auto blur_node = RendergraphNode::from(blur_renderpass);
+// ```
+//
+// 3. Specify the dependencies between the passes with the nodes
+// ```cpp
+// ssao_node.depends_on(Renderer::default_nodes(Renderer::Depth));
+// blur_node.depends_on(ssao_node);
+// Renderer::default_nodes(Renderer::Screen).depends_on(blur_node);
+// ```
+//
+// 4. Submit the nodes to the Rendergraph
+// ```cpp
+// rendergraph.submit_nodes({ssao_node, blur_node}); // NOTE: Order does not matter
+// ```
+//
+// 5. Compile the Rendergraph
+// ```cpp
+// const [ok, msg_id] = rendergraph.compile(); // NOTE: Immutable after a successfull compilation
+// if (!ok) {
+//   while MessageSystem::is_there_msgs(msg_id) {
+//     // Print error msgs
+//     Log::warning(MessageSystem::get_msg(msg_id));
+//   }
+// } else {
+//   // Rendergraph is now used with in the Renderer
+// }
+// ```
+//
+// 6. Submit the Rendergraph the Renderer, fails if the Rendergraph failed to compile
+// // NOTE: Rendergraphs are cached by the Renderer (TODO: .remove(), etc)
+// ```cpp
+// const auto rendergraph_id = Renderer::get_instance().submit(rendergraph);
+// ```
+//
+// 7. Use the Rendergraph, if you like
+// ```cpp
+// const [ok, msg_id] = Renderer::get_instance().use_rendergraph(rendergraph_id);
+// ```
+
+#include <functional> // std::reference_wrapper
+
+class Renderpass;
+class RenderpassNode;
+struct Rendergraph;
+
+class Renderpass {
+public:
+  const std::string name;
+  Shader shader;
+  virtual bool setup(const Renderer& renderer) = 0;
+  virtual void render(const Renderer& renderer) const = 0;
+};
+
+struct Rendergraph {
+private:
+  bool did_compile = false;
+  std::vector<std::reference_wrapper<const Renderpass>> render_passes;
+public:
+  void submit_nodes(const std::vector<RenderpassNode>& nodes);
+
+  std::pair<bool, ID> compile() {
+    // TODO: Topological sort of the graph
+    did_compile = true;
+    return {did_compile, 0};
+  }
+};
+
+class RenderpassNode {
+  const Renderpass& renderpass;
+  std::vector<std::reference_wrapper<const RenderpassNode>> dependencies;
+public:
+  RenderpassNode() = delete;
+  RenderpassNode(const Renderpass& pass): renderpass(pass) {}
+
+  // Adds a RenderpassNode dependency
+  friend void depends_on(const RenderpassNode& lhs, RenderpassNode& rhs) {
+    rhs.dependencies.emplace_back(std::reference_wrapper<const RenderpassNode>(lhs));
+  }
+
+  friend void Rendergraph::submit_nodes(const std::vector<RenderpassNode>& nodes);
+};
+
+void Rendergraph::submit_nodes(const std::vector<RenderpassNode> &nodes) {
+  if (did_compile) {
+    return;
+  }
+  for (const auto& node : nodes) {
+    render_passes.emplace_back(node.renderpass);
+  }
+};
+
+// ######
+
+class Shadowmappingpass: public Renderpass {
+  public:
+  const std::string name = "Shadowmapping pass";
+  uint32_t gl_fbo = 0;
+  uint32_t gl_texture = 0;
+  uint32_t gl_texture_unit = 0;
+  const uint32_t SHADOWMAP_W = 2048;
+  const uint32_t SHADOWMAP_H = SHADOWMAP_W;
+
+  virtual bool setup(const Renderer& renderer) override {
+    glGenFramebuffers(1, &gl_fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, gl_fbo);
+		glObjectLabel(GL_FRAMEBUFFER, gl_fbo, -1, "Shadowmap FBO");
+    gl_texture_unit = get_next_free_texture_unit();
+    glActiveTexture(GL_TEXTURE0 + gl_texture_unit); // FIXME: These are not neccessary when creating the texture only when they are used
+    glGenTextures(1, &gl_texture);
+    glBindTexture(GL_TEXTURE_2D, gl_texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexStorage2D(GL_TEXTURE_2D, 1, GL_DEPTH_COMPONENT16, SHADOWMAP_W, SHADOWMAP_H);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, gl_texture, 0);
+    glObjectLabel(GL_TEXTURE, gl_texture, -1, "Shadowmap texture");
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+      Log::error("Directional shadow mapping FBO not complete"); exit(1);
+    }
+
+    shader = Shader(Filesystem::base + "shaders/shadowmapping.vert",
+                    Filesystem::base + "shaders/shadowmapping.frag");
+    const auto [ok, err_msg] = shader.compile();
+    if (!ok) {
+      Log::error("Shadowmapping shader error: " + err_msg); return false;
+    }
+
+    return true;
+  }
+
+  virtual void render(const Renderer& renderer) const override {
+    glCullFace(GL_FRONT);
+    glBindFramebuffer(GL_FRAMEBUFFER, gl_fbo);
+    glViewport(0, 0, SHADOWMAP_W, SHADOWMAP_H);
+    glEnable(GL_DEPTH_TEST);
+    glClear(GL_DEPTH_BUFFER_BIT); // Always update the depth buffer with the new values
+    const uint32_t program = shader.gl_program;
+    glUseProgram(program);
+    glUniformMatrix4fv(glGetUniformLocation(program, "uLight_space_transform"), 1, GL_FALSE, glm::value_ptr(renderer.light_space_transform));
+    for (size_t i = 0; i < renderer.graphics_batches.size(); i++) {
+      const auto& batch = renderer.graphics_batches[i];
+      glBindVertexArray(batch.gl_shadowmapping_vao);
+      glBindBuffer(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo); // GL_DRAW_INDIRECT_BUFFER is global context state
+
+      const uint32_t gl_models_binding_point = 2; // Defaults to 2 in geometry.vert shader
+      glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_models_binding_point, batch.gl_depth_model_buffer);
+
+      const uint64_t draw_cmd_offset = batch.gl_curr_ibo_idx * sizeof(DrawElementsIndirectCommand);
+      glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (const void*) draw_cmd_offset, 1, sizeof(DrawElementsIndirectCommand));
+    }
+    glViewport(0, 0, renderer.screen.width, renderer.screen.height);
+    glCullFace(GL_BACK);
+  }
+};
+
+// #############################################################################
+
 void Renderer::load_environment_map(const std::vector<std::string>& faces) {
   Texture texture;
   const auto resource = TextureResource{faces};
@@ -400,34 +575,8 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   // View frustum culling shader
   cull_shader = new ComputeShader(Filesystem::base + "shaders/culling.comp.glsl");
 
-  /// Directional shadow mapping setup
-  {
-    glGenFramebuffers(1, &gl_shadowmapping_fbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, gl_shadowmapping_fbo);
-		glObjectLabel(GL_FRAMEBUFFER, gl_shadowmapping_fbo, -1, "Shadowmap FBO");
-    gl_shadowmapping_texture_unit = get_next_free_texture_unit();
-    glActiveTexture(GL_TEXTURE0 + gl_shadowmapping_texture_unit); // FIXME: These are not neccessary when creating the texture only when they are used
-    glGenTextures(1, &gl_shadowmapping_texture);
-    glBindTexture(GL_TEXTURE_2D, gl_shadowmapping_texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST); 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); 
-    glTexStorage2D(GL_TEXTURE_2D, 1, GL_DEPTH_COMPONENT16, SHADOWMAP_W, SHADOWMAP_H);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, gl_shadowmapping_texture, 0);
-    glObjectLabel(GL_TEXTURE, gl_shadowmapping_texture, -1, "Shadowmap texture");
-    glDrawBuffer(GL_NONE);
-    glReadBuffer(GL_NONE);
-
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-      Log::error("Directional shadow mapping FBO not complete"); exit(1);
-    }
-
-    shadowmapping_shader = new Shader(Filesystem::base + "shaders/shadowmapping.vert",
-                                      Filesystem::base + "shaders/shadowmapping.frag");
-    const auto [ok, err_msg] = shadowmapping_shader->compile();
-    if (!ok) {
-      Log::error("Shadowmapping shader error: " + err_msg); exit(1);
-    }
-  }
+  shadowmappingpass = new Shadowmappingpass();
+  shadowmappingpass->setup(*this);
 
   /// Voxelization pass
   {
@@ -484,65 +633,10 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     }
 
     // Reuse shadowmap depth attachment for FBO completeness (disabled anyway)
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, gl_shadowmapping_texture, 0);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, shadowmappingpass->gl_texture, 0);
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
       Log::error("Voxelization FBO not complete"); exit(1);
     }
-
-    /// Opacity normalization compute shader subpass
-    const std::string include = Filesystem::read_file(Filesystem::base + "shaders/voxel-cone-tracing-utils.glsl");
-    voxelization_opacity_norm_shader = new ComputeShader(Filesystem::base + "shaders/voxelization-opacity-normalization.comp",
-                                                         std::vector{include});
-  }
-
-  /// Voxel visualization pass
-  if (voxel_visualization_enabled) {
-    voxel_visualization_shader = new Shader(Filesystem::base + "shaders/voxel-visualization.vert",
-                                            Filesystem::base + "shaders/voxel-visualization.geom",
-                                            Filesystem::base + "shaders/voxel-visualization.frag");
-
-    const std::string includes = Filesystem::read_file(Filesystem::base + "shaders/voxel-cone-tracing-utils.glsl");
-    voxel_visualization_shader->add(includes);
-
-    const auto [ok, err_msg] = voxel_visualization_shader->compile();
-
-    if (!ok) {
-      Log::error("Voxel visualization shader error: " + err_msg); exit(-1);
-    } 
-
-    const auto program = voxel_visualization_shader->gl_program;
-    glUseProgram(program);
-
-    glGenFramebuffers(1, &gl_voxel_visualization_fbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, gl_voxel_visualization_fbo);
-    glObjectLabel(GL_FRAMEBUFFER, gl_voxel_visualization_fbo, -1, "Voxel visualization FBO");
-
-    glActiveTexture(GL_TEXTURE0 + gl_lightning_texture_unit);
-    glGenTextures(1, &gl_voxel_visualization_texture);
-    glBindTexture(GL_TEXTURE_2D, gl_voxel_visualization_texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, screen.width, screen.height, 0, GL_RGBA, GL_FLOAT, nullptr);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_voxel_visualization_texture, 0);
-    glObjectLabel(GL_TEXTURE, gl_voxel_visualization_texture, -1, "Voxel visualization texture");
-
-    uint32_t fbo_attachments[1] = {GL_COLOR_ATTACHMENT0};
-    glDrawBuffers(1, fbo_attachments);
-
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-      Log::error("Voxel visualization FBO not complete"); exit(1);
-    }
-
-    glGenVertexArrays(1, &gl_voxel_visualization_vao);
-    glBindVertexArray(gl_voxel_visualization_vao);
-
-    GLuint gl_vbo = 0;
-    glGenBuffers(1, &gl_vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, gl_vbo);
-    const Vec3f vertex(1.0f, 1.0f, 1.0f);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(Vec3f), &vertex, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
-    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 0, nullptr);
   }
 
   /// Voxel cone tracing pass
@@ -716,33 +810,11 @@ void Renderer::render(const uint32_t delta) {
     pass_ended();
   }
 
-  pass_started("Directional shadow mapping pass");
-  const glm::mat4 light_space_transform = shadowmap_transform(scene->aabb, directional_light);
-  {
-    glCullFace(GL_FRONT);
-    glBindFramebuffer(GL_FRAMEBUFFER, gl_shadowmapping_fbo);
-    glViewport(0, 0, SHADOWMAP_W, SHADOWMAP_H);
-    glEnable(GL_DEPTH_TEST);
-    glClear(GL_DEPTH_BUFFER_BIT); // Always update the depth buffer with the new values
-    const uint32_t program = shadowmapping_shader->gl_program;
-    glUseProgram(program);
-    glUniformMatrix4fv(glGetUniformLocation(program, "uLight_space_transform"), 1, GL_FALSE, glm::value_ptr(light_space_transform));
-    for (size_t i = 0; i < graphics_batches.size(); i++) {
-      const auto& batch = graphics_batches[i];
-      glBindVertexArray(batch.gl_shadowmapping_vao);
-      glBindBuffer(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo); // GL_DRAW_INDIRECT_BUFFER is global context state
+  light_space_transform = shadowmap_transform(scene->aabb, directional_light);
 
-      const uint32_t gl_models_binding_point = 2; // Defaults to 2 in geometry.vert shader
-      glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_models_binding_point, batch.gl_depth_model_buffer);
-
-      const uint64_t draw_cmd_offset = batch.gl_curr_ibo_idx * sizeof(DrawElementsIndirectCommand);
-      glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (const void*) draw_cmd_offset, 1, sizeof(DrawElementsIndirectCommand));
-    }
-    glViewport(0, 0, screen.width, screen.height);
-    glCullFace(GL_BACK);
-
-    pass_ended();
-  }
+  pass_started(shadowmappingpass->name);
+  shadowmappingpass->render(*this);
+  pass_ended();
 
   {
     pass_started("Geometry pass");
@@ -831,7 +903,7 @@ void Renderer::render(const uint32_t delta) {
     glUniform1f(glGetUniformLocation(program, "uShadow_bias"), state.shadow_bias);
     glUniform3fv(glGetUniformLocation(program, "uDirectional_light_direction"), 1, &directional_light.direction.x);
     glUniformMatrix4fv(glGetUniformLocation(program, "uLight_space_transform"), 1, GL_FALSE, glm::value_ptr(light_space_transform));
-    glUniform1i(glGetUniformLocation(program, "uShadowmap"), gl_shadowmapping_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "uShadowmap"), shadowmappingpass->gl_texture_unit);
     glUniform1iv(glGetUniformLocation(program, "uClipmap_sizes"), NUM_CLIPMAPS, clipmaps.size);
     glUniform1i(glGetUniformLocation(program, "uConservative_rasterization_enabled"), state.conservative_rasterization);
 
@@ -882,60 +954,6 @@ void Renderer::render(const uint32_t delta) {
 		glViewport(0, 0, screen.width, screen.height);
  
     pass_ended();
-
-    // NOTE: Opacity normalization subpass is way too slow around 12.7 ms (26% of frame time)
-    if constexpr(false) {
-      pass_started("Opacity normalization subpass");
-
-      const auto program = voxelization_opacity_norm_shader->gl_program;
-      glUseProgram(program);
-      for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
-        glBindImageTexture(gl_voxel_radiance_image_units[i], gl_voxel_radiance_textures[i], 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA8);
-        glUniform1i(glGetUniformLocation(program, "voxels"), gl_voxel_radiance_image_units[i]);
-        glDispatchCompute(clipmaps.size[i], clipmaps.size[i], clipmaps.size[i]);
-        glBindImageTexture(gl_voxel_radiance_image_units[i], gl_voxel_radiance_textures[i], 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32UI);
-      }
-      
-      glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT); // Due to incoherent mem. access need to sync read and usage of voxel data
-
-      pass_ended();
-    }
-  }
-
-  if (voxel_visualization_enabled) {
-    pass_started("Voxel visualization pass");
-
-    const auto program = voxel_visualization_shader->gl_program;
-    glUseProgram(program);
-    glBindFramebuffer(GL_FRAMEBUFFER, gl_voxel_visualization_fbo);
-    glBindVertexArray(gl_voxel_visualization_vao);
-
-    glActiveTexture(GL_TEXTURE0 + gl_lightning_texture_unit);
-    glBindTexture(GL_TEXTURE_2D, gl_voxel_visualization_texture);
-
-    glUniform1iv(glGetUniformLocation(program, "uClipmap_sizes"), NUM_CLIPMAPS, clipmaps.size);
-    glUniformMatrix4fv(glGetUniformLocation(program, "uCamera_view"), 1, GL_FALSE, glm::value_ptr(camera_transform));
-
-    for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
-      glBindImageTexture(gl_voxel_radiance_image_units[i], gl_voxel_radiance_textures[i], 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32UI);
-      glBindImageTexture(gl_voxel_opacity_image_units[i], gl_voxel_opacity_textures[i], 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32UI);
-    }
-    glUniform1iv(glGetUniformLocation(program, "uVoxelOpacity"), NUM_CLIPMAPS, gl_voxel_opacity_image_units);
-    glUniform1iv(glGetUniformLocation(program, "uVoxelRadiance"), NUM_CLIPMAPS, gl_voxel_radiance_image_units);
-
-    Vec3f clipmap_aabb_mins[NUM_CLIPMAPS];
-    for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
-      clipmap_aabb_mins[i] = clipmaps.aabb[i].min;
-    }
-    glUniform3fv(glGetUniformLocation(program, "uAABB_mins"), NUM_CLIPMAPS, &clipmap_aabb_mins[0].x);
-
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
-      glUniform1ui(glGetUniformLocation(program, "uClipmapIdx"), i);
-      glDrawArrays(GL_POINTS, 0, clipmaps.size[i] * clipmaps.size[i] * clipmaps.size[i]);
-    }
-
-    pass_ended();
   }
 
   /// Voxel cone tracing pass
@@ -971,9 +989,9 @@ void Renderer::render(const uint32_t delta) {
     glUniform1f(glGetUniformLocation(program, "uShadow_bias"), state.shadow_bias);
     glUniform3fv(glGetUniformLocation(program, "uDirectional_light_direction"), 1, &directional_light.direction.x);
     glUniformMatrix4fv(glGetUniformLocation(program, "uLight_space_transform"), 1, GL_FALSE, glm::value_ptr(light_space_transform));
-    glUniform1i(glGetUniformLocation(program, "uShadowmap"), gl_shadowmapping_texture_unit);
-    glUniform1ui(glGetUniformLocation(program, "uShadowmap_width"), SHADOWMAP_W);
-    glUniform1ui(glGetUniformLocation(program, "uShadowmap_height"), SHADOWMAP_H);
+    glUniform1i(glGetUniformLocation(program, "uShadowmap"), shadowmappingpass->gl_texture_unit);
+    glUniform1ui(glGetUniformLocation(program, "uShadowmap_width"), shadowmappingpass->SHADOWMAP_W);
+    glUniform1ui(glGetUniformLocation(program, "uShadowmap_height"), shadowmappingpass->SHADOWMAP_H);
 
     glUniform3fv(glGetUniformLocation(program, "uCamera_position"), 1, &scene->camera->position.x);
 
@@ -1074,11 +1092,13 @@ void Renderer::render(const uint32_t delta) {
     }
   }
 
+  const uint32_t last_pass_fbo = gl_vct_fbo;
+
   /// Copy final pass into default FBO
   {
     pass_started("Final blit pass");
 
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, gl_vct_fbo);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, last_pass_fbo);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     const auto mask = GL_COLOR_BUFFER_BIT;
     const auto filter = GL_NEAREST;
@@ -1190,8 +1210,8 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glVertexAttribDivisor(glGetAttribLocation(program, "instance_idx"), 1);
   }
   /// Shadowmap pass setup
-  {
-    const auto program = shadowmapping_shader->gl_program;
+  if (shadowmappingpass) {
+    const auto program = shadowmappingpass->shader.gl_program;
     glUseProgram(program);
 
     glGenVertexArrays(1, &batch.gl_shadowmapping_vao);

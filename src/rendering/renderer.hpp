@@ -20,6 +20,7 @@ struct ComputeShader;
 struct Material;
 struct Texture;
 struct Scene;
+class Shadowmappingpass;
 
 struct Renderer {
   /// Create a renderer with a given window/screen size/resolution 
@@ -45,6 +46,7 @@ struct Renderer {
   RenderState state;
   Resolution screen;
   std::vector<GraphicsBatch> graphics_batches;
+  glm::mat4 light_space_transform; // Used in Shadowmapping. Transform to light space for the directional light
 
 	Scene *scene = nullptr;
   std::vector<PointLight> pointlights;
@@ -56,6 +58,8 @@ private:
   void update_transforms();
   void link_batch(GraphicsBatch& batch);
 
+  Shadowmappingpass* shadowmappingpass = nullptr;
+
   /// View frustum culling shader
   ComputeShader* cull_shader = nullptr;
   
@@ -63,14 +67,6 @@ private:
   uint32_t gl_depth_fbo = 0;
   uint32_t gl_depth_texture = 0;
   uint32_t gl_depth_texture_unit = 0;
-
-  /// Directional shadow mapping related
-  uint32_t gl_shadowmapping_fbo = 0;
-  uint32_t gl_shadowmapping_texture = 0;
-  uint32_t gl_shadowmapping_texture_unit = 0;
-  Shader* shadowmapping_shader = nullptr;
-  const uint32_t SHADOWMAP_W = 2 * 2048; // Shadowmap texture dimensions
-  const uint32_t SHADOWMAP_H = SHADOWMAP_W;
 
   /// Lightning pass related
   Shader* lightning_shader = nullptr;
@@ -93,7 +89,6 @@ private:
 
   Shader* voxelization_shader = nullptr;
   uint32_t gl_voxelization_fbo = 0;
-  ComputeShader* voxelization_opacity_norm_shader = nullptr;
 
   // Compute VCT pass related
   ComputeShader* vct_compute_shader = nullptr;
@@ -121,14 +116,6 @@ private:
   uint32_t gl_voxel_opacity_textures[NUM_CLIPMAPS] = {};
   int32_t gl_voxel_opacity_image_units[NUM_CLIPMAPS] = {};
   int32_t gl_voxel_opacity_texture_units[NUM_CLIPMAPS] = {};
-
-  // Voxel visualization pass
-  // TODO: Voxel visualization does not work ...
-  const bool voxel_visualization_enabled = false;
-  Shader* voxel_visualization_shader = nullptr;
-  uint32_t gl_voxel_visualization_vao = 0;
-  uint32_t gl_voxel_visualization_fbo = 0;
-  uint32_t gl_voxel_visualization_texture = 0;
 
   /// Global buffers
   // Geometric normals
@@ -160,5 +147,6 @@ private:
   Texture environment_map; 
   uint32_t gl_environment_map_texture_unit = 0;
 };
+
 
 #endif // MEINEKRAFT_RENDERER_HPP

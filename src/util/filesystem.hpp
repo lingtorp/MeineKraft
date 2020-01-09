@@ -8,7 +8,7 @@
 namespace Filesystem {
   /// Base filepath to the executeable
 #if defined(__linux__)
-  const std::string base = "/home/alexander/repos/MeineKraft/";
+  const std::string base = "/home/alexander/repos/MeineKraft-2/MeineKraft/";
 #elif defined(__APPLE__)
   const std::string base = "/Users/lingtorp/repos/MeineKraft/";
 #elif defined(_WIN32) || defined(_WIN64)
