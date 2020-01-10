@@ -3,6 +3,7 @@
 #include "../util/filesystem.hpp"
 #include "debug_opengl.hpp"
 
+#include <cassert>
 #include <string>
 
 #ifdef _WIN32
@@ -41,20 +42,21 @@ static std::string shader_define_to_string(const Shader::Defines define) {
 }
 
 static std::string shader_compilation_err_msg(const GLuint shader) {
-  GLint max_lng = 0;
+  GLint max_lng = 0; // max_lng includes the NULL character
   glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &max_lng);
 
   if (max_lng == 0) {
     return "";
   }
 
-  // The max_lng includes the NULL character
-  char *err_log[max_lng];
-  glGetShaderInfoLog(shader, max_lng, &max_lng, err_log[0]);
+  char err_log[max_lng];
+  glGetShaderInfoLog(shader, max_lng, &max_lng, &err_log[0]);
 
-  return std::string(err_log[0]);
+  return std::string(&err_log[0]);
 }
 
+// TODO: Rewrite to use a compile function for correct err msg handling (remove
+// exit(-1))
 ComputeShader::ComputeShader(const std::string &compute_filepath,
                              const std::vector<std::string> &defines) {
   GLuint gl_comp_shader = glCreateShader(GL_COMPUTE_SHADER);
@@ -69,12 +71,23 @@ ComputeShader::ComputeShader(const std::string &compute_filepath,
     comp_src.insert(0, define);
   }
 
-  // Insert the define into the shader src
   comp_src.insert(0, GLSL_VERSION);
 
   const char *raw_str_ptr = comp_src.c_str();
   glShaderSource(gl_comp_shader, 1, &raw_str_ptr, nullptr);
   glCompileShader(gl_comp_shader);
+
+  GLint compute_shader_status = 0;
+  glGetShaderiv(gl_comp_shader, GL_COMPILE_STATUS, &compute_shader_status);
+
+  if (!compute_shader_status) {
+    const std::string err_msg = shader_compilation_err_msg(gl_comp_shader);
+    Log::error("Could not compile compute shader: " + compute_filepath + "\n" +
+               err_msg);
+    glDetachShader(gl_program, gl_comp_shader);
+    glDeleteShader(gl_comp_shader);
+    exit(-1);
+  }
 
   glObjectLabel(GL_SHADER, gl_comp_shader, -1, compute_filepath.c_str());
 
@@ -82,43 +95,35 @@ ComputeShader::ComputeShader(const std::string &compute_filepath,
   glAttachShader(gl_program, gl_comp_shader);
   glLinkProgram(gl_program);
 
-  glObjectLabel(GL_PROGRAM, gl_program, -1, compute_filepath.c_str());
+  std::string err_msg = "";
+  GLint program_linked = 0;
+  glGetProgramiv(gl_program, GL_LINK_STATUS, &program_linked);
 
-  GLint compute_shader_status = 0;
-  glGetShaderiv(gl_comp_shader, GL_COMPILE_STATUS, &compute_shader_status);
+  if (!program_linked) {
+    GLint err_size = 0;
+    glGetProgramiv(gl_program, GL_INFO_LOG_LENGTH, &err_size);
+    char program_err_msg[err_size];
+    glGetProgramInfoLog(gl_program, err_size, nullptr, program_err_msg);
+    err_msg += std::string(program_err_msg);
+
+    glDeleteProgram(gl_program);
+  }
+
+  glObjectLabel(GL_PROGRAM, gl_program, -1, compute_filepath.c_str());
 
   glDetachShader(gl_program, gl_comp_shader);
   glDeleteShader(gl_comp_shader);
-
-  if (compute_shader_status == GL_FALSE) {
-    GLint err_size = 0;
-    glGetProgramiv(gl_program, GL_INFO_LOG_LENGTH, &err_size);
-    char *prog_err_msg = new char[err_size];
-    glGetProgramInfoLog(gl_program, err_size, nullptr, prog_err_msg);
-    if (err_size != 0) {
-      Log::error("Could not compile compute shader: " + compute_filepath +
-                 "\n" + std::string(prog_err_msg));
-    }
-    delete[] prog_err_msg;
-
-    exit(-1);
-  }
 }
 
 Shader::Shader(const std::string &vertex_filepath,
                const std::string &geometry_filepath,
                const std::string &fragment_filepath)
     : vertex_filepath(vertex_filepath), geometry_filepath(geometry_filepath),
-      fragment_filepath(fragment_filepath),
-      vertex_src(Filesystem::read_file(vertex_filepath)),
-      geometry_src(Filesystem::read_file(geometry_filepath)),
-      fragment_src(Filesystem::read_file(fragment_filepath)) {}
+      fragment_filepath(fragment_filepath) {}
 
 Shader::Shader(const std::string &vertex_filepath,
                const std::string &fragment_filepath)
-    : vertex_filepath(vertex_filepath), fragment_filepath(fragment_filepath),
-      vertex_src(Filesystem::read_file(vertex_filepath)),
-      fragment_src(Filesystem::read_file(fragment_filepath)) {}
+    : vertex_filepath(vertex_filepath), fragment_filepath(fragment_filepath) {}
 
 std::pair<bool, std::string> Shader::compile() {
   const bool vertex_included = !vertex_filepath.empty();
@@ -132,6 +137,8 @@ std::pair<bool, std::string> Shader::compile() {
   GLint fragment_shader_compiled = GL_FALSE;
 
   if (!vertex_filepath.empty()) {
+    std::string vertex_src = Filesystem::read_file(vertex_filepath);
+
     if (vertex_src.empty()) {
       return {false, "Vertex shader passed could not be opened or is empty"};
     }
@@ -140,6 +147,7 @@ std::pair<bool, std::string> Shader::compile() {
       vertex_src.insert(0, shader_define_to_string(define));
     }
 
+    vertex_src.insert(0, include_vertex_src);
     vertex_src.insert(0, GLSL_VERSION);
 
     const auto raw_str = vertex_src.c_str();
@@ -155,6 +163,8 @@ std::pair<bool, std::string> Shader::compile() {
   }
 
   if (!geometry_filepath.empty()) {
+    std::string geometry_src = Filesystem::read_file(geometry_filepath);
+
     if (geometry_src.empty()) {
       return {false, "Geometry shader passed could not be opened or is empty"};
     }
@@ -163,6 +173,7 @@ std::pair<bool, std::string> Shader::compile() {
       geometry_src.insert(0, shader_define_to_string(define));
     }
 
+    geometry_src.insert(0, include_geometry_src);
     geometry_src.insert(0, GLSL_VERSION);
 
     const auto raw_str = geometry_src.c_str();
@@ -179,6 +190,8 @@ std::pair<bool, std::string> Shader::compile() {
   }
 
   if (!fragment_filepath.empty()) {
+    std::string fragment_src = Filesystem::read_file(fragment_filepath);
+
     if (fragment_src.empty()) {
       return {false, "Fragment shader passed could not be opened or is empty"};
     }
@@ -187,6 +200,7 @@ std::pair<bool, std::string> Shader::compile() {
       fragment_src.insert(0, shader_define_to_string(define));
     }
 
+    fragment_src.insert(0, include_fragment_src);
     fragment_src.insert(0, GLSL_VERSION);
 
     const auto raw_str = fragment_src.c_str();
@@ -250,6 +264,20 @@ std::pair<bool, std::string> Shader::compile() {
 
   glLinkProgram(gl_program);
 
+  std::string err_msg = "";
+  GLint program_linked = 0;
+  glGetProgramiv(gl_program, GL_LINK_STATUS, &program_linked);
+
+  if (!program_linked) {
+    GLint err_size = 0;
+    glGetProgramiv(gl_program, GL_INFO_LOG_LENGTH, &err_size);
+    char program_err_msg[err_size];
+    glGetProgramInfoLog(gl_program, err_size, nullptr, program_err_msg);
+    err_msg += "Program error (" + vertex_filepath + ", " + geometry_filepath +
+               ", " + fragment_filepath + "): \n" +
+               std::string(program_err_msg);
+  }
+
   if (vertex_included) {
     glDetachShader(gl_program, gl_vertex_shader);
     glDeleteShader(gl_vertex_shader);
@@ -265,22 +293,28 @@ std::pair<bool, std::string> Shader::compile() {
     glDeleteShader(gl_fragment_shader);
   }
 
-  return {true, ""};
+  if (!program_linked) {
+    glDeleteProgram(gl_program);
+  }
+
+  return {program_linked == GL_TRUE, err_msg};
 };
 
 void Shader::add(const Shader::Defines define) { defines.insert(define); }
 
 void Shader::add(const std::string &str) {
+  assert(!str.empty() && "Passed empty shader string to include ...");
+
   if (!vertex_filepath.empty()) {
-    vertex_src.insert(0, str);
+    include_vertex_src.insert(0, str);
   }
 
   if (!geometry_filepath.empty()) {
-    geometry_src.insert(0, str);
+    include_geometry_src.insert(0, str);
   }
 
   if (!fragment_filepath.empty()) {
-    fragment_src.insert(0, str);
+    include_fragment_src.insert(0, str);
   }
 }
 

@@ -38,10 +38,6 @@ struct Shader {
   std::string geometry_filepath = "";
   std::string fragment_filepath = "";
 
-  // Shader source
-  std::string vertex_src = "";
-  std::string geometry_src = "";
-  std::string fragment_src = "";
 
   uint32_t gl_program = 0;
   uint32_t gl_vertex_shader = 0;
@@ -55,6 +51,12 @@ struct Shader {
 
   // Configuration of the shader a la Ubershader
   std::set<Shader::Defines> defines{};
+
+private:
+  // Shader source to be added
+  std::string include_vertex_src = "";
+  std::string include_geometry_src = "";
+  std::string include_fragment_src = "";
 };
 
 struct ComputeShader {
