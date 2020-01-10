@@ -1,4 +1,5 @@
 // NOTE: VCT utilities and functions
+// File: voxel-cone-tracing-utils.glsl
 
 // Number of clipmaps
 #define NUM_CLIPMAPS 4

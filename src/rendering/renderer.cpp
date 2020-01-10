@@ -614,9 +614,11 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
 
   /// Bilateral filtering compute pass
   {
-    const std::string includes = Filesystem::read_file(Filesystem::base + "shaders/voxel-cone-tracing-utils.glsl");
-    vct_bf_compute_shader = new ComputeShader(Filesystem::base + "shaders/bfs.comp.glsl",
-                                              std::vector{includes});
+    // NOTE: Include order matters
+    const std::string include0 = Filesystem::read_file(Filesystem::base + "shaders/voxel-cone-tracing-utils.glsl");
+    const std::string include1 = Filesystem::read_file(Filesystem::base + "shaders/bilateral-filtering-utils.glsl");
+    vct_bf_compute_shader = new ComputeShader(Filesystem::base + "shaders/bf.comp.glsl",
+                                              std::vector{include0 + include1});
     gl_vct_compute_bf_image_unit = get_next_free_image_unit();
 
     glGenTextures(1, &gl_vct_bf_in_texture);
@@ -625,6 +627,42 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, screen.width, screen.height, 0, GL_RGBA, GL_FLOAT, nullptr);
     glObjectLabel(GL_TEXTURE, gl_vct_bf_in_texture, -1, "Bilateral filtering input texture");
+  }
+
+  /// Bilateral filtering rasterization pass
+  {
+    vct_bf_rasterization_shader = new Shader(Filesystem::base + "shaders/bf-rasterization.vert.glsl",
+                                             Filesystem::base + "shaders/bf-rasterization.frag.glsl");
+
+    // NOTE: Include order matters
+    const std::string include0 = Filesystem::read_file(Filesystem::base + "shaders/voxel-cone-tracing-utils.glsl");
+    const std::string include1 = Filesystem::read_file(Filesystem::base + "shaders/bilateral-filtering-utils.glsl");
+    vct_bf_rasterization_shader->add(include1);
+    vct_bf_rasterization_shader->add(include0);
+
+    const auto [ok, msg] = vct_bf_rasterization_shader->compile();
+    if (!ok) {
+      Log::error(msg); exit(-1);
+    }
+
+    gl_vct_bf_rasterization_image_unit = get_next_free_image_unit();
+
+    GLuint gl_vbo = 0;
+    glGenBuffers(1, &gl_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, gl_vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(Primitive::quad), &Primitive::quad, GL_STATIC_DRAW);
+
+    const uint32_t program = vct_bf_rasterization_shader->gl_program;
+    glUseProgram(program);
+    glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
+    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
+
+    glGenTextures(1, &gl_vct_bf_rasterization_in_texture);
+    glBindTexture(GL_TEXTURE_2D, gl_vct_bf_rasterization_in_texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, screen.width, screen.height, 0, GL_RGBA, GL_FLOAT, nullptr);
+    glObjectLabel(GL_TEXTURE, gl_vct_bf_rasterization_in_texture, -1, "Bilateral filtering input texture");
   }
 
   glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
@@ -938,6 +976,7 @@ void Renderer::render(const uint32_t delta) {
     pass_ended();
   }
 
+    const size_t div = 2; // Downsample factor / fraction of the screen rendered
   /// Voxel cone tracing pass
   {
     uint32_t program = 0;
@@ -1007,8 +1046,8 @@ void Renderer::render(const uint32_t delta) {
     glUniform3fv(glGetUniformLocation(program, "uAABB_maxs"), NUM_CLIPMAPS, &clipmap_aabb_maxs[0].x);
 		glUniform1iv(glGetUniformLocation(program, "uVoxelRadiance"), NUM_CLIPMAPS, gl_voxel_radiance_texture_units);
     glUniform1iv(glGetUniformLocation(program, "uVoxelOpacity"), NUM_CLIPMAPS, gl_voxel_opacity_texture_units);
-    glUniform1ui(glGetUniformLocation(program, "uScreen_width"), screen.width);
-    glUniform1ui(glGetUniformLocation(program, "uScreen_height"), screen.height);
+    glUniform1ui(glGetUniformLocation(program, "uScreen_width"), screen.width / div);
+    glUniform1ui(glGetUniformLocation(program, "uScreen_height"), screen.height / div);
     glUniform1i(glGetUniformLocation(program, "uDiffuse"), gl_diffuse_texture_unit);
     glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
     glUniform1i(glGetUniformLocation(program, "uNormal"), gl_geometric_normal_texture_unit);
@@ -1032,8 +1071,10 @@ void Renderer::render(const uint32_t delta) {
 
       glMemoryBarrier(GL_COMMAND_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
     } else {
+      glViewport(0, 0, screen.width / div, screen.height / div);
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
       glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+      glViewport(0, 0, screen.width, screen.height);
     }
 
     pass_ended();
@@ -1041,7 +1082,7 @@ void Renderer::render(const uint32_t delta) {
 
   {
     if (state.vct_compute && state.vct_compute_bilateral_filter) {
-      pass_started("Bilateral filtering subpass");
+      pass_started("Bilateral filtering compute subpass");
 
       glActiveTexture(GL_TEXTURE0 + gl_lightning_texture_unit);
       glBindTexture(GL_TEXTURE_2D, gl_vct_bf_in_texture);
@@ -1069,6 +1110,43 @@ void Renderer::render(const uint32_t delta) {
 
       const auto space = Vec2<uint32_t>(screen.width / nth_pixel, screen.height / nth_pixel);
       glDispatchCompute(space.x, space.y, 1);
+
+      pass_ended();
+    }
+
+    if (!state.vct_compute && state.vct_compute_bilateral_filter) {
+      pass_started("Bilateral filtering rasterization subpass");
+
+      glActiveTexture(GL_TEXTURE0 + gl_lightning_texture_unit);
+      glBindTexture(GL_TEXTURE_2D, gl_vct_bf_in_texture);
+
+      const auto program = vct_bf_rasterization_shader->gl_program;
+      glUseProgram(program);
+
+      glUniform1ui(glGetUniformLocation(program, "uScreen_width"), screen.width);
+      glUniform1ui(glGetUniformLocation(program, "uScreen_height"), screen.height);
+      glUniform1ui(glGetUniformLocation(program, "uScreen_width_downsampled"), screen.width / div);
+      glUniform1ui(glGetUniformLocation(program, "uScreen_height_downsampled"), screen.height / div);
+
+      const uint32_t kernel_size = state.vct_compute_bf_kernel_size;
+      glUniform1ui(glGetUniformLocation(program, "uKernel_size"), kernel_size);
+
+      glUniform1f(glGetUniformLocation(program, "uSigmaSpatial"), state.vct_compute_spatial_sigma);
+      glUniform1f(glGetUniformLocation(program, "uSigmaRange"), state.vct_compute_range_sigma);
+
+      const uint32_t nth_pixel = state.vct_compute_nth_pixel;
+      glUniform1ui(glGetUniformLocation(program, "uNth_pixel"), nth_pixel);
+
+      glBindImageTexture(gl_vct_compute_bf_image_unit, gl_vct_bf_in_texture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA8);
+      glUniform1i(glGetUniformLocation(program, "uInput"), gl_vct_compute_bf_image_unit);
+
+      glBindImageTexture(gl_vct_compute_image_unit, gl_vct_texture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA8);
+      glUniform1i(glGetUniformLocation(program, "uOutput"), gl_vct_compute_image_unit);
+
+      glViewport(0, 0, screen.width / div, screen.height / div);
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+      glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+      glViewport(0, 0, screen.width, screen.height);
 
       pass_ended();
     }
