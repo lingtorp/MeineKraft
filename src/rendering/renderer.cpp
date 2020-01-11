@@ -586,8 +586,41 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_vct_texture, 0);
     glObjectLabel(GL_TEXTURE, gl_vct_texture, -1, "VCT lighting texture");
 
-    uint32_t fbo_attachments[1] = { GL_COLOR_ATTACHMENT0 };
-    glDrawBuffers(1, fbo_attachments);
+    // Global diffuse radiance map
+    gl_diffuse_radiance_texture_unit = get_next_free_texture_unit();
+    glActiveTexture(GL_TEXTURE0 + gl_diffuse_radiance_texture_unit);
+    glGenTextures(1, &gl_diffuse_radiance_texture);
+    glBindTexture(GL_TEXTURE_2D, gl_diffuse_radiance_texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, gl_diffuse_radiance_texture, 0);
+    glObjectLabel(GL_TEXTURE, gl_diffuse_radiance_texture, -1, "GBuffer diffuse radiance texture");
+
+    // Global ambient radiance map
+    gl_ambient_radiance_texture_unit = get_next_free_texture_unit();
+    glActiveTexture(GL_TEXTURE0 + gl_ambient_radiance_texture_unit);
+    glGenTextures(1, &gl_ambient_radiance_texture);
+    glBindTexture(GL_TEXTURE_2D, gl_ambient_radiance_texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, gl_ambient_radiance_texture, 0);
+    glObjectLabel(GL_TEXTURE, gl_ambient_radiance_texture, -1, "GBuffer ambient radiance texture");
+
+    // Global specular radiance map
+    gl_specular_radiance_texture_unit = get_next_free_texture_unit();
+    glActiveTexture(GL_TEXTURE0 + gl_specular_radiance_texture_unit);
+    glGenTextures(1, &gl_specular_radiance_texture);
+    glBindTexture(GL_TEXTURE_2D, gl_specular_radiance_texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, gl_specular_radiance_texture, 0);
+    glObjectLabel(GL_TEXTURE, gl_specular_radiance_texture, -1, "GBuffer specular radiance texture");
+
+    uint32_t fbo_attachments[4] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3 };
+    glDrawBuffers(4, fbo_attachments);
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
       Log::error("VCT fbo not complete"); exit(-1); 
@@ -976,7 +1009,7 @@ void Renderer::render(const uint32_t delta) {
     pass_ended();
   }
 
-    const size_t div = 2; // Downsample factor / fraction of the screen rendered
+  const size_t div = 1 ; // Downsample factor / fraction of the screen rendered
   /// Voxel cone tracing pass
   {
     uint32_t program = 0;

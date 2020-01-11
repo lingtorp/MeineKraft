@@ -21,6 +21,12 @@ uniform sampler2D uNormal;
 uniform sampler2D uPBR_parameters;
 uniform sampler2D uEmissive;
 
+// Out textures
+// NOTE: gl_vct_texture is location = 0
+layout(location = 1) out vec3  gDiffuseRadiance;
+layout(location = 2) out float gAmbientRadiance;
+layout(location = 3) out vec3  gSpecularRadiance;
+
 uniform float uScaling_factors[NUM_CLIPMAPS];
 uniform vec3  uAABB_centers[NUM_CLIPMAPS];
 uniform vec3  uAABB_mins[NUM_CLIPMAPS];
@@ -257,23 +263,29 @@ void main() {
     // Offset origin to avoid self-sampling
     const float start_lvl = floor(clipmap_lvl_from_distance(origin));
     const vec3 o = origin + (uVoxel_size_LOD0 * 1.5 * exp2(start_lvl)) * fNormal; 
-    const vec4 radiance = cones[0].w * diffuse * trace_diffuse_cone(o, normal, roughness_aperature);
-    color += radiance;
+    const vec4 radiance = cones[0].w * trace_diffuse_cone(o, normal, roughness_aperature);
+    color.rgb += radiance.rgb * diffuse.rgb;
+
+    gDiffuseRadiance += radiance.rgb;
 
     for (uint i = 1; i < uNum_diffuse_cones; i++) {
       // Offset origin to avoid self-sampling
       const vec3 d = cones[i].xyz;
       if (dot(d, normal) < 0.0) { continue; }
-      const vec4 radiance = 2.0 * cones[i].w * diffuse * trace_diffuse_cone(o, d, roughness_aperature);
-      color.rgb += radiance.rgb * max(dot(d, normal), 0.0);
+      const vec4 radiance = 2.0 * cones[i].w * trace_diffuse_cone(o, d, roughness_aperature);
+      color.rgb += radiance.rgb * diffuse.rgb * max(dot(d, normal), 0.0);
       color.a   += radiance.a;
       traced_cones++;
+
+      gDiffuseRadiance += radiance.rgb * max(dot(d, normal), 0.0);
     }
   }
 
   if (uAmbient_lighting) {
-    color.rgb += diffuse.rgb * vec3(color.a * M_PI_INV) / traced_cones;
+    const float radiance = (color.a * M_PI_INV) / traced_cones;
+    color.rgb += diffuse.rgb * radiance;
 
+    gAmbientRadiance = radiance;
     // color.rgb = vec3(0.0);
     // color.rgb += vec3(color.a) / traced_cones;
     // NOTE: See generate_diffuse_cones for details about the division
@@ -282,7 +294,10 @@ void main() {
   if (uSpecular_lighting) {
     const float aperture = metallic_aperature; 
     const vec3 reflection = normalize(reflect(-(uCamera_position - origin), fNormal));
-    color += metallic * trace_specular_cone(origin, reflection, aperture);
+    const vec4 radiance = trace_specular_cone(origin, reflection, aperture);
+    color += metallic * radiance;
+
+    gSpecularRadiance = radiance.rgb;
   }
 
   if (!uIndirect_lighting) {

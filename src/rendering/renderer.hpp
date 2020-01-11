@@ -160,8 +160,17 @@ private:
   // Shading model 
   uint32_t gl_shading_model_texture_unit = 0;
   uint32_t gl_shading_model_texture = 0;
+  // Radiance textures
+  uint32_t gl_diffuse_radiance_texture_unit = 0;
+  uint32_t gl_diffuse_radiance_texture = 0;
 
-  // Environment map
+  uint32_t gl_ambient_radiance_texture_unit = 0;
+  uint32_t gl_ambient_radiance_texture = 0;
+
+  uint32_t gl_specular_radiance_texture_unit = 0;
+  uint32_t gl_specular_radiance_texture = 0;
+
+  //  Environment map
   Texture environment_map; 
   uint32_t gl_environment_map_texture_unit = 0;
 };
