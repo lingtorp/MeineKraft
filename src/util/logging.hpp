@@ -5,6 +5,8 @@
 #include <iostream>
 #include <vector>
 
+#define DEBUG
+
 namespace Log {
   template<typename T>
   static inline void log_to_console(const size_t indent, const T& msg, const std::string& type, 
@@ -33,6 +35,13 @@ namespace Log {
   #define error(msg) log_to_console(0, msg, "ERROR", __FILE__, __LINE__)
   #define warn(msg)  log_to_console(0, msg, "WARNING", __FILE__, __LINE__)
   #define info(msg)  log_to_console(0, msg, "INFO", __FILE__, __LINE__)
+
+  // Debug printouts are no operations when DEBUG is disabled
+#ifdef DEBUG
+  #define dbg(msg)   log_to_console(0, msg, "DEBUG", __FILE__, __LINE__)
+#else
+  #define dbg(msg)
+#endif
 
   // Indented versions
   #define info_indent(indent, msg) log_to_console(indent, msg, "INFO", __FILE__, __LINE__)
