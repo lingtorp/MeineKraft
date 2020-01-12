@@ -671,6 +671,7 @@ bool Renderer::init() {
 
 void Renderer::render(const uint32_t delta) {
   state.frame++;
+  GLuint last_executed_fbo = 0; // NOTE: This FBO's default buffer is blitted to the screen
 
   const glm::mat4 camera_transform = projection_matrix * scene->camera->transform(); // TODO: Camera handling needs to be reworked
 
@@ -1061,6 +1062,8 @@ void Renderer::render(const uint32_t delta) {
       glViewport(0, 0, screen.width, screen.height);
     }
 
+    last_executed_fbo = gl_vct_fbo;
+
     pass_ended();
   }
 
@@ -1127,6 +1130,8 @@ void Renderer::render(const uint32_t delta) {
       glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
       glViewport(0, 0, screen.width, screen.height);
 
+      last_executed_fbo = gl_bf_fbo;
+
       pass_ended();
     }
   }
@@ -1135,7 +1140,7 @@ void Renderer::render(const uint32_t delta) {
   {
     pass_started("Final blit pass");
 
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, gl_vct_fbo);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, last_executed_fbo);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     const auto mask = GL_COLOR_BUFFER_BIT;
     const auto filter = GL_NEAREST;
