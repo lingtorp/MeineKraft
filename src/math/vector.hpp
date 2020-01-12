@@ -245,7 +245,11 @@ template<typename T>
 struct Vec2 {
     T x, y;
     constexpr Vec2(const T x, const T y): x(x), y(y) {};
+    constexpr explicit Vec2(const T v): x(v), y(v) {};
     constexpr Vec2(): x(0.0f), y(0.0f) {};
+
+    /// Zeroed Vec2
+    constexpr static inline Vec2 zero() { return Vec2(); };
 
     /// Sum of the components of the vector
     constexpr inline T sum() const { return x + y; }
@@ -257,10 +261,16 @@ struct Vec2 {
     constexpr inline T dot(Vec2<T> u) const { return x * u.x + y * u.y; }
 
     /************ Operators ************/
+    /// Element-wise addition
     constexpr Vec2<T> operator+(const Vec2& rhs) const { return {x + rhs.x, y + rhs.y}; }
 
+    /// Element-wise multiplication
+    constexpr Vec2<T> operator*(const Vec2& rhs) const { return {x * rhs.x, y * rhs.y}; }
+
+    /// Element-wise subtraction
     constexpr Vec2<T> operator-(const Vec2& rhs) const { return {x - rhs.x, y - rhs.y}; }
 
+    /// Element-wise equality
     constexpr bool operator==(const Vec2& rhs) const { return x == rhs.x && y == rhs.y; }
 
     /// Returns a copy of this vector normalized
