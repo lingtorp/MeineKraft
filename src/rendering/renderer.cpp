@@ -1128,6 +1128,10 @@ void Renderer::render(const uint32_t delta) {
       glBindFramebuffer(GL_FRAMEBUFFER, gl_bf_fbo);
 
       glUniform1i(glGetUniformLocation(program, "uInput"), gl_ambient_radiance_texture_unit);
+
+      const Vec2f pixel_size = Vec2(1.0f / screen.width, 1.0f / screen.height);
+      glUniform2fv(glGetUniformLocation(program, "uPixel_size"), 1, &pixel_size.x);
+
       // glUniform1i(glGetUniformLocation(program, "uOutput"), 0); // NOTE: Default to 0 in shader
 
       glViewport(0, 0, screen.width / div, screen.height / div);
