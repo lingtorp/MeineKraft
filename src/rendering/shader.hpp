@@ -38,7 +38,6 @@ struct Shader {
   std::string geometry_filepath = "";
   std::string fragment_filepath = "";
 
-
   uint32_t gl_program = 0;
   uint32_t gl_vertex_shader = 0;
   uint32_t gl_geometry_shader = 0;

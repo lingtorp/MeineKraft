@@ -41,6 +41,11 @@ static std::string shader_define_to_string(const Shader::Defines define) {
   }
 }
 
+/// NOTE: Tries to parse out where and what went wrong in the shader
+std::string try_to_parse_shader_err_msg(const std::string& shader_src, const std::string& err_msg) {
+  return err_msg; // TODO: Implement ...
+}
+
 static std::string shader_compilation_err_msg(const GLuint shader) {
   GLint max_lng = 0; // max_lng includes the NULL character
   glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &max_lng);
@@ -95,7 +100,6 @@ ComputeShader::ComputeShader(const std::string &compute_filepath,
   glAttachShader(gl_program, gl_comp_shader);
   glLinkProgram(gl_program);
 
-  std::string err_msg = "";
   GLint program_linked = 0;
   glGetProgramiv(gl_program, GL_LINK_STATUS, &program_linked);
 
@@ -104,7 +108,7 @@ ComputeShader::ComputeShader(const std::string &compute_filepath,
     glGetProgramiv(gl_program, GL_INFO_LOG_LENGTH, &err_size);
     char program_err_msg[err_size];
     glGetProgramInfoLog(gl_program, err_size, nullptr, program_err_msg);
-    err_msg += std::string(program_err_msg);
+    Log::warn(try_to_parse_shader_err_msg(comp_src, std::string(program_err_msg)));
 
     glDeleteProgram(gl_program);
   }
