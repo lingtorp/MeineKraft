@@ -72,14 +72,6 @@ private:
   const uint32_t SHADOWMAP_W = 2 * 2048; // Shadowmap texture dimensions
   const uint32_t SHADOWMAP_H = SHADOWMAP_W;
 
-  /// Lightning pass related
-  Shader* lightning_shader = nullptr;
-  // Used since default fbo is not to be trusted
-  uint32_t gl_lightning_texture = 0;
-  uint32_t gl_lightning_texture_unit = 0;
-  uint32_t gl_lightning_fbo = 0;
-  uint32_t gl_lightning_vao = 0;
-
   uint32_t gl_pointlights_ssbo = 0;
   uint8_t* gl_pointlights_ssbo_ptr = nullptr;
 

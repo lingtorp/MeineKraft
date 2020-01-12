@@ -336,55 +336,6 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     Log::error("Lightning framebuffer status not complete.");
   }
 
-  /// Point lightning framebuffer
-  glGenFramebuffers(1, &gl_lightning_fbo);
-  glBindFramebuffer(GL_FRAMEBUFFER, gl_lightning_fbo);
-
-  GLuint gl_lightning_rbo;
-  glGenRenderbuffers(1, &gl_lightning_rbo);
-  glBindRenderbuffer(GL_RENDERBUFFER, gl_lightning_rbo);
-  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, screen.width, screen.height);
-  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, gl_lightning_rbo);
-
-  gl_lightning_texture_unit = get_next_free_texture_unit();
-  glActiveTexture(GL_TEXTURE0 + gl_lightning_texture_unit);
-  glGenTextures(1, &gl_lightning_texture);
-  glBindTexture(GL_TEXTURE_2D, gl_lightning_texture);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, screen.width, screen.height, 0, GL_RGBA, GL_FLOAT, nullptr);
-  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_lightning_texture, 0);
-  glObjectLabel(GL_TEXTURE, gl_lightning_texture, -1, "Pointlighting texture");
-
-  uint32_t lightning_attachments[1] = { GL_COLOR_ATTACHMENT0 };
-  glDrawBuffers(1, lightning_attachments);
-
-  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-    Log::error("Point lightning framebuffer status not complete."); exit(-1);
-  }
-
-  /// Lightning pass shader
-  lightning_shader = new Shader(Filesystem::base + "shaders/lightning.vert",
-                                Filesystem::base + "shaders/lightning.frag");
-  const auto [ok, err_msg] = lightning_shader->compile();
-  if (!ok) {
-    Log::error("Lightning shader compilation failed; " + err_msg); exit(-1);
-  }
-
-  /// Point light pass setup
-  {
-    const auto program = lightning_shader->gl_program;
-    glGenVertexArrays(1, &gl_lightning_vao);
-    glBindVertexArray(gl_lightning_vao);
-
-    GLuint gl_vbo;
-    glGenBuffers(1, &gl_vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, gl_vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(Primitive::quad), &Primitive::quad, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
-    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
-  }
-
   /// Create SSBO for the PointLights
   pointlights.emplace_back(PointLight(Vec3f(200.0f)));
   glGenBuffers(1, &gl_pointlights_ssbo);
@@ -1117,9 +1068,6 @@ void Renderer::render(const uint32_t delta) {
     if (state.vct_compute && state.vct_compute_bilateral_filter) {
       pass_started("Bilateral filtering compute subpass");
 
-      glActiveTexture(GL_TEXTURE0 + gl_lightning_texture_unit);
-      glBindTexture(GL_TEXTURE_2D, gl_vct_bf_in_texture);
-
       const auto program = vct_bf_compute_shader->gl_program;
       glUseProgram(program);
 
@@ -1150,8 +1098,6 @@ void Renderer::render(const uint32_t delta) {
     if (!state.vct_compute && state.vct_compute_bilateral_filter) {
       pass_started("Bilateral filtering rasterization subpass");
 
-      glActiveTexture(GL_TEXTURE0 + gl_lightning_texture_unit);
-      glBindTexture(GL_TEXTURE_2D, gl_vct_bf_in_texture);
 
       const auto program = vct_bf_rasterization_shader->gl_program;
       glUseProgram(program);
