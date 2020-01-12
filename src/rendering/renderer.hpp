@@ -106,12 +106,15 @@ private:
   uint8_t* gl_vct_diffuse_cones_ssbo_ptr = nullptr;
 
   // Bilateral filtering rasterization shader subpass related
-  Shader* vct_bf_rasterization_shader = nullptr;
-  uint32_t gl_vct_bf_rasterization_in_texture = 0;
-  uint32_t gl_vct_bf_rasterization_image_unit = 0;
-  uint32_t gl_bf_fbo = 0;
+  Shader* bf_ping_shader = nullptr;
+  Shader* bf_pong_shader = nullptr;
   uint32_t gl_bf_vao = 0;
-  uint32_t gl_bf_out_texture = 0;
+  uint32_t gl_bf_ping_fbo = 0;
+  uint32_t gl_bf_pong_fbo = 0;
+  uint32_t gl_bf_ping_out_texture = 0;
+  uint32_t gl_bf_ping_out_texture_unit = 0;
+  uint32_t gl_bf_pong_out_texture = 0;
+  uint32_t gl_bf_pong_out_texture_unit = 0;
 
   // Voxels
   uint32_t gl_voxel_radiance_textures[NUM_CLIPMAPS] = {};

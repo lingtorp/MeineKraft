@@ -1,5 +1,5 @@
 // NOTE: Gaussian separable vertical blur pass
-// File: bf-separable-vertical.frag.glsl
+// File: bf-separable-horizontal.frag.glsl
 
 // Low-res texture
 uniform sampler2D uInput;
