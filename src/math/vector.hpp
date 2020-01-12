@@ -422,4 +422,49 @@ using Vec3d = Vec3<double>;
 using Vec4d = Vec4<double>;
 using Mat4d = Mat4<double>;
 
+/// Computes the Gaussian matrix of dimension 'size' with the variance 'sigma'
+static std::vector<float> gaussian_2d_kernel(const size_t size, const float sigma) {
+  assert(false); // TODO: Implement
+  assert(size % 2 == 1 && "Not a box filter kernel");
+  assert(size > 1 && "Kernel size too small");
+  assert(sigma > 0.0 && "Sigma not non-zero");
+
+  std::vector<float> kernel;
+
+  const auto gaussian = [](const Vec2f& v, const float sigma) -> float {
+                          const float factor = 1.0f / (sigma * sigma * 2.0f * M_PI);
+                          return factor * exp(- (v.x*v.x + v.y*v.y) / (2.0f * sigma * sigma));
+                        };
+
+  const Vec2f c = Vec2f::zero();
+
+  // Step size in Gaussian space
+  // TODO: Try symmetric stratified uniform sampling
+  // TODO: Find an algorithm for sampling the Gaussian function
+  const Vec2f delta = Vec2f::zero();
+
+  const int32_t R = size - 2; // Kernel radius
+  float sum = 0.0;            // Weight sum
+
+  // Sample kernel
+  for (int32_t i = -R; i <= R; i++) {
+    for (int32_t j = -R; j <= R; j++) {
+      const Vec2f offset = Vec2f(i, j) * delta;
+      const float weight = gaussian(c + offset, sigma);
+      kernel.push_back(weight);
+      sum += weight;
+    }
+  }
+
+  // Normalize kernel
+  for (int32_t i = -R; i <= R; i++) {
+    for (int32_t j = -R; j <= R; j++) {
+      const Vec2i wv = Vec2i(R, R) + Vec2i(i, j);
+      kernel[wv.x * size + wv.y] /= sum;
+    }
+  }
+
+  return kernel;
+};
+
 #endif // MEINEKRAFT_VECTOR_HPP
