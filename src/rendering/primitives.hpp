@@ -356,6 +356,10 @@ struct RenderState {
   float vct_compute_spatial_sigma = 0.2;    // Variance used in spatial Gaussian kernel
   float vct_compute_range_sigma = 0.2;      // Variance used in range Gaussian kernel
 
+  // Voxel visualization related
+  // FIXME: Voxel visualization does not work ...
+  const bool voxel_visualization_enabled = false;
+
   RenderState() = default;
 
   friend std::ostream &operator<<(std::ostream &os, const RenderState& state) {

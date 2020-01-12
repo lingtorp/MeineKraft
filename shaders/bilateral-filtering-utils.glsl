@@ -1,5 +1,6 @@
 // NOTE: Bilateral filtering utility functions
 // File: bilateral-filtering-utils.glsl
+// [0]: https://bartwronski.com/2019/09/22/local-linear-models-guided-filter/
 
 // --- Uniform Requirements ---
 uniform uint uScreen_width;
@@ -28,6 +29,7 @@ float gaussian_1d(const float sigma, const float x) {
 }
 
 // Range (a.k.a domain/value) kernel function
+// Best name for this function is the 'signal similarity' function[0]
 // NOTE: Euclidean distance in RGB space
 // TODO: Are there better ways to measure color difference?
 float range(const vec3 p, const vec3 q) {

@@ -109,6 +109,9 @@ private:
   Shader* vct_bf_rasterization_shader = nullptr;
   uint32_t gl_vct_bf_rasterization_in_texture = 0;
   uint32_t gl_vct_bf_rasterization_image_unit = 0;
+  uint32_t gl_bf_fbo = 0;
+  uint32_t gl_bf_vao = 0;
+  uint32_t gl_bf_out_texture = 0;
 
   // Voxels
   uint32_t gl_voxel_radiance_textures[NUM_CLIPMAPS] = {};
@@ -120,12 +123,11 @@ private:
   int32_t gl_voxel_opacity_texture_units[NUM_CLIPMAPS] = {};
 
   // Voxel visualization pass
-  // TODO: Voxel visualization does not work ...
-  const bool voxel_visualization_enabled = false;
   Shader* voxel_visualization_shader = nullptr;
   uint32_t gl_voxel_visualization_vao = 0;
   uint32_t gl_voxel_visualization_fbo = 0;
   uint32_t gl_voxel_visualization_texture = 0;
+  uint32_t gl_voxel_visualization_texture_unit = 0;
 
   /// Global buffers
   // Geometric normals

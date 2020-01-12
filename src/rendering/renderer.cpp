@@ -447,7 +447,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   }
 
   /// Voxel visualization pass
-  if (voxel_visualization_enabled) {
+  if (state.voxel_visualization_enabled) {
     voxel_visualization_shader = new Shader(Filesystem::base + "shaders/voxel-visualization.vert",
                                             Filesystem::base + "shaders/voxel-visualization.geom",
                                             Filesystem::base + "shaders/voxel-visualization.frag");
@@ -468,7 +468,8 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glBindFramebuffer(GL_FRAMEBUFFER, gl_voxel_visualization_fbo);
     glObjectLabel(GL_FRAMEBUFFER, gl_voxel_visualization_fbo, -1, "Voxel visualization FBO");
 
-    glActiveTexture(GL_TEXTURE0 + gl_lightning_texture_unit);
+    gl_voxel_visualization_texture_unit = get_next_free_texture_unit();
+    glActiveTexture(GL_TEXTURE0 + gl_voxel_visualization_texture_unit);
     glGenTextures(1, &gl_voxel_visualization_texture);
     glBindTexture(GL_TEXTURE_2D, gl_voxel_visualization_texture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -631,15 +632,36 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
 
     gl_vct_bf_rasterization_image_unit = get_next_free_image_unit();
 
+    const uint32_t program = vct_bf_rasterization_shader->gl_program;
+    glUseProgram(program);
+    glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
+    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
+
     GLuint gl_vbo = 0;
     glGenBuffers(1, &gl_vbo);
     glBindBuffer(GL_ARRAY_BUFFER, gl_vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(Primitive::quad), &Primitive::quad, GL_STATIC_DRAW);
 
-    const uint32_t program = vct_bf_rasterization_shader->gl_program;
-    glUseProgram(program);
-    glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
-    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
+    glGenFramebuffers(1, &gl_bf_fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, gl_bf_fbo);
+
+    glGenTextures(1, &gl_bf_out_texture);
+    glBindTexture(GL_TEXTURE_2D, gl_bf_out_texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, screen.width, screen.height, 0, GL_RGBA, GL_FLOAT, nullptr);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_bf_out_texture, 0);
+    glObjectLabel(GL_TEXTURE, gl_bf_out_texture, -1, "Bilateral filtering output texture");
+
+    uint32_t fbo_attachments[1] = { GL_COLOR_ATTACHMENT0 };
+    glDrawBuffers(1, fbo_attachments);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+      Log::error("Bilateral filtering FBO not complete"); exit(-1);
+    }
+
+    glGenVertexArrays(1, &gl_bf_vao);
+    glBindVertexArray(gl_bf_vao);
 
     glGenTextures(1, &gl_vct_bf_rasterization_in_texture);
     glBindTexture(GL_TEXTURE_2D, gl_vct_bf_rasterization_in_texture);
@@ -925,7 +947,7 @@ void Renderer::render(const uint32_t delta) {
     }
   }
 
-  if (voxel_visualization_enabled) {
+  if (state.voxel_visualization_enabled) {
     pass_started("Voxel visualization pass");
 
     const auto program = voxel_visualization_shader->gl_program;
@@ -933,7 +955,7 @@ void Renderer::render(const uint32_t delta) {
     glBindFramebuffer(GL_FRAMEBUFFER, gl_voxel_visualization_fbo);
     glBindVertexArray(gl_voxel_visualization_vao);
 
-    glActiveTexture(GL_TEXTURE0 + gl_lightning_texture_unit);
+    glActiveTexture(GL_TEXTURE0 + gl_voxel_visualization_texture_unit);
     glBindTexture(GL_TEXTURE_2D, gl_voxel_visualization_texture);
 
     glUniform1iv(glGetUniformLocation(program, "uClipmap_sizes"), NUM_CLIPMAPS, clipmaps.size);
@@ -1101,29 +1123,12 @@ void Renderer::render(const uint32_t delta) {
     if (!state.vct_compute && state.vct_compute_bilateral_filter) {
       pass_started("Bilateral filtering rasterization subpass");
 
-
       const auto program = vct_bf_rasterization_shader->gl_program;
       glUseProgram(program);
+      glBindFramebuffer(GL_FRAMEBUFFER, gl_bf_fbo);
 
-      glUniform1ui(glGetUniformLocation(program, "uScreen_width"), screen.width);
-      glUniform1ui(glGetUniformLocation(program, "uScreen_height"), screen.height);
-      glUniform1ui(glGetUniformLocation(program, "uScreen_width_downsampled"), screen.width / div);
-      glUniform1ui(glGetUniformLocation(program, "uScreen_height_downsampled"), screen.height / div);
-
-      const uint32_t kernel_size = state.vct_compute_bf_kernel_size;
-      glUniform1ui(glGetUniformLocation(program, "uKernel_size"), kernel_size);
-
-      glUniform1f(glGetUniformLocation(program, "uSigmaSpatial"), state.vct_compute_spatial_sigma);
-      glUniform1f(glGetUniformLocation(program, "uSigmaRange"), state.vct_compute_range_sigma);
-
-      const uint32_t nth_pixel = state.vct_compute_nth_pixel;
-      glUniform1ui(glGetUniformLocation(program, "uNth_pixel"), nth_pixel);
-
-      glBindImageTexture(gl_vct_compute_bf_image_unit, gl_vct_bf_in_texture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA8);
-      glUniform1i(glGetUniformLocation(program, "uInput"), gl_vct_compute_bf_image_unit);
-
-      glBindImageTexture(gl_vct_compute_image_unit, gl_vct_texture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA8);
-      glUniform1i(glGetUniformLocation(program, "uOutput"), gl_vct_compute_image_unit);
+      glUniform1i(glGetUniformLocation(program, "uInput"), gl_ambient_radiance_texture_unit);
+      // glUniform1i(glGetUniformLocation(program, "uOutput"), 0); // NOTE: Default to 0 in shader
 
       glViewport(0, 0, screen.width / div, screen.height / div);
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
