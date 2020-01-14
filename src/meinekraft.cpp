@@ -2,6 +2,7 @@
 
 #include <chrono>
 
+#include "imgui/imgui.h"
 #include "rendering/renderer.hpp"
 #include "../include/imgui/imgui_impl_sdl.h"
 #include "rendering/camera.hpp"
@@ -13,6 +14,19 @@
 #include "scene/world.hpp"
 #include "rendering/graphicsbatch.hpp"
 #include "util/config.hpp"
+
+// ImGui global GUI settings
+struct {
+  bool render_system_window = true;  // Render system information and config. window
+  struct {
+    bool pipeline_window = false;    // TODO: Detailed information about the various renderer stages
+  } renderer;
+  bool scene_graph_window = false;   // Scene graph of Graphic entities
+  bool logger_window = false;        // TODO: Logger of engine messages
+  bool console_window = false;       // TODO: Console for engine commands
+  bool help_window = false;          // TODO: Helpful keyboard shortcuts, displayed on first launch
+  bool about_window = false;         // TODO: Displays some information about the application
+} Gui;
 
 void imgui_styling() {
   ImGuiStyle* style = &ImGui::GetStyle();
@@ -167,15 +181,6 @@ void MeineKraft::mainloop() {
 
         case SDL_KEYDOWN:
           switch (event.key.keysym.sym) {
-					case SDLK_1:
-						renderer->state.camera_selection = 0;
-						break;
-					case SDLK_2:
-						renderer->state.camera_selection = 1;
-						break;
-					case SDLK_3:
-						renderer->state.camera_selection = 2;
-						break;
           case SDLK_w:
             renderer->scene->camera->move_forward(true);
             break;
@@ -263,120 +268,180 @@ void MeineKraft::mainloop() {
 
       ImGui_ImplSdlGL3_NewFrame(window);
       auto io = ImGui::GetIO();
-      ImGui::Begin("MeineKraft");
 
-      ImGui::PushItemWidth(90.0f);
-
-      if (ImGui::CollapsingHeader("Render System", ImGuiTreeNodeFlags_DefaultOpen)) {
-        ImGui::Text("Frame: %lu", renderer->state.frame);
-        ImGui::Text("Entities: %lu", renderer->state.entities);
-        ImGui::Text("Average %lu ms / frame (%.1f FPS)", delta, io.Framerate);
-
-        static size_t i = -1; i = (i + 1) % num_deltas;
-        deltas[i] = float(delta);
-        ImGui::PlotLines("", deltas, num_deltas, 0, "ms / frame", 0.0f, 50.0f, ImVec2(ImGui::GetWindowWidth(), 100));
-
-        ImGui::InputFloat("Shadow bias", &renderer->state.shadow_bias);
-        ImGui::Checkbox("Normal mapping", &renderer->state.normalmapping);
-        ImGui::Checkbox("Conservative raster.", &renderer->state.conservative_rasterization);
-
-        if (ImGui::Button("Voxelize")) {
-          renderer->state.voxelize = true;
-        }
-        ImGui::Checkbox("Always voxelize", &renderer->state.always_voxelize);
-
-        ImGui::Checkbox("Direct", &renderer->state.direct_lighting);
-        ImGui::SameLine();
-        ImGui::Checkbox("Indirect", &renderer->state.indirect_lighting);
-
-
-        ImGui::Checkbox("Diffuse", &renderer->state.diffuse_lighting);
-        ImGui::SameLine();
-        ImGui::Checkbox("Specular", &renderer->state.specular_lighting);
-        ImGui::SameLine();
-        ImGui::Checkbox("Ambient", &renderer->state.ambient_lighting);
-
-        ImGui::SliderInt("# diffuse cones", &renderer->state.num_diffuse_cones, 1, RenderState::MAX_VCT_DIFFUSE_CONES);
-
-        ImGui::InputFloat("Roughness", &renderer->state.roughness);
-        ImGui::InputFloat("Metallic", &renderer->state.metallic);
-        ImGui::InputFloat("Roughness aperature (deg.)", &renderer->state.roughness_aperature);
-        ImGui::InputFloat("Metallic aperature (deg.)", &renderer->state.metallic_aperature);
-
-        // Voxel cone tracing compute related settings
-        ImGui::Checkbox("VCT Compute", &renderer->state.vct_compute);
-        ImGui::SliderInt("N:th pixel: ", &renderer->state.vct_compute_nth_pixel, 1, 16);
-
-        ImGui::Checkbox("VCT filtering", &renderer->state.vct_compute_bilateral_filter);
-        ImGui::InputFloat("Spatial sigma", &renderer->state.vct_compute_spatial_sigma);
-        ImGui::InputFloat("Range sigma", &renderer->state.vct_compute_range_sigma);
-
-        ImGui::Checkbox("BF position weight", &renderer->state.bf_position_weight);
-        ImGui::Checkbox("BF normal weight", &renderer->state.bf_normal_weight);
-
-        if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
-          ImGui::PushItemWidth(200.0f);
-          ImGui::InputFloat3("Position##camera", &renderer->scene->camera->position.x);
-          ImGui::InputFloat3("Direction##camera", &renderer->scene->camera->direction.x);
-          ImGui::PopItemWidth();
-          // ImGui::InputFloat("FoV", camera->FoV); // TODO: Camera adjustable FoV
-          if (ImGui::Button("Reset camera")) {
-            renderer->scene->reset_camera();
+      //  Main window
+      {
+        if (ImGui::BeginMainMenuBar()) {
+          if (ImGui::BeginMenu("MeineKraft")) {
+            if (ImGui::MenuItem("Quit", "ESC")) { done = true; }
+            if (ImGui::MenuItem("Hide GUI")) {  } // TODO: Implement
+            ImGui::EndMenu();
           }
+
+          if (ImGui::BeginMenu("Windows")) {
+            if (ImGui::MenuItem("Render system", "CTRL+R")) { Gui.render_system_window = !Gui.render_system_window; }
+            if (ImGui::MenuItem("Logger system", "CTRL+L")) { Gui.logger_window = !Gui.logger_window; }
+            if (ImGui::MenuItem("Scene graph",   "CTRL+S")) { Gui.scene_graph_window = !Gui.scene_graph_window; }
+            ImGui::Separator();
+            if (ImGui::MenuItem("Close all ..")) {  }; // TODO: Implement ...
+            if (ImGui::MenuItem("Reset position ..")) {  }; // TODO: Implement ...
+            ImGui::EndMenu();
+          }
+
+          ImGui::Text("(%.1f FPS)", io.Framerate);
+
+          ImGui::EndMainMenuBar();
         }
 
-        // Directional light
-        const std::string directional_light_title = "Directional light";
-        if (ImGui::CollapsingHeader(directional_light_title.c_str())) {
-          ImGui::InputFloat3("Direction##directional_light", &renderer->directional_light.direction.x);
-        }
+        // Render system
+        if (Gui.render_system_window) {
+          ImGui::Begin("Render system", &Gui.render_system_window);
 
-        // Point lights
-        const std::string pointlights_title = "Point lights (" + std::to_string(renderer->pointlights.size()) + ")";
-        if (ImGui::CollapsingHeader(pointlights_title.c_str())) {
-          for (size_t i = 0; i < renderer->pointlights.size(); i++) {
-            ImGui::PushID(&renderer->pointlights[i]);
-            const std::string str = std::to_string(i);
-            if (ImGui::CollapsingHeader(str.c_str())) {
-              ImGui::InputFloat3("Position", &renderer->pointlights[i].position.x);
-              ImGui::InputFloat3("Intensity", &renderer->pointlights[i].intensity.x);
+          ImGui::PushItemWidth(90.0f);
+
+          static size_t i = -1; i = (i + 1) % num_deltas;
+          deltas[i] = float(delta);
+          ImGui::PlotLines("", deltas, num_deltas, 0, "ms / frame", 0.0f, 50.0f, ImVec2(ImGui::GetWindowWidth(), 100));
+
+          ImGui::Text("Average %lu ms/frame (%.1f FPS)", delta, io.Framerate);
+          ImGui::SameLine();
+          ImGui::Text("Frame: %lu", renderer->state.frame);
+          ImGui::Text("Resolution: (%u, %u)", renderer->screen.width, renderer->screen.height);
+          // TODO: Change resolution
+          // TODO: Memory usage, textures, etc
+
+          ImGui::InputFloat("Shadow bias", &renderer->state.shadow_bias);
+          ImGui::Checkbox("Normal mapping", &renderer->state.normalmapping);
+
+          if (Gui.renderer.pipeline_window) {
+            ImGui::Begin("Graphics Pipeline");
+            // TODO: Implement ... timings, pipeline stages, etc
+          }
+
+          if (ImGui::CollapsingHeader("Voxelization", ImGuiTreeNodeFlags_DefaultOpen)) {
+            if (ImGui::Button("Voxelize")) {
+              renderer->state.voxelize = true;
             }
-            ImGui::PopID();
+            ImGui::SameLine();
+            ImGui::Checkbox("Always voxelize", &renderer->state.always_voxelize);
+
+            ImGui::Checkbox("Conservative voxelization", &renderer->state.conservative_rasterization);
           }
+
+          if (ImGui::CollapsingHeader("Voxel cone tracing", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::Checkbox("Direct", &renderer->state.direct_lighting);
+            ImGui::SameLine();
+            ImGui::Checkbox("Indirect", &renderer->state.indirect_lighting);
+
+            ImGui::Checkbox("Diffuse", &renderer->state.diffuse_lighting);
+            ImGui::SameLine();
+            ImGui::Checkbox("Specular", &renderer->state.specular_lighting);
+            ImGui::SameLine();
+            ImGui::Checkbox("Ambient", &renderer->state.ambient_lighting);
+
+            ImGui::SliderInt("# diffuse cones", &renderer->state.num_diffuse_cones, 1, RenderState::MAX_VCT_DIFFUSE_CONES);
+
+            ImGui::InputFloat("Roughness", &renderer->state.roughness);
+            ImGui::InputFloat("Metallic", &renderer->state.metallic);
+            ImGui::InputFloat("Roughness aperature (deg.)", &renderer->state.roughness_aperature);
+            ImGui::InputFloat("Metallic aperature (deg.)", &renderer->state.metallic_aperature);
+          }
+
+          if (ImGui::CollapsingHeader("Bilateral filtering", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::Checkbox("Enabled", &renderer->state.bilateral_filtering.enabled);
+
+            ImGui::Text("Filter:");
+            ImGui::Checkbox("Direct", &renderer->state.bilateral_filtering.direct_enabled);
+            ImGui::SameLine();
+            ImGui::Checkbox("Ambient", &renderer->state.bilateral_filtering.ambient_enabled);
+            ImGui::SameLine();
+            ImGui::Checkbox("Specular", &renderer->state.bilateral_filtering.specular_enabled);
+
+            ImGui::Text("Weights:");
+            ImGui::Checkbox("Position", &renderer->state.bilateral_filtering.position_weight);
+            ImGui::SameLine();
+            ImGui::Checkbox("Normal", &renderer->state.bilateral_filtering.normal_weight);
+          }
+
+          ImGui::PopItemWidth();
+          ImGui::End();
         }
 
-        // Graphics batches
-        const std::string graphicsbatches_title = "Graphics batches (" + std::to_string(renderer->graphics_batches.size()) + ")";
-        if (ImGui::CollapsingHeader(graphicsbatches_title.c_str())) {
-          for (size_t batch_num = 0; batch_num < renderer->graphics_batches.size(); batch_num++) {
-            const auto& batch = renderer->graphics_batches[batch_num];
-            const std::string batch_title = "Batch #" + std::to_string(batch_num + 1) + " (" + std::to_string(batch.entity_ids.size()) + ")";
+        if (Gui.scene_graph_window) {
+          ImGui::Begin("Scene graph", &Gui.scene_graph_window);
 
-            if (ImGui::CollapsingHeader(batch_title.c_str())) {
-              const std::string member_title = "Members##" + batch_title;
-              if (ImGui::CollapsingHeader(member_title.c_str())) {
-                for (const auto& id : batch.entity_ids) {
-                  const std::string* name = NameSystem::instance().get_name_from_entity_referenced(id);
-                  ImGui::Text("Entity id: %lu, Name: %s", id, name->c_str());
-                  TransformComponent* transform = TransformSystem::instance().lookup_referenced(id);
-                  ImGui::PushID(transform);
-                  ImGui::InputFloat3("Position", &transform->position.x);
-                  ImGui::InputFloat3("Rotation", &transform->rotation.x);
-                  ImGui::InputFloat("Scale", &transform->scale);
-                  ImGui::PopID();
+          ImGui::Text("Entities: %lu", renderer->state.entities);
+
+          if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::PushItemWidth(200.0f);
+            ImGui::InputFloat3("Position##camera", &renderer->scene->camera->position.x);
+            ImGui::InputFloat3("Direction##camera", &renderer->scene->camera->direction.x);
+            ImGui::PopItemWidth();
+            // ImGui::InputFloat("FoV", camera->FoV); // TODO: Camera adjustable FoV
+            if (ImGui::Button("Reset camera")) {
+              renderer->scene->reset_camera();
+            }
+          }
+
+          // Directional light
+          const std::string directional_light_title = "Directional light";
+          if (ImGui::CollapsingHeader(directional_light_title.c_str())) {
+            ImGui::InputFloat3("Direction##directional_light", &renderer->directional_light.direction.x);
+          }
+
+          // Point lights
+          const std::string pointlights_title = "Point lights (" + std::to_string(renderer->pointlights.size()) + ")";
+          if (ImGui::CollapsingHeader(pointlights_title.c_str())) {
+            for (size_t i = 0; i < renderer->pointlights.size(); i++) {
+              ImGui::PushID(&renderer->pointlights[i]);
+              const std::string str = std::to_string(i);
+              if (ImGui::CollapsingHeader(str.c_str())) {
+                ImGui::InputFloat3("Position", &renderer->pointlights[i].position.x);
+                ImGui::InputFloat3("Intensity", &renderer->pointlights[i].intensity.x);
+              }
+              ImGui::PopID();
+            }
+          }
+
+          // Graphics batches
+          const std::string graphicsbatches_title = "Graphics batches (" + std::to_string(renderer->graphics_batches.size()) + ")";
+          if (ImGui::CollapsingHeader(graphicsbatches_title.c_str())) {
+            for (size_t batch_num = 0; batch_num < renderer->graphics_batches.size(); batch_num++) {
+              const auto& batch = renderer->graphics_batches[batch_num];
+              const std::string batch_title = "Batch #" + std::to_string(batch_num + 1) + " (" + std::to_string(batch.entity_ids.size()) + ")";
+
+              if (ImGui::CollapsingHeader(batch_title.c_str())) {
+                const std::string member_title = "Members##" + batch_title;
+                if (ImGui::CollapsingHeader(member_title.c_str())) {
+                  for (const auto& id : batch.entity_ids) {
+                    const std::string* name = NameSystem::instance().get_name_from_entity_referenced(id);
+                    ImGui::Text("Entity id: %lu, Name: %s", id, name->c_str());
+                    TransformComponent* transform = TransformSystem::instance().lookup_referenced(id);
+                    ImGui::PushID(transform);
+                    ImGui::InputFloat3("Position", &transform->position.x);
+                    ImGui::InputFloat3("Rotation", &transform->rotation.x);
+                    ImGui::InputFloat("Scale", &transform->scale);
+                    ImGui::PopID();
+                  }
                 }
               }
             }
           }
+
+          ImGui::End();
         }
 
-        ImGui::PopItemWidth();
+        if (Gui.logger_window) {
+          ImGui::Begin("Logger system", &Gui.logger_window);
+          // TODO: Implement logger system window
+          // for (const auto& item : Logger::msgs) {
+          // }
+          ImGui::End();
+        }
 
-        ImGui::End();
         ImGui::Render();
         pass_ended();
       }
-
     }
     SDL_GL_SwapWindow(window);
   }
