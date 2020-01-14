@@ -349,10 +349,10 @@ struct RenderState {
   int num_diffuse_cones = 6;  // [Crassin11], [Yeu13] suggests 5
 
   // Voxel cone tracing compute related
-  bool vct_compute = true;                  // Use VCT compute or fullscreen fragment shader
+  bool vct_compute = false;                 // Use VCT compute or fullscreen fragment shader
   int vct_compute_nth_pixel = 4;            // Used in VCT compute shader (shades every Nth pixel)
-  bool vct_compute_bilateral_filter = true; // Use bilateral filtering subpass to produce a smooth image
   int vct_compute_bf_kernel_size = 4;
+  bool vct_compute_bilateral_filter = true; // Use bilateral filtering subpass to produce a smooth image
   float vct_compute_spatial_sigma = 0.2;    // Variance used in spatial Gaussian kernel
   float vct_compute_range_sigma = 0.2;      // Variance used in range Gaussian kernel
 
