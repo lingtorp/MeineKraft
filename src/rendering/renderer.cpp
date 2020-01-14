@@ -692,16 +692,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
       glGenFramebuffers(1, &gl_bf_pong_fbo);
       glBindFramebuffer(GL_FRAMEBUFFER, gl_bf_pong_fbo);
 
-      gl_bf_pong_out_texture_unit = get_next_free_texture_unit();
-      glActiveTexture(GL_TEXTURE0 + gl_bf_pong_out_texture_unit);
-
-      glGenTextures(1, &gl_bf_pong_out_texture);
-      glBindTexture(GL_TEXTURE_2D, gl_bf_pong_out_texture);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, screen.width, screen.height, 0, GL_RGBA, GL_FLOAT, nullptr);
-      glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_bf_pong_out_texture, 0);
-      glObjectLabel(GL_TEXTURE, gl_bf_pong_out_texture, -1, "Bilateral filtering pong output texture");
+      glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_ambient_radiance_texture, 0); // NOTE: Use w/e temp. texture for FBO completeness
 
       uint32_t fbo_attachments[1] = { GL_COLOR_ATTACHMENT0 };
       glDrawBuffers(1, fbo_attachments);
@@ -1174,17 +1165,21 @@ void Renderer::render(const uint32_t delta) {
 
       const Vec2f pixel_size = Vec2(1.0f / screen.width, 1.0f / screen.height);
 
+      // Declare input & output texture
+      const uint32_t gl_ping_in_texture_unit  = gl_ambient_radiance_texture_unit;
+      const uint32_t gl_pong_out_texture = gl_ambient_radiance_texture;
+
       // Ping
       {
         const auto program = bf_ping_shader->gl_program;
         glUseProgram(program);
         glBindFramebuffer(GL_FRAMEBUFFER, gl_bf_ping_fbo);
 
+        glUniform2fv(glGetUniformLocation(program, "uPixel_size"), 1, &pixel_size.x);
         glUniform1ui(glGetUniformLocation(program, "uKernel_dim"), kernel.size());
         glUniform1fv(glGetUniformLocation(program, "uKernel"), kernel.size(), kernel.data());
-        glUniform1i(glGetUniformLocation(program, "uInput"), gl_ambient_radiance_texture_unit);
-        glUniform2fv(glGetUniformLocation(program, "uPixel_size"), 1, &pixel_size.x);
 
+        glUniform1i(glGetUniformLocation(program, "uInput"), gl_ping_in_texture_unit);
         // glUniform1i(glGetUniformLocation(program, "uOutput"), 0); // NOTE: Default to 0 in shader
 
         glViewport(0, 0, screen.width / div, screen.height / div);
@@ -1201,12 +1196,12 @@ void Renderer::render(const uint32_t delta) {
         glUseProgram(program);
         glBindFramebuffer(GL_FRAMEBUFFER, gl_bf_pong_fbo);
 
+        glUniform2fv(glGetUniformLocation(program, "uPixel_size"), 1, &pixel_size.x);
         glUniform1ui(glGetUniformLocation(program, "uKernel_dim"), kernel.size());
         glUniform1fv(glGetUniformLocation(program, "uKernel"), kernel.size(), kernel.data());
-        glUniform1i(glGetUniformLocation(program, "uInput"), gl_bf_ping_out_texture_unit);
-        glUniform2fv(glGetUniformLocation(program, "uPixel_size"), 1, &pixel_size.x);
 
-        // glUniform1i(glGetUniformLocation(program, "uOutput"), 0); // NOTE: Default to 0 in shader
+        glUniform1i(glGetUniformLocation(program, "uInput"), gl_bf_ping_out_texture_unit);
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_pong_out_texture, 0);
 
         glViewport(0, 0, screen.width / div, screen.height / div);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -1218,6 +1213,11 @@ void Renderer::render(const uint32_t delta) {
 
       pass_ended();
     }
+  }
+
+  /// Lighting application pass
+  {
+
   }
 
   /// Copy final pass into default FBO
