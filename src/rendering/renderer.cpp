@@ -616,25 +616,27 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
 
   /// Bilateral filtering pass
   {
-    bf_ping_shader = new Shader(Filesystem::base + "shaders/bf-separable-vertical.vert.glsl",
-                                Filesystem::base + "shaders/bf-separable-vertical.frag.glsl");
+    bf_ping_shader = new Shader(Filesystem::base + "shaders/generic-passthrough.vert.glsl",
+                                Filesystem::base + "shaders/bf-separable.frag.glsl");
 
     // NOTE: Include order matters
     const std::string include0 = Filesystem::read_file(Filesystem::base + "shaders/voxel-cone-tracing-utils.glsl");
     const std::string include1 = Filesystem::read_file(Filesystem::base + "shaders/bilateral-filtering-utils.glsl");
     bf_ping_shader->add(include1);
     bf_ping_shader->add(include0);
+    bf_ping_shader->add("#define VERTICAL_STEP_DIR \n");
 
     const auto [ok, msg] = bf_ping_shader->compile();
     if (!ok) {
       Log::error(msg); exit(-1);
     }
 
-    bf_pong_shader = new Shader(Filesystem::base + "shaders/bf-separable-horizontal.vert.glsl",
-                                Filesystem::base + "shaders/bf-separable-horizontal.frag.glsl");
+    bf_pong_shader = new Shader(Filesystem::base + "shaders/generic-passthrough.vert.glsl",
+                                Filesystem::base + "shaders/bf-separable.frag.glsl");
 
     bf_pong_shader->add(include1);
     bf_pong_shader->add(include0);
+    bf_pong_shader->add("#define HORIZONTAL_STEP_DIR \n");
 
     const auto [ok_pong, msg_pong] = bf_pong_shader->compile();
     if (!ok_pong) {
@@ -727,6 +729,13 @@ bool Renderer::init() {
     Log::info("Voxel size: "    + std::to_string(aabbs[i].max_axis() / clipmaps.size[i]));
     Log::info("Voxel d^3: "     + std::to_string(clipmaps.size[i]));
   }
+
+  Log::info("---- Gaussian 1D separable kernel ----");
+  const float sigma = 1.0f;
+  const size_t kernel_radius = 4;
+  kernel = gaussian_1d_kernel(sigma, kernel_radius);
+  Log::info(kernel);
+
   return true;
 }
 
@@ -1171,6 +1180,8 @@ void Renderer::render(const uint32_t delta) {
         glUseProgram(program);
         glBindFramebuffer(GL_FRAMEBUFFER, gl_bf_ping_fbo);
 
+        glUniform1ui(glGetUniformLocation(program, "uKernel_dim"), kernel.size());
+        glUniform1fv(glGetUniformLocation(program, "uKernel"), kernel.size(), kernel.data());
         glUniform1i(glGetUniformLocation(program, "uInput"), gl_ambient_radiance_texture_unit);
         glUniform2fv(glGetUniformLocation(program, "uPixel_size"), 1, &pixel_size.x);
 
@@ -1190,6 +1201,8 @@ void Renderer::render(const uint32_t delta) {
         glUseProgram(program);
         glBindFramebuffer(GL_FRAMEBUFFER, gl_bf_pong_fbo);
 
+        glUniform1ui(glGetUniformLocation(program, "uKernel_dim"), kernel.size());
+        glUniform1fv(glGetUniformLocation(program, "uKernel"), kernel.size(), kernel.data());
         glUniform1i(glGetUniformLocation(program, "uInput"), gl_bf_ping_out_texture_unit);
         glUniform2fv(glGetUniformLocation(program, "uPixel_size"), 1, &pixel_size.x);
 

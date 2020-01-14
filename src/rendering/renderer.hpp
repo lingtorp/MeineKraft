@@ -115,6 +115,7 @@ private:
   uint32_t gl_bf_ping_out_texture_unit = 0;
   uint32_t gl_bf_pong_out_texture = 0;
   uint32_t gl_bf_pong_out_texture_unit = 0;
+  std::vector<float> kernel = {}; // Gaussian 1D separable kernel weights
 
   // Voxels
   uint32_t gl_voxel_radiance_textures[NUM_CLIPMAPS] = {};

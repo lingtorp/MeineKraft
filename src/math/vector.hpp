@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <vector>
+#include <random>
 
 #include <glm/common.hpp>
 
@@ -422,6 +423,70 @@ using Vec3d = Vec3<double>;
 using Vec4d = Vec4<double>;
 using Mat4d = Mat4<double>;
 
+/// Computes the Gaussian 1D kernel with the resulting standard deviation of 'sqrt(2) * sigma' and mean of zero
+/// when filtering twice over the returned box kernel window specified by 'dim' passed along one axis.
+/// Kernel radius passed is assumed to be exclusive of the origin/center (kernel_radisu + 1 + kernel_radius).
+/// Kernel radius of 3 becomes a 2D kernel window of (3 + 1 + 3) (7x7 effective 2D kernel).
+/// Kernel radius of 2 becomes a 2D kernel window of (2 + 1 + 2) (5x5 effective 2D kernel).
+/// Kernel radius of 1 becomes a 2D kernel window of (1 + 1 + 1) (3x3 effective 2D kernel).
+/// Gaussian function is sampled using strafified sampling with each strata using a uniform distribution.
+/// [1] suggests a kernel cutoff of 3*sigma and [2] a cutoff of 2*sigma, [0] 2*sigma + 1
+/// [0]: https://fiveko.com/tutorials/image-processing/gaussian-blur-filter/#gauss1d
+/// [1]: https:///www.crisluengo.net/archives/695
+/// [2]: https://people.csail.mit.edu/sparis/bf_course/
+static std::vector<float> gaussian_1d_kernel(const float sigma, const size_t kernel_radius) {
+  assert(sigma > 0.0 && "Sigma must be non-zero and positive.");
+  assert(kernel_radius > 0 && "Kernel radius must be larger than 0.");
+
+  // NOTE: No factor do to discretization normalizes the sample anyway
+  const auto gaussian = [](const float x, const float sigma) -> float {
+                          return exp(- 0.5f * x * x / (sigma * sigma));
+                        };
+
+  // Samples the Gaussian function uniformly in [x0, x1] with sigma and x1 > x0
+  const auto sampler = [&](const float x0, const float x1) -> float {
+                         const uint32_t iterations = 100;
+                         const float dx = abs(x1 - x0) / iterations;
+                         float sum = 0.0f;
+                         for (size_t i = 0; i < iterations; i++) {
+                           const float x = x0 + dx * i;
+                           sum += gaussian(x, sigma) * dx;
+                         }
+                         return sum;
+                       };
+
+  const size_t kernel_dim = kernel_radius + 1;
+  std::vector<float> kernel;
+  kernel.reserve(kernel_dim);
+
+  // Stratified sampling
+  const float kernel_cutoff = 2.0f * sigma + 1.0f;
+  const float strata_size = 2.0f * kernel_cutoff / float(2.0f * kernel_radius + 1); // Symmetric kernel
+
+  float cum_v = 0.0f; // Cumulative value
+
+  // NOTE: Center/origin strata is half on the positive and half on the negative interval
+  float x0 = -strata_size / 2.0f;
+  float x1 = strata_size / 2.0f;
+  const float v = sampler(x0, x1);
+  cum_v += v;
+  kernel.push_back(v);
+
+  for (size_t i = 0; i < kernel_dim - 1; i++) {
+    x0 += strata_size; x1 += strata_size; // Move interval
+    const float v = sampler(x0, x1);      // Sample interval
+    cum_v += 2.0f * v;                    // Count each side of origin                   
+    kernel.push_back(v);
+  }
+
+  // Normalization
+  for (auto& v : kernel) {
+    v /= cum_v;
+  }
+
+  return kernel;
+};
+
 /// Computes the Gaussian matrix of dimension 'size' with the variance 'sigma'
 static std::vector<float> gaussian_2d_kernel(const size_t size, const float sigma) {
   assert(false); // TODO: Implement
@@ -431,9 +496,10 @@ static std::vector<float> gaussian_2d_kernel(const size_t size, const float sigm
 
   std::vector<float> kernel;
 
+  // FIXME: Gaussian is defined in multiple ways all over the internet, which one is the most correct?
   const auto gaussian = [](const Vec2f& v, const float sigma) -> float {
                           const float factor = 1.0f / (sigma * sigma * 2.0f * M_PI);
-                          return factor * exp(- (v.x*v.x + v.y*v.y) / (2.0f * sigma * sigma));
+                          return factor * exp(- 0.5f * (v.dot(v)) / (sigma * sigma));
                         };
 
   const Vec2f c = Vec2f::zero();
