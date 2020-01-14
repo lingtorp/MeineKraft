@@ -356,6 +356,10 @@ struct RenderState {
   float vct_compute_spatial_sigma = 0.2;    // Variance used in spatial Gaussian kernel
   float vct_compute_range_sigma = 0.2;      // Variance used in range Gaussian kernel
 
+  // Bilateral filtering related
+  bool bf_position_weight = true; // Enable position as a weight in filtering
+  bool bf_normal_weight = false;  // Enable normals as a weight in filtering
+
   // Voxel visualization related
   // FIXME: Voxel visualization does not work ...
   const bool voxel_visualization_enabled = false;

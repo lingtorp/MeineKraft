@@ -23,6 +23,12 @@ ivec2 texture_to_pixel_space(const vec2 p) {
 
 // 1D Gaussian function
 // Src: https://people.csail.mit.edu/sparis/bf_course/course_notes.pdf
+float gaussian(const float x, const float sigma) {
+  return exp(- 0.5 * x * x / (sigma * sigma));
+}
+
+// 1D Gaussian function
+// Src: https://people.csail.mit.edu/sparis/bf_course/course_notes.pdf
 float gaussian_1d(const float sigma, const float x) {
   const float factor = 1.0 / (M_2PI * sigma * sigma);
   return factor * exp(- x * x / (2.0 * sigma * sigma));

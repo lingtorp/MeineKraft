@@ -311,6 +311,9 @@ void MeineKraft::mainloop() {
         ImGui::InputFloat("Spatial sigma", &renderer->state.vct_compute_spatial_sigma);
         ImGui::InputFloat("Range sigma", &renderer->state.vct_compute_range_sigma);
 
+        ImGui::Checkbox("BF position weight", &renderer->state.bf_position_weight);
+        ImGui::Checkbox("BF normal weight", &renderer->state.bf_normal_weight);
+
         if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
           ImGui::PushItemWidth(200.0f);
           ImGui::InputFloat3("Position##camera", &renderer->scene->camera->position.x);

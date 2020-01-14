@@ -1169,11 +1169,22 @@ void Renderer::render(const uint32_t delta) {
       const uint32_t gl_ping_in_texture_unit  = gl_ambient_radiance_texture_unit;
       const uint32_t gl_pong_out_texture = gl_ambient_radiance_texture;
 
+      const float position_sigma = 2.0f; // TODO: How to set this value or tune it?
+      const float normal_sigma = 2.0f;   // TODO: How to set this value or tune it?
+
+      // TODO: Reduce to one single shader, reuse that one twice instead
       // Ping
       {
         const auto program = bf_ping_shader->gl_program;
         glUseProgram(program);
         glBindFramebuffer(GL_FRAMEBUFFER, gl_bf_ping_fbo);
+
+        glUniform1i(glGetUniformLocation(program, "uPosition_weight"), state.bf_position_weight);
+        glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
+        glUniform1f(glGetUniformLocation(program, "uPosition_sigma"), position_sigma);
+        glUniform1i(glGetUniformLocation(program, "uNormal_weight"), state.bf_normal_weight);
+        glUniform1i(glGetUniformLocation(program, "uNormal"), gl_geometric_normal_texture_unit);
+        glUniform1f(glGetUniformLocation(program, "uNormal_sigma"), normal_sigma);
 
         glUniform2fv(glGetUniformLocation(program, "uPixel_size"), 1, &pixel_size.x);
         glUniform1ui(glGetUniformLocation(program, "uKernel_dim"), kernel.size());
@@ -1196,12 +1207,19 @@ void Renderer::render(const uint32_t delta) {
         glUseProgram(program);
         glBindFramebuffer(GL_FRAMEBUFFER, gl_bf_pong_fbo);
 
+        glUniform1i(glGetUniformLocation(program, "uPosition_weight"), state.bf_position_weight);
+        glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
+        glUniform1f(glGetUniformLocation(program, "uPosition_sigma"), position_sigma);
+        glUniform1i(glGetUniformLocation(program, "uNormal_weight"), state.bf_normal_weight);
+        glUniform1i(glGetUniformLocation(program, "uNormal"), gl_geometric_normal_texture_unit);
+        glUniform1f(glGetUniformLocation(program, "uNormal_sigma"), normal_sigma);
+
         glUniform2fv(glGetUniformLocation(program, "uPixel_size"), 1, &pixel_size.x);
         glUniform1ui(glGetUniformLocation(program, "uKernel_dim"), kernel.size());
         glUniform1fv(glGetUniformLocation(program, "uKernel"), kernel.size(), kernel.data());
 
         glUniform1i(glGetUniformLocation(program, "uInput"), gl_bf_ping_out_texture_unit);
-        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_pong_out_texture, 0);
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_pong_out_texture, 0); // FIXME: 'This does not change any OpenGL state (from Nvidia Nsights)'
 
         glViewport(0, 0, screen.width / div, screen.height / div);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
