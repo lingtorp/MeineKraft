@@ -58,6 +58,12 @@ private:
 
   /// View frustum culling shader
   ComputeShader* cull_shader = nullptr;
+
+  /// Lighting application pass related
+  Shader* lighting_application_shader = nullptr;
+  uint32_t gl_lighting_application_fbo;
+  uint32_t gl_lighting_application_texture;
+  uint32_t gl_lighting_application_texture_unit;
   
   /// Geometry pass related
   uint32_t gl_depth_fbo = 0;
@@ -87,15 +93,6 @@ private:
   uint32_t gl_voxelization_fbo = 0;
   ComputeShader* voxelization_opacity_norm_shader = nullptr;
 
-  // Compute VCT pass related
-  ComputeShader* vct_compute_shader = nullptr;
-  uint32_t gl_vct_compute_image_unit = 0;      // Bound to gl_lightning_texture
-
-  // Bilateral filtering compute shader subpass related
-  ComputeShader* vct_bf_compute_shader = nullptr;
-  uint32_t gl_vct_bf_in_texture = 0;
-  uint32_t gl_vct_compute_bf_image_unit = 0;
-
   // Rasterization based VCT pass related
   Shader* vct_shader = nullptr;
   uint32_t gl_vct_fbo = 0;
@@ -105,7 +102,7 @@ private:
   uint32_t gl_vct_diffuse_cones_ssbo = 0;
   uint8_t* gl_vct_diffuse_cones_ssbo_ptr = nullptr;
 
-  // Bilateral filtering rasterization shader subpass related
+  // Bilateral filtering rasterization shader pass related
   Shader* bf_ping_shader = nullptr;
   Shader* bf_pong_shader = nullptr;
   uint32_t gl_bf_vao = 0;

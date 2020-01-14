@@ -589,31 +589,6 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
   }
 
-  /// Voxel cone tracing compute pass
-  {
-    const std::string includes = Filesystem::read_file(Filesystem::base + "shaders/voxel-cone-tracing-utils.glsl");
-    vct_compute_shader = new ComputeShader(Filesystem::base + "shaders/voxel-cone-tracing.comp.glsl",
-                                                               std::vector{includes});
-    gl_vct_compute_image_unit = get_next_free_image_unit();
-  }
-
-  /// Bilateral filtering compute pass
-  {
-    // NOTE: Include order matters
-    const std::string include0 = Filesystem::read_file(Filesystem::base + "shaders/voxel-cone-tracing-utils.glsl");
-    const std::string include1 = Filesystem::read_file(Filesystem::base + "shaders/bilateral-filtering-utils.glsl");
-    vct_bf_compute_shader = new ComputeShader(Filesystem::base + "shaders/bf.comp.glsl",
-                                              std::vector{include0 + include1});
-    gl_vct_compute_bf_image_unit = get_next_free_image_unit();
-
-    glGenTextures(1, &gl_vct_bf_in_texture);
-    glBindTexture(GL_TEXTURE_2D, gl_vct_bf_in_texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, screen.width, screen.height, 0, GL_RGBA, GL_FLOAT, nullptr);
-    glObjectLabel(GL_TEXTURE, gl_vct_bf_in_texture, -1, "Bilateral filtering input texture");
-  }
-
   /// Bilateral filtering pass
   {
     bf_ping_shader = new Shader(Filesystem::base + "shaders/generic-passthrough.vert.glsl",
@@ -700,6 +675,39 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
       if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
         Log::error("Bilateral filtering pong FBO not complete"); exit(-1);
       }
+    }
+  }
+
+  /// Lighting application pass
+  {
+    lighting_application_shader = new Shader(Filesystem::base + "shaders/generic-passthrough.vert.glsl",
+                                             Filesystem::base + "shaders/lighting-application.frag.glsl");
+
+    const auto [ok, msg] = lighting_application_shader->compile();
+    if (!ok) {
+      Log::error(msg); exit(-1);
+    }
+
+    const uint32_t program = lighting_application_shader->gl_program;
+    glUseProgram(program);
+    glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
+    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
+
+    GLuint gl_vbo = 0;
+    glGenBuffers(1, &gl_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, gl_vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(Primitive::quad), &Primitive::quad, GL_STATIC_DRAW);
+
+    glGenFramebuffers(1, &gl_bf_pong_fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, gl_bf_pong_fbo);
+
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_ambient_radiance_texture, 0); // NOTE: Use w/e temp. texture for FBO completeness
+
+    uint32_t fbo_attachments[1] = { GL_COLOR_ATTACHMENT0 };
+    glDrawBuffers(1, fbo_attachments);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+      Log::error("Lighting application FBO not complete"); exit(-1);
     }
   }
 
@@ -1027,13 +1035,8 @@ void Renderer::render(const uint32_t delta) {
   /// Voxel cone tracing pass
   {
     uint32_t program = 0;
-    if (state.vct_compute) {
-      pass_started("Voxel cone tracing compute pass");
-      program = vct_compute_shader->gl_program;
-    } else {
-      pass_started("Voxel cone tracing pass");
-      program = vct_shader->gl_program;
-    }
+    pass_started("Voxel cone tracing pass");
+    program = vct_shader->gl_program;
 
     glUseProgram(program);
     glBindFramebuffer(GL_FRAMEBUFFER, gl_vct_fbo);
@@ -1103,139 +1106,93 @@ void Renderer::render(const uint32_t delta) {
     glUniform1i(glGetUniformLocation(program, "uTangent"), gl_tangent_texture_unit);
     glUniform1i(glGetUniformLocation(program, "uEmissive"), gl_emissive_texture_unit); 
 
-    if (state.vct_compute) {
-      glClearTexImage(gl_vct_texture, 0, GL_RGBA, GL_FLOAT, nullptr);
-
-      const uint32_t nth_pixel = state.vct_compute_nth_pixel;
-      glUniform1ui(glGetUniformLocation(program, "uNth_pixel"), nth_pixel);
-
-      const uint32_t vct_texture = state.vct_compute_bilateral_filter ? gl_vct_bf_in_texture : gl_vct_texture;
-      glBindImageTexture(gl_vct_compute_image_unit, vct_texture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA8);
-      glUniform1i(glGetUniformLocation(program, "uScreen"), gl_vct_compute_image_unit);
-
-      const auto space = Vec2<uint32_t>(screen.width / nth_pixel, screen.height / nth_pixel);
-      glDispatchCompute(space.x, space.y, 1);
-
-      glMemoryBarrier(GL_COMMAND_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
-    } else {
-      glViewport(0, 0, screen.width / div, screen.height / div);
-      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-      glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-      glViewport(0, 0, screen.width, screen.height);
-    }
+    glViewport(0, 0, screen.width / div, screen.height / div);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glViewport(0, 0, screen.width, screen.height);
 
     last_executed_fbo = gl_vct_fbo;
 
     pass_ended();
   }
 
-  {
-    if (state.vct_compute && state.vct_compute_bilateral_filter) {
-      pass_started("Bilateral filtering compute subpass");
+  if (state.bilateral_filtering.enabled) {
+    pass_started("Bilateral filtering pass");
 
-      const auto program = vct_bf_compute_shader->gl_program;
+    const Vec2f pixel_size = Vec2(1.0f / screen.width, 1.0f / screen.height);
+
+    // Declare input & output texture
+    const uint32_t gl_ping_in_texture_unit  = gl_ambient_radiance_texture_unit;
+    const uint32_t gl_pong_out_texture = gl_ambient_radiance_texture;
+
+    const float position_sigma = 2.0f; // TODO: How to set this value or tune it?
+    const float normal_sigma = 2.0f;   // TODO: How to set this value or tune it?
+
+    // TODO: Reduce to one single shader, reuse that one twice instead
+    // Ping
+    {
+      const auto program = bf_ping_shader->gl_program;
       glUseProgram(program);
+      glBindFramebuffer(GL_FRAMEBUFFER, gl_bf_ping_fbo);
 
-      glUniform1ui(glGetUniformLocation(program, "uScreen_width"), screen.width);
-      glUniform1ui(glGetUniformLocation(program, "uScreen_height"), screen.height);
+      glUniform1i(glGetUniformLocation(program, "uPosition_weight"), state.bilateral_filtering.position_weight);
+      glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
+      glUniform1f(glGetUniformLocation(program, "uPosition_sigma"), position_sigma);
+      glUniform1i(glGetUniformLocation(program, "uNormal_weight"), state.bilateral_filtering.normal_weight);
+      glUniform1i(glGetUniformLocation(program, "uNormal"), gl_geometric_normal_texture_unit);
+      glUniform1f(glGetUniformLocation(program, "uNormal_sigma"), normal_sigma);
 
-      const uint32_t kernel_size = state.vct_compute_bf_kernel_size;
-      glUniform1ui(glGetUniformLocation(program, "uKernel_size"), kernel_size);
+      glUniform2fv(glGetUniformLocation(program, "uPixel_size"), 1, &pixel_size.x);
+      glUniform1ui(glGetUniformLocation(program, "uKernel_dim"), kernel.size());
+      glUniform1fv(glGetUniformLocation(program, "uKernel"), kernel.size(), kernel.data());
 
-      glUniform1f(glGetUniformLocation(program, "uSigmaSpatial"), state.vct_compute_spatial_sigma);
-      glUniform1f(glGetUniformLocation(program, "uSigmaRange"), state.vct_compute_range_sigma);
+      glUniform1i(glGetUniformLocation(program, "uInput"), gl_ping_in_texture_unit);
+      // glUniform1i(glGetUniformLocation(program, "uOutput"), 0); // NOTE: Default to 0 in shader
 
-      const uint32_t nth_pixel = state.vct_compute_nth_pixel;
-      glUniform1ui(glGetUniformLocation(program, "uNth_pixel"), nth_pixel);
-
-      glBindImageTexture(gl_vct_compute_bf_image_unit, gl_vct_bf_in_texture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA8);
-      glUniform1i(glGetUniformLocation(program, "uInput"), gl_vct_compute_bf_image_unit);
-
-      glBindImageTexture(gl_vct_compute_image_unit, gl_vct_texture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA8);
-      glUniform1i(glGetUniformLocation(program, "uOutput"), gl_vct_compute_image_unit);
-
-      const auto space = Vec2<uint32_t>(screen.width / nth_pixel, screen.height / nth_pixel);
-      glDispatchCompute(space.x, space.y, 1);
-
-      pass_ended();
+      glViewport(0, 0, screen.width / div, screen.height / div);
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+      glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+      glViewport(0, 0, screen.width, screen.height);
     }
 
-    if (!state.vct_compute && state.vct_compute_bilateral_filter) {
-      pass_started("Bilateral filtering subpass");
+    glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT); // Due to incoherent mem. access need to sync read and usage of voxel data
 
-      const Vec2f pixel_size = Vec2(1.0f / screen.width, 1.0f / screen.height);
+    // Pong
+    {
+      const auto program = bf_pong_shader->gl_program;
+      glUseProgram(program);
+      glBindFramebuffer(GL_FRAMEBUFFER, gl_bf_pong_fbo);
 
-      // Declare input & output texture
-      const uint32_t gl_ping_in_texture_unit  = gl_ambient_radiance_texture_unit;
-      const uint32_t gl_pong_out_texture = gl_ambient_radiance_texture;
+      glUniform1i(glGetUniformLocation(program, "uPosition_weight"), state.bilateral_filtering.position_weight);
+      glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
+      glUniform1f(glGetUniformLocation(program, "uPosition_sigma"), position_sigma);
+      glUniform1i(glGetUniformLocation(program, "uNormal_weight"), state.bilateral_filtering.normal_weight);
+      glUniform1i(glGetUniformLocation(program, "uNormal"), gl_geometric_normal_texture_unit);
+      glUniform1f(glGetUniformLocation(program, "uNormal_sigma"), normal_sigma);
 
-      const float position_sigma = 2.0f; // TODO: How to set this value or tune it?
-      const float normal_sigma = 2.0f;   // TODO: How to set this value or tune it?
+      glUniform2fv(glGetUniformLocation(program, "uPixel_size"), 1, &pixel_size.x);
+      glUniform1ui(glGetUniformLocation(program, "uKernel_dim"), kernel.size());
+      glUniform1fv(glGetUniformLocation(program, "uKernel"), kernel.size(), kernel.data());
 
-      // TODO: Reduce to one single shader, reuse that one twice instead
-      // Ping
-      {
-        const auto program = bf_ping_shader->gl_program;
-        glUseProgram(program);
-        glBindFramebuffer(GL_FRAMEBUFFER, gl_bf_ping_fbo);
+      glUniform1i(glGetUniformLocation(program, "uInput"), gl_bf_ping_out_texture_unit);
+      glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_pong_out_texture, 0); // FIXME: 'This does not change any OpenGL state (from Nvidia Nsights)'
 
-        glUniform1i(glGetUniformLocation(program, "uPosition_weight"), state.bf_position_weight);
-        glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
-        glUniform1f(glGetUniformLocation(program, "uPosition_sigma"), position_sigma);
-        glUniform1i(glGetUniformLocation(program, "uNormal_weight"), state.bf_normal_weight);
-        glUniform1i(glGetUniformLocation(program, "uNormal"), gl_geometric_normal_texture_unit);
-        glUniform1f(glGetUniformLocation(program, "uNormal_sigma"), normal_sigma);
-
-        glUniform2fv(glGetUniformLocation(program, "uPixel_size"), 1, &pixel_size.x);
-        glUniform1ui(glGetUniformLocation(program, "uKernel_dim"), kernel.size());
-        glUniform1fv(glGetUniformLocation(program, "uKernel"), kernel.size(), kernel.data());
-
-        glUniform1i(glGetUniformLocation(program, "uInput"), gl_ping_in_texture_unit);
-        // glUniform1i(glGetUniformLocation(program, "uOutput"), 0); // NOTE: Default to 0 in shader
-
-        glViewport(0, 0, screen.width / div, screen.height / div);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-        glViewport(0, 0, screen.width, screen.height);
-      }
-
-      glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT); // Due to incoherent mem. access need to sync read and usage of voxel data
-
-      // Pong
-      {
-        const auto program = bf_pong_shader->gl_program;
-        glUseProgram(program);
-        glBindFramebuffer(GL_FRAMEBUFFER, gl_bf_pong_fbo);
-
-        glUniform1i(glGetUniformLocation(program, "uPosition_weight"), state.bf_position_weight);
-        glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
-        glUniform1f(glGetUniformLocation(program, "uPosition_sigma"), position_sigma);
-        glUniform1i(glGetUniformLocation(program, "uNormal_weight"), state.bf_normal_weight);
-        glUniform1i(glGetUniformLocation(program, "uNormal"), gl_geometric_normal_texture_unit);
-        glUniform1f(glGetUniformLocation(program, "uNormal_sigma"), normal_sigma);
-
-        glUniform2fv(glGetUniformLocation(program, "uPixel_size"), 1, &pixel_size.x);
-        glUniform1ui(glGetUniformLocation(program, "uKernel_dim"), kernel.size());
-        glUniform1fv(glGetUniformLocation(program, "uKernel"), kernel.size(), kernel.data());
-
-        glUniform1i(glGetUniformLocation(program, "uInput"), gl_bf_ping_out_texture_unit);
-        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_pong_out_texture, 0); // FIXME: 'This does not change any OpenGL state (from Nvidia Nsights)'
-
-        glViewport(0, 0, screen.width / div, screen.height / div);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-        glViewport(0, 0, screen.width, screen.height);
-      }
-
-      last_executed_fbo = gl_bf_pong_fbo;
-
-      pass_ended();
+      glViewport(0, 0, screen.width / div, screen.height / div);
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+      glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+      glViewport(0, 0, screen.width, screen.height);
     }
+
+    last_executed_fbo = gl_bf_pong_fbo;
+
+    pass_ended();
   }
 
   /// Lighting application pass
   {
-
+    pass_started("Lighting application pass");
+    // TODO: Implement
+    pass_ended();
   }
 
   /// Copy final pass into default FBO
