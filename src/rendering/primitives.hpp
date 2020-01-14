@@ -321,14 +321,20 @@ enum class ShadowAlgorithm : uint8_t {
 
 /// Represents the state of the Render, used for ImGUI debug panes
 struct RenderState {
-	uint32_t camera_selection = 0;
-
+  // General renderer system information
   uint64_t frame           = 0;
   uint64_t entities        = 0;
   uint64_t graphic_batches = 0;
   uint64_t draw_calls      = 0;
+
+  // Global illumination related
   bool shadowmapping = true;
   bool normalmapping = true;
+  bool direct_lighting = true;
+  bool indirect_lighting = true;
+  bool diffuse_lighting = true;
+  bool specular_lighting = true;
+  bool ambient_lighting  = true;
 
   // Voxel cone tracing related
   static const uint32_t MAX_VCT_DIFFUSE_CONES = 12;
@@ -338,27 +344,21 @@ struct RenderState {
   float metallic_aperature   = 0.1f; // 10 deg specular cone from [Crassin11]
   bool voxelize = true;              // NOTE: Toggled by the Renderer (a.k.a executed once)
   bool conservative_rasterization = false;
-  bool direct_lighting = true;
-  bool indirect_lighting = true;
-  bool diffuse_lighting = true;
-  bool specular_lighting = true;
-  bool ambient_lighting  = true;
   bool always_voxelize = false;
   uint8_t shadow_algorithm = 0; // See enum class ShadowAlgorithm
   float shadow_bias = 0.00025f;
   int num_diffuse_cones = 6;  // [Crassin11], [Yeu13] suggests 5
 
-  // Voxel cone tracing compute related
-  bool vct_compute = false;                 // Use VCT compute or fullscreen fragment shader
-  int vct_compute_nth_pixel = 4;            // Used in VCT compute shader (shades every Nth pixel)
-  int vct_compute_bf_kernel_size = 4;
-  bool vct_compute_bilateral_filter = true; // Use bilateral filtering subpass to produce a smooth image
-  float vct_compute_spatial_sigma = 0.2;    // Variance used in spatial Gaussian kernel
-  float vct_compute_range_sigma = 0.2;      // Variance used in range Gaussian kernel
-
   // Bilateral filtering related
-  bool bf_position_weight = true; // Enable position as a weight in filtering
-  bool bf_normal_weight = false;  // Enable normals as a weight in filtering
+  struct {
+    bool enabled = true;            // Bilateral filtering pass to filter the radiance
+    bool direct_enabled = false;    // Enable filtering of the direct radiance
+    bool ambient_enabled = true;    // Enable filtering of the ambient radiance
+    bool diffuse_enabled = true;    // Enable filtering of the diffuse radiance
+    bool specular_enabled = true;   // Enable filtering of the specular radiance
+    bool position_weight = true;    // Enable position as a weight in filtering
+    bool normal_weight = false;     // Enable normals as a weight in filtering
+  } bilateral_filtering;
 
   // Voxel visualization related
   // FIXME: Voxel visualization does not work ...
