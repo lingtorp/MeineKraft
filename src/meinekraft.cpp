@@ -15,6 +15,8 @@
 #include "rendering/graphicsbatch.hpp"
 #include "util/config.hpp"
 
+// TODO: Update try to ImGui some day
+
 // ImGui global GUI settings
 struct {
   bool render_system_window = true;  // Render system information and config. window
@@ -27,6 +29,19 @@ struct {
   bool help_window = false;          // TODO: Helpful keyboard shortcuts, displayed on first launch
   bool about_window = false;         // TODO: Displays some information about the application
 } Gui;
+
+// Helper to display a little (?) mark which shows a tooltip when hovered.
+// In your own code you may want to display an actual icon if you are using a merged icon fonts (see docs/FONTS.txt)
+static void ImGui_HelpMarker(const std::string& str) {
+  ImGui::TextDisabled("(?)");
+  if (ImGui::IsItemHovered()) {
+    ImGui::BeginTooltip();
+    ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+    ImGui::TextUnformatted(str.c_str());
+    ImGui::PopTextWrapPos();
+    ImGui::EndTooltip();
+  }
+}
 
 void imgui_styling() {
   ImGuiStyle* style = &ImGui::GetStyle();
@@ -293,6 +308,11 @@ void MeineKraft::mainloop() {
           ImGui::EndMainMenuBar();
         }
 
+        if (Gui.renderer.pipeline_window) {
+          ImGui::Begin("Graphics Pipeline");
+          // TODO: Implement ... timings, pipeline stages, etc
+        }
+
         // Render system
         if (Gui.render_system_window) {
           ImGui::Begin("Render system", &Gui.render_system_window);
@@ -307,16 +327,11 @@ void MeineKraft::mainloop() {
           ImGui::SameLine();
           ImGui::Text("Frame: %lu", renderer->state.frame);
           ImGui::Text("Resolution: (%u, %u)", renderer->screen.width, renderer->screen.height);
-          // TODO: Change resolution
-          // TODO: Memory usage, textures, etc
+          ImGui::Text("Draw calls per frame: %u", renderer->state.draw_calls);
+          // TODO: Change resolution, memory usage, textures, etc
 
           ImGui::InputFloat("Shadow bias", &renderer->state.shadow_bias);
-          ImGui::Checkbox("Normal mapping", &renderer->state.normalmapping);
-
-          if (Gui.renderer.pipeline_window) {
-            ImGui::Begin("Graphics Pipeline");
-            // TODO: Implement ... timings, pipeline stages, etc
-          }
+          ImGui::Checkbox("Normal mapping", &renderer->state.lighting.normalmapping);
 
           if (ImGui::CollapsingHeader("Voxelization", ImGuiTreeNodeFlags_DefaultOpen)) {
             if (ImGui::Button("Voxelize")) {
@@ -329,20 +344,18 @@ void MeineKraft::mainloop() {
           }
 
           if (ImGui::CollapsingHeader("Voxel cone tracing", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::Checkbox("Direct", &renderer->state.direct_lighting);
+            ImGui::Checkbox("Direct", &renderer->state.lighting.direct);
             ImGui::SameLine();
-            ImGui::Checkbox("Indirect", &renderer->state.indirect_lighting);
+            ImGui::Checkbox("Indirect", &renderer->state.lighting.indirect);
 
-            ImGui::Checkbox("Diffuse", &renderer->state.diffuse_lighting);
+            ImGui::Checkbox("Specular", &renderer->state.lighting.specular);
             ImGui::SameLine();
-            ImGui::Checkbox("Specular", &renderer->state.specular_lighting);
+            ImGui::Checkbox("Ambient", &renderer->state.lighting.ambient);
             ImGui::SameLine();
-            ImGui::Checkbox("Ambient", &renderer->state.ambient_lighting);
+            ImGui_HelpMarker("Note ambient is only available when 'Indirect' is used.");
 
             ImGui::SliderInt("# diffuse cones", &renderer->state.num_diffuse_cones, 1, RenderState::MAX_VCT_DIFFUSE_CONES);
 
-            ImGui::InputFloat("Roughness", &renderer->state.roughness);
-            ImGui::InputFloat("Metallic", &renderer->state.metallic);
             ImGui::InputFloat("Roughness aperature (deg.)", &renderer->state.roughness_aperature);
             ImGui::InputFloat("Metallic aperature (deg.)", &renderer->state.metallic_aperature);
           }
@@ -351,11 +364,13 @@ void MeineKraft::mainloop() {
             ImGui::Checkbox("Enabled", &renderer->state.bilateral_filtering.enabled);
 
             ImGui::Text("Filter:");
-            ImGui::Checkbox("Direct", &renderer->state.bilateral_filtering.direct_enabled);
+            ImGui::Checkbox("Direct##filtering", &renderer->state.bilateral_filtering.direct_enabled);
             ImGui::SameLine();
-            ImGui::Checkbox("Ambient", &renderer->state.bilateral_filtering.ambient_enabled);
+            ImGui::Checkbox("Indirect##filtering", &renderer->state.bilateral_filtering.indirect_enabled);
+
+            ImGui::Checkbox("Specular##filtering", &renderer->state.bilateral_filtering.specular_enabled);
             ImGui::SameLine();
-            ImGui::Checkbox("Specular", &renderer->state.bilateral_filtering.specular_enabled);
+            ImGui::Checkbox("Ambient##filtering", &renderer->state.bilateral_filtering.ambient_enabled);
 
             ImGui::Text("Weights:");
             ImGui::Checkbox("Position", &renderer->state.bilateral_filtering.position_weight);
@@ -370,7 +385,7 @@ void MeineKraft::mainloop() {
         if (Gui.scene_graph_window) {
           ImGui::Begin("Scene graph", &Gui.scene_graph_window);
 
-          ImGui::Text("Entities: %lu", renderer->state.entities);
+          ImGui::Text("Entities: %u", renderer->state.entities);
 
           if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::PushItemWidth(200.0f);
