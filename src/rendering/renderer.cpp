@@ -1129,13 +1129,11 @@ void Renderer::render(const uint32_t delta) {
     pass_ended();
   }
 
-  const Vec2f pixel_size = Vec2(1.0f / screen.width, 1.0f / screen.height);
   if (state.bilateral_filtering.enabled) {
     pass_started("Bilateral filtering pass");
 
     // Declare input & output texture
-    const uint32_t ping_in_texture_unit  = gl_ambient_radiance_texture_unit;
-    const uint32_t pong_out_texture_unit = gl_ambient_radiance_texture_unit;
+    const uint32_t ping_pong_in_texture_unit  = gl_ambient_radiance_texture_unit;
 
     const float position_sigma = 2.0f; // FIXME: How to set this value or tune it?
     const float normal_sigma = 2.0f;   // FIXME: How to set this value or tune it?
@@ -1154,11 +1152,12 @@ void Renderer::render(const uint32_t delta) {
       glUniform1i(glGetUniformLocation(program, "uNormal"), gl_geometric_normal_texture_unit);
       glUniform1f(glGetUniformLocation(program, "uNormal_sigma"), normal_sigma);
 
+      const Vec2f pixel_size = Vec2(1.0f / screen.width, 1.0f / screen.height);
       glUniform2fv(glGetUniformLocation(program, "uPixel_size"), 1, &pixel_size.x);
       glUniform1ui(glGetUniformLocation(program, "uKernel_dim"), kernel.size());
       glUniform1fv(glGetUniformLocation(program, "uKernel"), kernel.size(), kernel.data());
 
-      glUniform1i(glGetUniformLocation(program, "uInput"), ping_in_texture_unit);
+      glUniform1i(glGetUniformLocation(program, "uInput"), ping_pong_in_texture_unit);
       // glUniform1i(glGetUniformLocation(program, "uOutput"), 0); // NOTE: Default to 0 in shader
 
       glViewport(0, 0, screen.width / div, screen.height / div);
@@ -1182,12 +1181,13 @@ void Renderer::render(const uint32_t delta) {
       glUniform1i(glGetUniformLocation(program, "uNormal"), gl_geometric_normal_texture_unit);
       glUniform1f(glGetUniformLocation(program, "uNormal_sigma"), normal_sigma);
 
+      const Vec2f pixel_size = Vec2(1.0f / screen.width, 1.0f / screen.height);
       glUniform2fv(glGetUniformLocation(program, "uPixel_size"), 1, &pixel_size.x);
       glUniform1ui(glGetUniformLocation(program, "uKernel_dim"), kernel.size());
       glUniform1fv(glGetUniformLocation(program, "uKernel"), kernel.size(), kernel.data());
 
       glUniform1i(glGetUniformLocation(program, "uInput"), gl_bf_ping_out_texture_unit);
-      glUniform1i(glGetUniformLocation(program, "uOutput"), pong_out_texture_unit);
+      glUniform1i(glGetUniformLocation(program, "uOutput"), ping_pong_in_texture_unit);
 
       glViewport(0, 0, screen.width / div, screen.height / div);
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -1203,12 +1203,12 @@ void Renderer::render(const uint32_t delta) {
   /// TODO: Lighting application pass
   {
     pass_started("Lighting application pass");
-    // TODO: Implement
-    // uIndirect toggle from Renderstate
+
     const auto program = lighting_application_shader->gl_program;
     glUseProgram(program);
     glBindFramebuffer(GL_FRAMEBUFFER, gl_lighting_application_fbo);
 
+    const Vec2f pixel_size = Vec2(1.0f / screen.width, 1.0f / screen.height);
     glUniform2fv(glGetUniformLocation(program, "uPixel_size"), 1, &pixel_size.x);
     glUniform1i(glGetUniformLocation(program, "uDiffuse"), gl_diffuse_texture_unit);
 
