@@ -319,27 +319,28 @@ enum class ShadowAlgorithm : uint8_t {
   VCT = 2                        // Voxel cone tracing based shadowing
 };
 
-/// Represents the state of the Render, used for ImGUI debug panes
+/// Represents the state of the Render system, used for ImGUI debug panes
 struct RenderState {
   // General renderer system information
   uint64_t frame           = 0;
-  uint64_t entities        = 0;
-  uint64_t graphic_batches = 0;
-  uint64_t draw_calls      = 0;
+  uint32_t entities        = 0;
+  uint32_t graphic_batches = 0;
+  uint32_t draw_calls      = 0; // TODO: Hook these two up and use them
+  uint32_t render_passes   = 0; // TODO: Hook these two up and use them
 
   // Global illumination related
-  bool shadowmapping = true;
-  bool normalmapping = true;
-  bool direct_lighting = true;
-  bool indirect_lighting = true;
-  bool diffuse_lighting = true;
-  bool specular_lighting = true;
-  bool ambient_lighting  = true;
+  struct {
+    bool shadowmapping = true;
+    bool normalmapping = true;
+    bool indirect = true;
+    bool ambient  = true;      // Dependent on 'indirect' when VCT is used as GI algorithm
+    bool direct = true;
+    bool specular = true;
+    bool emissive = true;
+  } lighting;
 
   // Voxel cone tracing related
   static const uint32_t MAX_VCT_DIFFUSE_CONES = 12;
-  float roughness = 1.0f;
-  float metallic = 1.0f;
   float roughness_aperature = 60.0f; // 60 deg diffuse cone from [Rauwendaal, Crassin11]
   float metallic_aperature   = 0.1f; // 10 deg specular cone from [Crassin11]
   bool voxelize = true;              // NOTE: Toggled by the Renderer (a.k.a executed once)
@@ -354,8 +355,8 @@ struct RenderState {
     bool enabled = true;            // Bilateral filtering pass to filter the radiance
     bool direct_enabled = false;    // Enable filtering of the direct radiance
     bool ambient_enabled = true;    // Enable filtering of the ambient radiance
-    bool diffuse_enabled = true;    // Enable filtering of the diffuse radiance
-    bool specular_enabled = true;   // Enable filtering of the specular radiance
+    bool indirect_enabled = false;  // Enable filtering of the indirect radiance
+    bool specular_enabled = false;  // Enable filtering of the specular radiance
     bool position_weight = true;    // Enable position as a weight in filtering
     bool normal_weight = false;     // Enable normals as a weight in filtering
   } bilateral_filtering;
@@ -380,9 +381,11 @@ static auto HD      = Resolution{1280, 720};
 static auto FULL_HD = Resolution{1920, 1080};
 
 struct DirectionalLight {
+  Vec3f intensity;
   Vec3f position;
   Vec3f direction;
-  DirectionalLight(const Vec3f& position, const Vec3f& direction): position(position), direction(direction) {}
+  // TODO: Find a typical Directional light intensity
+  DirectionalLight(const Vec3f& position, const Vec3f& direction): position(position), direction(direction), intensity(Vec3f(1.0f)) {}
 
   friend std::ostream &operator<<(std::ostream &os, const DirectionalLight& l) {
     return os << "DirectionalLight(direction: " << l.direction << ", postiion: " << l.position << ")";

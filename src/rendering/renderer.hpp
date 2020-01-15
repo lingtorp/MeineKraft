@@ -97,7 +97,6 @@ private:
   Shader* vct_shader = nullptr;
   uint32_t gl_vct_fbo = 0;
   uint32_t gl_vct_vao = 0;
-  uint32_t gl_vct_texture = 0;  // texture unit the same as gl_lightning_texture_unit
 
   uint32_t gl_vct_diffuse_cones_ssbo = 0;
   uint8_t* gl_vct_diffuse_cones_ssbo_ptr = nullptr;
@@ -156,14 +155,17 @@ private:
   uint32_t gl_shading_model_texture_unit = 0;
   uint32_t gl_shading_model_texture = 0;
   // Radiance textures
-  uint32_t gl_diffuse_radiance_texture_unit = 0;
-  uint32_t gl_diffuse_radiance_texture = 0;
+  uint32_t gl_indirect_radiance_texture_unit = 0;
+  uint32_t gl_indirect_radiance_texture = 0;
 
   uint32_t gl_ambient_radiance_texture_unit = 0;
   uint32_t gl_ambient_radiance_texture = 0;
 
   uint32_t gl_specular_radiance_texture_unit = 0;
   uint32_t gl_specular_radiance_texture = 0;
+
+  uint32_t gl_direct_radiance_texture_unit = 0;
+  uint32_t gl_direct_radiance_texture = 0;
 
   //  Environment map
   Texture environment_map; 

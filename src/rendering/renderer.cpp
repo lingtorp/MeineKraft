@@ -333,7 +333,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   glDrawBuffers(8, depth_attachments);
 
   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-    Log::error("Lightning framebuffer status not complete.");
+    Log::error("GBuffer framebuffer status not complete.");
   }
 
   /// Create SSBO for the PointLights
@@ -478,7 +478,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_voxel_visualization_texture, 0);
     glObjectLabel(GL_TEXTURE, gl_voxel_visualization_texture, -1, "Voxel visualization texture");
 
-    uint32_t fbo_attachments[1] = {GL_COLOR_ATTACHMENT0};
+    const uint32_t fbo_attachments[1] = {GL_COLOR_ATTACHMENT0};
     glDrawBuffers(1, fbo_attachments);
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
@@ -530,34 +530,26 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glGenFramebuffers(1, &gl_vct_fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, gl_vct_fbo);
 
-    glGenTextures(1, &gl_vct_texture);
-    glBindTexture(GL_TEXTURE_2D, gl_vct_texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, screen.width, screen.height, 0, GL_RGBA, GL_FLOAT, nullptr);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_vct_texture, 0);
-    glObjectLabel(GL_TEXTURE, gl_vct_texture, -1, "VCT lighting texture");
-
-    // Global diffuse radiance map
-    gl_diffuse_radiance_texture_unit = get_next_free_texture_unit();
-    glActiveTexture(GL_TEXTURE0 + gl_diffuse_radiance_texture_unit);
-    glGenTextures(1, &gl_diffuse_radiance_texture);
-    glBindTexture(GL_TEXTURE_2D, gl_diffuse_radiance_texture);
+    // Global indirect radiance map
+    gl_indirect_radiance_texture_unit = get_next_free_texture_unit();
+    glActiveTexture(GL_TEXTURE0 + gl_indirect_radiance_texture_unit);
+    glGenTextures(1, &gl_indirect_radiance_texture);
+    glBindTexture(GL_TEXTURE_2D, gl_indirect_radiance_texture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, gl_diffuse_radiance_texture, 0);
-    glObjectLabel(GL_TEXTURE, gl_diffuse_radiance_texture, -1, "GBuffer diffuse radiance texture");
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_indirect_radiance_texture, 0);
+    glObjectLabel(GL_TEXTURE, gl_indirect_radiance_texture, -1, "GBuffer indirect radiance texture");
 
     // Global ambient radiance map
     gl_ambient_radiance_texture_unit = get_next_free_texture_unit();
     glActiveTexture(GL_TEXTURE0 + gl_ambient_radiance_texture_unit);
     glGenTextures(1, &gl_ambient_radiance_texture);
     glBindTexture(GL_TEXTURE_2D, gl_ambient_radiance_texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R16F, screen.width, screen.height, 0, GL_RED, GL_FLOAT, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, gl_ambient_radiance_texture, 0);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, gl_ambient_radiance_texture, 0);
     glObjectLabel(GL_TEXTURE, gl_ambient_radiance_texture, -1, "GBuffer ambient radiance texture");
 
     // Global specular radiance map
@@ -568,14 +560,25 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, gl_specular_radiance_texture, 0);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, gl_specular_radiance_texture, 0);
     glObjectLabel(GL_TEXTURE, gl_specular_radiance_texture, -1, "GBuffer specular radiance texture");
 
-    uint32_t fbo_attachments[4] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3 };
+    // Global direct radiance map
+    gl_direct_radiance_texture_unit = get_next_free_texture_unit();
+    glActiveTexture(GL_TEXTURE0 + gl_direct_radiance_texture_unit);
+    glGenTextures(1, &gl_direct_radiance_texture);
+    glBindTexture(GL_TEXTURE_2D, gl_direct_radiance_texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, gl_direct_radiance_texture, 0);
+    glObjectLabel(GL_TEXTURE, gl_direct_radiance_texture, -1, "GBuffer direct radiance texture");
+
+    const uint32_t fbo_attachments[4] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3 };
     glDrawBuffers(4, fbo_attachments);
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-      Log::error("VCT fbo not complete"); exit(-1); 
+      Log::error("VCT fbo not complete"); log_gl_error(); exit(-1);
     }
 
     glGenVertexArrays(1, &gl_vct_vao);
@@ -644,7 +647,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
       glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_bf_ping_out_texture, 0);
       glObjectLabel(GL_TEXTURE, gl_bf_ping_out_texture, -1, "Bilateral filtering ping output texture");
 
-      uint32_t fbo_attachments[1] = { GL_COLOR_ATTACHMENT0 };
+      const uint32_t fbo_attachments[1] = { GL_COLOR_ATTACHMENT0 };
       glDrawBuffers(1, fbo_attachments);
 
       if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
@@ -669,7 +672,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
 
       glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_ambient_radiance_texture, 0); // NOTE: Use w/e temp. texture for FBO completeness
 
-      uint32_t fbo_attachments[1] = { GL_COLOR_ATTACHMENT0 };
+      const uint32_t fbo_attachments[1] = { GL_COLOR_ATTACHMENT0 };
       glDrawBuffers(1, fbo_attachments);
 
       if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
@@ -682,6 +685,9 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   {
     lighting_application_shader = new Shader(Filesystem::base + "shaders/generic-passthrough.vert.glsl",
                                              Filesystem::base + "shaders/lighting-application.frag.glsl");
+
+    const std::string includes = Filesystem::read_file(Filesystem::base + "shaders/voxel-cone-tracing-utils.glsl");
+    lighting_application_shader->add(includes);
 
     const auto [ok, msg] = lighting_application_shader->compile();
     if (!ok) {
@@ -698,12 +704,23 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glBindBuffer(GL_ARRAY_BUFFER, gl_vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(Primitive::quad), &Primitive::quad, GL_STATIC_DRAW);
 
-    glGenFramebuffers(1, &gl_bf_pong_fbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, gl_bf_pong_fbo);
+    glGenFramebuffers(1, &gl_lighting_application_fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, gl_lighting_application_fbo);
 
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_ambient_radiance_texture, 0); // NOTE: Use w/e temp. texture for FBO completeness
+    gl_lighting_application_texture_unit = get_next_free_texture_unit();
+    glActiveTexture(GL_TEXTURE0 + gl_lighting_application_texture_unit);
 
-    uint32_t fbo_attachments[1] = { GL_COLOR_ATTACHMENT0 };
+    glGenTextures(1, &gl_lighting_application_texture);
+    glBindTexture(GL_TEXTURE_2D, gl_lighting_application_texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, screen.width, screen.height, 0, GL_RGBA, GL_FLOAT, nullptr);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_lighting_application_texture, 0);
+    glObjectLabel(GL_TEXTURE, gl_lighting_application_texture, -1, "Lighting application texture");
+
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_lighting_application_texture, 0);
+
+    const uint32_t fbo_attachments[1] = { GL_COLOR_ATTACHMENT0 };
     glDrawBuffers(1, fbo_attachments);
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
@@ -932,8 +949,8 @@ void Renderer::render(const uint32_t delta) {
       glBindImageTexture(gl_voxel_radiance_image_units[i], gl_voxel_radiance_textures[i], 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32UI);
       glBindImageTexture(gl_voxel_opacity_image_units[i], gl_voxel_opacity_textures[i], 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_RGBA8);
     }
-    glUniform1iv(glGetUniformLocation(program, "uVoxelRadiance"), NUM_CLIPMAPS, gl_voxel_radiance_image_units);
-    glUniform1iv(glGetUniformLocation(program, "uVoxelOpacity"), NUM_CLIPMAPS, gl_voxel_opacity_image_units);
+    glUniform1iv(glGetUniformLocation(program, "uVoxel_radiance"), NUM_CLIPMAPS, gl_voxel_radiance_image_units);
+    glUniform1iv(glGetUniformLocation(program, "uVoxel_opacity"), NUM_CLIPMAPS, gl_voxel_opacity_image_units);
 
     glDisable(GL_DEPTH_TEST);
     glDepthMask(GL_FALSE);
@@ -1013,8 +1030,8 @@ void Renderer::render(const uint32_t delta) {
       glBindImageTexture(gl_voxel_radiance_image_units[i], gl_voxel_radiance_textures[i], 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32UI);
       glBindImageTexture(gl_voxel_opacity_image_units[i], gl_voxel_opacity_textures[i], 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32UI);
     }
-    glUniform1iv(glGetUniformLocation(program, "uVoxelOpacity"), NUM_CLIPMAPS, gl_voxel_opacity_image_units);
-    glUniform1iv(glGetUniformLocation(program, "uVoxelRadiance"), NUM_CLIPMAPS, gl_voxel_radiance_image_units);
+    glUniform1iv(glGetUniformLocation(program, "uVoxel_opacity"), NUM_CLIPMAPS, gl_voxel_opacity_image_units);
+    glUniform1iv(glGetUniformLocation(program, "uVoxel_radiance"), NUM_CLIPMAPS, gl_voxel_radiance_image_units);
 
     Vec3f clipmap_aabb_mins[NUM_CLIPMAPS];
     for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
@@ -1031,33 +1048,31 @@ void Renderer::render(const uint32_t delta) {
     pass_ended();
   }
 
-  const size_t div = 1 ; // Downsample factor / fraction of the screen rendered
+  const size_t div = 1 ; // FIXME: Downsample factor / fraction of the screen rendered
   /// Voxel cone tracing pass
   {
-    uint32_t program = 0;
     pass_started("Voxel cone tracing pass");
-    program = vct_shader->gl_program;
+    const auto program = vct_shader->gl_program;
 
     glUseProgram(program);
     glBindFramebuffer(GL_FRAMEBUFFER, gl_vct_fbo);
     glBindVertexArray(gl_vct_vao);
 
     // User customizable
-    glUniform1i(glGetUniformLocation(program, "uDirect_lighting"), state.direct_lighting);
-    glUniform1i(glGetUniformLocation(program, "uIndirect_lighting"), state.indirect_lighting);
-    glUniform1i(glGetUniformLocation(program, "uDiffuse_lighting"), state.diffuse_lighting);
-    glUniform1i(glGetUniformLocation(program, "uSpecular_lighting"), state.specular_lighting);
-    glUniform1i(glGetUniformLocation(program, "uAmbient_lighting"), state.ambient_lighting);
-    glUniform1f(glGetUniformLocation(program, "uRoughness"), state.roughness);
+    glUniform1i(glGetUniformLocation(program, "uIndirect"), state.lighting.indirect);
+    glUniform1i(glGetUniformLocation(program, "uEmissive"), state.lighting.emissive);
+    glUniform1i(glGetUniformLocation(program, "uSpecular"), state.lighting.specular);
+    glUniform1i(glGetUniformLocation(program, "uAmbient"), state.lighting.ambient);
+    glUniform1i(glGetUniformLocation(program, "uDirect"), state.lighting.direct);
     const float roughness_aperature = glm::radians(state.roughness_aperature);
     glUniform1f(glGetUniformLocation(program, "uRoughness_aperature"), roughness_aperature);
-    glUniform1f(glGetUniformLocation(program, "uMetallic"), state.metallic);
     const float metallic_aperature = glm::radians(state.metallic_aperature);
     glUniform1f(glGetUniformLocation(program, "uMetallic_aperature"), metallic_aperature);
 
     // Shadowmapping
     glUniform1ui(glGetUniformLocation(program, "uShadow_algorithm"), state.shadow_algorithm);
     glUniform1f(glGetUniformLocation(program, "uShadow_bias"), state.shadow_bias);
+    glUniform3fv(glGetUniformLocation(program, "uDirectional_light_intensity"), 1, &directional_light.intensity.x);
     glUniform3fv(glGetUniformLocation(program, "uDirectional_light_direction"), 1, &directional_light.direction.x);
     glUniformMatrix4fv(glGetUniformLocation(program, "uLight_space_transform"), 1, GL_FALSE, glm::value_ptr(light_space_transform));
     glUniform1i(glGetUniformLocation(program, "uShadowmap"), gl_shadowmapping_texture_unit);
@@ -1070,7 +1085,7 @@ void Renderer::render(const uint32_t delta) {
     const std::vector<Vec4f> cones = generate_diffuse_cones(state.num_diffuse_cones);
     std::memcpy(gl_vct_diffuse_cones_ssbo_ptr, cones.data(), cones.size() * sizeof(Vec4f));
 
-    glUniform1i(glGetUniformLocation(program, "uNormalmapping"), state.normalmapping);
+    glUniform1i(glGetUniformLocation(program, "uNormalmapping"), state.lighting.normalmapping);
 
     float scaling_factors[NUM_CLIPMAPS];
     for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
@@ -1094,17 +1109,15 @@ void Renderer::render(const uint32_t delta) {
     glUniform3fv(glGetUniformLocation(program, "uAABB_centers"), NUM_CLIPMAPS, &clipmap_aabb_centers[0].x);
     glUniform3fv(glGetUniformLocation(program, "uAABB_mins"), NUM_CLIPMAPS, &clipmap_aabb_mins[0].x);
     glUniform3fv(glGetUniformLocation(program, "uAABB_maxs"), NUM_CLIPMAPS, &clipmap_aabb_maxs[0].x);
-		glUniform1iv(glGetUniformLocation(program, "uVoxelRadiance"), NUM_CLIPMAPS, gl_voxel_radiance_texture_units);
-    glUniform1iv(glGetUniformLocation(program, "uVoxelOpacity"), NUM_CLIPMAPS, gl_voxel_opacity_texture_units);
+		glUniform1iv(glGetUniformLocation(program, "uVoxel_radiance"), NUM_CLIPMAPS, gl_voxel_radiance_texture_units);
+    glUniform1iv(glGetUniformLocation(program, "uVoxel_opacity"), NUM_CLIPMAPS, gl_voxel_opacity_texture_units);
     glUniform1ui(glGetUniformLocation(program, "uScreen_width"), screen.width / div);
     glUniform1ui(glGetUniformLocation(program, "uScreen_height"), screen.height / div);
-    glUniform1i(glGetUniformLocation(program, "uDiffuse"), gl_diffuse_texture_unit);
     glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
     glUniform1i(glGetUniformLocation(program, "uNormal"), gl_geometric_normal_texture_unit);
     glUniform1i(glGetUniformLocation(program, "uPBR_parameters"), gl_pbr_parameters_texture_unit);
     glUniform1i(glGetUniformLocation(program, "uTangent_normal"), gl_tangent_normal_texture_unit);
     glUniform1i(glGetUniformLocation(program, "uTangent"), gl_tangent_texture_unit);
-    glUniform1i(glGetUniformLocation(program, "uEmissive"), gl_emissive_texture_unit); 
 
     glViewport(0, 0, screen.width / div, screen.height / div);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -1116,17 +1129,16 @@ void Renderer::render(const uint32_t delta) {
     pass_ended();
   }
 
+  const Vec2f pixel_size = Vec2(1.0f / screen.width, 1.0f / screen.height);
   if (state.bilateral_filtering.enabled) {
     pass_started("Bilateral filtering pass");
 
-    const Vec2f pixel_size = Vec2(1.0f / screen.width, 1.0f / screen.height);
-
     // Declare input & output texture
-    const uint32_t gl_ping_in_texture_unit  = gl_ambient_radiance_texture_unit;
-    const uint32_t gl_pong_out_texture = gl_ambient_radiance_texture;
+    const uint32_t ping_in_texture_unit  = gl_ambient_radiance_texture_unit;
+    const uint32_t pong_out_texture_unit = gl_ambient_radiance_texture_unit;
 
-    const float position_sigma = 2.0f; // TODO: How to set this value or tune it?
-    const float normal_sigma = 2.0f;   // TODO: How to set this value or tune it?
+    const float position_sigma = 2.0f; // FIXME: How to set this value or tune it?
+    const float normal_sigma = 2.0f;   // FIXME: How to set this value or tune it?
 
     // TODO: Reduce to one single shader, reuse that one twice instead
     // Ping
@@ -1146,7 +1158,7 @@ void Renderer::render(const uint32_t delta) {
       glUniform1ui(glGetUniformLocation(program, "uKernel_dim"), kernel.size());
       glUniform1fv(glGetUniformLocation(program, "uKernel"), kernel.size(), kernel.data());
 
-      glUniform1i(glGetUniformLocation(program, "uInput"), gl_ping_in_texture_unit);
+      glUniform1i(glGetUniformLocation(program, "uInput"), ping_in_texture_unit);
       // glUniform1i(glGetUniformLocation(program, "uOutput"), 0); // NOTE: Default to 0 in shader
 
       glViewport(0, 0, screen.width / div, screen.height / div);
@@ -1175,7 +1187,7 @@ void Renderer::render(const uint32_t delta) {
       glUniform1fv(glGetUniformLocation(program, "uKernel"), kernel.size(), kernel.data());
 
       glUniform1i(glGetUniformLocation(program, "uInput"), gl_bf_ping_out_texture_unit);
-      glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_pong_out_texture, 0); // FIXME: 'This does not change any OpenGL state (from Nvidia Nsights)'
+      glUniform1i(glGetUniformLocation(program, "uOutput"), pong_out_texture_unit);
 
       glViewport(0, 0, screen.width / div, screen.height / div);
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -1188,10 +1200,29 @@ void Renderer::render(const uint32_t delta) {
     pass_ended();
   }
 
-  /// Lighting application pass
+  /// TODO: Lighting application pass
   {
     pass_started("Lighting application pass");
     // TODO: Implement
+    // uIndirect toggle from Renderstate
+    const auto program = lighting_application_shader->gl_program;
+    glUseProgram(program);
+    glBindFramebuffer(GL_FRAMEBUFFER, gl_lighting_application_fbo);
+
+    glUniform2fv(glGetUniformLocation(program, "uPixel_size"), 1, &pixel_size.x);
+    glUniform1i(glGetUniformLocation(program, "uDiffuse"), gl_diffuse_texture_unit);
+
+    glUniform1i(glGetUniformLocation(program, "uIndirect_radiance"), gl_indirect_radiance_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "uAmbient_radiance"), gl_ambient_radiance_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "uSpecular_radiance"), gl_specular_radiance_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "uEmissive_radiance"), gl_emissive_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "uDirect_radiance"), gl_direct_radiance_texture_unit);
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+    last_executed_fbo = gl_lighting_application_fbo;
+
     pass_ended();
   }
 
