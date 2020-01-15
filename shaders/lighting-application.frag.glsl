@@ -33,6 +33,7 @@ void main() {
 
   // TODO: Tonemapping here?
 
-  const vec3 diffuse = sRGB_to_linear(vec4(texture(uDiffuse, c).rgb, 1.0)).rgb;
+  // const vec3 diffuse = sRGB_to_linear(vec4(texture(uDiffuse, c).rgb, 1.0)).rgb;
+  const vec3 diffuse = texture(uDiffuse, c).rgb;
   color *= diffuse;
 }

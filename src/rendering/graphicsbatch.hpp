@@ -11,6 +11,8 @@
 #include "debug_opengl.hpp"
 #include "meshmanager.hpp"
 
+#define GL_EXT_texture_sRGB 1
+
 #ifdef _WIN32
 #include <glew.h>
 #include <SDL_image.h>
@@ -85,16 +87,22 @@ static BoundingVolume compute_bounding_volume(const Mesh& mesh) {
   return sphere;
 }
 
+// sRGB automatic mipmapping is performed correctly by OpenGL by default due to texture format [0]
+// [0]: https://github.com/KhronosGroup/OpenGL-Registry/blob/master/extensions/EXT/EXT_texture_sRGB_decode.txt
 struct GraphicsBatch {
   explicit GraphicsBatch(const ID mesh_id): mesh_id(mesh_id), objects{}, mesh{MeshManager::mesh_from_id(mesh_id)}, 
-    layer_idxs{}, bounding_volume(compute_bounding_volume(mesh)) {};
+    layer_idxs{}, bounding_volume(compute_bounding_volume(mesh)) {
+      if (!GLEW_EXT_texture_sRGB_decode) {
+        Log::error("OpenGL extension sRGB_decode does not exist."); exit(-1);
+      }
+    };
   
-  void init_buffer(const Texture& texture, uint32_t* gl_buffer, const uint32_t gl_texture_unit, uint32_t* buffer_capacity) {
+  void init_buffer(const Texture& texture, uint32_t* gl_buffer, const uint32_t gl_texture_unit, uint32_t* buffer_capacity, const bool is_sRGB = false) {
     glActiveTexture(GL_TEXTURE0 + gl_texture_unit);
     glGenTextures(1, gl_buffer);
     glBindTexture(texture.gl_texture_target, *gl_buffer);
     const int default_buffer_size = 1;
-    const GLuint texture_format = texture.data.bytes_per_pixel == 3 ? GL_RGB8 : GL_RGBA8;
+    const GLuint texture_format = texture.data.bytes_per_pixel == 3 ? (is_sRGB ? GL_SRGB8_EXT : GL_RGB8) : (is_sRGB ? GL_SRGB8_ALPHA8_EXT : GL_RGBA8);
     const uint8_t mipmap_levels = uint8_t(std::log(std::max(texture.data.width, texture.data.height))) + 1;
     glTexStorage3D(texture.gl_texture_target, mipmap_levels, texture_format, texture.data.width, texture.data.height, texture.data.faces * default_buffer_size); // depth = layer faces
     glGenerateMipmap(texture.gl_texture_target);
@@ -105,7 +113,7 @@ struct GraphicsBatch {
   }
 
   /// Increases the texture buffer and copies over the old texture buffer (this seems to be the only way to do it)
-  void expand_texture_buffer(const Texture& texture, uint32_t* gl_buffer, uint32_t* texture_array_capacity, const uint32_t texture_unit) {
+  void expand_texture_buffer(const Texture& texture, uint32_t* gl_buffer, uint32_t* texture_array_capacity, const uint32_t texture_unit, const bool is_sRGB = false) {
     // Allocate new memory
     uint32_t gl_new_texture_array;
     glGenTextures(1, &gl_new_texture_array);
@@ -113,7 +121,7 @@ struct GraphicsBatch {
     glBindTexture(texture.gl_texture_target, gl_new_texture_array);
     uint32_t old_capacity = *texture_array_capacity;
     *texture_array_capacity = (uint32_t) std::ceil(*texture_array_capacity * 1.5f);
-    const GLuint texture_format = texture.data.bytes_per_pixel == 3 ? GL_RGB8 : GL_RGBA8;
+    const GLuint texture_format = texture.data.bytes_per_pixel == 3 ? (is_sRGB ? GL_SRGB8_EXT : GL_RGB8) : (is_sRGB ? GL_SRGB8_ALPHA8_EXT : GL_RGBA8);
     const uint8_t mipmap_levels = std::log(std::max(texture.data.width, texture.data.height)) + 1;
     glTexStorage3D(texture.gl_texture_target, mipmap_levels, texture_format, texture.data.width, texture.data.height, texture.data.faces * *texture_array_capacity);
     
@@ -126,6 +134,7 @@ struct GraphicsBatch {
   }
   
   /// Upload a texture to the diffuse array
+  /// NOTE: glTexSubImage3D does not care for sRGB or not, simply GL_RGB* variants of the format
   void upload(const Texture& texture, const uint32_t gl_texture_unit, const uint32_t gl_texture_array) {
     const GLuint texture_format = texture.data.bytes_per_pixel == 3 ? GL_RGB : GL_RGBA;
     glActiveTexture(GL_TEXTURE0 + gl_texture_unit);

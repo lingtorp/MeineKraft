@@ -1428,9 +1428,11 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
       if (batch_contains_texture) {
         material.diffuse_layer_idx = batch.layer_idxs[comp.diffuse_texture.id];
       } else {
+        const bool is_sRGB = true; // FIXME: Assumes that diffuse textures are sRGB due to glTF2 material model
+
         /// Expand texture buffer if needed
         if (batch.diffuse_textures_count + 1 > batch.diffuse_textures_capacity) {
-          batch.expand_texture_buffer(comp.diffuse_texture, &batch.gl_diffuse_texture_array, &batch.diffuse_textures_capacity, batch.gl_diffuse_texture_unit);
+          batch.expand_texture_buffer(comp.diffuse_texture, &batch.gl_diffuse_texture_array, &batch.diffuse_textures_capacity, batch.gl_diffuse_texture_unit, is_sRGB);
         }
 
         /// Update the mapping from texture id to layer idx and increment count
@@ -1463,7 +1465,8 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
   if (comp.diffuse_texture.data.pixels) {
     batch.gl_diffuse_texture_unit = next_free_texture_unit;
 
-    batch.init_buffer(comp.diffuse_texture, &batch.gl_diffuse_texture_array, batch.gl_diffuse_texture_unit, &batch.diffuse_textures_capacity);
+    const bool is_sRGB = true; // FIXME: Assumes that diffuse textures are in sRGB
+    batch.init_buffer(comp.diffuse_texture, &batch.gl_diffuse_texture_array, batch.gl_diffuse_texture_unit, &batch.diffuse_textures_capacity, is_sRGB);
 
     /// Update the mapping from texture id to layer idx and increment count
     batch.layer_idxs[comp.diffuse_texture.id] = batch.diffuse_textures_count++;

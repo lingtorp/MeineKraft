@@ -127,15 +127,17 @@ struct OpenGLContextInfo {
     #ifdef VERBOSE
     GLint n = 0;
     glGetIntegerv(GL_NUM_EXTENSIONS, &n);
-    const char **extensions = (const char **)malloc(n * sizeof(char *));
     if (n > 0) {
       for (GLint i = 0; i < n; i++) {
-        extensions[i] = (char*)glGetStringi(GL_EXTENSIONS, i);
-        Log::info(std::string(extensions[i]));
+        const std::string str((char*)glGetStringi(GL_EXTENSIONS, i));
+        Log::info(str);
       }
     }
-    delete extensions;
     #endif
+
+    if (!GLEW_EXT_texture_sRGB_decode) {
+      Log::error("OpenGL extension sRGB_decode does not exist."); exit(-1);
+    }
 
     glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 0, &max_compute_local_work_grp_size_x);
     glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 1, &max_compute_local_work_grp_size_y);
