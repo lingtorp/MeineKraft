@@ -9,8 +9,8 @@ in vec2 fTextureCoord;
 in vec4 fAABB;    // Bounding triangle (conservative rasterization)
 
 uniform int uClipmap_sizes[NUM_CLIPMAPS];
-layout(R32UI) uniform restrict coherent volatile uimage3D uVoxelRadiance[NUM_CLIPMAPS];
-layout(RGBA8) uniform restrict writeonly image3D uVoxelOpacity[NUM_CLIPMAPS];
+layout(R32UI) uniform restrict coherent volatile uimage3D uVoxel_radiance[NUM_CLIPMAPS];
+layout(RGBA8) uniform restrict writeonly image3D uVoxel_opacity[NUM_CLIPMAPS];
 
 uniform sampler2DArray uDiffuse;
 uniform sampler2D uEmissive;
@@ -97,7 +97,7 @@ void main() {
   // Inject radiance if voxel NOT in shadow
   const vec3 value = shadow(fPosition, fNormal) * radiance + emissive;
   if (abs(dot(value, vec3(1.0))) > 0.0) {
-      imageAtomicAverageRGBA8(uVoxelRadiance[clipmap], radiance + emissive, vpos);
+      imageAtomicAverageRGBA8(uVoxel_radiance[clipmap], radiance + emissive, vpos);
   }
-  imageStore(uVoxelOpacity[clipmap], vpos, vec4(1.0));
+  imageStore(uVoxel_opacity[clipmap], vpos, vec4(1.0));
 }

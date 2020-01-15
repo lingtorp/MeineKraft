@@ -1,12 +1,10 @@
 // NOTE: Performs fullscreen VCT
 
-#define NUM_CLIPMAPS 4
-
 uniform uint uScreen_height;
 uniform uint uScreen_width;
 
-uniform sampler3D uVoxelRadiance[NUM_CLIPMAPS];
-uniform sampler3D uVoxelOpacity[NUM_CLIPMAPS];
+uniform sampler3D uVoxel_radiance[NUM_CLIPMAPS];
+uniform sampler3D uVoxel_opacity[NUM_CLIPMAPS];
 
 uniform bool uNormalmapping;
 uniform sampler2D uTangent;
@@ -15,33 +13,32 @@ uniform sampler2D uTangent_normal;
 uniform vec3 uCamera_position;
 
 // General textures
-uniform sampler2D uDiffuse;
 uniform sampler2D uPosition; // World space
 uniform sampler2D uNormal;
 uniform sampler2D uPBR_parameters;
-uniform sampler2D uEmissive;
 
 // Out textures
-// NOTE: gl_vct_texture is location = 0
-layout(location = 1) out vec3  gDiffuseRadiance;
-layout(location = 2) out float gAmbientRadiance;
-layout(location = 3) out vec3  gSpecularRadiance;
+layout(location = 0) out vec3  gIndirect_radiance;
+layout(location = 1) out float gAmbient_radiance;
+layout(location = 2) out vec3  gSpecular_radiance;
+layout(location = 3) out vec3  gDirect_radiance;
 
+// Voxel cone tracing related
+uniform float uVoxel_size_LOD0;
 uniform float uScaling_factors[NUM_CLIPMAPS];
 uniform vec3  uAABB_centers[NUM_CLIPMAPS];
 uniform vec3  uAABB_mins[NUM_CLIPMAPS];
 uniform vec3  uAABB_maxs[NUM_CLIPMAPS];
 
 // User customizable
-uniform float uRoughness;
-uniform float uMetallic;
 uniform float uRoughness_aperature; // Radians (half-angle of cone)
 uniform float uMetallic_aperature;  // Radians (half-angle of cone)
-uniform bool  uDirect_lighting;  
-uniform bool  uIndirect_lighting;  
-uniform bool  uDiffuse_lighting;
-uniform bool  uSpecular_lighting;
-uniform bool  uAmbient_lighting;
+
+// Computational toggles
+uniform bool uDirect;
+uniform bool uIndirect;
+uniform bool uSpecular;
+uniform bool uAmbient;
 
 uniform uint uNum_diffuse_cones;
 // (Vec3, float) = (direction, weight) for each cone
@@ -65,8 +62,8 @@ float clipmap_lvl_from_distance(const vec3 position) {
 // Beware of sampling outside the clipmap!
 vec4 sample_clipmap(const vec3 wp, const uint lvl) {
   const vec3 p = world_to_clipmap_voxelspace(wp, uScaling_factors[lvl], uAABB_centers[lvl]);
-  const vec3 radiance = texture(uVoxelRadiance[lvl], p).rgb;
-  const float opacity = texture(uVoxelOpacity[lvl], p).r;
+  const vec3 radiance = texture(uVoxel_radiance[lvl], p).rgb;
+  const float opacity = texture(uVoxel_opacity[lvl], p).r;
   return vec4(radiance, opacity);
 }
 
@@ -85,10 +82,6 @@ vec4 sample_clipmap_linearly(const vec3 wp, const float lvl) {
   const vec4 s0s1 = mix(s0, s1, fract(lvl));
   return vec4(s0s1.rgb * (lvl - fract(lvl)) * 0.1, s0s1.a); // NOTE: Deals with the rings
 }
-
-out vec4 color;
-
-uniform float uVoxel_size_LOD0;
 
 vec4 trace_diffuse_cone(const vec3 origin,
                         const vec3 direction,
@@ -155,6 +148,7 @@ vec4 trace_specular_cone(const vec3 origin,
 
 uniform uint uShadowAlgorithm;
 uniform float uShadow_bias;
+uniform vec3 uDirectional_light_intensity;
 uniform vec3 uDirectional_light_direction;
 uniform mat4 uLight_space_transform;
 uniform sampler2D uShadowmap;
@@ -256,55 +250,42 @@ void main() {
   const float metallic = texture(uPBR_parameters, frag_coord).b;
   const float roughness_aperature = uRoughness_aperature;
   const float metallic_aperature = uMetallic_aperature;
-  const vec4  diffuse = sRGB_to_linear(vec4(texture(uDiffuse, frag_coord).rgb, 1.0));
- 
-  uint traced_cones = 1;
-  if (uDiffuse_lighting) {
+
+  if (uIndirect) {
+    float ambient_radiance = 0.0; // NOTE: Traced with diffuse cones
+    uint traced_cones = 1;
+
     // Offset origin to avoid self-sampling
     const float start_lvl = floor(clipmap_lvl_from_distance(origin));
     const vec3 o = origin + (uVoxel_size_LOD0 * 1.5 * exp2(start_lvl)) * fNormal; 
     const vec4 radiance = cones[0].w * trace_diffuse_cone(o, normal, roughness_aperature);
-    color.rgb += radiance.rgb * diffuse.rgb;
-
-    gDiffuseRadiance += radiance.rgb;
+    gIndirect_radiance += radiance.rgb;
+    ambient_radiance += radiance.a;
 
     for (uint i = 1; i < uNum_diffuse_cones; i++) {
       // Offset origin to avoid self-sampling
       const vec3 d = cones[i].xyz;
       if (dot(d, normal) < 0.0) { continue; }
       const vec4 radiance = 2.0 * cones[i].w * trace_diffuse_cone(o, d, roughness_aperature);
-      color.rgb += radiance.rgb * diffuse.rgb * max(dot(d, normal), 0.0);
-      color.a   += radiance.a;
+      gIndirect_radiance += radiance.rgb * max(dot(d, normal), 0.0);
+      ambient_radiance += radiance.a;
       traced_cones++;
+    }
 
-      gDiffuseRadiance += radiance.rgb * max(dot(d, normal), 0.0);
+    if (uAmbient) {
+      // NOTE: See generate_diffuse_cones for details about the division of M_PI
+      gAmbient_radiance = (ambient_radiance * M_PI_INV) / float(traced_cones);
     }
   }
 
-  if (uAmbient_lighting) {
-    const float radiance = (color.a * M_PI_INV) / traced_cones;
-    color.rgb += diffuse.rgb * radiance;
 
-    gAmbientRadiance = radiance;
-    // color.rgb = vec3(0.0);
-    // color.rgb += vec3(color.a) / traced_cones;
-    // NOTE: See generate_diffuse_cones for details about the division
-  } 	
-
-  if (uSpecular_lighting) {
+  if (uSpecular) {
     const float aperture = metallic_aperature; 
     const vec3 reflection = normalize(reflect(-(uCamera_position - origin), fNormal));
-    const vec4 radiance = trace_specular_cone(origin, reflection, aperture);
-    color += metallic * radiance;
-
-    gSpecularRadiance = radiance.rgb;
+    gSpecular_radiance = trace_specular_cone(origin, reflection, aperture).rgb;
   }
 
-  if (!uIndirect_lighting) {
-    color.rgb = vec3(0.0);
-  }
-
-  if (uDirect_lighting) { // TODO: fNormal vs. normal?
+  if (uDirect) { // TODO: fNormal vs. normal?
     float shadow = 0.0;
     switch (uShadowAlgorithm) {
       case 0:
@@ -317,11 +298,9 @@ void main() {
         shadow = vct_shadow(origin, normal, -uDirectional_light_direction);
         break;
     }
-    color.rgb += shadow * diffuse.rgb * max(dot(-uDirectional_light_direction, normal), 0.0);
-    // color.rgb += vec3(shadow);
+    const vec3 intensity = uDirectional_light_intensity;
+    gDirect_radiance = shadow * intensity * max(dot(-uDirectional_light_direction, normal), 0.0);
   }
-
-  color.rgb += texture(uEmissive, frag_coord).rgb;
 
   // color.rgb = vec3(floor(clipmap_lvl_from_distance(origin)) / NUM_CLIPMAPS);
   // color.rgb = sample_clipmap(origin, uint(floor(clipmap_lvl_from_distance(origin)))).rgb;
