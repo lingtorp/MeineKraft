@@ -3,6 +3,7 @@
 
 // Low-res texture
 uniform sampler2D uInput;
+out vec3 uOutput;
 
 // Guide textures
 uniform bool uPosition_weight;
@@ -12,8 +13,6 @@ uniform sampler2D uPosition; // World space
 uniform bool uNormal_weight;
 uniform float uNormal_sigma;
 uniform sampler2D uNormal;
-
-layout(location = 0) out vec3 uOutput;
 
 uniform vec2 uPixel_size;
 
