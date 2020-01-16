@@ -59,6 +59,10 @@ private:
   /// View frustum culling shader
   ComputeShader* cull_shader = nullptr;
 
+  /// Render pass execution time query buffer
+  uint32_t gl_execution_time_query_buffer = 0;
+  uint32_t *gl_query_ids = nullptr;
+
   /// Lighting application pass related
   Shader* lighting_application_shader = nullptr;
   uint32_t gl_lighting_application_fbo;

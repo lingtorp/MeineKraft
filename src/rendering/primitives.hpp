@@ -330,6 +330,7 @@ struct RenderState {
 
   // Global illumination related
   struct {
+    uint64_t execution_time; // NOTE: nanoseconds
     bool shadowmapping = true;
     bool normalmapping = true;
     bool indirect = true;
@@ -340,6 +341,7 @@ struct RenderState {
   } lighting;
 
   // Voxel cone tracing related
+  uint64_t execution_time; // NOTE: nanoseconds
   static const uint32_t MAX_VCT_DIFFUSE_CONES = 12;
   float roughness_aperature = 60.0f; // 60 deg diffuse cone from [Rauwendaal, Crassin11]
   float metallic_aperature   = 0.1f; // 10 deg specular cone from [Crassin11]
@@ -350,6 +352,7 @@ struct RenderState {
 
   // Direct/shadows related
   struct {
+    uint64_t execution_time; // NOTE: nanoseconds
     ShadowAlgorithm algorithm = ShadowAlgorithm::Plain; // See enum class ShadowAlgorithm
     float bias = 0.00025f;
     int32_t pcf_samples = 2;
@@ -358,6 +361,7 @@ struct RenderState {
 
   // Bilateral filtering related
   struct {
+    uint64_t execution_time; // NOTE: nanoseconds
     bool enabled = true;            // Bilateral filtering pass to filter the radiance
     bool direct_enabled = false;    // Enable filtering of the direct radiance
     bool ambient_enabled = true;    // Enable filtering of the ambient radiance
@@ -369,7 +373,9 @@ struct RenderState {
 
   // Voxel visualization related
   // FIXME: Voxel visualization does not work ...
-  const bool voxel_visualization_enabled = false;
+  struct {
+    const bool enabled = false;
+  } voxel_visualization;
 
   RenderState() = default;
 

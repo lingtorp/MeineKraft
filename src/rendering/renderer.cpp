@@ -447,7 +447,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   }
 
   /// Voxel visualization pass
-  if (state.voxel_visualization_enabled) {
+  if (state.voxel_visualization.enabled) {
     voxel_visualization_shader = new Shader(Filesystem::base + "shaders/voxel-visualization.vert",
                                             Filesystem::base + "shaders/voxel-visualization.geom",
                                             Filesystem::base + "shaders/voxel-visualization.frag");
@@ -728,6 +728,16 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     }
   }
 
+  /// Rendering pass execution time query buffer
+  {
+    const uint32_t num_render_passes = 25; // FIXME: Hardcoded number of render pass ...
+    // glGenQueries(num_render_passes, gl_query_ids);
+
+    glGenBuffers(1, &gl_execution_time_query_buffer);
+    glBindBuffer(GL_QUERY_BUFFER, gl_execution_time_query_buffer);
+    glBufferData(GL_QUERY_BUFFER, num_render_passes * sizeof(GLuint64), nullptr, GL_DYNAMIC_COPY);
+  }
+
   glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
   glEnable(GL_CULL_FACE);
   glCullFace(GL_BACK);
@@ -757,6 +767,7 @@ bool Renderer::init() {
 
 void Renderer::render(const uint32_t delta) {
   state.frame++;
+  state.render_passes = 0;
 
   GLuint last_executed_fbo = 0; // NOTE: This FBO's default buffer is blitted to the screen
 
@@ -793,7 +804,7 @@ void Renderer::render(const uint32_t delta) {
   std::memcpy(gl_pointlights_ssbo_ptr, pointlights.data(), pointlights.size() * sizeof(PointLight));
 
   {
-    pass_started("Culling pass");
+    pass_started("Culling pass", state.render_passes++);
 
     // NOTE: Extraction of frustum planes are performed on the transpose (because of column/row-major difference).
     // FIXME: Use the Direct3D way of extraction instead since GLM appears to store the matrix in a row-major way.
@@ -826,7 +837,7 @@ void Renderer::render(const uint32_t delta) {
     pass_ended();
   }
 
-  pass_started("Directional shadow mapping pass");
+  pass_started("Directional shadow mapping pass", state.render_passes++);
   const glm::mat4 light_space_transform = shadowmap_transform(scene->aabb, directional_light);
   {
     glCullFace(GL_FRONT);
@@ -855,7 +866,7 @@ void Renderer::render(const uint32_t delta) {
   }
 
   {
-    pass_started("Geometry pass");
+    pass_started("Geometry pass", state.render_passes++);
 
     glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
     glEnable(GL_DEPTH_TEST);
@@ -905,7 +916,7 @@ void Renderer::render(const uint32_t delta) {
       state.voxelize = false;
     }
 
-    pass_started("Voxelization pass");
+    pass_started("Voxelization pass", state.render_passes++);
 
     for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
       glClearTexImage(gl_voxel_radiance_textures[i], 0, GL_RGBA, GL_FLOAT, nullptr); 
@@ -995,7 +1006,7 @@ void Renderer::render(const uint32_t delta) {
 
     // NOTE: Opacity normalization subpass is way too slow around 12.7 ms (26% of frame time)
     if constexpr(false) {
-      pass_started("Opacity normalization subpass");
+      pass_started("Opacity normalization subpass", state.render_passes++);
 
       const auto program = voxelization_opacity_norm_shader->gl_program;
       glUseProgram(program);
@@ -1012,8 +1023,8 @@ void Renderer::render(const uint32_t delta) {
     }
   }
 
-  if (state.voxel_visualization_enabled) {
-    pass_started("Voxel visualization pass");
+  if (state.voxel_visualization.enabled) {
+    pass_started("Voxel visualization pass", state.render_passes++);
 
     const auto program = voxel_visualization_shader->gl_program;
     glUseProgram(program);
@@ -1051,7 +1062,7 @@ void Renderer::render(const uint32_t delta) {
   const size_t div = 1 ; // FIXME: Downsample factor / fraction of the screen rendered
   /// Voxel cone tracing pass
   {
-    pass_started("Voxel cone tracing pass");
+    pass_started("Voxel cone tracing pass", state.render_passes++);
     const auto program = vct_shader->gl_program;
 
     glUseProgram(program);
@@ -1133,7 +1144,7 @@ void Renderer::render(const uint32_t delta) {
   }
 
   if (state.bilateral_filtering.enabled) {
-    pass_started("Bilateral filtering pass");
+    pass_started("Bilateral filtering pass", state.render_passes++);
 
     // Declare input & output texture
     const uint32_t ping_pong_in_texture_unit  = gl_ambient_radiance_texture_unit;
@@ -1203,9 +1214,8 @@ void Renderer::render(const uint32_t delta) {
     pass_ended();
   }
 
-  /// TODO: Lighting application pass
   {
-    pass_started("Lighting application pass");
+    pass_started("Lighting application pass", state.render_passes++);
 
     const auto program = lighting_application_shader->gl_program;
     glUseProgram(program);
@@ -1231,7 +1241,7 @@ void Renderer::render(const uint32_t delta) {
 
   /// Copy final pass into default FBO
   {
-    pass_started("Final blit pass");
+    pass_started("Final blit pass", state.render_passes++);
 
     glBindFramebuffer(GL_READ_FRAMEBUFFER, last_executed_fbo);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
@@ -1250,6 +1260,12 @@ void Renderer::render(const uint32_t delta) {
 
   if (syncs[state.frame % 3]) glDeleteSync(syncs[state.frame % 3]);
   syncs[state.frame % 3] = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+
+  /// Query for the GPU execution time for the render passes
+  glBindBuffer(GL_QUERY_BUFFER, gl_execution_time_query_buffer);
+  for (size_t i = 0; i < state.render_passes; i++) {
+    // glGetQueryObjectui64v(i, GL_QUERY_RESULT_NO_WAIT, nullptr);
+  }
 }
 
 void Renderer::update_projection_matrix(const float fov, const Resolution& new_screen) {
