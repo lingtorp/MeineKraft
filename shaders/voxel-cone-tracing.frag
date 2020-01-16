@@ -29,6 +29,7 @@ uniform float uScaling_factors[NUM_CLIPMAPS];
 uniform vec3  uAABB_centers[NUM_CLIPMAPS];
 uniform vec3  uAABB_mins[NUM_CLIPMAPS];
 uniform vec3  uAABB_maxs[NUM_CLIPMAPS];
+uniform float uAmbient_decay;                  // Crassin11 mentions but does not specify
 
 // User customizable
 uniform float uRoughness_aperature; // Radians (half-angle of cone)
@@ -109,8 +110,7 @@ vec4 trace_diffuse_cone(const vec3 origin,
     radiance  += (1.0 - opacity) * sampled.a * sampled.rgb;
     opacity   += (1.0 - opacity) * sampled.a;
 
-    const float decay = 0.1; // Crassin11 mentions but does not specify
-    occlusion += (1.0 - occlusion) * sampled.a / (1.0 + cone_distance * decay);
+    occlusion += (1.0 - occlusion) * sampled.a / (1.0 + cone_distance * uAmbient_decay);
   }
 
   return vec4(radiance, 1.0 - occlusion);
@@ -146,7 +146,7 @@ vec4 trace_specular_cone(const vec3 origin,
   return vec4(radiance, 1.0 - occlusion);
 }
 
-uniform uint uShadowAlgorithm;
+uniform uint uShadow_algorithm;
 uniform float uShadow_bias;
 uniform vec3 uDirectional_light_intensity;
 uniform vec3 uDirectional_light_direction;
@@ -154,6 +154,8 @@ uniform mat4 uLight_space_transform;
 uniform sampler2D uShadowmap;
 uniform uint uShadowmap_width;
 uniform uint uShadowmap_height;
+uniform uint uPCF_samples;
+uniform float uVCT_shadow_cone_aperature; // Shadow cone aperature (deg.)
 
 float plain_shadow(const vec3 world_position, const vec3 normal) {
   vec4 lightspace_position = uLight_space_transform * vec4(world_position, 1.0);
@@ -170,8 +172,6 @@ float plain_shadow(const vec3 world_position, const vec3 normal) {
   return (closest_shadowmap_depth < current_depth - bias) ? 0.0 : 1.0;
 }
 
-uniform uint uPCF_shadow_samples; // TODO: Hook up
-
 // Percentage-closer filtering shadow technique
 float pcf_shadow(const vec3 world_position, const vec3 normal) {
   vec4 s = uLight_space_transform * vec4(world_position, 1.0);
@@ -179,8 +179,8 @@ float pcf_shadow(const vec3 world_position, const vec3 normal) {
   s = s * 0.5 + 0.5;
 
   const float current_depth = s.z;
+  const float num_samples = uPCF_samples; // 2 ==> 5x5 kernel, n ==> (n + 1)x(n + 1) kernel
 
-  const float num_samples = 2; // 2 ==> 4x4 kernel, n ==> nxn kernel
   float shadowing = 0.0;
   for (float x = -num_samples + 0.5; x < num_samples - 0.5; x += 1.0) {
     for (float y = -num_samples + 0.5; y < num_samples - 0.5; y += 1.0) {
@@ -190,13 +190,12 @@ float pcf_shadow(const vec3 world_position, const vec3 normal) {
       shadowing += depth < current_depth ? 0.0 : 1.0;
     }
   }
+
   return shadowing / (4.0 * num_samples * num_samples);
 }
 
 // FIXME: Blocky shadows due to clipmap level sampling not 100%
 float vct_shadow(const vec3 origin, const vec3 normal, const vec3 direction) {
-  const float half_angle = 0.0050; // Shadow cone aperature
-
   const float max_distance = (1.0 / uScaling_factors[NUM_CLIPMAPS - 1]) / 8.0; 
   const float start_lvl = floor(clipmap_lvl_from_distance(origin));
 
@@ -212,7 +211,7 @@ float vct_shadow(const vec3 origin, const vec3 normal, const vec3 direction) {
     //  return occlusion;
     // }
 
-    const float cone_diameter = max(2.0 * tan(half_angle) * cone_distance, uVoxel_size_LOD0);
+    const float cone_diameter = max(2.0 * tan(uVCT_shadow_cone_aperature) * cone_distance, uVoxel_size_LOD0);
     cone_distance += cone_diameter * 1.0;
     
     const float min_lvl = floor(clipmap_lvl_from_distance(cone_position));
@@ -251,7 +250,8 @@ void main() {
   const float roughness_aperature = uRoughness_aperature;
   const float metallic_aperature = uMetallic_aperature;
 
-  if (uIndirect) {
+  // Indirect
+  {
     float ambient_radiance = 0.0; // NOTE: Traced with diffuse cones
     uint traced_cones = 1;
 
@@ -272,12 +272,15 @@ void main() {
       traced_cones++;
     }
 
+    if (!uIndirect) {
+      gIndirect_radiance = vec3(0.0);
+    }
+
     if (uAmbient) {
       // NOTE: See generate_diffuse_cones for details about the division of M_PI
       gAmbient_radiance = (ambient_radiance * M_PI_INV) / float(traced_cones);
     }
   }
-
 
   if (uSpecular) {
     const float aperture = metallic_aperature; 
@@ -287,7 +290,7 @@ void main() {
 
   if (uDirect) { // TODO: fNormal vs. normal?
     float shadow = 0.0;
-    switch (uShadowAlgorithm) {
+    switch (uShadow_algorithm) {
       case 0:
         shadow = plain_shadow(origin, normal);
         break;
@@ -298,8 +301,7 @@ void main() {
         shadow = vct_shadow(origin, normal, -uDirectional_light_direction);
         break;
     }
-    const vec3 intensity = uDirectional_light_intensity;
-    gDirect_radiance = shadow * intensity * max(dot(-uDirectional_light_direction, normal), 0.0);
+    gDirect_radiance = shadow * uDirectional_light_intensity * max(dot(-uDirectional_light_direction, normal), 0.0);
   }
 
   // color.rgb = vec3(floor(clipmap_lvl_from_distance(origin)) / NUM_CLIPMAPS);

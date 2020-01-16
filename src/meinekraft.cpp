@@ -3,6 +3,7 @@
 #include <chrono>
 
 #include "imgui/imgui.h"
+#include "rendering/primitives.hpp"
 #include "rendering/renderer.hpp"
 #include "../include/imgui/imgui_impl_sdl.h"
 #include "rendering/camera.hpp"
@@ -330,8 +331,27 @@ void MeineKraft::mainloop() {
           ImGui::Text("Draw calls per frame: %u", renderer->state.draw_calls);
           // TODO: Change resolution, memory usage, textures, etc
 
-          ImGui::InputFloat("Shadow bias", &renderer->state.shadow_bias);
           ImGui::Checkbox("Normal mapping", &renderer->state.lighting.normalmapping);
+
+          if (ImGui::CollapsingHeader("Shadows", ImGuiTreeNodeFlags_DefaultOpen)) {
+            static int s = 0; // Selection
+            ImGui::Combo("Algorithm", &s, "Shadowmapping \0 Percentage-close filtering \0 Voxel cone traced \0");
+            ImGui::SameLine(); ImGui_HelpMarker("Shadow algorithm applied by the directional light");
+            renderer->state.shadow.algorithm = ShadowAlgorithm(s);
+
+            switch (renderer->state.shadow.algorithm) {
+            case ShadowAlgorithm::Plain:
+                ImGui::InputFloat("Shadow bias", &renderer->state.shadow.bias);
+                break;
+            case ShadowAlgorithm::PercentageCloserFiltering:
+                ImGui::InputFloat("Shadow bias", &renderer->state.shadow.bias);
+                ImGui::InputInt("Samples", &renderer->state.shadow.pcf_samples);
+                break;
+            case ShadowAlgorithm::VCT:
+                ImGui::InputFloat("Shadow cone aperature", &renderer->state.shadow.vct_cone_aperature);
+                break;
+            }
+          }
 
           if (ImGui::CollapsingHeader("Voxelization", ImGuiTreeNodeFlags_DefaultOpen)) {
             if (ImGui::Button("Voxelize")) {
@@ -402,6 +422,7 @@ void MeineKraft::mainloop() {
           const std::string directional_light_title = "Directional light";
           if (ImGui::CollapsingHeader(directional_light_title.c_str())) {
             ImGui::InputFloat3("Direction##directional_light", &renderer->directional_light.direction.x);
+            ImGui::InputFloat3("Intensity", &renderer->directional_light.intensity.x);
           }
 
           // Point lights

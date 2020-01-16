@@ -346,9 +346,15 @@ struct RenderState {
   bool voxelize = true;              // NOTE: Toggled by the Renderer (a.k.a executed once)
   bool conservative_rasterization = false;
   bool always_voxelize = false;
-  uint8_t shadow_algorithm = 0; // See enum class ShadowAlgorithm
-  float shadow_bias = 0.00025f;
   int num_diffuse_cones = 6;  // [Crassin11], [Yeu13] suggests 5
+
+  // Direct/shadows related
+  struct {
+    ShadowAlgorithm algorithm = ShadowAlgorithm::Plain; // See enum class ShadowAlgorithm
+    float bias = 0.00025f;
+    int32_t pcf_samples = 2;
+    float vct_cone_aperature = 0.0050f;                 // Shadow cone aperature
+  } shadow;
 
   // Bilateral filtering related
   struct {

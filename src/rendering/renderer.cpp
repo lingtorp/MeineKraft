@@ -756,8 +756,8 @@ bool Renderer::init() {
 }
 
 void Renderer::render(const uint32_t delta) {
-
   state.frame++;
+
   GLuint last_executed_fbo = 0; // NOTE: This FBO's default buffer is blitted to the screen
 
   const glm::mat4 camera_transform = projection_matrix * scene->camera->transform(); // TODO: Camera handling needs to be reworked
@@ -938,7 +938,7 @@ void Renderer::render(const uint32_t delta) {
     glUniform3fv(glGetUniformLocation(program, "uCamera_position"), 1, &scene->camera->position.x);
 
     // Shadowmapping
-    glUniform1f(glGetUniformLocation(program, "uShadow_bias"), state.shadow_bias);
+    glUniform1f(glGetUniformLocation(program, "uShadow_bias"), state.shadow.bias);
     glUniform3fv(glGetUniformLocation(program, "uDirectional_light_direction"), 1, &directional_light.direction.x);
     glUniformMatrix4fv(glGetUniformLocation(program, "uLight_space_transform"), 1, GL_FALSE, glm::value_ptr(light_space_transform));
     glUniform1i(glGetUniformLocation(program, "uShadowmap"), gl_shadowmapping_texture_unit);
@@ -1068,10 +1068,13 @@ void Renderer::render(const uint32_t delta) {
     glUniform1f(glGetUniformLocation(program, "uRoughness_aperature"), roughness_aperature);
     const float metallic_aperature = glm::radians(state.metallic_aperature);
     glUniform1f(glGetUniformLocation(program, "uMetallic_aperature"), metallic_aperature);
+    const float ambient_decay = 0.1f;
+    glUniform1f(glGetUniformLocation(program, "uAmbient_decay"), ambient_decay);
 
     // Shadowmapping
-    glUniform1ui(glGetUniformLocation(program, "uShadow_algorithm"), state.shadow_algorithm);
-    glUniform1f(glGetUniformLocation(program, "uShadow_bias"), state.shadow_bias);
+    glUniform1f(glGetUniformLocation(program, "uVCT_shadow_cone_aperature"), state.shadow.vct_cone_aperature);
+    glUniform1ui(glGetUniformLocation(program, "uShadow_algorithm"), static_cast<uint32_t>(state.shadow.algorithm));
+    glUniform1f(glGetUniformLocation(program, "uShadow_bias"), state.shadow.bias);
     glUniform3fv(glGetUniformLocation(program, "uDirectional_light_intensity"), 1, &directional_light.intensity.x);
     glUniform3fv(glGetUniformLocation(program, "uDirectional_light_direction"), 1, &directional_light.direction.x);
     glUniformMatrix4fv(glGetUniformLocation(program, "uLight_space_transform"), 1, GL_FALSE, glm::value_ptr(light_space_transform));
