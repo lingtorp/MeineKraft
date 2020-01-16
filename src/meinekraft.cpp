@@ -280,7 +280,7 @@ void MeineKraft::mainloop() {
 
     /// ImGui - Debug instruments
     if (!throttle_rendering) {
-      pass_started("ImGui");
+      pass_started("ImGui", renderer->state.render_passes++);
 
       ImGui_ImplSdlGL3_NewFrame(window);
       auto io = ImGui::GetIO();
@@ -327,13 +327,19 @@ void MeineKraft::mainloop() {
           ImGui::Text("Average %lu ms/frame (%.1f FPS)", delta, io.Framerate);
           ImGui::SameLine();
           ImGui::Text("Frame: %lu", renderer->state.frame);
+
           ImGui::Text("Resolution: (%u, %u)", renderer->screen.width, renderer->screen.height);
           ImGui::Text("Draw calls per frame: %u", renderer->state.draw_calls);
-          // TODO: Change resolution, memory usage, textures, etc
+          ImGui::Text("Render passes: %u", renderer->state.render_passes);
+          // TODO: Change resolution, memory usage, textures, render pass execution times, etc
 
-          ImGui::Checkbox("Normal mapping", &renderer->state.lighting.normalmapping);
+          if (ImGui::CollapsingHeader("Global settings")) {
+            ImGui::Checkbox("Normal mapping", &renderer->state.lighting.normalmapping);
+          }
 
           if (ImGui::CollapsingHeader("Shadows", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::InputInt2("Shadowmap resolution", &renderer->screen.width);
+
             static int s = 0; // Selection
             ImGui::Combo("Algorithm", &s, "Shadowmapping \0 Percentage-close filtering \0 Voxel cone traced \0");
             ImGui::SameLine(); ImGui_HelpMarker("Shadow algorithm applied by the directional light");
@@ -405,24 +411,25 @@ void MeineKraft::mainloop() {
         if (Gui.scene_graph_window) {
           ImGui::Begin("Scene graph", &Gui.scene_graph_window);
 
-          ImGui::Text("Entities: %u", renderer->state.entities);
+          static int s = 0; // Selection
+          ImGui::Text("Spawn ..", "Model \0 Geometric primitive \0"); // TODO: Spawn models, geometric primitives
+          ImGui::SameLine(); ImGui_HelpMarker("Add visual entities to the world");
 
           if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::PushItemWidth(200.0f);
             ImGui::InputFloat3("Position##camera", &renderer->scene->camera->position.x);
             ImGui::InputFloat3("Direction##camera", &renderer->scene->camera->direction.x);
-            ImGui::PopItemWidth();
-            // ImGui::InputFloat("FoV", camera->FoV); // TODO: Camera adjustable FoV
-            if (ImGui::Button("Reset camera")) {
-              renderer->scene->reset_camera();
-            }
+            // ImGui::InputFloat("FoV", &renderer->scene->camera->FoV); // TODO: Camera adjustable FoV
+            if (ImGui::Button("Reset")) { renderer->scene->reset_camera(); }
           }
 
           // Directional light
           const std::string directional_light_title = "Directional light";
           if (ImGui::CollapsingHeader(directional_light_title.c_str())) {
             ImGui::InputFloat3("Direction##directional_light", &renderer->directional_light.direction.x);
-            ImGui::InputFloat3("Intensity", &renderer->directional_light.intensity.x);
+            ImGui::SameLine(); ImGui_HelpMarker("Direction is negative.");
+
+            ImGui::ColorEdit3("Intensity", &renderer->directional_light.intensity.x);
+            ImGui::SameLine(); ImGui_HelpMarker("Intensity or color of the light."); // FIXME: May or may not exceed 1.0??
           }
 
           // Point lights
@@ -433,7 +440,8 @@ void MeineKraft::mainloop() {
               const std::string str = std::to_string(i);
               if (ImGui::CollapsingHeader(str.c_str())) {
                 ImGui::InputFloat3("Position", &renderer->pointlights[i].position.x);
-                ImGui::InputFloat3("Intensity", &renderer->pointlights[i].intensity.x);
+                ImGui::ColorEdit3("Intensity", &renderer->pointlights[i].intensity.x);
+                ImGui::SameLine(); ImGui_HelpMarker("Intensity or color of the light."); // FIXME: May or may not exceed 1.0??
               }
               ImGui::PopID();
             }
@@ -450,14 +458,26 @@ void MeineKraft::mainloop() {
                 const std::string member_title = "Members##" + batch_title;
                 if (ImGui::CollapsingHeader(member_title.c_str())) {
                   for (const auto& id : batch.entity_ids) {
+                    ImGui::Text("Entity id: %lu", id);
+
                     const std::string* name = NameSystem::instance().get_name_from_entity_referenced(id);
-                    ImGui::Text("Entity id: %lu, Name: %s", id, name->c_str());
+                    ImGui::Text("Name: %s", name->c_str());
+                    // ImGui::InputText("Name", name->c_str(), name->size()); // TODO: Change Entity name
+
                     TransformComponent* transform = TransformSystem::instance().lookup_referenced(id);
                     ImGui::PushID(transform);
                     ImGui::InputFloat3("Position", &transform->position.x);
                     ImGui::InputFloat3("Rotation", &transform->rotation.x);
                     ImGui::InputFloat("Scale", &transform->scale);
                     ImGui::PopID();
+
+                    if (ImGui::Button("Remove")) {
+                      renderer->remove_component(id);
+                    }
+                    ImGui::SameLine();
+                    if (ImGui::Button("Clone")) {
+                      // TODO: Clone Entity
+                    }
                   }
                 }
               }

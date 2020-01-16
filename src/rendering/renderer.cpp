@@ -951,6 +951,7 @@ void Renderer::render(const uint32_t delta) {
     // Shadowmapping
     glUniform1f(glGetUniformLocation(program, "uShadow_bias"), state.shadow.bias);
     glUniform3fv(glGetUniformLocation(program, "uDirectional_light_direction"), 1, &directional_light.direction.x);
+    glUniform3fv(glGetUniformLocation(program, "uDirectional_light_intensity"), 1, &directional_light.intensity.x);
     glUniformMatrix4fv(glGetUniformLocation(program, "uLight_space_transform"), 1, GL_FALSE, glm::value_ptr(light_space_transform));
     glUniform1i(glGetUniformLocation(program, "uShadowmap"), gl_shadowmapping_texture_unit);
     glUniform1iv(glGetUniformLocation(program, "uClipmap_sizes"), NUM_CLIPMAPS, clipmaps.size);
