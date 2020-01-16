@@ -55,9 +55,9 @@ void imageAtomicAverageRGBA8(layout(r32ui) coherent volatile uimage3D voxels,
   }
 }
 
-// TODO: Add directional light color
 uniform float uShadow_bias;
 uniform vec3 uDirectional_light_direction;
+uniform vec3 uDirectional_light_intensity;
 uniform mat4 uLight_space_transform;
 uniform sampler2D uShadowmap;
 
@@ -95,7 +95,7 @@ void main() {
   const vec3 emissive = texture(uEmissive, fTextureCoord).rgb;
 
   // Inject radiance if voxel NOT in shadow
-  const vec3 value = shadow(fPosition, fNormal) * radiance + emissive;
+  const vec3 value = uDirectional_light_intensity * shadow(fPosition, fNormal) * radiance + emissive;
   if (abs(dot(value, vec3(1.0))) > 0.0) {
       imageAtomicAverageRGBA8(uVoxel_radiance[clipmap], radiance + emissive, vpos);
   }
