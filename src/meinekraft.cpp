@@ -21,9 +21,6 @@
 // ImGui global GUI settings
 struct {
   bool render_system_window = true;  // Render system information and config. window
-  struct {
-    bool pipeline_window = false;    // TODO: Detailed information about the various renderer stages
-  } renderer;
   bool scene_graph_window = false;   // Scene graph of Graphic entities
   bool logger_window = false;        // TODO: Logger of engine messages
   bool console_window = false;       // TODO: Console for engine commands
@@ -172,7 +169,7 @@ void MeineKraft::mainloop() {
   int64_t delta = 0;
 
   /// Delta values
-  const int num_deltas = 100;
+  const int num_deltas = 150;
   float deltas[num_deltas];
 
   while (!done) {
@@ -256,7 +253,7 @@ void MeineKraft::mainloop() {
               throttle_rendering = false;
               break;
             case SDL_WINDOWEVENT_FOCUS_LOST:
-              // throttle_rendering = true;
+              // throttle_rendering = true; // FIXME: Does not work when RenderDoc is attached
               break;
           }
           break;
@@ -280,7 +277,7 @@ void MeineKraft::mainloop() {
 
     /// ImGui - Debug instruments
     if (!throttle_rendering) {
-      pass_started("ImGui", renderer->state.render_passes++);
+      // pass_started("ImGui");
 
       ImGui_ImplSdlGL3_NewFrame(window);
       auto io = ImGui::GetIO();
@@ -309,11 +306,6 @@ void MeineKraft::mainloop() {
           ImGui::EndMainMenuBar();
         }
 
-        if (Gui.renderer.pipeline_window) {
-          ImGui::Begin("Graphics Pipeline");
-          // TODO: Implement ... timings, pipeline stages, etc
-        }
-
         // Render system
         if (Gui.render_system_window) {
           ImGui::Begin("Render system", &Gui.render_system_window);
@@ -325,19 +317,27 @@ void MeineKraft::mainloop() {
           ImGui::PlotLines("", deltas, num_deltas, 0, "ms / frame", 0.0f, 50.0f, ImVec2(ImGui::GetWindowWidth(), 100));
 
           ImGui::Text("Average %lu ms/frame (%.1f FPS)", delta, io.Framerate);
-          ImGui::SameLine();
           ImGui::Text("Frame: %lu", renderer->state.frame);
-
           ImGui::Text("Resolution: (%u, %u)", renderer->screen.width, renderer->screen.height);
           ImGui::Text("Draw calls per frame: %u", renderer->state.draw_calls);
           ImGui::Text("Render passes: %u", renderer->state.render_passes);
           // TODO: Change resolution, memory usage, textures, render pass execution times, etc
 
-          if (ImGui::CollapsingHeader("Global settings")) {
+          if (ImGui::CollapsingHeader("Global")) {
             ImGui::Checkbox("Normal mapping", &renderer->state.lighting.normalmapping);
+
+            if (ImGui::CollapsingHeader("GPU view frustum culling")) {
+              ImGui::Text("Execution time (ms): %.2f", renderer->state.culling.execution_time / 1'000'000.0f);
+              ImGui::Checkbox("Enabled", &renderer->state.culling.enabled);
+            }
+
+            if (ImGui::CollapsingHeader("Global buffer generation")) {
+              ImGui::Text("Execution time (ms): %.2f", renderer->state.gbuffer.execution_time / 1'000'000.0f);
+            }
           }
 
           if (ImGui::CollapsingHeader("Shadows", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::Text("Execution time (ms): %.2f", renderer->state.shadow.execution_time / 1'000'000.0f);
             ImGui::InputInt2("Shadowmap resolution", &renderer->screen.width);
 
             static int s = 0; // Selection
@@ -360,16 +360,20 @@ void MeineKraft::mainloop() {
           }
 
           if (ImGui::CollapsingHeader("Voxelization", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::Text("Execution time (ms): %.2f", renderer->state.voxelization.execution_time / 1'000'000.0f);
+
             if (ImGui::Button("Voxelize")) {
-              renderer->state.voxelize = true;
+              renderer->state.voxelization.voxelize = true;
             }
             ImGui::SameLine();
-            ImGui::Checkbox("Always voxelize", &renderer->state.always_voxelize);
+            ImGui::Checkbox("Always voxelize", &renderer->state.voxelization.always_voxelize);
 
-            ImGui::Checkbox("Conservative voxelization", &renderer->state.conservative_rasterization);
+            ImGui::Checkbox("Conservative voxelization", &renderer->state.voxelization.conservative_rasterization);
           }
 
           if (ImGui::CollapsingHeader("Voxel cone tracing", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::Text("Execution time (ms): %.2f", renderer->state.vct.execution_time / 1'000'000.0f);
+
             ImGui::Checkbox("Direct", &renderer->state.lighting.direct);
             ImGui::SameLine();
             ImGui::Checkbox("Indirect", &renderer->state.lighting.indirect);
@@ -380,13 +384,15 @@ void MeineKraft::mainloop() {
             ImGui::SameLine();
             ImGui_HelpMarker("Note ambient is only available when 'Indirect' is used.");
 
-            ImGui::SliderInt("# diffuse cones", &renderer->state.num_diffuse_cones, 1, RenderState::MAX_VCT_DIFFUSE_CONES);
+            ImGui::SliderInt("# diffuse cones", &renderer->state.vct.num_diffuse_cones, 1, renderer->state.vct.MAX_DIFFUSE_CONES);
 
-            ImGui::InputFloat("Roughness aperature (deg.)", &renderer->state.roughness_aperature);
-            ImGui::InputFloat("Metallic aperature (deg.)", &renderer->state.metallic_aperature);
+            ImGui::InputFloat("Roughness aperature (deg.)", &renderer->state.vct.roughness_aperature);
+            ImGui::InputFloat("Metallic aperature (deg.)", &renderer->state.vct.metallic_aperature);
           }
 
           if (ImGui::CollapsingHeader("Bilateral filtering", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::Text("Execution time (ms): %.2f", renderer->state.bilateral_filtering.execution_time / 1'000'000.0f);
+
             ImGui::Checkbox("Enabled", &renderer->state.bilateral_filtering.enabled);
 
             ImGui::Text("Filter:");
@@ -496,7 +502,7 @@ void MeineKraft::mainloop() {
         }
 
         ImGui::Render();
-        pass_ended();
+        // pass_ended(); // FIXME: Render pass handling outside Renderer not allowed
       }
     }
     SDL_GL_SwapWindow(window);
