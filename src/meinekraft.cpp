@@ -41,19 +41,34 @@ static void ImGui_HelpMarker(const std::string& str) {
   }
 }
 
+static ImVec4 imgui_color_for_value(const float v, const float a, const float b) {
+  ImVec4 color;
+ 
+  if (v <= a) {
+    color = ImVec4(0.35f, 1.0f, 0.0f, 0.57f); // Good
+  } else if (v <= b) {
+    color = ImVec4(1.0f, 1.0f, 0.0f, 0.57f); // OK
+  } else {
+    color = ImVec4(1.0, 0.35f, 0.0f, 0.57f); // Bad
+  }
+
+  return color;
+}
+
 void imgui_styling() {
   ImGuiStyle* style = &ImGui::GetStyle();
 
   style->WindowPadding = ImVec2(15, 15);
   style->WindowRounding = 5.0f;
+  style->WindowTitleAlign = ImVec2(0.5, 0.5);
   style->FramePadding = ImVec2(5, 5);
   style->FrameRounding = 4.0f;
   style->ItemSpacing = ImVec2(12, 8);
-  style->ItemInnerSpacing = ImVec2(8, 6);
+  style->ItemInnerSpacing = ImVec2(10, 6);
   style->IndentSpacing = 25.0f;
   style->ScrollbarSize = 15.0f;
   style->ScrollbarRounding = 9.0f;
-  style->GrabMinSize = 5.0f;
+  style->GrabMinSize = 20.0f;
   style->GrabRounding = 3.0f;
 
   style->Colors[ImGuiCol_Text] = ImVec4(0.80f, 0.80f, 0.83f, 1.00f);
@@ -99,7 +114,6 @@ void imgui_styling() {
   style->Colors[ImGuiCol_PlotHistogramHovered] = ImVec4(1.0f, 1.00f, 1.0f, 1.00f);
   style->Colors[ImGuiCol_TextSelectedBg] = ImVec4(0.55f, 0.55f, 0.55f, 0.43f);
   style->Colors[ImGuiCol_ModalWindowDarkening] = ImVec4(1.00f, 0.98f, 0.95f, 0.73f);
-  // TODO: Change PlotLines color depending on the value (set thresholds for the different colors)
 }
 
 MeineKraft::MeineKraft() {
@@ -253,7 +267,7 @@ void MeineKraft::mainloop() {
               throttle_rendering = false;
               break;
             case SDL_WINDOWEVENT_FOCUS_LOST:
-              // throttle_rendering = true; // FIXME: Does not work when RenderDoc is attached
+              throttle_rendering = true; // FIXME: Does not work when RenderDoc is attached
               break;
           }
           break;
@@ -314,30 +328,38 @@ void MeineKraft::mainloop() {
 
           static size_t i = -1; i = (i + 1) % num_deltas;
           deltas[i] = float(delta);
-          ImGui::PlotLines("", deltas, num_deltas, 0, "ms / frame", 0.0f, 50.0f, ImVec2(ImGui::GetWindowWidth(), 100));
+          const ImVec4 color = imgui_color_for_value(float(delta), 16.0f, 20.0f);
+          ImGui::PushStyleColor(ImGuiCol_PlotLines, color);
+          ImGui::PlotLines("", deltas, num_deltas, 0, "ms / frame", 0.0f, 50.0f, ImVec2(ImGui::GetWindowWidth(), 80));
+          ImGui::PopStyleColor();
 
           ImGui::Text("Average %lu ms/frame (%.1f FPS)", delta, io.Framerate);
           ImGui::Text("Frame: %lu", renderer->state.frame);
           ImGui::Text("Resolution: (%u, %u)", renderer->screen.width, renderer->screen.height);
           ImGui::Text("Draw calls per frame: %u", renderer->state.draw_calls);
           ImGui::Text("Render passes: %u", renderer->state.render_passes);
+          ImGui::Text("Render passes total time (ms): %f", renderer->state.total_execution_time / 1'000'000.0f);
           // TODO: Change resolution, memory usage, textures, render pass execution times, etc
 
           if (ImGui::CollapsingHeader("Global")) {
             ImGui::Checkbox("Normal mapping", &renderer->state.lighting.normalmapping);
 
             if (ImGui::CollapsingHeader("GPU view frustum culling")) {
-              ImGui::Text("Execution time (ms): %.2f", renderer->state.culling.execution_time / 1'000'000.0f);
+              ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.culling.execution_time / 1'000'000.0f, float(renderer->state.culling.execution_time) / float(renderer->state.total_execution_time));
               ImGui::Checkbox("Enabled", &renderer->state.culling.enabled);
             }
 
             if (ImGui::CollapsingHeader("Global buffer generation")) {
-              ImGui::Text("Execution time (ms): %.2f", renderer->state.gbuffer.execution_time / 1'000'000.0f);
+              ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.gbuffer.execution_time / 1'000'000.0f, float(renderer->state.gbuffer.execution_time) / float(renderer->state.total_execution_time));
+            }
+
+            if (ImGui::CollapsingHeader("Final blit pass")) {
+              ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.blit.execution_time / 1'000'000.0f, float(renderer->state.blit.execution_time) / float(renderer->state.total_execution_time));
             }
           }
 
           if (ImGui::CollapsingHeader("Shadows", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::Text("Execution time (ms): %.2f", renderer->state.shadow.execution_time / 1'000'000.0f);
+            ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.shadow.execution_time / 1'000'000.0f, float(renderer->state.shadow.execution_time) / float(renderer->state.total_execution_time));
             ImGui::InputInt2("Shadowmap resolution", &renderer->screen.width);
 
             static int s = 0; // Selection
@@ -360,7 +382,7 @@ void MeineKraft::mainloop() {
           }
 
           if (ImGui::CollapsingHeader("Voxelization", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::Text("Execution time (ms): %.2f", renderer->state.voxelization.execution_time / 1'000'000.0f);
+            ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.voxelization.execution_time / 1'000'000.0f, float(renderer->state.voxelization.execution_time) / float(renderer->state.total_execution_time));
 
             if (ImGui::Button("Voxelize")) {
               renderer->state.voxelization.voxelize = true;
@@ -372,7 +394,7 @@ void MeineKraft::mainloop() {
           }
 
           if (ImGui::CollapsingHeader("Voxel cone tracing", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::Text("Execution time (ms): %.2f", renderer->state.vct.execution_time / 1'000'000.0f);
+            ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.vct.execution_time / 1'000'000.0f, float(renderer->state.vct.execution_time) / float(renderer->state.total_execution_time));
 
             ImGui::Checkbox("Direct", &renderer->state.lighting.direct);
             ImGui::SameLine();
@@ -391,7 +413,7 @@ void MeineKraft::mainloop() {
           }
 
           if (ImGui::CollapsingHeader("Bilateral filtering", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::Text("Execution time (ms): %.2f", renderer->state.bilateral_filtering.execution_time / 1'000'000.0f);
+            ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.bilateral_filtering.execution_time / 1'000'000.0f, float(renderer->state.bilateral_filtering.execution_time) / float(renderer->state.total_execution_time));
 
             ImGui::Checkbox("Enabled", &renderer->state.bilateral_filtering.enabled);
 
@@ -414,17 +436,26 @@ void MeineKraft::mainloop() {
           ImGui::End();
         }
 
+        ImGui::ShowTestWindow();
+
         if (Gui.scene_graph_window) {
           ImGui::Begin("Scene graph", &Gui.scene_graph_window);
 
-          static int s = 0; // Selection
-          ImGui::Text("Spawn ..", "Model \0 Geometric primitive \0"); // TODO: Spawn models, geometric primitives
-          ImGui::SameLine(); ImGui_HelpMarker("Add visual entities to the world");
+          // FIXME: Does not work
+          if (ImGui::BeginMenuBar()) {
+            if (ImGui::BeginMenu("New")) {
+              if (ImGui::MenuItem("Model")) {  } // TODO: Model loader GUI
+              if (ImGui::MenuItem("Geometric primitive")) {  }
+              ImGui::EndMenu();
+            }
+            ImGui::EndMenuBar();
+          }
 
           if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::InputFloat3("Position##camera", &renderer->scene->camera->position.x);
             ImGui::InputFloat3("Direction##camera", &renderer->scene->camera->direction.x);
             // ImGui::InputFloat("FoV", &renderer->scene->camera->FoV); // TODO: Camera adjustable FoV
+            ImGui::SameLine();
             if (ImGui::Button("Reset")) { renderer->scene->reset_camera(); }
           }
 
