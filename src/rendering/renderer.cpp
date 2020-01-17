@@ -35,6 +35,17 @@ struct DrawElementsIndirectCommand {
   uint32_t padding2 = 0;
 };
 
+/// Pass handling code - used for debuggging at this moment
+inline void Renderer::pass_started(const std::string &msg) {
+  glBeginQuery(GL_TIME_ELAPSED, gl_query_ids[state.render_passes++]);
+  glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, msg.c_str());
+}
+
+inline void Renderer::pass_ended() {
+  glPopDebugGroup();
+  glEndQuery(GL_TIME_ELAPSED);
+}
+
 static uint32_t get_next_free_texture_unit(bool peek = false) {
   int32_t max_texture_units;
   glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max_texture_units);
@@ -500,8 +511,8 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   /// Voxel cone tracing pass
   {
     /// Create SSBO for the diffuse cones
-    const size_t MAX_CONES = RenderState::MAX_VCT_DIFFUSE_CONES;
-    const std::vector<Vec4f> cones = generate_diffuse_cones(state.num_diffuse_cones);
+    const size_t MAX_CONES = state.vct.MAX_DIFFUSE_CONES;
+    const std::vector<Vec4f> cones = generate_diffuse_cones(state.vct.num_diffuse_cones);
 
     glGenBuffers(1, &gl_vct_diffuse_cones_ssbo);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, gl_vct_diffuse_cones_ssbo);
@@ -730,12 +741,14 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
 
   /// Rendering pass execution time query buffer
   {
-    const uint32_t num_render_passes = 25; // FIXME: Hardcoded number of render pass ...
-    // glGenQueries(num_render_passes, gl_query_ids);
+    glGenQueries(MAX_RENDER_PASSES, &gl_query_ids[0]);
 
     glGenBuffers(1, &gl_execution_time_query_buffer);
     glBindBuffer(GL_QUERY_BUFFER, gl_execution_time_query_buffer);
-    glBufferData(GL_QUERY_BUFFER, num_render_passes * sizeof(GLuint64), nullptr, GL_DYNAMIC_COPY);
+    const auto flags = GL_MAP_READ_BIT | GL_MAP_PERSISTENT_BIT;
+    glBufferStorage(GL_QUERY_BUFFER, MAX_RENDER_PASSES * sizeof(GLuint64), nullptr, flags);
+    gl_query_time_buffer_ptr = (uint64_t*) glMapBufferRange(GL_QUERY_BUFFER, 0, MAX_RENDER_PASSES * sizeof(GLuint64), flags);
+    glObjectLabel(GL_BUFFER, gl_execution_time_query_buffer, -1, "Renderpass execution time buffer");
   }
 
   glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
@@ -804,7 +817,8 @@ void Renderer::render(const uint32_t delta) {
   std::memcpy(gl_pointlights_ssbo_ptr, pointlights.data(), pointlights.size() * sizeof(PointLight));
 
   {
-    pass_started("Culling pass", state.render_passes++);
+    state.culling.execution_time = gl_query_time_buffer_ptr[state.render_passes];
+    pass_started("Culling pass");
 
     // NOTE: Extraction of frustum planes are performed on the transpose (because of column/row-major difference).
     // FIXME: Use the Direct3D way of extraction instead since GLM appears to store the matrix in a row-major way.
@@ -837,7 +851,7 @@ void Renderer::render(const uint32_t delta) {
     pass_ended();
   }
 
-  pass_started("Directional shadow mapping pass", state.render_passes++);
+  pass_started("Directional shadow mapping pass");
   const glm::mat4 light_space_transform = shadowmap_transform(scene->aabb, directional_light);
   {
     glCullFace(GL_FRONT);
@@ -866,7 +880,8 @@ void Renderer::render(const uint32_t delta) {
   }
 
   {
-    pass_started("Geometry pass", state.render_passes++);
+    state.gbuffer.execution_time = gl_query_time_buffer_ptr[state.render_passes];
+    pass_started("Geometry pass");
 
     glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
     glEnable(GL_DEPTH_TEST);
@@ -911,12 +926,13 @@ void Renderer::render(const uint32_t delta) {
     pass_ended();
   }
 
-  if (state.voxelize) {
-    if (!state.always_voxelize) {
-      state.voxelize = false;
+  if (state.voxelization.voxelize) {
+    if (!state.voxelization.always_voxelize) {
+      state.voxelization.voxelize = false;
     }
 
-    pass_started("Voxelization pass", state.render_passes++);
+    state.voxelization.execution_time = gl_query_time_buffer_ptr[state.render_passes];
+    pass_started("Voxelization pass");
 
     for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
       glClearTexImage(gl_voxel_radiance_textures[i], 0, GL_RGBA, GL_FLOAT, nullptr); 
@@ -955,7 +971,7 @@ void Renderer::render(const uint32_t delta) {
     glUniformMatrix4fv(glGetUniformLocation(program, "uLight_space_transform"), 1, GL_FALSE, glm::value_ptr(light_space_transform));
     glUniform1i(glGetUniformLocation(program, "uShadowmap"), gl_shadowmapping_texture_unit);
     glUniform1iv(glGetUniformLocation(program, "uClipmap_sizes"), NUM_CLIPMAPS, clipmaps.size);
-    glUniform1i(glGetUniformLocation(program, "uConservative_rasterization_enabled"), state.conservative_rasterization);
+    glUniform1i(glGetUniformLocation(program, "uConservative_rasterization_enabled"), state.voxelization.conservative_rasterization);
 
     for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
       glBindImageTexture(gl_voxel_radiance_image_units[i], gl_voxel_radiance_textures[i], 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32UI);
@@ -1007,7 +1023,7 @@ void Renderer::render(const uint32_t delta) {
 
     // NOTE: Opacity normalization subpass is way too slow around 12.7 ms (26% of frame time)
     if constexpr(false) {
-      pass_started("Opacity normalization subpass", state.render_passes++);
+      pass_started("Opacity normalization subpass");
 
       const auto program = voxelization_opacity_norm_shader->gl_program;
       glUseProgram(program);
@@ -1025,7 +1041,8 @@ void Renderer::render(const uint32_t delta) {
   }
 
   if (state.voxel_visualization.enabled) {
-    pass_started("Voxel visualization pass", state.render_passes++);
+    state.voxel_visualization.execution_time = gl_query_time_buffer_ptr[state.render_passes];
+    pass_started("Voxel visualization pass");
 
     const auto program = voxel_visualization_shader->gl_program;
     glUseProgram(program);
@@ -1060,10 +1077,11 @@ void Renderer::render(const uint32_t delta) {
     pass_ended();
   }
 
-  const size_t div = 1 ; // FIXME: Downsample factor / fraction of the screen rendered
+  const size_t div = 2 ; // FIXME: Downsample factor / fraction of the screen rendered
   /// Voxel cone tracing pass
   {
-    pass_started("Voxel cone tracing pass", state.render_passes++);
+    state.vct.execution_time = gl_query_time_buffer_ptr[state.render_passes];
+    pass_started("Voxel cone tracing pass");
     const auto program = vct_shader->gl_program;
 
     glUseProgram(program);
@@ -1076,9 +1094,9 @@ void Renderer::render(const uint32_t delta) {
     glUniform1i(glGetUniformLocation(program, "uSpecular"), state.lighting.specular);
     glUniform1i(glGetUniformLocation(program, "uAmbient"), state.lighting.ambient);
     glUniform1i(glGetUniformLocation(program, "uDirect"), state.lighting.direct);
-    const float roughness_aperature = glm::radians(state.roughness_aperature);
+    const float roughness_aperature = glm::radians(state.vct.roughness_aperature);
     glUniform1f(glGetUniformLocation(program, "uRoughness_aperature"), roughness_aperature);
-    const float metallic_aperature = glm::radians(state.metallic_aperature);
+    const float metallic_aperature = glm::radians(state.vct.metallic_aperature);
     glUniform1f(glGetUniformLocation(program, "uMetallic_aperature"), metallic_aperature);
     const float ambient_decay = 0.1f;
     glUniform1f(glGetUniformLocation(program, "uAmbient_decay"), ambient_decay);
@@ -1096,8 +1114,8 @@ void Renderer::render(const uint32_t delta) {
 
     glUniform3fv(glGetUniformLocation(program, "uCamera_position"), 1, &scene->camera->position.x);
 
-    glUniform1ui(glGetUniformLocation(program, "uNum_diffuse_cones"), state.num_diffuse_cones);
-    const std::vector<Vec4f> cones = generate_diffuse_cones(state.num_diffuse_cones);
+    glUniform1ui(glGetUniformLocation(program, "uNum_diffuse_cones"), state.vct.num_diffuse_cones);
+    const std::vector<Vec4f> cones = generate_diffuse_cones(state.vct.num_diffuse_cones);
     std::memcpy(gl_vct_diffuse_cones_ssbo_ptr, cones.data(), cones.size() * sizeof(Vec4f));
 
     glUniform1i(glGetUniformLocation(program, "uNormalmapping"), state.lighting.normalmapping);
@@ -1145,7 +1163,8 @@ void Renderer::render(const uint32_t delta) {
   }
 
   if (state.bilateral_filtering.enabled) {
-    pass_started("Bilateral filtering pass", state.render_passes++);
+    state.bilateral_filtering.execution_time = gl_query_time_buffer_ptr[state.render_passes];
+    pass_started("Bilateral filtering pass");
 
     // Declare input & output texture
     const uint32_t ping_pong_in_texture_unit  = gl_ambient_radiance_texture_unit;
@@ -1159,6 +1178,9 @@ void Renderer::render(const uint32_t delta) {
       const auto program = bf_ping_shader->gl_program;
       glUseProgram(program);
       glBindFramebuffer(GL_FRAMEBUFFER, gl_bf_ping_fbo);
+
+      glUniform1ui(glGetUniformLocation(program, "uScreen_width"), screen.width / div);
+      glUniform1ui(glGetUniformLocation(program, "uScreen_height"), screen.height / div);
 
       glUniform1i(glGetUniformLocation(program, "uPosition_weight"), state.bilateral_filtering.position_weight);
       glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
@@ -1175,10 +1197,8 @@ void Renderer::render(const uint32_t delta) {
       glUniform1i(glGetUniformLocation(program, "uInput"), ping_pong_in_texture_unit);
       // glUniform1i(glGetUniformLocation(program, "uOutput"), 0); // NOTE: Default to 0 in shader
 
-      glViewport(0, 0, screen.width / div, screen.height / div);
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
       glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-      glViewport(0, 0, screen.width, screen.height);
     }
 
     glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT); // Due to incoherent mem. access need to sync read and usage of voxel data
@@ -1188,6 +1208,9 @@ void Renderer::render(const uint32_t delta) {
       const auto program = bf_pong_shader->gl_program;
       glUseProgram(program);
       glBindFramebuffer(GL_FRAMEBUFFER, gl_bf_pong_fbo);
+
+      glUniform1ui(glGetUniformLocation(program, "uScreen_width"), screen.width / div);
+      glUniform1ui(glGetUniformLocation(program, "uScreen_height"), screen.height / div);
 
       glUniform1i(glGetUniformLocation(program, "uPosition_weight"), state.bilateral_filtering.position_weight);
       glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
@@ -1204,10 +1227,8 @@ void Renderer::render(const uint32_t delta) {
       glUniform1i(glGetUniformLocation(program, "uInput"), gl_bf_ping_out_texture_unit);
       glUniform1i(glGetUniformLocation(program, "uOutput"), ping_pong_in_texture_unit);
 
-      glViewport(0, 0, screen.width / div, screen.height / div);
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
       glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-      glViewport(0, 0, screen.width, screen.height);
     }
 
     last_executed_fbo = gl_bf_pong_fbo;
@@ -1216,7 +1237,8 @@ void Renderer::render(const uint32_t delta) {
   }
 
   {
-    pass_started("Lighting application pass", state.render_passes++);
+    state.lighting.execution_time = gl_query_time_buffer_ptr[state.render_passes];
+    pass_started("Lighting application pass");
 
     const auto program = lighting_application_shader->gl_program;
     glUseProgram(program);
@@ -1242,7 +1264,8 @@ void Renderer::render(const uint32_t delta) {
 
   /// Copy final pass into default FBO
   {
-    pass_started("Final blit pass", state.render_passes++);
+    state.blit.execution_time = gl_query_time_buffer_ptr[state.render_passes];
+    pass_started("Final blit pass");
 
     glBindFramebuffer(GL_READ_FRAMEBUFFER, last_executed_fbo);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
@@ -1265,7 +1288,7 @@ void Renderer::render(const uint32_t delta) {
   /// Query for the GPU execution time for the render passes
   glBindBuffer(GL_QUERY_BUFFER, gl_execution_time_query_buffer);
   for (size_t i = 0; i < state.render_passes; i++) {
-    // glGetQueryObjectui64v(i, GL_QUERY_RESULT_NO_WAIT, nullptr);
+    glGetQueryObjectui64v(gl_query_ids[i], GL_QUERY_RESULT_NO_WAIT, (GLuint64*) (sizeof(GLuint64) * i));
   }
 }
 

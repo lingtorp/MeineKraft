@@ -320,6 +320,7 @@ enum class ShadowAlgorithm : uint8_t {
 };
 
 /// Represents the state of the Render system, used for ImGUI debug panes
+/// NOTE: execution_time per render pass is NOT stable frame to frame after a render pass has changed, the pipeline needs to be static to be accurate
 struct RenderState {
   // General renderer system information
   uint64_t frame           = 0;
@@ -330,7 +331,8 @@ struct RenderState {
 
   // Global illumination related
   struct {
-    uint64_t execution_time; // NOTE: nanoseconds
+    // NOTE: Execution time of lighting application only applies radiance does not compute it (hence very fast)
+    uint64_t execution_time = 0; // NOTE: nanoseconds
     bool shadowmapping = true;
     bool normalmapping = true;
     bool indirect = true;
@@ -340,19 +342,36 @@ struct RenderState {
     bool emissive = true;
   } lighting;
 
+  struct {
+    uint64_t execution_time = 0; // NOTE: nanoseconds
+    bool enabled = true;
+  } culling;
+
+  // GBuffer generation pass (a.k.a geometry pass)
+  struct {
+    uint64_t execution_time = 0; // NOTE: nanoseconds
+  } gbuffer;
+
+  // Voxelization related (used by VCT pass)
+  struct {
+    uint64_t execution_time = 0; // NOTE: nanoseconds
+    bool voxelize = true; // NOTE: Toggled by the Renderer (a.k.a executed once)
+    bool conservative_rasterization = false;
+    bool always_voxelize = false;
+  } voxelization;
+
   // Voxel cone tracing related
-  uint64_t execution_time; // NOTE: nanoseconds
-  static const uint32_t MAX_VCT_DIFFUSE_CONES = 12;
-  float roughness_aperature = 60.0f; // 60 deg diffuse cone from [Rauwendaal, Crassin11]
-  float metallic_aperature   = 0.1f; // 10 deg specular cone from [Crassin11]
-  bool voxelize = true;              // NOTE: Toggled by the Renderer (a.k.a executed once)
-  bool conservative_rasterization = false;
-  bool always_voxelize = false;
-  int num_diffuse_cones = 6;  // [Crassin11], [Yeu13] suggests 5
+  struct {
+    uint64_t execution_time; // NOTE: nanoseconds
+    const uint32_t MAX_DIFFUSE_CONES = 12;
+    float roughness_aperature = 60.0f; // 60 deg diffuse cone from [Rauwendaal, Crassin11]
+    float metallic_aperature   = 0.1f; // 10 deg specular cone from [Crassin11]
+    int num_diffuse_cones = 6;  // [Crassin11], [Yeu13] suggests 5
+  } vct;
 
   // Direct/shadows related
   struct {
-    uint64_t execution_time; // NOTE: nanoseconds
+    uint64_t execution_time = 0; // NOTE: nanoseconds
     ShadowAlgorithm algorithm = ShadowAlgorithm::Plain; // See enum class ShadowAlgorithm
     float bias = 0.00025f;
     int32_t pcf_samples = 2;
@@ -361,7 +380,7 @@ struct RenderState {
 
   // Bilateral filtering related
   struct {
-    uint64_t execution_time; // NOTE: nanoseconds
+    uint64_t execution_time = 0; // NOTE: nanoseconds
     bool enabled = true;            // Bilateral filtering pass to filter the radiance
     bool direct_enabled = false;    // Enable filtering of the direct radiance
     bool ambient_enabled = true;    // Enable filtering of the ambient radiance
@@ -371,10 +390,16 @@ struct RenderState {
     bool normal_weight = false;     // Enable normals as a weight in filtering
   } bilateral_filtering;
 
+  // Final blit pass
+  struct {
+    uint64_t execution_time = 0; // NOTE: nanoseconds
+  } blit;
+
   // Voxel visualization related
   // FIXME: Voxel visualization does not work ...
   struct {
-    const bool enabled = false;
+    uint64_t execution_time = 0; // NOTE: nanoseconds
+    bool enabled = false;
   } voxel_visualization;
 
   RenderState() = default;

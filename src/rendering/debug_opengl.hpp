@@ -213,19 +213,4 @@ static void log_gl_error() {
   Log::error("OpenGL error " + err_str + ":" + std::to_string(err));
 }
 
-/// Pass handling code - used for debuggging at this moment
-inline void pass_started(const std::string &msg, const uint32_t id) {
-#if defined(__LINUX__) || defined(WIN32)
-  glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, msg.c_str());
-#endif
-  // glBeginQuery(GL_TIME_ELAPSED, id); // TODO: Implement
-}
-
-inline void pass_ended() {
-#if defined(__LINUX__) || defined(WIN32)
-  glPopDebugGroup();
-#endif
-  // glEndQuery(GL_TIME_ELAPSED);
-}
-
 #endif // MEINEKRAFT_DEBUG_OPENGL_HPP

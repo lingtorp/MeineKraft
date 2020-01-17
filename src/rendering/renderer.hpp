@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <array>
 
 #include "texture.hpp"
 #include "light.hpp"
@@ -52,16 +53,22 @@ struct Renderer {
 private:
   glm::mat4 projection_matrix; 
 
+  // Render pass handling related
+  void pass_started(const std::string &msg);
+  void pass_ended();
+
+  const static size_t MAX_RENDER_PASSES = 25;
+  /// Render pass execution time query buffer
+  uint32_t gl_execution_time_query_buffer = 0;
+  uint64_t* gl_query_time_buffer_ptr = nullptr;
+  std::array<uint32_t, MAX_RENDER_PASSES> gl_query_ids = {};
+
   void add_graphics_state(GraphicsBatch& batch, const RenderComponent& comp, Material material, ID entity_id);
   void update_transforms();
   void link_batch(GraphicsBatch& batch);
 
   /// View frustum culling shader
   ComputeShader* cull_shader = nullptr;
-
-  /// Render pass execution time query buffer
-  uint32_t gl_execution_time_query_buffer = 0;
-  uint32_t *gl_query_ids = nullptr;
 
   /// Lighting application pass related
   Shader* lighting_application_shader = nullptr;
@@ -137,7 +144,7 @@ private:
   // Geometric normals
   uint32_t gl_geometric_normal_texture = 0;
   uint32_t gl_geometric_normal_texture_unit = 0;
-  // Tangent space normals
+  //  Tangent space normals
   uint32_t gl_tangent_normal_texture = 0;
   uint32_t gl_tangent_normal_texture_unit = 0;
   // Tangent map
