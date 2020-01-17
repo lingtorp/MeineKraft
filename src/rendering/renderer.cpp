@@ -781,6 +781,7 @@ bool Renderer::init() {
 void Renderer::render(const uint32_t delta) {
   state.frame++;
   state.render_passes = 0;
+  state.total_execution_time = 0;
 
   GLuint last_executed_fbo = 0; // NOTE: This FBO's default buffer is blitted to the screen
 
@@ -1077,7 +1078,7 @@ void Renderer::render(const uint32_t delta) {
     pass_ended();
   }
 
-  const size_t div = 2 ; // FIXME: Downsample factor / fraction of the screen rendered
+  const size_t div = 1; // FIXME: Downsample factor / fraction of the screen rendered
   /// Voxel cone tracing pass
   {
     state.vct.execution_time = gl_query_time_buffer_ptr[state.render_passes];
@@ -1289,6 +1290,7 @@ void Renderer::render(const uint32_t delta) {
   glBindBuffer(GL_QUERY_BUFFER, gl_execution_time_query_buffer);
   for (size_t i = 0; i < state.render_passes; i++) {
     glGetQueryObjectui64v(gl_query_ids[i], GL_QUERY_RESULT_NO_WAIT, (GLuint64*) (sizeof(GLuint64) * i));
+    state.total_execution_time += gl_query_time_buffer_ptr[i]; // NOTE: Not 100% exact due to timings and changing pipeline
   }
 }
 

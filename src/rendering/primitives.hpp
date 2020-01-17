@@ -328,6 +328,7 @@ struct RenderState {
   uint32_t graphic_batches = 0;
   uint32_t draw_calls      = 0; // TODO: Hook these two up and use them
   uint32_t render_passes   = 0; // TODO: Hook these two up and use them
+  uint64_t total_execution_time = 0; // NOTE: for all render passes in ns
 
   // Global illumination related
   struct {
