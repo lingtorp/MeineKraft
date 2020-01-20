@@ -274,6 +274,9 @@ struct Vec2 {
     /// Element-wise equality
     constexpr bool operator==(const Vec2& rhs) const { return x == rhs.x && y == rhs.y; }
 
+    /// Element-wise division
+    constexpr Vec2<T> operator/(const Vec2& rhs) const { return {x / rhs.x , y / rhs.y}; }
+
     /// Returns a copy of this vector normalized
     constexpr inline Vec2<T> normalize() const {
         double length = this->length();
