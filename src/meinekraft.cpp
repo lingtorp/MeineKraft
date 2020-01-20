@@ -298,9 +298,15 @@ void MeineKraft::mainloop() {
 
       //  Main window
       {
+        // ImGui::ShowTestWindow();
+
         if (ImGui::BeginMainMenuBar()) {
           if (ImGui::BeginMenu("MeineKraft")) {
             if (ImGui::MenuItem("Quit", "ESC")) { done = true; }
+            if (ImGui::MenuItem("Screenshot")) {
+                const Vec3f *pixels = renderer->take_screenshot();
+                Filesystem::save_image_as_ppm(Filesystem::tmp, pixels, renderer->screen.width, renderer->screen.height);
+            }
             if (ImGui::MenuItem("Hide GUI")) {  } // TODO: Implement
             ImGui::EndMenu();
           }
@@ -338,29 +344,36 @@ void MeineKraft::mainloop() {
           ImGui::Text("Resolution: (%u, %u)", renderer->screen.width, renderer->screen.height);
           ImGui::Text("Draw calls per frame: %u", renderer->state.draw_calls);
           ImGui::Text("Render passes: %u", renderer->state.render_passes);
-          ImGui::Text("Render passes total time (ms): %f", renderer->state.total_execution_time / 1'000'000.0f);
+          ImGui::Text("Render passes total time (ms): %.1f", renderer->state.total_execution_time / 1'000'000.0f);
           // TODO: Change resolution, memory usage, textures, render pass execution times, etc
 
-          if (ImGui::CollapsingHeader("Global")) {
+          if (ImGui::CollapsingHeader("Global settings")) {
             ImGui::Checkbox("Normal mapping", &renderer->state.lighting.normalmapping);
+            ImGui::SliderInt("Downsample modifier", &renderer->state.lighting.downsample_modifier, 1, 4);
+            ImGui::SameLine(); ImGui_HelpMarker("GI is performed in lower resolution by factor 1/x");
 
-            if (ImGui::CollapsingHeader("GPU view frustum culling")) {
-              ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.culling.execution_time / 1'000'000.0f, float(renderer->state.culling.execution_time) / float(renderer->state.total_execution_time));
+            if (ImGui::TreeNode("GPU view frustum culling")) {
+              ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.culling.execution_time / 1'000'000.0f, 100.0f * float(renderer->state.culling.execution_time) / float(renderer->state.total_execution_time));
               ImGui::Checkbox("Enabled", &renderer->state.culling.enabled);
+              ImGui::TreePop();
             }
 
-            if (ImGui::CollapsingHeader("Global buffer generation")) {
-              ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.gbuffer.execution_time / 1'000'000.0f, float(renderer->state.gbuffer.execution_time) / float(renderer->state.total_execution_time));
+            if (ImGui::TreeNode("Global buffer generation")) {
+              ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.gbuffer.execution_time / 1'000'000.0f, 100.0f * float(renderer->state.gbuffer.execution_time) / float(renderer->state.total_execution_time));
+              ImGui::TreePop();
             }
 
-            if (ImGui::CollapsingHeader("Final blit pass")) {
-              ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.blit.execution_time / 1'000'000.0f, float(renderer->state.blit.execution_time) / float(renderer->state.total_execution_time));
+            if (ImGui::TreeNode("Final blit pass")) {
+              ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.blit.execution_time / 1'000'000.0f, 100.0f * float(renderer->state.blit.execution_time) / float(renderer->state.total_execution_time));
+              ImGui::TreePop();
             }
           }
 
-          if (ImGui::CollapsingHeader("Shadows", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.shadow.execution_time / 1'000'000.0f, float(renderer->state.shadow.execution_time) / float(renderer->state.total_execution_time));
-            ImGui::InputInt2("Shadowmap resolution", &renderer->screen.width);
+          if (ImGui::CollapsingHeader("Direct shadows")) {
+            ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.shadow.execution_time / 1'000'000.0f, 100.0f * float(renderer->state.shadow.execution_time) / float(renderer->state.total_execution_time));
+            ImGui::Text("Shadowmap resolution: (%u, %u)", renderer->state.shadow.SHADOWMAP_W, renderer->state.shadow.SHADOWMAP_H);
+            ImGui::SliderInt("Resolution modifier", &renderer->state.shadow.shadowmap_resolution_step, 1, 5);
+            ImGui::SameLine(); ImGui_HelpMarker("Changes the shadowmap texture size");
 
             static int s = 0; // Selection
             ImGui::Combo("Algorithm", &s, "Shadowmapping \0 Percentage-close filtering \0 Voxel cone traced \0");
@@ -370,19 +383,21 @@ void MeineKraft::mainloop() {
             switch (renderer->state.shadow.algorithm) {
             case ShadowAlgorithm::Plain:
                 ImGui::InputFloat("Shadow bias", &renderer->state.shadow.bias);
+                ImGui::SameLine(); ImGui_HelpMarker("Offset along normal to avoid shadow acne");
                 break;
             case ShadowAlgorithm::PercentageCloserFiltering:
                 ImGui::InputFloat("Shadow bias", &renderer->state.shadow.bias);
+                ImGui::SameLine(); ImGui_HelpMarker("Offset along normal to avoid shadow acne");
                 ImGui::InputInt("Samples", &renderer->state.shadow.pcf_samples);
                 break;
             case ShadowAlgorithm::VCT:
-                ImGui::InputFloat("Shadow cone aperature", &renderer->state.shadow.vct_cone_aperature);
+                ImGui::InputFloat("Shadow cone aperature (deg.)", &renderer->state.shadow.vct_cone_aperature);
                 break;
             }
           }
 
-          if (ImGui::CollapsingHeader("Voxelization", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.voxelization.execution_time / 1'000'000.0f, float(renderer->state.voxelization.execution_time) / float(renderer->state.total_execution_time));
+          if (ImGui::CollapsingHeader("Voxelization")) {
+            ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.voxelization.execution_time / 1'000'000.0f, 100.0f * float(renderer->state.voxelization.execution_time) / float(renderer->state.total_execution_time));
 
             if (ImGui::Button("Voxelize")) {
               renderer->state.voxelization.voxelize = true;
@@ -394,7 +409,7 @@ void MeineKraft::mainloop() {
           }
 
           if (ImGui::CollapsingHeader("Voxel cone tracing", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.vct.execution_time / 1'000'000.0f, float(renderer->state.vct.execution_time) / float(renderer->state.total_execution_time));
+            ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.vct.execution_time / 1'000'000.0f, 100.0f * float(renderer->state.vct.execution_time) / float(renderer->state.total_execution_time));
 
             ImGui::Checkbox("Direct", &renderer->state.lighting.direct);
             ImGui::SameLine();
@@ -413,7 +428,7 @@ void MeineKraft::mainloop() {
           }
 
           if (ImGui::CollapsingHeader("Bilateral filtering", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.bilateral_filtering.execution_time / 1'000'000.0f, float(renderer->state.bilateral_filtering.execution_time) / float(renderer->state.total_execution_time));
+            ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.bilateral_filtering.execution_time / 1'000'000.0f, 100.0f * float(renderer->state.bilateral_filtering.execution_time) / float(renderer->state.total_execution_time));
 
             ImGui::Checkbox("Enabled", &renderer->state.bilateral_filtering.enabled);
 
@@ -428,15 +443,17 @@ void MeineKraft::mainloop() {
 
             ImGui::Text("Weights:");
             ImGui::Checkbox("Position", &renderer->state.bilateral_filtering.position_weight);
-            ImGui::SameLine();
+            ImGui::SameLine(); ImGui::SliderFloat("Sigma##Position", &renderer->state.bilateral_filtering.position_sigma, 0.05f, 5.0f);
+
+            ImGui::Separator();
+
             ImGui::Checkbox("Normal", &renderer->state.bilateral_filtering.normal_weight);
+            ImGui::SameLine(); ImGui::SliderFloat("Sigma##Normal", &renderer->state.bilateral_filtering.normal_sigma, 0.05f, 5.0f);
           }
 
           ImGui::PopItemWidth();
           ImGui::End();
         }
-
-        ImGui::ShowTestWindow();
 
         if (Gui.scene_graph_window) {
           ImGui::Begin("Scene graph", &Gui.scene_graph_window);
