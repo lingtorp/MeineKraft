@@ -36,12 +36,17 @@ struct Renderer {
   /// Adds the data of a RenderComponent to a internal batch
   void add_component(const RenderComponent comp, const ID entity_id);
 
+  // TODO: Implement ...
   void remove_component(ID entity_id); // TODO: Implement
 
   /// Updates all the shaders projection matrices in order to support resizing of the window
   void update_projection_matrix(const float fov, const Resolution& screen);
 
+  // TODO: Document ...
   void load_environment_map(const std::vector<std::string>& faces);
+
+  // TODO: Implement ...
+  Vec3f* take_screenshot() const { return nullptr; };
 
   RenderState state;
   Resolution screen;
@@ -82,12 +87,10 @@ private:
   uint32_t gl_depth_texture_unit = 0;
 
   /// Directional shadow mapping related
+  Shader* shadowmapping_shader = nullptr;
   uint32_t gl_shadowmapping_fbo = 0;
   uint32_t gl_shadowmapping_texture = 0;
   uint32_t gl_shadowmapping_texture_unit = 0;
-  Shader* shadowmapping_shader = nullptr;
-  const uint32_t SHADOWMAP_W = 2 * 2048; // Shadowmap texture dimensions
-  const uint32_t SHADOWMAP_H = SHADOWMAP_W;
 
   uint32_t gl_pointlights_ssbo = 0;
   uint8_t* gl_pointlights_ssbo_ptr = nullptr;
@@ -139,6 +142,12 @@ private:
   uint32_t gl_voxel_visualization_fbo = 0;
   uint32_t gl_voxel_visualization_texture = 0;
   uint32_t gl_voxel_visualization_texture_unit = 0;
+
+  // Bilinear upsampling pass
+  Shader* bilinear_upsampling_shader = nullptr;
+  uint32_t gl_bilinear_upsampling_fbo = 0;
+  uint32_t gl_bilinear_upsampling_texture = 0;
+  uint32_t gl_bilinear_upsampling_texture_unit = 0;
 
   /// Global buffers
   // Geometric normals

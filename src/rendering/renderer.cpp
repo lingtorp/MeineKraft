@@ -373,7 +373,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glBindTexture(GL_TEXTURE_2D, gl_shadowmapping_texture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST); 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); 
-    glTexStorage2D(GL_TEXTURE_2D, 1, GL_DEPTH_COMPONENT16, SHADOWMAP_W, SHADOWMAP_H);
+    glTexStorage2D(GL_TEXTURE_2D, 1, GL_DEPTH_COMPONENT16, state.shadow.SHADOWMAP_W, state.shadow.SHADOWMAP_H);
     glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, gl_shadowmapping_texture, 0);
     glObjectLabel(GL_TEXTURE, gl_shadowmapping_texture, -1, "Shadowmap texture");
     glDrawBuffer(GL_NONE);
@@ -739,6 +739,50 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     }
   }
 
+  /// Bilinear upsampling pass
+  {
+    bilinear_upsampling_shader = new Shader(Filesystem::base + "shaders/generic-passthrough.vert.glsl",
+                                            Filesystem::base + "shaders/bilinear-upsampling.frag.glsl");
+
+    const auto [ok, msg] = bilinear_upsampling_shader->compile();
+    if (!ok) {
+      Log::error(msg); exit(-1);
+    }
+
+    const uint32_t program = bilinear_upsampling_shader->gl_program;
+    glUseProgram(program);
+    glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
+    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
+
+    GLuint gl_vbo = 0;
+    glGenBuffers(1, &gl_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, gl_vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(Primitive::quad), &Primitive::quad, GL_STATIC_DRAW);
+
+    glGenFramebuffers(1, &gl_bilinear_upsampling_fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, gl_bilinear_upsampling_fbo);
+
+    gl_bilinear_upsampling_texture_unit = get_next_free_texture_unit();
+    glActiveTexture(GL_TEXTURE0 + gl_bilinear_upsampling_texture_unit);
+
+    glGenTextures(1, &gl_bilinear_upsampling_texture);
+    glBindTexture(GL_TEXTURE_2D, gl_bilinear_upsampling_texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, screen.width, screen.height, 0, GL_RGBA, GL_FLOAT, nullptr);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_bilinear_upsampling_texture, 0);
+    glObjectLabel(GL_TEXTURE, gl_bilinear_upsampling_texture, -1, "Bilinear upsampling texture");
+
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_bilinear_upsampling_texture, 0);
+
+    const uint32_t fbo_attachments[1] = { GL_COLOR_ATTACHMENT0 };
+    glDrawBuffers(1, fbo_attachments);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+      Log::error("Lighting application FBO not complete"); exit(-1);
+    }
+  }
+
   /// Rendering pass execution time query buffer
   {
     glGenQueries(MAX_RENDER_PASSES, &gl_query_ids[0]);
@@ -857,7 +901,7 @@ void Renderer::render(const uint32_t delta) {
   {
     glCullFace(GL_FRONT);
     glBindFramebuffer(GL_FRAMEBUFFER, gl_shadowmapping_fbo);
-    glViewport(0, 0, SHADOWMAP_W, SHADOWMAP_H);
+    glViewport(0, 0, state.shadow.SHADOWMAP_W, state.shadow.SHADOWMAP_H);
     glEnable(GL_DEPTH_TEST);
     glClear(GL_DEPTH_BUFFER_BIT); // Always update the depth buffer with the new values
     const uint32_t program = shadowmapping_shader->gl_program;
@@ -1078,7 +1122,6 @@ void Renderer::render(const uint32_t delta) {
     pass_ended();
   }
 
-  const size_t div = 1; // FIXME: Downsample factor / fraction of the screen rendered
   /// Voxel cone tracing pass
   {
     state.vct.execution_time = gl_query_time_buffer_ptr[state.render_passes];
@@ -1110,8 +1153,8 @@ void Renderer::render(const uint32_t delta) {
     glUniform3fv(glGetUniformLocation(program, "uDirectional_light_direction"), 1, &directional_light.direction.x);
     glUniformMatrix4fv(glGetUniformLocation(program, "uLight_space_transform"), 1, GL_FALSE, glm::value_ptr(light_space_transform));
     glUniform1i(glGetUniformLocation(program, "uShadowmap"), gl_shadowmapping_texture_unit);
-    glUniform1ui(glGetUniformLocation(program, "uShadowmap_width"), SHADOWMAP_W);
-    glUniform1ui(glGetUniformLocation(program, "uShadowmap_height"), SHADOWMAP_H);
+    glUniform1ui(glGetUniformLocation(program, "uShadowmap_width"), state.shadow.SHADOWMAP_W);
+    glUniform1ui(glGetUniformLocation(program, "uShadowmap_height"), state.shadow.SHADOWMAP_H);
 
     glUniform3fv(glGetUniformLocation(program, "uCamera_position"), 1, &scene->camera->position.x);
 
@@ -1145,15 +1188,15 @@ void Renderer::render(const uint32_t delta) {
     glUniform3fv(glGetUniformLocation(program, "uAABB_maxs"), NUM_CLIPMAPS, &clipmap_aabb_maxs[0].x);
 		glUniform1iv(glGetUniformLocation(program, "uVoxel_radiance"), NUM_CLIPMAPS, gl_voxel_radiance_texture_units);
     glUniform1iv(glGetUniformLocation(program, "uVoxel_opacity"), NUM_CLIPMAPS, gl_voxel_opacity_texture_units);
-    glUniform1ui(glGetUniformLocation(program, "uScreen_width"), screen.width / div);
-    glUniform1ui(glGetUniformLocation(program, "uScreen_height"), screen.height / div);
+    glUniform1ui(glGetUniformLocation(program, "uScreen_width"), screen.width / state.lighting.downsample_modifier);
+    glUniform1ui(glGetUniformLocation(program, "uScreen_height"), screen.height / state.lighting.downsample_modifier);
     glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
     glUniform1i(glGetUniformLocation(program, "uNormal"), gl_geometric_normal_texture_unit);
     glUniform1i(glGetUniformLocation(program, "uPBR_parameters"), gl_pbr_parameters_texture_unit);
     glUniform1i(glGetUniformLocation(program, "uTangent_normal"), gl_tangent_normal_texture_unit);
     glUniform1i(glGetUniformLocation(program, "uTangent"), gl_tangent_texture_unit);
 
-    glViewport(0, 0, screen.width / div, screen.height / div);
+    glViewport(0, 0, screen.width / state.lighting.downsample_modifier, screen.height / state.lighting.downsample_modifier);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     glViewport(0, 0, screen.width, screen.height);
@@ -1167,76 +1210,106 @@ void Renderer::render(const uint32_t delta) {
     state.bilateral_filtering.execution_time = gl_query_time_buffer_ptr[state.render_passes];
     pass_started("Bilateral filtering pass");
 
+    const auto bilateral_filtering_pass = [&](const uint32_t in_texture, const uint32_t in_texture_unit) {
+      // TODO: Reduce to one single shader, reuse that one twice instead
+      // Ping
+      {
+        const auto program = bf_ping_shader->gl_program;
+        glUseProgram(program);
+        glBindFramebuffer(GL_FRAMEBUFFER, gl_bf_ping_fbo);
+
+        glUniform1i(glGetUniformLocation(program, "uPosition_weight"), state.bilateral_filtering.position_weight);
+        glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
+        glUniform1f(glGetUniformLocation(program, "uPosition_sigma"), state.bilateral_filtering.position_sigma);
+        glUniform1i(glGetUniformLocation(program, "uNormal_weight"), state.bilateral_filtering.normal_weight);
+        glUniform1i(glGetUniformLocation(program, "uNormal"), gl_geometric_normal_texture_unit);
+        glUniform1f(glGetUniformLocation(program, "uNormal_sigma"), state.bilateral_filtering.normal_sigma);
+
+        const float div = state.lighting.downsample_modifier;
+        const Vec2f input_pixel_size = Vec2(1.0f / (screen.width * float(div)), 1.0f / (screen.height * float(div)));
+        glUniform2fv(glGetUniformLocation(program, "uInput_pixel_size"), 1, &input_pixel_size.x);
+
+        const Vec2f output_pixel_size = Vec2(1.0f / screen.width, 1.0f / screen.height);
+        glUniform2fv(glGetUniformLocation(program, "uOutput_pixel_size"), 1, &output_pixel_size.x);
+
+        glUniform1ui(glGetUniformLocation(program, "uKernel_dim"), kernel.size());
+        glUniform1fv(glGetUniformLocation(program, "uKernel"), kernel.size(), kernel.data());
+
+        glUniform1i(glGetUniformLocation(program, "uInput"), in_texture_unit);
+        // glUniform1i(glGetUniformLocation(program, "uOutput"), 0); // NOTE: Default to 0 in shader
+
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+      }
+
+      glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT); // Due to incoherent mem. access need to sync read and usage of voxel data
+
+      // Pong
+      {
+        const auto program = bf_pong_shader->gl_program;
+        glUseProgram(program);
+        glBindFramebuffer(GL_FRAMEBUFFER, gl_bf_pong_fbo);
+
+        glUniform1i(glGetUniformLocation(program, "uPosition_weight"), state.bilateral_filtering.position_weight);
+        glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
+        glUniform1f(glGetUniformLocation(program, "uPosition_sigma"), state.bilateral_filtering.position_sigma);
+        glUniform1i(glGetUniformLocation(program, "uNormal_weight"), state.bilateral_filtering.normal_weight);
+        glUniform1i(glGetUniformLocation(program, "uNormal"), gl_geometric_normal_texture_unit);
+        glUniform1f(glGetUniformLocation(program, "uNormal_sigma"), state.bilateral_filtering.normal_sigma);
+
+        // NOTE: Second iteration uses the upsampled intermediate result
+        const Vec2f input_pixel_size = Vec2(1.0f / screen.width, 1.0f / screen.height);
+        glUniform2fv(glGetUniformLocation(program, "uInput_pixel_size"), 1, &input_pixel_size.x);
+
+        const Vec2f output_pixel_size = Vec2(1.0f / screen.width, 1.0f / screen.height);
+        glUniform2fv(glGetUniformLocation(program, "uOutput_pixel_size"), 1, &output_pixel_size.x);
+
+        glUniform1ui(glGetUniformLocation(program, "uKernel_dim"), kernel.size());
+        glUniform1fv(glGetUniformLocation(program, "uKernel"), kernel.size(), kernel.data());
+
+        glUniform1i(glGetUniformLocation(program, "uInput"), gl_bf_ping_out_texture_unit);
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, in_texture, 0);
+        // glUniform1i(glGetUniformLocation(program, "uOutput"), ping_pong_in_texture_unit);
+
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+      }
+    };
+
     // Declare input & output texture
-    const uint32_t ping_pong_in_texture_unit  = gl_ambient_radiance_texture_unit;
-
-    const float position_sigma = 2.0f; // FIXME: How to set this value or tune it?
-    const float normal_sigma = 2.0f;   // FIXME: How to set this value or tune it?
-
-    // TODO: Reduce to one single shader, reuse that one twice instead
-    // Ping
-    {
-      const auto program = bf_ping_shader->gl_program;
-      glUseProgram(program);
-      glBindFramebuffer(GL_FRAMEBUFFER, gl_bf_ping_fbo);
-
-      glUniform1ui(glGetUniformLocation(program, "uScreen_width"), screen.width / div);
-      glUniform1ui(glGetUniformLocation(program, "uScreen_height"), screen.height / div);
-
-      glUniform1i(glGetUniformLocation(program, "uPosition_weight"), state.bilateral_filtering.position_weight);
-      glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
-      glUniform1f(glGetUniformLocation(program, "uPosition_sigma"), position_sigma);
-      glUniform1i(glGetUniformLocation(program, "uNormal_weight"), state.bilateral_filtering.normal_weight);
-      glUniform1i(glGetUniformLocation(program, "uNormal"), gl_geometric_normal_texture_unit);
-      glUniform1f(glGetUniformLocation(program, "uNormal_sigma"), normal_sigma);
-
-      const Vec2f pixel_size = Vec2(1.0f / screen.width, 1.0f / screen.height);
-      glUniform2fv(glGetUniformLocation(program, "uPixel_size"), 1, &pixel_size.x);
-      glUniform1ui(glGetUniformLocation(program, "uKernel_dim"), kernel.size());
-      glUniform1fv(glGetUniformLocation(program, "uKernel"), kernel.size(), kernel.data());
-
-      glUniform1i(glGetUniformLocation(program, "uInput"), ping_pong_in_texture_unit);
-      // glUniform1i(glGetUniformLocation(program, "uOutput"), 0); // NOTE: Default to 0 in shader
-
-      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-      glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    }
-
-    glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT); // Due to incoherent mem. access need to sync read and usage of voxel data
-
-    // Pong
-    {
-      const auto program = bf_pong_shader->gl_program;
-      glUseProgram(program);
-      glBindFramebuffer(GL_FRAMEBUFFER, gl_bf_pong_fbo);
-
-      glUniform1ui(glGetUniformLocation(program, "uScreen_width"), screen.width / div);
-      glUniform1ui(glGetUniformLocation(program, "uScreen_height"), screen.height / div);
-
-      glUniform1i(glGetUniformLocation(program, "uPosition_weight"), state.bilateral_filtering.position_weight);
-      glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
-      glUniform1f(glGetUniformLocation(program, "uPosition_sigma"), position_sigma);
-      glUniform1i(glGetUniformLocation(program, "uNormal_weight"), state.bilateral_filtering.normal_weight);
-      glUniform1i(glGetUniformLocation(program, "uNormal"), gl_geometric_normal_texture_unit);
-      glUniform1f(glGetUniformLocation(program, "uNormal_sigma"), normal_sigma);
-
-      const Vec2f pixel_size = Vec2(1.0f / screen.width, 1.0f / screen.height);
-      glUniform2fv(glGetUniformLocation(program, "uPixel_size"), 1, &pixel_size.x);
-      glUniform1ui(glGetUniformLocation(program, "uKernel_dim"), kernel.size());
-      glUniform1fv(glGetUniformLocation(program, "uKernel"), kernel.size(), kernel.data());
-
-      glUniform1i(glGetUniformLocation(program, "uInput"), gl_bf_ping_out_texture_unit);
-      glUniform1i(glGetUniformLocation(program, "uOutput"), ping_pong_in_texture_unit);
-
-      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-      glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    }
+    if (state.bilateral_filtering.ambient_enabled)  { bilateral_filtering_pass(gl_ambient_radiance_texture,  gl_ambient_radiance_texture_unit);  }
+    if (state.bilateral_filtering.indirect_enabled) { bilateral_filtering_pass(gl_indirect_radiance_texture, gl_indirect_radiance_texture_unit); }
+    if (state.bilateral_filtering.specular_enabled) { bilateral_filtering_pass(gl_specular_radiance_texture, gl_specular_radiance_texture_unit); }
+    if (state.bilateral_filtering.direct_enabled)   { bilateral_filtering_pass(gl_direct_radiance_texture,   gl_direct_radiance_texture_unit);   }
 
     last_executed_fbo = gl_bf_pong_fbo;
 
     pass_ended();
   }
 
+  /// Bilinear upsampling
+  if (false) {
+    pass_started("Bilinear upsampling pass");
+
+    const auto program = bilinear_upsampling_shader->gl_program;
+    glUseProgram(program);
+    glBindFramebuffer(GL_FRAMEBUFFER, gl_bilinear_upsampling_fbo);
+
+    glUniform1i(glGetUniformLocation(program, "uInput"), gl_lighting_application_texture_unit);
+
+    const float d = float(state.lighting.downsample_modifier);
+    const Vec2f output_pixel_size = Vec2f(1.0f / (screen.width / d), 1.0f / (screen.height / d));
+    glUniform2fv(glGetUniformLocation(program, "uOutput_pixel_size"), 1, &output_pixel_size.x);
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+    last_executed_fbo = gl_bilinear_upsampling_fbo;
+
+    pass_ended();
+  }
+
+  /// Lighting application pass
   {
     state.lighting.execution_time = gl_query_time_buffer_ptr[state.render_passes];
     pass_started("Lighting application pass");
@@ -1247,6 +1320,7 @@ void Renderer::render(const uint32_t delta) {
 
     const Vec2f pixel_size = Vec2(1.0f / screen.width, 1.0f / screen.height);
     glUniform2fv(glGetUniformLocation(program, "uPixel_size"), 1, &pixel_size.x);
+
     glUniform1i(glGetUniformLocation(program, "uDiffuse"), gl_diffuse_texture_unit);
 
     glUniform1i(glGetUniformLocation(program, "uIndirect_radiance"), gl_indirect_radiance_texture_unit);
