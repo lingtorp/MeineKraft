@@ -326,21 +326,22 @@ struct RenderState {
   uint64_t frame           = 0;
   uint32_t entities        = 0;
   uint32_t graphic_batches = 0;
-  uint32_t draw_calls      = 0; // TODO: Hook these two up and use them
-  uint32_t render_passes   = 0; // TODO: Hook these two up and use them
+  uint32_t draw_calls      = 0;      // TODO: Hook these two up and use them
+  uint32_t render_passes   = 0;      // TODO: Hook these two up and use them
   uint64_t total_execution_time = 0; // NOTE: for all render passes in ns
 
   // Global illumination related
   struct {
     // NOTE: Execution time of lighting application only applies radiance does not compute it (hence very fast)
-    uint64_t execution_time = 0; // NOTE: nanoseconds
+    uint64_t execution_time = 0;      // NOTE: nanoseconds
     bool shadowmapping = true;
     bool normalmapping = true;
     bool indirect = true;
-    bool ambient  = true;      // Dependent on 'indirect' when VCT is used as GI algorithm
+    bool ambient  = true;             // Dependent on 'indirect' when VCT is used as GI algorithm
     bool direct = true;
     bool specular = true;
     bool emissive = true;
+    int32_t downsample_modifier = 1;  // GI is performed in downsampled space (1 / modifier) * full_res
   } lighting;
 
   struct {
@@ -356,39 +357,44 @@ struct RenderState {
   // Voxelization related (used by VCT pass)
   struct {
     uint64_t execution_time = 0; // NOTE: nanoseconds
-    bool voxelize = true; // NOTE: Toggled by the Renderer (a.k.a executed once)
+    bool voxelize = true;        // NOTE: Toggled by the Renderer (a.k.a executed once)
     bool conservative_rasterization = false;
     bool always_voxelize = false;
   } voxelization;
 
   // Voxel cone tracing related
   struct {
-    uint64_t execution_time; // NOTE: nanoseconds
+    uint64_t execution_time;               // NOTE: nanoseconds
     const uint32_t MAX_DIFFUSE_CONES = 12;
-    float roughness_aperature = 60.0f; // 60 deg diffuse cone from [Rauwendaal, Crassin11]
-    float metallic_aperature   = 0.1f; // 10 deg specular cone from [Crassin11]
-    int num_diffuse_cones = 6;  // [Crassin11], [Yeu13] suggests 5
+    float roughness_aperature = 60.0f;     // 60 deg diffuse cone from [Rauwendaal, Crassin11]
+    float metallic_aperature   = 0.1f;     // 10 deg specular cone from [Crassin11]
+    int num_diffuse_cones = 6;             // [Crassin11], [Yeu13] suggests 5
   } vct;
 
   // Direct/shadows related
   struct {
-    uint64_t execution_time = 0; // NOTE: nanoseconds
+    uint64_t execution_time = 0;                        // NOTE: nanoseconds
     ShadowAlgorithm algorithm = ShadowAlgorithm::Plain; // See enum class ShadowAlgorithm
-    float bias = 0.00025f;
-    int32_t pcf_samples = 2;
+    float bias = 0.00025f;                              // Shadow bias along geometric normal of surface
+    int32_t pcf_samples = 2;                            // Number of depth samples taken with PCF
     float vct_cone_aperature = 0.0050f;                 // Shadow cone aperature
+    int32_t shadowmap_resolution_step = 2;              // TODO: Hook up and use
+    const uint32_t SHADOWMAP_W = 2 * 2048;              // Shadowmap texture width
+    const uint32_t SHADOWMAP_H = SHADOWMAP_W;           // Shadowmap texture height
   } shadow;
 
   // Bilateral filtering related
   struct {
-    uint64_t execution_time = 0; // NOTE: nanoseconds
-    bool enabled = true;            // Bilateral filtering pass to filter the radiance
-    bool direct_enabled = false;    // Enable filtering of the direct radiance
-    bool ambient_enabled = true;    // Enable filtering of the ambient radiance
-    bool indirect_enabled = false;  // Enable filtering of the indirect radiance
-    bool specular_enabled = false;  // Enable filtering of the specular radiance
-    bool position_weight = true;    // Enable position as a weight in filtering
-    bool normal_weight = false;     // Enable normals as a weight in filtering
+    uint64_t execution_time = 0;   // NOTE: nanoseconds
+    bool enabled = true;           // Bilateral filtering pass to filter the radiance
+    bool direct_enabled = false;   // Enable filtering of the direct radiance
+    bool ambient_enabled = true;   // Enable filtering of the ambient radiance
+    bool indirect_enabled = true;  // Enable filtering of the indirect radiance
+    bool specular_enabled = true;  // Enable filtering of the specular radiance
+    bool position_weight = true;   // Enable position as a weight in filtering
+    float position_sigma = 2.0f;   // FIXME: How to set this value or tune it?
+    bool normal_weight = false;    // Enable normals as a weight in filtering
+    float normal_sigma = 2.0f;     // FIXME: How to set this value or tune it?
   } bilateral_filtering;
 
   // Final blit pass
