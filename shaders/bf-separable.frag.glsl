@@ -1,11 +1,15 @@
-// NOTE: Gaussian separable blur pass
+// NOTE: Joint bilateral filtering pass
 // File: bf-separable.frag.glsl
 
-// Low-res texture
+// Low-res src texture
+uniform vec2 uInput_pixel_size;
 uniform sampler2D uInput;
+
+// High-res result texture
+uniform vec2 uOutput_pixel_size;
 out vec3 uOutput;
 
-// Guide textures
+// Guide textures (full resolution)
 uniform bool uPosition_weight;
 uniform float uPosition_sigma;
 uniform sampler2D uPosition; // World space
@@ -14,7 +18,6 @@ uniform bool uNormal_weight;
 uniform float uNormal_sigma;
 uniform sampler2D uNormal;
 
-uniform vec2 uPixel_size;
 
 // NOTE: Uses multiple edge-stopping functions that takes into
 // account ray-traced, normal, position buffer.
@@ -57,30 +60,34 @@ float weights(const vec2 c, const vec2 p) {
 }
 
 void main() {
-  const vec2 c = gl_FragCoord.xy * uPixel_size;
+  const vec2 c_i = gl_FragCoord.xy * uInput_pixel_size;
+  const vec2 c_o = gl_FragCoord.xy * uOutput_pixel_size;
 
-  const vec2 offset = STEP_DIR * uPixel_size;
+  const vec2 offset_i = STEP_DIR * uInput_pixel_size;
+  const vec2 offset_o = STEP_DIR * uOutput_pixel_size;
 
   const uint R = uKernel_dim - 1; // Kernel radius
 
   float cum_w = 0.0; // Cumulative weight used for normalization
 
-  const float w = uKernel[0] * weights(c, c);
-  uOutput += w * texture(uInput, c).rgb;
+  const float w = uKernel[0] * weights(c_o, c_o);
+  uOutput += w * texture(uInput, c_i).rgb;
   cum_w += w;
 
   for (uint i = 1; i <= R; i++) {
-    const vec2 p = c - offset * i;
-    const float w0 = uKernel[i] * weights(c, p);
+    const vec2 p_o = c_o - offset_o * i;
+    const float w0 = uKernel[i] * weights(c_o, p_o);
     cum_w += w0;
-    uOutput += w0 * texture(uInput, p).rgb;
+    const vec2 p_i = c_i - offset_i * i;
+    uOutput += w0 * texture(uInput, p_i).rgb;
 
     // --------------------------------------------------------------
 
-    const vec2 q = c + offset * i;
-    const float w1 = uKernel[i] * weights(c, q);
+    const vec2 q_o = c_o + offset_o * i;
+    const float w1 = uKernel[i] * weights(c_o, q_o);
     cum_w += w1;
-    uOutput += w1 * texture(uInput, q).rgb;
+    const vec2 q_i = c_i + offset_i * i;
+    uOutput += w1 * texture(uInput, q_i).rgb;
   }
 
   // Only normalize again if there are any other weights
