@@ -1,4 +1,8 @@
 {
+    "screenshot_mode": true,
+    "render_state": {
+        "bilateral_filtering": true
+    },
     "scene": {
         "path": "Desktop/Meinekraft/Sponza/",
         "name": "Sponza.gltf",
