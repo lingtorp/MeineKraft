@@ -1,6 +1,7 @@
 #include "renderer.hpp"
 #include "primitives.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 
@@ -1708,9 +1709,23 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
   graphics_batches.push_back(batch);
 }
 
-void Renderer::remove_component(ID entity_id) {
-  // TODO: Implement, buffer then components that should be removed
-  // components_to_be_removed.push_back(entity_id);
+void Renderer::remove_component(const ID eid) {
+  for (auto& batch : graphics_batches) {
+    for (auto& id : batch.entity_ids) {
+      if (id == eid) {
+        std::swap(id, batch.entity_ids.back());
+        batch.entity_ids.pop_back();
+
+        if (batch.entity_ids.empty()) {
+          // TODO: Remove an empty GraphicsBatch ...
+          // std::swap(batch, graphics_batches.back());
+          graphics_batches.pop_back();
+        }
+
+        return;
+      }
+    }
+  }
 }
 
 void Renderer::add_graphics_state(GraphicsBatch& batch, const RenderComponent& comp, Material material, ID entity_id) {

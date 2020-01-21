@@ -96,7 +96,12 @@ struct GraphicsBatch {
         Log::error("OpenGL extension sRGB_decode does not exist."); exit(-1);
       }
     };
-  
+
+  // TODO: Dealloc GL resources
+  ~GraphicsBatch() {
+    Log::info("GraphicsBatch destructor called.");
+  }
+
   void init_buffer(const Texture& texture, uint32_t* gl_buffer, const uint32_t gl_texture_unit, uint32_t* buffer_capacity, const bool is_sRGB = false) {
     glActiveTexture(GL_TEXTURE0 + gl_texture_unit);
     glGenTextures(1, gl_buffer);
