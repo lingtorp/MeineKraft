@@ -1,4 +1,5 @@
 #include "renderer.hpp"
+#include "primitives.hpp"
 
 #include <array>
 #include <cmath>
@@ -762,24 +763,46 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glGenFramebuffers(1, &gl_bilinear_upsampling_fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, gl_bilinear_upsampling_fbo);
 
-    gl_bilinear_upsampling_texture_unit = get_next_free_texture_unit();
-    glActiveTexture(GL_TEXTURE0 + gl_bilinear_upsampling_texture_unit);
-
-    glGenTextures(1, &gl_bilinear_upsampling_texture);
-    glBindTexture(GL_TEXTURE_2D, gl_bilinear_upsampling_texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, screen.width, screen.height, 0, GL_RGBA, GL_FLOAT, nullptr);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_bilinear_upsampling_texture, 0);
-    glObjectLabel(GL_TEXTURE, gl_bilinear_upsampling_texture, -1, "Bilinear upsampling texture");
-
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_bilinear_upsampling_texture, 0);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_bf_ping_out_texture, 0);
 
     const uint32_t fbo_attachments[1] = { GL_COLOR_ATTACHMENT0 };
     glDrawBuffers(1, fbo_attachments);
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-      Log::error("Lighting application FBO not complete"); exit(-1);
+      Log::error("Bilinear upsampling FBO not complete"); exit(-1);
+    }
+  }
+
+  /// Direct lighting pass
+  {
+    direct_lighting_shader = new Shader(Filesystem::base + "shaders/generic-passthrough.vert.glsl",
+                                        Filesystem::base + "shaders/direct-lighting.frag.glsl");
+
+    const auto [ok, msg] = direct_lighting_shader->compile();
+    if (!ok) {
+      Log::error(msg); exit(-1);
+    }
+
+    const uint32_t program = direct_lighting_shader->gl_program;
+    glUseProgram(program);
+    glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
+    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
+
+    GLuint gl_vbo = 0;
+    glGenBuffers(1, &gl_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, gl_vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(Primitive::quad), &Primitive::quad, GL_STATIC_DRAW);
+
+    glGenFramebuffers(1, &gl_direct_lighting_fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, gl_direct_lighting_fbo);
+
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_direct_radiance_texture, 0);
+
+    const uint32_t fbo_attachments[1] = { GL_COLOR_ATTACHMENT0 };
+    glDrawBuffers(1, fbo_attachments);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+      Log::error("Direct lighting FBO not complete"); exit(-1);
     }
   }
 
@@ -795,6 +818,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glObjectLabel(GL_BUFFER, gl_execution_time_query_buffer, -1, "Renderpass execution time buffer");
   }
 
+  glDisable(GL_DITHER);
   glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
   glEnable(GL_CULL_FACE);
   glCullFace(GL_BACK);
@@ -1085,6 +1109,7 @@ void Renderer::render(const uint32_t delta) {
     }
   }
 
+  // FIXME: Does not work
   if (state.voxel_visualization.enabled) {
     state.voxel_visualization.execution_time = gl_query_time_buffer_ptr[state.render_passes];
     pass_started("Voxel visualization pass");
@@ -1137,24 +1162,12 @@ void Renderer::render(const uint32_t delta) {
     glUniform1i(glGetUniformLocation(program, "uEmissive"), state.lighting.emissive);
     glUniform1i(glGetUniformLocation(program, "uSpecular"), state.lighting.specular);
     glUniform1i(glGetUniformLocation(program, "uAmbient"), state.lighting.ambient);
-    glUniform1i(glGetUniformLocation(program, "uDirect"), state.lighting.direct);
+    glUniform1i(glGetUniformLocation(program, "uDirect"), state.lighting.direct && state.shadow.algorithm == ShadowAlgorithm::VCT);
     const float roughness_aperature = glm::radians(state.vct.roughness_aperature);
     glUniform1f(glGetUniformLocation(program, "uRoughness_aperature"), roughness_aperature);
     const float metallic_aperature = glm::radians(state.vct.metallic_aperature);
     glUniform1f(glGetUniformLocation(program, "uMetallic_aperature"), metallic_aperature);
-    const float ambient_decay = 0.1f;
-    glUniform1f(glGetUniformLocation(program, "uAmbient_decay"), ambient_decay);
-
-    // Shadowmapping
-    glUniform1f(glGetUniformLocation(program, "uVCT_shadow_cone_aperature"), state.shadow.vct_cone_aperature);
-    glUniform1ui(glGetUniformLocation(program, "uShadow_algorithm"), static_cast<uint32_t>(state.shadow.algorithm));
-    glUniform1f(glGetUniformLocation(program, "uShadow_bias"), state.shadow.bias);
-    glUniform3fv(glGetUniformLocation(program, "uDirectional_light_intensity"), 1, &directional_light.intensity.x);
-    glUniform3fv(glGetUniformLocation(program, "uDirectional_light_direction"), 1, &directional_light.direction.x);
-    glUniformMatrix4fv(glGetUniformLocation(program, "uLight_space_transform"), 1, GL_FALSE, glm::value_ptr(light_space_transform));
-    glUniform1i(glGetUniformLocation(program, "uShadowmap"), gl_shadowmapping_texture_unit);
-    glUniform1ui(glGetUniformLocation(program, "uShadowmap_width"), state.shadow.SHADOWMAP_W);
-    glUniform1ui(glGetUniformLocation(program, "uShadowmap_height"), state.shadow.SHADOWMAP_H);
+    glUniform1f(glGetUniformLocation(program, "uAmbient_decay"), state.vct.ambient_decay);
 
     glUniform3fv(glGetUniformLocation(program, "uCamera_position"), 1, &scene->camera->position.x);
 
@@ -1269,7 +1282,6 @@ void Renderer::render(const uint32_t delta) {
 
         glUniform1i(glGetUniformLocation(program, "uInput"), gl_bf_ping_out_texture_unit);
         glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, in_texture, 0);
-        // glUniform1i(glGetUniformLocation(program, "uOutput"), ping_pong_in_texture_unit);
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
@@ -1277,10 +1289,10 @@ void Renderer::render(const uint32_t delta) {
     };
 
     // Declare input & output texture
-    if (state.bilateral_filtering.ambient_enabled)  { bilateral_filtering_pass(gl_ambient_radiance_texture,  gl_ambient_radiance_texture_unit);  }
-    if (state.bilateral_filtering.indirect_enabled) { bilateral_filtering_pass(gl_indirect_radiance_texture, gl_indirect_radiance_texture_unit); }
-    if (state.bilateral_filtering.specular_enabled) { bilateral_filtering_pass(gl_specular_radiance_texture, gl_specular_radiance_texture_unit); }
-    if (state.bilateral_filtering.direct_enabled)   { bilateral_filtering_pass(gl_direct_radiance_texture,   gl_direct_radiance_texture_unit);   }
+    if (state.bilateral_filtering.ambient)  { bilateral_filtering_pass(gl_ambient_radiance_texture,  gl_ambient_radiance_texture_unit);  }
+    if (state.bilateral_filtering.indirect) { bilateral_filtering_pass(gl_indirect_radiance_texture, gl_indirect_radiance_texture_unit); }
+    if (state.bilateral_filtering.specular) { bilateral_filtering_pass(gl_specular_radiance_texture, gl_specular_radiance_texture_unit); }
+    if (state.bilateral_filtering.direct)   { bilateral_filtering_pass(gl_direct_radiance_texture,   gl_direct_radiance_texture_unit);   }
 
     last_executed_fbo = gl_bf_pong_fbo;
 
@@ -1288,23 +1300,83 @@ void Renderer::render(const uint32_t delta) {
   }
 
   /// Bilinear upsampling
-  if (false) {
+  if (state.bilinear_upsample.enabled && state.lighting.downsample_modifier > 1) {
+    state.bilinear_upsample.execution_time = gl_query_time_buffer_ptr[state.render_passes];
     pass_started("Bilinear upsampling pass");
 
-    const auto program = bilinear_upsampling_shader->gl_program;
+    // FIXME: Reuses some of Bilateral filtering ping-pong texture resources
+    const auto bilinear_upsample = [&](const uint32_t in_texture, const uint32_t in_texture_unit) {
+      const auto program = bilinear_upsampling_shader->gl_program;
+      glUseProgram(program);
+      glBindFramebuffer(GL_FRAMEBUFFER, gl_bilinear_upsampling_fbo);
+
+      // Ping
+      {
+        const float d = float(state.lighting.downsample_modifier);
+        const Vec2f output_pixel_size = Vec2f(1.0f / (screen.width * d), 1.0f / (screen.height * d));
+        glUniform2fv(glGetUniformLocation(program, "uOutput_pixel_size"), 1, &output_pixel_size.x);
+
+        glUniform1i(glGetUniformLocation(program, "uInput"), in_texture_unit);
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_bf_ping_out_texture, 0);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+      }
+
+      glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT); // Due to incoherent mem. access need to sync read and usage of voxel data
+
+      // Pong
+      {
+        const Vec2f output_pixel_size = Vec2f(1.0f / screen.width, 1.0f / screen.height);
+        glUniform2fv(glGetUniformLocation(program, "uOutput_pixel_size"), 1, &output_pixel_size.x);
+
+        glUniform1i(glGetUniformLocation(program, "uInput"), gl_bf_ping_out_texture_unit);
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, in_texture, 0);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+      }
+    };
+
+    if (state.bilinear_upsample.ambient)  { bilinear_upsample(gl_ambient_radiance_texture, gl_ambient_radiance_texture_unit);   }
+    if (state.bilinear_upsample.indirect) { bilinear_upsample(gl_indirect_radiance_texture, gl_indirect_radiance_texture_unit); }
+    if (state.bilinear_upsample.specular) { bilinear_upsample(gl_specular_radiance_texture, gl_specular_radiance_texture_unit); }
+
+    last_executed_fbo = gl_bilinear_upsampling_fbo;
+
+    pass_ended();
+  }
+
+  /// Direct lighting (non-VCT) pass
+  if (state.lighting.direct && state.shadow.algorithm != ShadowAlgorithm::VCT) {
+    state.bilinear_upsample.execution_time = gl_query_time_buffer_ptr[state.render_passes];
+    pass_started("Direct lighting pass");
+
+    const auto program = direct_lighting_shader->gl_program;
     glUseProgram(program);
-    glBindFramebuffer(GL_FRAMEBUFFER, gl_bilinear_upsampling_fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, gl_direct_lighting_fbo);
 
-    glUniform1i(glGetUniformLocation(program, "uInput"), gl_lighting_application_texture_unit);
+    glUniform1ui(glGetUniformLocation(program, "uPCF_samples"), state.shadow.pcf_samples);
+    glUniform1f(glGetUniformLocation(program, "uVCT_shadow_cone_aperature"), state.shadow.vct_cone_aperature);
+    glUniform1ui(glGetUniformLocation(program, "uShadow_algorithm"), static_cast<uint32_t>(state.shadow.algorithm));
+    glUniform1f(glGetUniformLocation(program, "uShadow_bias"), state.shadow.bias);
+    glUniform3fv(glGetUniformLocation(program, "uDirectional_light_intensity"), 1, &directional_light.intensity.x);
+    glUniform3fv(glGetUniformLocation(program, "uDirectional_light_direction"), 1, &directional_light.direction.x);
+    glUniformMatrix4fv(glGetUniformLocation(program, "uLight_space_transform"), 1, GL_FALSE, glm::value_ptr(light_space_transform));
+    glUniform1i(glGetUniformLocation(program, "uShadowmap"), gl_shadowmapping_texture_unit);
+    glUniform1ui(glGetUniformLocation(program, "uShadowmap_width"), state.shadow.SHADOWMAP_W);
+    glUniform1ui(glGetUniformLocation(program, "uShadowmap_height"), state.shadow.SHADOWMAP_H);
 
-    const float d = float(state.lighting.downsample_modifier);
-    const Vec2f output_pixel_size = Vec2f(1.0f / (screen.width / d), 1.0f / (screen.height / d));
-    glUniform2fv(glGetUniformLocation(program, "uOutput_pixel_size"), 1, &output_pixel_size.x);
+    glUniform1ui(glGetUniformLocation(program, "uScreen_width"), screen.width);
+    glUniform1ui(glGetUniformLocation(program, "uScreen_height"), screen.height);
+    glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "uNormal"), gl_geometric_normal_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "uTangent_normal"), gl_tangent_normal_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "uTangent"), gl_tangent_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "uNormalmapping"), state.lighting.normalmapping);
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
-    last_executed_fbo = gl_bilinear_upsampling_fbo;
+    last_executed_fbo = gl_direct_lighting_fbo;
 
     pass_ended();
   }
@@ -1694,4 +1766,16 @@ void Renderer::update_transforms() {
       std::memcpy(batch.gl_depth_model_buffer_ptr + idx->second * sizeof(Mat4f), &batch.objects.transforms[idx->second], sizeof(Mat4f));
     }
   }
+}
+
+/// Pixels starts at the lower left corner then row major order
+Vec3f* Renderer::take_screenshot() const {
+  glPixelStorei(GL_PACK_ROW_LENGTH, 0);
+  glPixelStorei(GL_PACK_SKIP_PIXELS, 0);
+  glPixelStorei(GL_PACK_SKIP_ROWS, 0);
+  glPixelStorei(GL_PACK_ALIGNMENT, 1);
+  glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+  Vec3f* pixels = (Vec3f*) calloc(1, sizeof(Vec3f) * screen.width * screen.height);
+  glReadPixels(0, 0, screen.width, screen.height, GL_RGB, GL_FLOAT, &pixels[0].x);
+  return pixels;
 }

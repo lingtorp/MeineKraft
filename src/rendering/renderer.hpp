@@ -45,8 +45,8 @@ struct Renderer {
   // TODO: Document ...
   void load_environment_map(const std::vector<std::string>& faces);
 
-  // TODO: Implement ...
-  Vec3f* take_screenshot() const { return nullptr; };
+  /// Returns the default framebuffer color in callee-owned ptr
+  Vec3f* take_screenshot() const;
 
   RenderState state;
   Resolution screen;
@@ -91,6 +91,10 @@ private:
   uint32_t gl_shadowmapping_fbo = 0;
   uint32_t gl_shadowmapping_texture = 0;
   uint32_t gl_shadowmapping_texture_unit = 0;
+
+  /// Direct lighting shadow pass related
+  Shader* direct_lighting_shader = nullptr;
+  uint32_t gl_direct_lighting_fbo = 0;
 
   uint32_t gl_pointlights_ssbo = 0;
   uint8_t* gl_pointlights_ssbo_ptr = nullptr;
