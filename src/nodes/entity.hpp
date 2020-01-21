@@ -135,7 +135,7 @@ struct JobSystem {
 
 struct ActionComponent {
   std::function<void(uint64_t, uint64_t)> action;
-  ActionComponent(const std::function<void(uint64_t, uint64_t)>& action): action(action) {}
+  ActionComponent(const std::function<void(const uint64_t, const uint64_t)>& action): action(action) {}
 };
 
 struct ActionSystem {
