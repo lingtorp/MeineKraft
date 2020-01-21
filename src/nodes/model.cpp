@@ -18,7 +18,7 @@ Model::Model(const RenderComponent& render) {
 }
 
 static AABB compute_aabb_from(const RenderComponent& render_component) {
-	return AABB();
+	return compute_aabb_from({render_component});
 }
 
 static AABB compute_aabb_from(const std::vector<RenderComponent>& render_components) {
