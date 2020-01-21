@@ -11,6 +11,9 @@ uniform sampler2D uTangent;
 uniform sampler2D uTangent_normal;
 
 uniform vec3 uCamera_position;
+uniform vec3 uDirectional_light_intensity;
+uniform vec3 uDirectional_light_direction;
+uniform float uVCT_shadow_cone_aperature; // Shadow cone aperature (deg.)
 
 // General textures
 uniform sampler2D uPosition; // World space
@@ -36,10 +39,10 @@ uniform float uRoughness_aperature; // Radians (half-angle of cone)
 uniform float uMetallic_aperature;  // Radians (half-angle of cone)
 
 // Computational toggles
-uniform bool uDirect;
 uniform bool uIndirect;
 uniform bool uSpecular;
 uniform bool uAmbient;
+uniform bool uDirect;
 
 uniform uint uNum_diffuse_cones;
 // (Vec3, float) = (direction, weight) for each cone
@@ -146,61 +149,13 @@ vec4 trace_specular_cone(const vec3 origin,
   return vec4(radiance, 1.0 - occlusion);
 }
 
-uniform uint uShadow_algorithm;
-uniform float uShadow_bias;
-uniform vec3 uDirectional_light_intensity;
-uniform vec3 uDirectional_light_direction;
-uniform mat4 uLight_space_transform;
-uniform sampler2D uShadowmap;
-uniform uint uShadowmap_width;
-uniform uint uShadowmap_height;
-uniform uint uPCF_samples;
-uniform float uVCT_shadow_cone_aperature; // Shadow cone aperature (deg.)
-
-float plain_shadow(const vec3 world_position, const vec3 normal) {
-  vec4 lightspace_position = uLight_space_transform * vec4(world_position, 1.0);
-  lightspace_position.xyz /= lightspace_position.w;
-  lightspace_position = lightspace_position * 0.5 + 0.5;
-
-  const float current_depth = lightspace_position.z;
-
-  const float closest_shadowmap_depth = texture(uShadowmap, lightspace_position.xy).r;
-    
-  // Bias avoids the _majority_ of shadow acne
-  const float bias = uShadow_bias * dot(-uDirectional_light_direction, normal);
-
-  return (closest_shadowmap_depth < current_depth - bias) ? 0.0 : 1.0;
-}
-
-// Percentage-closer filtering shadow technique
-float pcf_shadow(const vec3 world_position, const vec3 normal) {
-  vec4 s = uLight_space_transform * vec4(world_position, 1.0);
-  s.xyz /= s.w;
-  s = s * 0.5 + 0.5;
-
-  const float current_depth = s.z;
-  const float num_samples = uPCF_samples; // 2 ==> 5x5 kernel, n ==> (n + 1)x(n + 1) kernel
-
-  float shadowing = 0.0;
-  for (float x = -num_samples + 0.5; x < num_samples - 0.5; x += 1.0) {
-    for (float y = -num_samples + 0.5; y < num_samples - 0.5; y += 1.0) {
-      const vec2 p = vec2(s.x + x * (1.0 / float(uShadowmap_width)),
-                          s.y + y * (1.0 / float(uShadowmap_height)));
-      const float depth = texture(uShadowmap, p).r;
-      shadowing += depth < current_depth ? 0.0 : 1.0;
-    }
-  }
-
-  return shadowing / (4.0 * num_samples * num_samples);
-}
-
 // FIXME: Blocky shadows due to clipmap level sampling not 100%
 float vct_shadow(const vec3 origin, const vec3 normal, const vec3 direction) {
-  const float max_distance = (1.0 / uScaling_factors[NUM_CLIPMAPS - 1]) / 8.0; 
+  const float max_distance = (1.0 / uScaling_factors[NUM_CLIPMAPS - 1]) / 8.0;
   const float start_lvl = floor(clipmap_lvl_from_distance(origin));
 
   float occlusion = 0.0;
-  float cone_distance = 0.0; 
+  float cone_distance = 0.0;
   const vec3 o = origin + (uVoxel_size_LOD0 * 1.5 * exp2(start_lvl)) * normal; // Avoids self-occlusion/accumulation
 
   while (cone_distance < max_distance) {
@@ -213,18 +168,18 @@ float vct_shadow(const vec3 origin, const vec3 normal, const vec3 direction) {
 
     const float cone_diameter = max(2.0 * tan(uVCT_shadow_cone_aperature) * cone_distance, uVoxel_size_LOD0);
     cone_distance += cone_diameter * 1.0;
-    
+
     const float min_lvl = floor(clipmap_lvl_from_distance(cone_position));
     const float curr_lvl = log2(cone_diameter / uVoxel_size_LOD0);
     const float lvl = min(max(max(start_lvl, curr_lvl), min_lvl), float(NUM_CLIPMAPS - 1));
 
-    // Front-to-back acculumation 
+    // Front-to-back acculumation
     occlusion += (1.0 - occlusion) * sample_clipmap_linearly(cone_position, lvl).a;
   }
 
   return 1.0 - smoothstep(0.1, 0.95, occlusion);
 }
-  
+
 void main() {
   const vec2 frag_coord = vec2(gl_FragCoord.x / float(uScreen_width), gl_FragCoord.y / float(uScreen_height));
   
@@ -288,19 +243,8 @@ void main() {
     gSpecular_radiance = trace_specular_cone(origin, reflection, aperture).rgb;
   }
 
-  if (uDirect) { // TODO: fNormal vs. normal?
-    float shadow = 0.0;
-    switch (uShadow_algorithm) {
-      case 0:
-        shadow = plain_shadow(origin, normal);
-        break;
-      case 1:
-        shadow = pcf_shadow(origin, normal);
-        break;
-      case 2:
-        shadow = vct_shadow(origin, normal, -uDirectional_light_direction);
-        break;
-    }
+  if (uDirect) {
+    const float shadow = vct_shadow(origin, normal, -uDirectional_light_direction);
     gDirect_radiance = shadow * uDirectional_light_intensity * max(dot(-uDirectional_light_direction, normal), 0.0);
   }
 
