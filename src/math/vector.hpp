@@ -171,6 +171,27 @@ struct Vec3 {
     /// Dot product of this and the vector u
     constexpr inline T dot(const Vec3<T>& u) const { return x * u.x + y * u.y + z * u.z; }
 
+    /// Computes the element-wise raised to the power of e: (x^e, y^e, z^e)
+    /// See http://chilliant.blogspot.com/2012/08/srgb-approximations-for-hlsl.html
+    /// Src: https://github.com/KhronosGroup/glTF-Sample-Viewer/blob/master/src/shaders/metallic-roughness.frag
+    constexpr inline Vec3<T> pow(const float e) const {
+      return {std::pow(x, e), std::pow(y, e), std::pow(z, e)};
+    }
+
+    /// Returns a converted copy of the vector in linear RGB color space
+    /// See http://chilliant.blogspot.com/2012/08/srgb-approximations-for-hlsl.html
+    /// Src: https://github.com/KhronosGroup/glTF-Sample-Viewer/blob/master/src/shaders/metallic-roughness.frag
+    constexpr inline Vec3<T> sRGB_to_linear() const {
+      const float GAMMA = 2.2f;
+      return this->pow(GAMMA);
+    }
+
+    /// Returns a converted copy of the vector in sRGB color space
+    constexpr inline Vec3<T> linear_to_sRGB() const {
+      const float INV_GAMMA = 1.0f / 2.2f;
+      return this->pow(INV_GAMMA);
+    }
+
     /************ Operators ************/
     // Hashing operator
     inline size_t operator()() {
