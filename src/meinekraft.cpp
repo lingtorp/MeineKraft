@@ -41,6 +41,7 @@ static void ImGui_HelpMarker(const std::string& str) {
   }
 }
 
+/// Used for the Render system frame time graph
 static ImVec4 imgui_color_for_value(const float v, const float a, const float b) {
   ImVec4 color;
  
@@ -55,6 +56,7 @@ static ImVec4 imgui_color_for_value(const float v, const float a, const float b)
   return color;
 }
 
+/// Sets the custom engine styling for ImGui
 void imgui_styling() {
   ImGuiStyle* style = &ImGui::GetStyle();
 
@@ -82,7 +84,7 @@ void imgui_styling() {
   style->Colors[ImGuiCol_FrameBgHovered] = ImVec4(0.20f, 0.19f, 0.25f, 1.00f);
   style->Colors[ImGuiCol_FrameBgActive] = ImVec4(0.56f, 0.56f, 0.58f, 1.00f);
   style->Colors[ImGuiCol_TitleBg] = ImVec4(0.10f, 0.09f, 0.12f, 1.00f);
-  style->Colors[ImGuiCol_TitleBgCollapsed] = ImVec4(1.00f, 0.98f, 0.95f, 0.75f);
+  style->Colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.40f, 0.40f, 0.40f, 0.75f);
   style->Colors[ImGuiCol_TitleBgActive] = ImVec4(0.07f, 0.07f, 0.09f, 1.00f);
   style->Colors[ImGuiCol_MenuBarBg] = ImVec4(0.10f, 0.09f, 0.12f, 1.00f);
   style->Colors[ImGuiCol_ScrollbarBg] = ImVec4(0.10f, 0.09f, 0.12f, 1.00f);
@@ -116,6 +118,7 @@ void imgui_styling() {
   style->Colors[ImGuiCol_ModalWindowDarkening] = ImVec4(1.00f, 0.98f, 0.95f, 0.73f);
 }
 
+/// Main engine constructor
 MeineKraft::MeineKraft() {
   SDL_Init(SDL_INIT_EVERYTHING);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
@@ -132,6 +135,9 @@ MeineKraft::MeineKraft() {
 
   glewExperimental = (GLboolean) true;
   glewInit();
+
+  // Create MeineKraft folder structure
+  Filesystem::create_directory(Filesystem::tmp);
 
   OpenGLContextInfo gl_context_info(4, OPENGL_MINOR_VERSION);
 
@@ -185,6 +191,7 @@ void MeineKraft::mainloop() {
   /// Delta values
   const int num_deltas = 150;
   float deltas[num_deltas];
+  bool take_screenshot = false;
 
   while (!done) {
       current_tick = std::chrono::high_resolution_clock::now();
@@ -267,7 +274,7 @@ void MeineKraft::mainloop() {
               throttle_rendering = false;
               break;
             case SDL_WINDOWEVENT_FOCUS_LOST:
-              throttle_rendering = true; // FIXME: Does not work when RenderDoc is attached
+              throttle_rendering = true; // FIXME: May cause problems when RenderDoc is attached
               break;
           }
           break;
@@ -289,24 +296,28 @@ void MeineKraft::mainloop() {
       renderer->render(delta);
     }
 
+    if (take_screenshot) {
+      const Vec3f *pixels = renderer->take_screenshot();
+      Filesystem::save_image_as_ppm(Filesystem::tmp + "screenshot", pixels, renderer->screen.width, renderer->screen.height);
+      delete pixels;
+      take_screenshot = false;
+    }
+
     /// ImGui - Debug instruments
     if (!throttle_rendering) {
-      // pass_started("ImGui");
+      // pass_started("ImGui"); // FIXME: Render pass started fence for debug info
 
       ImGui_ImplSdlGL3_NewFrame(window);
       auto io = ImGui::GetIO();
 
       //  Main window
       {
-        // ImGui::ShowTestWindow();
+        // ImGui::ShowTestWindow(); // NOTE: Shows demo of ImGui widgets
 
         if (ImGui::BeginMainMenuBar()) {
           if (ImGui::BeginMenu("MeineKraft")) {
             if (ImGui::MenuItem("Quit", "ESC")) { done = true; }
-            if (ImGui::MenuItem("Screenshot")) {
-                const Vec3f *pixels = renderer->take_screenshot();
-                Filesystem::save_image_as_ppm(Filesystem::tmp, pixels, renderer->screen.width, renderer->screen.height);
-            }
+            if (ImGui::MenuItem("Screenshot")) { take_screenshot = true; }
             if (ImGui::MenuItem("Hide GUI")) {  } // TODO: Implement
             ImGui::EndMenu();
           }
@@ -354,7 +365,7 @@ void MeineKraft::mainloop() {
 
             if (ImGui::TreeNode("GPU view frustum culling")) {
               ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.culling.execution_time / 1'000'000.0f, 100.0f * float(renderer->state.culling.execution_time) / float(renderer->state.total_execution_time));
-              ImGui::Checkbox("Enabled", &renderer->state.culling.enabled);
+              ImGui::Checkbox("Enabled##culling", &renderer->state.culling.enabled);
               ImGui::TreePop();
             }
 
@@ -371,13 +382,14 @@ void MeineKraft::mainloop() {
 
           if (ImGui::CollapsingHeader("Direct shadows")) {
             ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.shadow.execution_time / 1'000'000.0f, 100.0f * float(renderer->state.shadow.execution_time) / float(renderer->state.total_execution_time));
+            ImGui::Checkbox("Enabled", &renderer->state.lighting.direct);
             ImGui::Text("Shadowmap resolution: (%u, %u)", renderer->state.shadow.SHADOWMAP_W, renderer->state.shadow.SHADOWMAP_H);
             ImGui::SliderInt("Resolution modifier", &renderer->state.shadow.shadowmap_resolution_step, 1, 5);
             ImGui::SameLine(); ImGui_HelpMarker("Changes the shadowmap texture size");
 
             static int s = 0; // Selection
-            ImGui::Combo("Algorithm", &s, "Shadowmapping \0 Percentage-close filtering \0 Voxel cone traced \0");
-            ImGui::SameLine(); ImGui_HelpMarker("Shadow algorithm applied by the directional light");
+            ImGui::Combo("Algorithm", &s, "Plain \0 PCF \0 VCT \0");
+            ImGui::SameLine(); ImGui_HelpMarker("Shadow algorithm applied by the directional light \n Plain: Classic shadowmapping \n PCF: Percentage-closer filtering \n VCT: Voxel cone traced shadows");
             renderer->state.shadow.algorithm = ShadowAlgorithm(s);
 
             switch (renderer->state.shadow.algorithm) {
@@ -411,10 +423,10 @@ void MeineKraft::mainloop() {
           if (ImGui::CollapsingHeader("Voxel cone tracing", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.vct.execution_time / 1'000'000.0f, 100.0f * float(renderer->state.vct.execution_time) / float(renderer->state.total_execution_time));
 
-            ImGui::Checkbox("Direct", &renderer->state.lighting.direct);
-            ImGui::SameLine();
-            ImGui::Checkbox("Indirect", &renderer->state.lighting.indirect);
+            ImGui::InputFloat("Ambient decay factor", &renderer->state.vct.ambient_decay);
 
+            ImGui::Checkbox("Indirect", &renderer->state.lighting.indirect);
+            ImGui::SameLine();
             ImGui::Checkbox("Specular", &renderer->state.lighting.specular);
             ImGui::SameLine();
             ImGui::Checkbox("Ambient", &renderer->state.lighting.ambient);
@@ -430,16 +442,16 @@ void MeineKraft::mainloop() {
           if (ImGui::CollapsingHeader("Bilateral filtering", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.bilateral_filtering.execution_time / 1'000'000.0f, 100.0f * float(renderer->state.bilateral_filtering.execution_time) / float(renderer->state.total_execution_time));
 
-            ImGui::Checkbox("Enabled", &renderer->state.bilateral_filtering.enabled);
+            ImGui::Checkbox("Enabled##bilateral", &renderer->state.bilateral_filtering.enabled);
 
             ImGui::Text("Filter:");
-            ImGui::Checkbox("Direct##filtering", &renderer->state.bilateral_filtering.direct_enabled);
+            ImGui::Checkbox("Direct##filtering", &renderer->state.bilateral_filtering.direct);
             ImGui::SameLine();
-            ImGui::Checkbox("Indirect##filtering", &renderer->state.bilateral_filtering.indirect_enabled);
+            ImGui::Checkbox("Indirect##filtering", &renderer->state.bilateral_filtering.indirect);
 
-            ImGui::Checkbox("Specular##filtering", &renderer->state.bilateral_filtering.specular_enabled);
+            ImGui::Checkbox("Specular##filtering", &renderer->state.bilateral_filtering.specular);
             ImGui::SameLine();
-            ImGui::Checkbox("Ambient##filtering", &renderer->state.bilateral_filtering.ambient_enabled);
+            ImGui::Checkbox("Ambient##filtering", &renderer->state.bilateral_filtering.ambient);
 
             ImGui::Text("Weights:");
             ImGui::Checkbox("Position", &renderer->state.bilateral_filtering.position_weight);
@@ -451,19 +463,47 @@ void MeineKraft::mainloop() {
             ImGui::SameLine(); ImGui::SliderFloat("Sigma##Normal", &renderer->state.bilateral_filtering.normal_sigma, 0.05f, 5.0f);
           }
 
+          if (ImGui::CollapsingHeader("Bilinear upsampling")) {
+            ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.bilinear_upsample.execution_time / 1'000'000.0f, 100.0f * float(renderer->state.bilinear_upsample.execution_time) / float(renderer->state.total_execution_time));
+
+            ImGui::Checkbox("Enabled##bilinear", &renderer->state.bilinear_upsample.enabled);
+
+            ImGui::Checkbox("Indirect##bilinear", &renderer->state.bilinear_upsample.indirect);
+            ImGui::SameLine();
+            ImGui::Checkbox("Specular##bilinear", &renderer->state.bilinear_upsample.specular);
+            ImGui::SameLine();
+            ImGui::Checkbox("Ambient##bilinear", &renderer->state.bilinear_upsample.ambient);
+          }
+
           ImGui::PopItemWidth();
           ImGui::End();
         }
 
         if (Gui.scene_graph_window) {
-          ImGui::Begin("Scene graph", &Gui.scene_graph_window);
+          ImGui::Begin("Scene graph", &Gui.scene_graph_window, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_AlwaysAutoResize);
 
-          // FIXME: Does not work
           if (ImGui::BeginMenuBar()) {
-            if (ImGui::BeginMenu("New")) {
-              if (ImGui::MenuItem("Model")) {  } // TODO: Model loader GUI
-              if (ImGui::MenuItem("Geometric primitive")) {  }
+            if (ImGui::BeginMenu("New##scene-graph")) {
+              if (ImGui::MenuItem("Model")) {
+                // TODO: Model loader GUI
+              }
+              if (ImGui::BeginMenu("Geometric primitive")) {
+                if (ImGui::MenuItem("Cube")) {
+                  world.spawn_entity(MeshPrimitive::Cube);
+                }
+                if (ImGui::MenuItem("Sphere")) {
+                  world.spawn_entity(MeshPrimitive::Sphere);
+                }
+                ImGui::EndMenu();
+              }
               ImGui::EndMenu();
+              ImGui::Separator();
+              if (ImGui::BeginMenu("Light")) {
+                if (ImGui::MenuItem("Pointlight")) {
+                  // TODO: Spawn pointlight
+                }
+                ImGui::EndMenu();
+              }
             }
             ImGui::EndMenuBar();
           }
@@ -477,12 +517,11 @@ void MeineKraft::mainloop() {
           }
 
           // Directional light
-          const std::string directional_light_title = "Directional light";
-          if (ImGui::CollapsingHeader(directional_light_title.c_str())) {
+          if (ImGui::CollapsingHeader("Directional light")) {
             ImGui::InputFloat3("Direction##directional_light", &renderer->directional_light.direction.x);
             ImGui::SameLine(); ImGui_HelpMarker("Direction is negative.");
 
-            ImGui::ColorEdit3("Intensity", &renderer->directional_light.intensity.x);
+            ImGui::ColorEdit3("Intensity##directional_light", &renderer->directional_light.intensity.x);
             ImGui::SameLine(); ImGui_HelpMarker("Intensity or color of the light."); // FIXME: May or may not exceed 1.0??
           }
 
@@ -493,8 +532,8 @@ void MeineKraft::mainloop() {
               ImGui::PushID(&renderer->pointlights[i]);
               const std::string str = std::to_string(i);
               if (ImGui::CollapsingHeader(str.c_str())) {
-                ImGui::InputFloat3("Position", &renderer->pointlights[i].position.x);
-                ImGui::ColorEdit3("Intensity", &renderer->pointlights[i].intensity.x);
+                ImGui::InputFloat3("Position##pointlight", &renderer->pointlights[i].position.x);
+                ImGui::ColorEdit3("Intensity##pointlight", &renderer->pointlights[i].intensity.x);
                 ImGui::SameLine(); ImGui_HelpMarker("Intensity or color of the light."); // FIXME: May or may not exceed 1.0??
               }
               ImGui::PopID();
@@ -506,9 +545,10 @@ void MeineKraft::mainloop() {
           if (ImGui::CollapsingHeader(graphicsbatches_title.c_str())) {
             for (size_t batch_num = 0; batch_num < renderer->graphics_batches.size(); batch_num++) {
               const auto& batch = renderer->graphics_batches[batch_num];
+             
               const std::string batch_title = "Batch #" + std::to_string(batch_num + 1) + " (" + std::to_string(batch.entity_ids.size()) + ")";
-
               if (ImGui::CollapsingHeader(batch_title.c_str())) {
+
                 const std::string member_title = "Members##" + batch_title;
                 if (ImGui::CollapsingHeader(member_title.c_str())) {
                   for (const auto& id : batch.entity_ids) {
@@ -530,7 +570,7 @@ void MeineKraft::mainloop() {
                     }
                     ImGui::SameLine();
                     if (ImGui::Button("Clone")) {
-                      // TODO: Clone Entity
+                      // TODO: Clone Entity: entity-clone();
                     }
                   }
                 }
