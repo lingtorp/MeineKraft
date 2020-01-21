@@ -369,11 +369,13 @@ struct RenderState {
     float roughness_aperature = 60.0f;     // 60 deg diffuse cone from [Rauwendaal, Crassin11]
     float metallic_aperature   = 0.1f;     // 10 deg specular cone from [Crassin11]
     int num_diffuse_cones = 6;             // [Crassin11], [Yeu13] suggests 5
+    float ambient_decay = 0.2f;            // [Crassin11] mentions but does not specify decay factor for scene ambient
   } vct;
 
   // Direct/shadows related
   struct {
     uint64_t execution_time = 0;                        // NOTE: nanoseconds
+    bool enabled = true;                                // Enable direct lighting computation
     ShadowAlgorithm algorithm = ShadowAlgorithm::Plain; // See enum class ShadowAlgorithm
     float bias = 0.00025f;                              // Shadow bias along geometric normal of surface
     int32_t pcf_samples = 2;                            // Number of depth samples taken with PCF
@@ -385,22 +387,26 @@ struct RenderState {
 
   // Bilateral filtering related
   struct {
-    uint64_t execution_time = 0;   // NOTE: nanoseconds
-    bool enabled = true;           // Bilateral filtering pass to filter the radiance
-    bool direct_enabled = false;   // Enable filtering of the direct radiance
-    bool ambient_enabled = true;   // Enable filtering of the ambient radiance
-    bool indirect_enabled = true;  // Enable filtering of the indirect radiance
-    bool specular_enabled = true;  // Enable filtering of the specular radiance
-    bool position_weight = true;   // Enable position as a weight in filtering
-    float position_sigma = 2.0f;   // FIXME: How to set this value or tune it?
-    bool normal_weight = false;    // Enable normals as a weight in filtering
-    float normal_sigma = 2.0f;     // FIXME: How to set this value or tune it?
+    uint64_t execution_time = 0;  // NOTE: nanoseconds
+    bool enabled = false;         // Bilateral filtering pass to filter the radiance
+    bool direct = false;          // Enable filtering of the direct radiance
+    bool ambient = true;          // Enable filtering of the ambient radiance
+    bool indirect = true;         // Enable filtering of the indirect radiance
+    bool specular = true;         // Enable filtering of the specular radiance
+    bool position_weight = true;  // Enable position as a weight in filtering
+    float position_sigma = 2.0f;  // FIXME: How to set this value or tune it?
+    bool normal_weight = false;   // Enable normals as a weight in filtering
+    float normal_sigma = 2.0f;    // FIXME: How to set this value or tune it?
   } bilateral_filtering;
 
-  // Final blit pass
+  // Bilinear upsampling related
   struct {
     uint64_t execution_time = 0; // NOTE: nanoseconds
-  } blit;
+    bool enabled = true;
+    bool ambient = true;
+    bool indirect = true;
+    bool specular = true;
+  } bilinear_upsample;
 
   // Voxel visualization related
   // FIXME: Voxel visualization does not work ...
@@ -408,6 +414,11 @@ struct RenderState {
     uint64_t execution_time = 0; // NOTE: nanoseconds
     bool enabled = false;
   } voxel_visualization;
+
+  // Final blit pass
+  struct {
+    uint64_t execution_time = 0; // NOTE: nanoseconds
+  } blit;
 
   RenderState() = default;
 
