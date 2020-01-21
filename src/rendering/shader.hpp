@@ -6,8 +6,12 @@
 #include <string>
 #include <vector>
 
+/// Shader implementation is meant to be used immutable.
+/// Load the shader files needed, append some includes on them and compile.
+/// It is an error to compile a Shader twice if it has succeded.
 struct Shader {
 
+  /// Shader definition for various types of textures handled
   enum class Defines : uint32_t {
     Diffuse2D,      // OpenGL texture target (GL_TEXTURE_2D)
     DiffuseCubemap, // OpenGL texture target (GL_TEXTURE_CUBE_MAP)
@@ -23,41 +27,45 @@ struct Shader {
          const std::string &geom_shader_file,
          const std::string &frag_shader_file);
 
-  // Add shader config. definition
-  void add(const Shader::Defines define);
+  /// Add shader config. definition, returns whether or not it was successful
+  bool add(const Shader::Defines define);
 
-  // Adds raw string to the shader sources
-  void add(const std::string &str);
+  /// Adds raw string to the shader sources, returns whether or not it was successful
+  bool add(const std::string &str);
 
   /// Loads and compiles shader sources returns compile error msg
   std::pair<bool, std::string> compile();
 
-  // Filepaths
-  // NOTE: Shader stage considered active if it is not .empty()
+  /// Equality operator according to the unique defines
+  bool operator==(const Shader &rhs);
+
+  /// Filepaths
+  /// NOTE: Shader stage considered active if it is not .empty()
   std::string vertex_filepath = "";
   std::string geometry_filepath = "";
   std::string fragment_filepath = "";
 
+  /// OpenGL object identifiers
   uint32_t gl_program = 0;
   uint32_t gl_vertex_shader = 0;
   uint32_t gl_geometry_shader = 0;
   uint32_t gl_fragment_shader = 0;
 
-  // Set by compile function, gets stale if the shader is changed
-  bool compiled_successfully = false;
-
-  bool operator==(const Shader &rhs);
-
-  // Configuration of the shader a la Ubershader
+  /// Configuration of the shader a la Ubershader
   std::set<Shader::Defines> defines{};
 
 private:
-  // Shader source to be added
+  /// Set by compile()
+  bool compiled_successfully = false;
+
+  /// Shader source to be added
   std::string include_vertex_src = "";
   std::string include_geometry_src = "";
   std::string include_fragment_src = "";
 };
 
+/// Defines and compiles a compute shader in one go in contrast to 'struct Shader'
+/// See documentation for 'struct Shader'
 struct ComputeShader {
   explicit ComputeShader(const std::string &compute_filepath,
                          const std::vector<std::string> &defines = {});

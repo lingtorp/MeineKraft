@@ -130,6 +130,10 @@ Shader::Shader(const std::string &vertex_filepath,
     : vertex_filepath(vertex_filepath), fragment_filepath(fragment_filepath) {}
 
 std::pair<bool, std::string> Shader::compile() {
+  if (compiled_successfully) {
+    return {false, "This shader has already been compiled."};
+  }
+
   const bool vertex_included = !vertex_filepath.empty();
   const bool geometry_included = !geometry_filepath.empty();
   const bool fragment_included = !fragment_filepath.empty();
@@ -301,13 +305,23 @@ std::pair<bool, std::string> Shader::compile() {
     glDeleteProgram(gl_program);
   }
 
-  return {program_linked == GL_TRUE, err_msg};
+  compiled_successfully = (program_linked == GL_TRUE);
+  return {compiled_successfully, err_msg};
 };
 
-void Shader::add(const Shader::Defines define) { defines.insert(define); }
+bool Shader::add(const Shader::Defines define) {
+  if (!compiled_successfully) {
+    defines.insert(define);
+  }
+  return !compiled_successfully;
+}
 
-void Shader::add(const std::string &str) {
+bool Shader::add(const std::string &str) {
   assert(!str.empty() && "Passed empty shader string to include ...");
+
+  if (compiled_successfully) {
+    return false;
+  }
 
   if (!vertex_filepath.empty()) {
     include_vertex_src.insert(0, str);
@@ -320,6 +334,8 @@ void Shader::add(const std::string &str) {
   if (!fragment_filepath.empty()) {
     include_fragment_src.insert(0, str);
   }
+
+  return true;
 }
 
 bool Shader::operator==(const Shader &rhs) { return defines == rhs.defines; }
