@@ -910,7 +910,7 @@ void Renderer::render(const uint32_t delta) {
       const uint32_t gl_bounding_volume_binding_point = 5; // Defaults to 5 in the culling compute shader
       glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_bounding_volume_binding_point, batch.gl_bounding_volume_buffer);
 
-      glUniform1ui(glGetUniformLocation(cull_shader->gl_program, "NUM_INDICES"), batch.mesh.indices.size());
+      glUniform1ui(glGetUniformLocation(cull_shader->gl_program, "NUM_INDICES"), batch.mesh->indices.size());
       glUniform1ui(glGetUniformLocation(cull_shader->gl_program, "DRAW_CMD_IDX"), batch.gl_curr_ibo_idx);
 
       glDispatchCompute(batch.objects.transforms.size(), 1, 1);
@@ -1467,13 +1467,13 @@ void Renderer::link_batch(GraphicsBatch& batch) {
 
     glGenBuffers(1, &batch.gl_depth_vbo);
     glBindBuffer(GL_ARRAY_BUFFER, batch.gl_depth_vbo);
-    glBufferData(GL_ARRAY_BUFFER, batch.mesh.byte_size_of_vertices(), batch.mesh.vertices.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, batch.mesh->byte_size_of_vertices(), batch.mesh->vertices.data(), GL_STATIC_DRAW);
 		glObjectLabel(GL_BUFFER, batch.gl_depth_vbo, -1, "Batch gl_depth_vbo");
 
     // Element buffer
     glGenBuffers(1, &batch.gl_ebo);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, batch.gl_ebo);
-    glBufferStorage(GL_ELEMENT_ARRAY_BUFFER, batch.mesh.byte_size_of_indices(), batch.mesh.indices.data(), 0);
+    glBufferStorage(GL_ELEMENT_ARRAY_BUFFER, batch.mesh->byte_size_of_indices(), batch.mesh->indices.data(), 0);
     glObjectLabel(GL_BUFFER, batch.gl_ebo, -1, "Elements SSBO");
 
     const auto position_attrib = glGetAttribLocation(program, "position");
@@ -1706,7 +1706,7 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
   link_batch(batch);
 
   add_graphics_state(batch, comp, material, entity_id);
-  graphics_batches.push_back(batch);
+  graphics_batches.emplace_back(std::move(batch));
 }
 
 void Renderer::remove_component(const ID eid) {

@@ -90,17 +90,21 @@ static BoundingVolume compute_bounding_volume(const Mesh& mesh) {
 // sRGB automatic mipmapping is performed correctly by OpenGL by default due to texture format [0]
 // [0]: https://github.com/KhronosGroup/OpenGL-Registry/blob/master/extensions/EXT/EXT_texture_sRGB_decode.txt
 struct GraphicsBatch {
-  explicit GraphicsBatch(const ID mesh_id): mesh_id(mesh_id), objects{}, mesh{MeshManager::mesh_from_id(mesh_id)}, 
-    layer_idxs{}, bounding_volume(compute_bounding_volume(mesh)) {
+  explicit GraphicsBatch(const ID mesh_id): mesh_id(mesh_id), objects{}, mesh{MeshManager::mesh_ptr_from_id(mesh_id)},
+    layer_idxs{}, bounding_volume(compute_bounding_volume(*mesh)) {
       if (!GLEW_EXT_texture_sRGB_decode) {
         Log::error("OpenGL extension sRGB_decode does not exist."); exit(-1);
       }
     };
 
+  // TODO: Move GL resources
+  // GraphicsBatch(const GraphicsBatch&& other) {}
+
   // TODO: Dealloc GL resources
-  ~GraphicsBatch() {
-    Log::info("GraphicsBatch destructor called.");
-  }
+  // ~GraphicsBatch() {
+  //   Log::info("GraphicsBatch destructor called.");
+  //   MeshManager::dealloc_mesh(mesh_id);
+  // }
 
   void init_buffer(const Texture& texture, uint32_t* gl_buffer, const uint32_t gl_texture_unit, uint32_t* buffer_capacity, const bool is_sRGB = false) {
     glActiveTexture(GL_TEXTURE0 + gl_texture_unit);
@@ -112,6 +116,7 @@ struct GraphicsBatch {
     glTexStorage3D(texture.gl_texture_target, mipmap_levels, texture_format, texture.data.width, texture.data.height, texture.data.faces * default_buffer_size); // depth = layer faces
     glGenerateMipmap(texture.gl_texture_target);
     *buffer_capacity = default_buffer_size;
+
     float aniso = 0.0f;
     glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &aniso);
     glTexParameterf(texture.gl_texture_target, GL_TEXTURE_MAX_ANISOTROPY_EXT, aniso);
@@ -218,7 +223,7 @@ struct GraphicsBatch {
   }
 
   ID mesh_id; 
-  Mesh mesh; 
+  const Mesh* mesh;
   struct {
     std::vector<Mat4f> transforms;
     std::vector<BoundingVolume> bounding_volumes;     // Bounding volumes (Spheres for now)
