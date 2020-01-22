@@ -433,7 +433,7 @@ void MeineKraft::mainloop() {
             ImGui::SameLine();
             ImGui_HelpMarker("Note ambient is only available when 'Indirect' is used.");
 
-            ImGui::SliderInt("# diffuse cones", &renderer->state.vct.num_diffuse_cones, 1, renderer->state.vct.MAX_DIFFUSE_CONES);
+            ImGui::SliderInt("# diffuse cones", &renderer->state.vct.num_diffuse_cones, 4, renderer->state.vct.MAX_DIFFUSE_CONES);
 
             ImGui::InputFloat("Roughness aperature (deg.)", &renderer->state.vct.roughness_aperature);
             ImGui::InputFloat("Metallic aperature (deg.)", &renderer->state.vct.metallic_aperature);
