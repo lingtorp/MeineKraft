@@ -174,7 +174,7 @@ std::array<glm::vec4, 6> extract_planes(const glm::mat4& mat) {
   return { normalize(left_plane), normalize(right_plane), normalize(bot_plane), normalize(top_plane), normalize(near_plane), normalize(far_plane) };
 }
 
-/// Generates (cone-direction, cone-weight)
+/// Generates diffuse cones on the hemisphere (Vec3f: cone-direction, float: cone-weight)
 /// NOTE: Weights does NOT sum to 2PI, the steradians of a hemisphere, but PI
 std::vector<Vec4f> generate_diffuse_cones(const size_t count) {
   assert(count >= 0);
@@ -209,9 +209,19 @@ std::vector<Vec4f> generate_diffuse_cones(const size_t count) {
   for (size_t i = 0; i < count - 1; i++) {
     const Vec3f direction = Vec3f(std::cos(theta) * std::sin(i * rad_delta),
                                   std::sin(theta) * std::sin(theta),
-                                  std::cos(i * rad_delta));
+                                  std::cos(i * rad_delta)).normalize();
     cones[i + 1] = Vec4f(direction, (M_PI - cones[0].w) / (count - 1.0f));
   }
+
+  float sum = 0.0f;
+  for (const auto& cone : cones) {
+    sum += cone.w;
+    assert(cone.w > 0.0f && "Diffuse cone generated with negative weight.");
+  }
+
+  const float tolerance = 0.001f;
+  const float diff = std::abs(M_PI - sum);
+  assert(diff <= tolerance && "Diffuse cones dont weight up to M_PI");
 
   return cones;
 }
