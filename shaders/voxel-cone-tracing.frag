@@ -221,6 +221,7 @@ void main() {
       // Offset origin to avoid self-sampling
       const vec3 d = cones[i].xyz;
       if (dot(d, normal) < 0.0) { continue; }
+      const vec3 d = TBN * cones[i].xyz;
       const vec4 radiance = 2.0 * cones[i].w * trace_diffuse_cone(o, d, roughness_aperature);
       gIndirect_radiance += radiance.rgb * max(dot(d, normal), 0.0);
       ambient_radiance += radiance.a;
