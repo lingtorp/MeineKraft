@@ -16,7 +16,7 @@
 #include "rendering/graphicsbatch.hpp"
 #include "util/config.hpp"
 
-// TODO: Update try to ImGui some day
+// TODO: Try to update ImGui some day
 
 // ImGui global GUI settings
 struct {
@@ -158,16 +158,14 @@ void MeineKraft::init() {
   if (success) {
     const std::string path = config["scene"]["path"].get<std::string>();
     const std::string name = config["scene"]["name"].get<std::string>();
-    // renderer->scene = new Scene("/home/alexander/Desktop/Meinekraft/BoomBox/", "BoomBox.gltf");
     renderer->scene = new Scene(Filesystem::home + path, name);
-    // renderer->scene = new Scene("/home/alexander/Desktop/Meinekraft/MetalRoughSpheres/", "MetalRoughSpheres.gltf");
-    // renderer->scene->load_models_from("/home/alexander/Desktop/Meinekraft/Suzanne/", "Suzanne.gltf");
-    // renderer->scene->load_models_from("/home/alexander/Desktop/Meinekraft/MetalRoughSpheres/", "MetalRoughSpheres.gltf");
-    // renderer->scene->load_models_from("/home/alexander/Desktop/Meinekraft/BoomBox/", "BoomBox.gltf");
+    renderer->scene->camera = Camera(config);
   } else {
-    // TODO: Load default scene or smt
-    Log::error("Failed to load config.json.");
+    renderer->scene = new Scene();
+    Log::warn("Failed to load config.json.");
   }
+
+  screenshot_mode = config["screenshot_mode"].get<bool>();
 
   renderer->init();
 }
@@ -193,13 +191,13 @@ void MeineKraft::mainloop() {
   float deltas[num_deltas];
   bool take_screenshot = false;
 
+  /// Window handling
+  bool throttle_rendering = false;
+
   while (!done) {
       current_tick = std::chrono::high_resolution_clock::now();
       delta = std::chrono::duration_cast<std::chrono::milliseconds>(current_tick - last_tick).count();
       last_tick = current_tick;
-
-      /// Window handling
-      static bool throttle_rendering = false;
 
       /// Process input
       SDL_Event event{};
@@ -208,30 +206,30 @@ void MeineKraft::mainloop() {
         switch (event.type) {
         case SDL_MOUSEMOTION:
           if (toggle_mouse_capture) { break; }
-          renderer->scene->camera->pitch += event.motion.yrel;
-          renderer->scene->camera->yaw += event.motion.xrel;
-          renderer->scene->camera->direction = renderer->scene->camera->recalculate_direction();
+          renderer->scene->camera.pitch += event.motion.yrel;
+          renderer->scene->camera.yaw += event.motion.xrel;
+          renderer->scene->camera.direction = renderer->scene->camera.recalculate_direction();
           break;
 
         case SDL_KEYDOWN:
           switch (event.key.keysym.sym) {
           case SDLK_w:
-            renderer->scene->camera->move_forward(true);
+            renderer->scene->camera.move_forward(true);
             break;
           case SDLK_a:
-            renderer->scene->camera->move_left(true);
+            renderer->scene->camera.move_left(true);
             break;
           case SDLK_s:
-            renderer->scene->camera->move_backward(true);
+            renderer->scene->camera.move_backward(true);
             break;
           case SDLK_d:
-            renderer->scene->camera->move_right(true);
+            renderer->scene->camera.move_right(true);
             break;
           case SDLK_q:
-            renderer->scene->camera->move_down(true);
+            renderer->scene->camera.move_down(true);
             break;
           case SDLK_e:
-            renderer->scene->camera->move_up(true);
+            renderer->scene->camera.move_up(true);
             break;
           case SDLK_TAB:
             toggle_mouse_capture = !toggle_mouse_capture;
@@ -245,22 +243,22 @@ void MeineKraft::mainloop() {
         case SDL_KEYUP:
           switch (event.key.keysym.sym) {
           case SDLK_w:
-            renderer->scene->camera->move_forward(false);
+            renderer->scene->camera.move_forward(false);
             break;
           case SDLK_a:
-            renderer->scene->camera->move_left(false);
+            renderer->scene->camera.move_left(false);
             break;
           case SDLK_s:
-            renderer->scene->camera->move_backward(false);
+            renderer->scene->camera.move_backward(false);
             break;
           case SDLK_d:
-            renderer->scene->camera->move_right(false);
+            renderer->scene->camera.move_right(false);
             break;
           case SDLK_q:
-            renderer->scene->camera->move_down(false);
+            renderer->scene->camera.move_down(false);
             break;
           case SDLK_e:
-            renderer->scene->camera->move_up(false);
+            renderer->scene->camera.move_up(false);
           }
 
         case SDL_WINDOWEVENT:
@@ -283,7 +281,7 @@ void MeineKraft::mainloop() {
           break;
       }
     }
-    renderer->scene->camera->position = renderer->scene->camera->update(delta);
+    renderer->scene->camera.position = renderer->scene->camera.update(delta);
 
     /// Run all actions
     ActionSystem::instance().execute_actions(renderer->state.frame, delta);
@@ -296,12 +294,18 @@ void MeineKraft::mainloop() {
       renderer->render(delta);
     }
 
+    if (screenshot_mode && renderer->state.frame > screenshot_mode_frame_wait) {
+      take_screenshot = true;
+    }
+
     if (take_screenshot) {
       const Vec3f *pixels = renderer->take_screenshot();
       Filesystem::save_image_as_ppm(Filesystem::tmp + "screenshot", pixels, renderer->screen.width, renderer->screen.height);
       delete pixels;
       take_screenshot = false;
     }
+
+    if (screenshot_mode && renderer->state.frame > screenshot_mode_frame_wait) { return; }
 
     /// ImGui - Debug instruments
     if (!throttle_rendering) {
@@ -509,9 +513,9 @@ void MeineKraft::mainloop() {
           }
 
           if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::InputFloat3("Position##camera", &renderer->scene->camera->position.x);
-            ImGui::InputFloat3("Direction##camera", &renderer->scene->camera->direction.x);
-            // ImGui::InputFloat("FoV", &renderer->scene->camera->FoV); // TODO: Camera adjustable FoV
+            ImGui::InputFloat3("Position##camera", &renderer->scene->camera.position.x);
+            ImGui::InputFloat3("Direction##camera", &renderer->scene->camera.direction.x);
+            // ImGui::InputFloat("FoV", &renderer->scene->camera.FoV); // TODO: Camera adjustable FoV
             ImGui::SameLine();
             if (ImGui::Button("Reset")) { renderer->scene->reset_camera(); }
           }
@@ -595,5 +599,6 @@ void MeineKraft::mainloop() {
     }
     SDL_GL_SwapWindow(window);
   }
-  Config::save_scene(renderer->scene);
+  // TODO: Config::save_scene
+  // Config::save_scene(renderer->scene);
 }
