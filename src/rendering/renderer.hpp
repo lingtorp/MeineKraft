@@ -13,7 +13,6 @@
 
 #include <glm/mat4x4.hpp>
 
-struct Camera;
 struct RenderComponent;
 struct GraphicsBatch;
 struct Shader;
