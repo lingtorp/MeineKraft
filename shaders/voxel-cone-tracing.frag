@@ -213,7 +213,8 @@ void main() {
     // Offset origin to avoid self-sampling
     const float start_lvl = floor(clipmap_lvl_from_distance(origin));
     const vec3 o = origin + (uVoxel_size_LOD0 * 1.5 * exp2(start_lvl)) * fNormal; 
-    const vec4 radiance = cones[0].w * trace_diffuse_cone(o, normal, roughness_aperature);
+
+    const vec4 radiance = 2.0 * cones[0].w * trace_diffuse_cone(o, normal, roughness_aperature);
     gIndirect_radiance += radiance.rgb;
     ambient_radiance += radiance.a;
 
