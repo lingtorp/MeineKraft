@@ -69,14 +69,14 @@ Scene::Scene(const std::string& directory, const std::string& file) {
   Log::info_indent(1, "Center: " + aabb.center().to_string());
   Log::info_indent(1, "Size(dx, dy, dz): " + std::to_string(aabb.width()) + ", " + std::to_string(aabb.height()) + ", " + std::to_string(aabb.breadth()));
 
-  // Root scene Camera
+  // Root scene Camera default
   const auto position = aabb.center();
   const auto direction = Vec3f(0.0f, 0.0f, 1.0f);
-  this->camera = new Camera(position, direction);
+  this->camera = Camera(position, direction);
 
   const auto end = std::chrono::high_resolution_clock::now();
   const auto seconds = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
-  Log::info_indent(1, "scene loaded in: " + std::to_string(seconds) + " seconds");
+  Log::info_indent(1, "✓ scene loaded in: " + std::to_string(seconds) + " seconds");
 }
 
 void Scene::load_models_from(const std::string& directory, const std::string& file) { 
@@ -89,10 +89,7 @@ void Scene::load_models_from(const std::string& directory, const std::string& fi
 }
 
 void Scene::reset_camera() {
-  if (camera) {
-    camera->position = aabb.center();
-    camera->direction = Vec3f(0.0f, 0.0f, 1.0f);
-  } else {
-    Log::error("Tried to reset non existing camera in Scene");
-  }
+  // TODO: Reset to spawned position, direction
+  camera.position = aabb.center();
+  camera.direction = Vec3f(0.0f, 0.0f, 1.0f);
 }

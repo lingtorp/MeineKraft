@@ -13,10 +13,19 @@ public:
 };
 
 struct Scene {
+  /// Scene-wide AABB containing all Models
 	AABB aabb;
-  Camera* camera;
+
+  /// Scene main camera
+  Camera camera;
+
+  Scene() = default;
   Scene(const std::string& directory, const std::string& file);
+
+  /// Loads all models from the following file into the Scene
   void load_models_from(const std::string& directory, const std::string& file);
+
+  /// Moves and positions the camera as it was spawned
   void reset_camera();  
 };
 
