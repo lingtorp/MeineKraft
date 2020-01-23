@@ -1222,13 +1222,49 @@ void Renderer::render(const uint32_t delta) {
     pass_ended();
   }
 
+  /// Direct lighting (non-VCT) pass
+  if (state.lighting.direct && state.shadow.algorithm != ShadowAlgorithm::VCT) {
+    state.bilinear_upsample.execution_time = gl_query_time_buffer_ptr[state.render_passes];
+    pass_started("Direct lighting pass");
+
+    const auto program = direct_lighting_shader->gl_program;
+    glUseProgram(program);
+    glBindFramebuffer(GL_FRAMEBUFFER, gl_direct_lighting_fbo);
+
+    glUniform1ui(glGetUniformLocation(program, "uPCF_samples"), state.shadow.pcf_samples);
+    glUniform1f(glGetUniformLocation(program, "uVCT_shadow_cone_aperature"), state.shadow.vct_cone_aperature);
+    glUniform1ui(glGetUniformLocation(program, "uShadow_algorithm"), static_cast<uint32_t>(state.shadow.algorithm));
+    glUniform1f(glGetUniformLocation(program, "uShadow_bias"), state.shadow.bias);
+    glUniform3fv(glGetUniformLocation(program, "uDirectional_light_intensity"), 1, &directional_light.intensity.x);
+    glUniform3fv(glGetUniformLocation(program, "uDirectional_light_direction"), 1, &directional_light.direction.x);
+    glUniformMatrix4fv(glGetUniformLocation(program, "uLight_space_transform"), 1, GL_FALSE, glm::value_ptr(light_space_transform));
+    glUniform1i(glGetUniformLocation(program, "uShadowmap"), gl_shadowmapping_texture_unit);
+    glUniform1ui(glGetUniformLocation(program, "uShadowmap_width"), state.shadow.SHADOWMAP_W);
+    glUniform1ui(glGetUniformLocation(program, "uShadowmap_height"), state.shadow.SHADOWMAP_H);
+
+    glUniform1ui(glGetUniformLocation(program, "uScreen_width"), screen.width);
+    glUniform1ui(glGetUniformLocation(program, "uScreen_height"), screen.height);
+    glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "uNormal"), gl_geometric_normal_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "uTangent_normal"), gl_tangent_normal_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "uTangent"), gl_tangent_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "uNormalmapping"), state.lighting.normalmapping);
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+    last_executed_fbo = gl_direct_lighting_fbo;
+
+    pass_ended();
+  }
+
   if (state.bilateral_filtering.enabled) {
     state.bilateral_filtering.execution_time = gl_query_time_buffer_ptr[state.render_passes];
     pass_started("Bilateral filtering pass");
 
     state.bilateral_filtering.kernel = gaussian_1d_kernel(state.bilateral_filtering.spatial_kernel_sigma, state.bilateral_filtering.spatial_kernel_radius);
 
-    const auto bilateral_filtering_pass = [&](const uint32_t in_texture, const uint32_t in_texture_unit) {
+    const auto bilateral_filtering_pass = [&](const uint32_t in_texture, const uint32_t in_texture_unit, const float div = 1.0f) {
       // TODO: Reduce to one single shader, reuse that one twice instead
       // Ping
       {
@@ -1243,7 +1279,6 @@ void Renderer::render(const uint32_t delta) {
         glUniform1i(glGetUniformLocation(program, "uNormal"), gl_geometric_normal_texture_unit);
         glUniform1f(glGetUniformLocation(program, "uNormal_sigma"), state.bilateral_filtering.normal_sigma);
 
-        const float div = state.lighting.downsample_modifier;
         const Vec2f input_pixel_size = Vec2(1.0f / (screen.width * float(div)), 1.0f / (screen.height * float(div)));
         glUniform2fv(glGetUniformLocation(program, "uInput_pixel_size"), 1, &input_pixel_size.x);
 
@@ -1294,9 +1329,10 @@ void Renderer::render(const uint32_t delta) {
     };
 
     // Declare input & output texture
-    if (state.bilateral_filtering.ambient)  { bilateral_filtering_pass(gl_ambient_radiance_texture,  gl_ambient_radiance_texture_unit);  }
-    if (state.bilateral_filtering.indirect) { bilateral_filtering_pass(gl_indirect_radiance_texture, gl_indirect_radiance_texture_unit); }
-    if (state.bilateral_filtering.specular) { bilateral_filtering_pass(gl_specular_radiance_texture, gl_specular_radiance_texture_unit); }
+    const float div = state.lighting.downsample_modifier;
+    if (state.bilateral_filtering.ambient)  { bilateral_filtering_pass(gl_ambient_radiance_texture,  gl_ambient_radiance_texture_unit, div);  }
+    if (state.bilateral_filtering.indirect) { bilateral_filtering_pass(gl_indirect_radiance_texture, gl_indirect_radiance_texture_unit, div); }
+    if (state.bilateral_filtering.specular) { bilateral_filtering_pass(gl_specular_radiance_texture, gl_specular_radiance_texture_unit, div); }
     if (state.bilateral_filtering.direct)   { bilateral_filtering_pass(gl_direct_radiance_texture,   gl_direct_radiance_texture_unit);   }
 
     last_executed_fbo = gl_bf_pong_fbo;
@@ -1346,42 +1382,6 @@ void Renderer::render(const uint32_t delta) {
     if (state.bilinear_upsample.specular) { bilinear_upsample(gl_specular_radiance_texture, gl_specular_radiance_texture_unit); }
 
     last_executed_fbo = gl_bilinear_upsampling_fbo;
-
-    pass_ended();
-  }
-
-  /// Direct lighting (non-VCT) pass
-  if (state.lighting.direct && state.shadow.algorithm != ShadowAlgorithm::VCT) {
-    state.bilinear_upsample.execution_time = gl_query_time_buffer_ptr[state.render_passes];
-    pass_started("Direct lighting pass");
-
-    const auto program = direct_lighting_shader->gl_program;
-    glUseProgram(program);
-    glBindFramebuffer(GL_FRAMEBUFFER, gl_direct_lighting_fbo);
-
-    glUniform1ui(glGetUniformLocation(program, "uPCF_samples"), state.shadow.pcf_samples);
-    glUniform1f(glGetUniformLocation(program, "uVCT_shadow_cone_aperature"), state.shadow.vct_cone_aperature);
-    glUniform1ui(glGetUniformLocation(program, "uShadow_algorithm"), static_cast<uint32_t>(state.shadow.algorithm));
-    glUniform1f(glGetUniformLocation(program, "uShadow_bias"), state.shadow.bias);
-    glUniform3fv(glGetUniformLocation(program, "uDirectional_light_intensity"), 1, &directional_light.intensity.x);
-    glUniform3fv(glGetUniformLocation(program, "uDirectional_light_direction"), 1, &directional_light.direction.x);
-    glUniformMatrix4fv(glGetUniformLocation(program, "uLight_space_transform"), 1, GL_FALSE, glm::value_ptr(light_space_transform));
-    glUniform1i(glGetUniformLocation(program, "uShadowmap"), gl_shadowmapping_texture_unit);
-    glUniform1ui(glGetUniformLocation(program, "uShadowmap_width"), state.shadow.SHADOWMAP_W);
-    glUniform1ui(glGetUniformLocation(program, "uShadowmap_height"), state.shadow.SHADOWMAP_H);
-
-    glUniform1ui(glGetUniformLocation(program, "uScreen_width"), screen.width);
-    glUniform1ui(glGetUniformLocation(program, "uScreen_height"), screen.height);
-    glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
-    glUniform1i(glGetUniformLocation(program, "uNormal"), gl_geometric_normal_texture_unit);
-    glUniform1i(glGetUniformLocation(program, "uTangent_normal"), gl_tangent_normal_texture_unit);
-    glUniform1i(glGetUniformLocation(program, "uTangent"), gl_tangent_texture_unit);
-    glUniform1i(glGetUniformLocation(program, "uNormalmapping"), state.lighting.normalmapping);
-
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-    last_executed_fbo = gl_direct_lighting_fbo;
 
     pass_ended();
   }
