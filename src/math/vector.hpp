@@ -8,18 +8,12 @@
 
 #include <glm/common.hpp>
 
-#if defined(__APPLE__)
-#include <cmath>
-#endif
-
 #if defined(__linux__)
 #include <math.h>
 #endif
 
 inline float mk_cosf(const float x) {
-#if defined(__APPLE__)
-  return std::cos(x);
-#elif defined(__linux__)
+#if defined(__linux__)
   return cosf(x);
 #elif defined(WIN32)
   return std::cosf(x);
@@ -27,9 +21,7 @@ inline float mk_cosf(const float x) {
 }
 
 inline float mk_sinf(const float x) {
-#if defined(__APPLE__)
-  return std::sin(x);
-#elif defined(__linux__)
+#if defined(__linux__)
   return sinf(x);
 #elif defined(WIN32)
   return std::sinf(x);
@@ -37,9 +29,7 @@ inline float mk_sinf(const float x) {
 }
 
 inline float mk_sqrtf(const float x) {
-#if defined(__APPLE__)
-  return std::sqrt(x);
-#elif defined(__linux__)
+#if defined(__linux__)
   return sqrt(x);
 #elif defined(WIN32)
   return std::sqrtf(x);
