@@ -846,12 +846,6 @@ bool Renderer::init() {
     Log::info("Voxel size: "    + std::to_string(aabbs[i].max_axis() / clipmaps.size[i]));
     Log::info("Voxel d^3: "     + std::to_string(clipmaps.size[i]));
   }
-
-  // TODO: Move out to gui
-  const float sigma = 1.0f;
-  const size_t kernel_radius = 4;
-  kernel = gaussian_1d_kernel(sigma, kernel_radius);
-
   return true;
 }
 
@@ -1232,6 +1226,8 @@ void Renderer::render(const uint32_t delta) {
     state.bilateral_filtering.execution_time = gl_query_time_buffer_ptr[state.render_passes];
     pass_started("Bilateral filtering pass");
 
+    state.bilateral_filtering.kernel = gaussian_1d_kernel(state.bilateral_filtering.spatial_kernel_sigma, state.bilateral_filtering.spatial_kernel_radius);
+
     const auto bilateral_filtering_pass = [&](const uint32_t in_texture, const uint32_t in_texture_unit) {
       // TODO: Reduce to one single shader, reuse that one twice instead
       // Ping
@@ -1254,8 +1250,8 @@ void Renderer::render(const uint32_t delta) {
         const Vec2f output_pixel_size = Vec2(1.0f / screen.width, 1.0f / screen.height);
         glUniform2fv(glGetUniformLocation(program, "uOutput_pixel_size"), 1, &output_pixel_size.x);
 
-        glUniform1ui(glGetUniformLocation(program, "uKernel_dim"), kernel.size());
-        glUniform1fv(glGetUniformLocation(program, "uKernel"), kernel.size(), kernel.data());
+        glUniform1ui(glGetUniformLocation(program, "uKernel_dim"), state.bilateral_filtering.kernel.size());
+        glUniform1fv(glGetUniformLocation(program, "uKernel"), state.bilateral_filtering.kernel.size(), state.bilateral_filtering.kernel.data());
 
         glUniform1i(glGetUniformLocation(program, "uInput"), in_texture_unit);
         // glUniform1i(glGetUniformLocation(program, "uOutput"), 0); // NOTE: Default to 0 in shader
@@ -1286,8 +1282,8 @@ void Renderer::render(const uint32_t delta) {
         const Vec2f output_pixel_size = Vec2(1.0f / screen.width, 1.0f / screen.height);
         glUniform2fv(glGetUniformLocation(program, "uOutput_pixel_size"), 1, &output_pixel_size.x);
 
-        glUniform1ui(glGetUniformLocation(program, "uKernel_dim"), kernel.size());
-        glUniform1fv(glGetUniformLocation(program, "uKernel"), kernel.size(), kernel.data());
+        glUniform1ui(glGetUniformLocation(program, "uKernel_dim"), state.bilateral_filtering.kernel.size());
+        glUniform1fv(glGetUniformLocation(program, "uKernel"), state.bilateral_filtering.kernel.size(), state.bilateral_filtering.kernel.data());
 
         glUniform1i(glGetUniformLocation(program, "uInput"), gl_bf_ping_out_texture_unit);
         glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, in_texture, 0);

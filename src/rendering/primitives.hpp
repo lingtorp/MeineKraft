@@ -387,16 +387,19 @@ struct RenderState {
 
   // Bilateral filtering related
   struct {
-    uint64_t execution_time = 0;  // NOTE: nanoseconds
-    bool enabled = false;         // Bilateral filtering pass to filter the radiance
-    bool direct = false;          // Enable filtering of the direct radiance
-    bool ambient = true;          // Enable filtering of the ambient radiance
-    bool indirect = true;         // Enable filtering of the indirect radiance
-    bool specular = true;         // Enable filtering of the specular radiance
-    bool position_weight = true;  // Enable position as a weight in filtering
-    float position_sigma = 2.0f;  // FIXME: How to set this value or tune it?
-    bool normal_weight = false;   // Enable normals as a weight in filtering
-    float normal_sigma = 2.0f;    // FIXME: How to set this value or tune it?
+    uint64_t execution_time = 0;        // NOTE: nanoseconds
+    bool enabled = false;               // Bilateral filtering pass to filter the radiance
+    bool direct = false;                // Enable filtering of the direct radiance
+    bool ambient = true;                // Enable filtering of the ambient radiance
+    bool indirect = true;               // Enable filtering of the indirect radiance
+    bool specular = true;               // Enable filtering of the specular radiance
+    std::vector<float> kernel;          // Spatial kernel values generated from sigma and radius
+    float spatial_kernel_sigma = 0.2f;  // Sigma of the spatial upsampling kernel in texture space
+    uint32_t spatial_kernel_radius = 3; // Radius of the spatial upsampling kernel in texture space
+    bool position_weight = true;        // Enable position as a weight in filtering
+    float position_sigma = 2.0f;        // FIXME: How to set this value or tune it?
+    bool normal_weight = false;         // Enable normals as a weight in filtering
+    float normal_sigma = 2.0f;          // FIXME: How to set this value or tune it?
   } bilateral_filtering;
 
   // Bilinear upsampling related

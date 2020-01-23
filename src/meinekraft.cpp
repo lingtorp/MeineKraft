@@ -457,11 +457,22 @@ void MeineKraft::mainloop() {
             ImGui::SameLine();
             ImGui::Checkbox("Ambient##filtering", &renderer->state.bilateral_filtering.ambient);
 
+            ImGui::Separator();
+            ImGui::Text("Gaussian spatial kernel weights");
+            ImGui::BeginChild("spatial_kernel", ImVec2(0, 3.5f * ImGui::GetTextLineHeight()), true, ImGuiWindowFlags_HorizontalScrollbar);
+            for (const float& weight : renderer->state.bilateral_filtering.kernel) {
+              ImGui::SameLine(); ImGui::Text("%0.2f", weight);
+            }
+            ImGui::EndChild();
+
+            ImGui::InputInt("Spatial kernel radius", (int*) (&renderer->state.bilateral_filtering.spatial_kernel_radius));
+            ImGui::InputFloat("Spatial kernel sigma", &renderer->state.bilateral_filtering.spatial_kernel_sigma);
+
+            ImGui::Separator();
+
             ImGui::Text("Weights:");
             ImGui::Checkbox("Position", &renderer->state.bilateral_filtering.position_weight);
             ImGui::SameLine(); ImGui::SliderFloat("Sigma##Position", &renderer->state.bilateral_filtering.position_sigma, 0.05f, 5.0f);
-
-            ImGui::Separator();
 
             ImGui::Checkbox("Normal", &renderer->state.bilateral_filtering.normal_weight);
             ImGui::SameLine(); ImGui::SliderFloat("Sigma##Normal", &renderer->state.bilateral_filtering.normal_sigma, 0.05f, 5.0f);
