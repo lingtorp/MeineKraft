@@ -11,32 +11,37 @@
 #include <glm/gtx/rotate_vector.hpp>
 #include <glm/gtx/rotate_vector.hpp>
 
+#include "../../include/json/json.hpp"
+
 struct Camera {
-  Camera(const Vec3f position, const Vec3f direction, const Vec3f up = Vec3f(0.0f, 1.0f, 0.0f));
+  Camera() = default;
+  Camera(nlohmann::json json);
+  Camera(const Vec3f position, const Vec3f direction);
 
   /// Where x-axis is direction (forward from the camera) and the other axis are relative to it
-  Vec3f direction;
+  Vec3f direction = Vec3f::Z();
 
   /// Position of the camera
-  Vec3f position;
+  Vec3f position = Vec3f::zero();
 
   /// Global positive up vector (y-axis)
-  Vec3f up;
+  Vec3f up = Vec3f::Y();
 
   /// Pitch and yaw of the camera
-  float pitch, yaw;
+  float pitch = 0.0f;
+  float yaw = 0.0f;
 
   /// Velocity in the three axis
-  Vec3d velocity;
+  Vec3d velocity = Vec3d::zero();
 
   /// Max velocity of the movement along the three axis
-  const Vec3d max_velocity;
+  Vec3d max_velocity = Vec3d(5.0, 5.0, 5.0);
 
   /**
     * Acceleration indicates the direction of the axis that are moving
     * Acceleration: {x-axis{postive-direction, negative-direction}, ... }
     */
-  Vec3<Vec2b> acceleration;
+  Vec3<Vec2b> acceleration = {{false, false}, {false, false}, {false, false}};
 
   /// Update performs the acceleration calculations and returns the new position
   Vec3f update(uint32_t delta);
@@ -52,31 +57,12 @@ struct Camera {
   /// Calculates the a new direction vector based on the current pitch and yaw
   Vec3f recalculate_direction() const;
 
-  /*
-  /// Update performs the acceleration calculations and returns the new position
-  Vec3<float> update(uint32_t delta);
-
-  // Start and stop the accelerations in the directions
-  void move_forward(bool move);
-  void move_backward(bool move);
-  void move_right(bool move);
-  void move_left(bool move);
-  void move_down(bool move);
-  void move_up(bool move);
-
-  /// Mouse diff vector from last frame
-  Vec2<float> diff_vector;
-
-  void move_forward();
-  void move_left();
-  void move_right();
-  void move_backward();
-
-  void update();
-  */
-
   /// Calculates the a new direction vector based on the current rotation
   glm::mat4 transform() const;
+
+	friend std::ostream& operator<<(std::ostream& os, const Camera& cam) {
+    return os << "Camera(position: " << cam.direction << ", direction: " << cam.direction << ")" << std::endl;
+  }
 };
 
 #endif // MEINEKRAFT_CAMERA_HPP
