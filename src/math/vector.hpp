@@ -12,6 +12,11 @@
 #include <math.h>
 #endif
 
+/// Clamps a number to between lo and hi, in other words: [lo, hi]
+inline float clamp(const float x, const float lo, const float hi) {
+  return std::min(std::max(x, lo), hi);
+}
+
 inline float mk_cosf(const float x) {
 #if defined(__linux__)
   return cosf(x);
