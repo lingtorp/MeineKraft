@@ -1,4 +1,4 @@
-// NOTE: Joint bilateral filtering pass
+// NOTE: Joint bilateral upsampling pass
 // File: bf-separable.frag.glsl
 
 // Low-res src texture
@@ -18,14 +18,13 @@ uniform bool uNormal_weight;
 uniform float uNormal_sigma;
 uniform sampler2D uNormal;
 
-
 // NOTE: Uses multiple edge-stopping functions that takes into
 // account ray-traced, normal, position buffer.
 // Title: Edge-Avoiding À-Trous Wavelet Transform for fast GI Filtering
 // https://jo.dreggn.org/home/2010_atrous.pdf
 
 // NOTE: Spatial kernel in texture space
-#define MAX_KERNEL_ELEMENTS 10
+#define MAX_KERNEL_ELEMENTS 15
 uniform uint uKernel_dim; // Resulting kernel dim is x**2
 // uniform float uKernel_sample_offsets[5] = {}; // TODO: Linear sampling
 uniform float uKernel[MAX_KERNEL_ELEMENTS];
