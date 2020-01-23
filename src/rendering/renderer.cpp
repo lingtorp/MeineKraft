@@ -829,7 +829,6 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glObjectLabel(GL_BUFFER, gl_execution_time_query_buffer, -1, "Renderpass execution time buffer");
   }
 
-  glDisable(GL_DITHER);
   glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
   glEnable(GL_CULL_FACE);
   glCullFace(GL_BACK);
@@ -848,11 +847,10 @@ bool Renderer::init() {
     Log::info("Voxel d^3: "     + std::to_string(clipmaps.size[i]));
   }
 
-  Log::info("---- Gaussian 1D separable kernel ----");
+  // TODO: Move out to gui
   const float sigma = 1.0f;
   const size_t kernel_radius = 4;
   kernel = gaussian_1d_kernel(sigma, kernel_radius);
-  Log::info(kernel);
 
   return true;
 }
@@ -864,7 +862,7 @@ void Renderer::render(const uint32_t delta) {
 
   GLuint last_executed_fbo = 0; // NOTE: This FBO's default buffer is blitted to the screen
 
-  const glm::mat4 camera_transform = projection_matrix * scene->camera->transform(); // TODO: Camera handling needs to be reworked
+  const glm::mat4 camera_transform = projection_matrix * scene->camera.transform(); // TODO: Camera handling needs to be reworked
 
   /// Renderer caches the transforms of components thus we need to fetch the ones who changed during the last frame
   if (state.frame % 10 == 0) {
@@ -1042,7 +1040,7 @@ void Renderer::render(const uint32_t delta) {
       aabb_centers[i] = clipmaps.aabb[i].center();
     }
     glUniform3fv(glGetUniformLocation(program, "uAABB_centers"), NUM_CLIPMAPS, &aabb_centers[0].x);
-    glUniform3fv(glGetUniformLocation(program, "uCamera_position"), 1, &scene->camera->position.x);
+    glUniform3fv(glGetUniformLocation(program, "uCamera_position"), 1, &scene->camera.position.x);
 
     // Shadowmapping
     glUniform1f(glGetUniformLocation(program, "uShadow_bias"), state.shadow.bias);
@@ -1180,7 +1178,7 @@ void Renderer::render(const uint32_t delta) {
     glUniform1f(glGetUniformLocation(program, "uMetallic_aperature"), metallic_aperature);
     glUniform1f(glGetUniformLocation(program, "uAmbient_decay"), state.vct.ambient_decay);
 
-    glUniform3fv(glGetUniformLocation(program, "uCamera_position"), 1, &scene->camera->position.x);
+    glUniform3fv(glGetUniformLocation(program, "uCamera_position"), 1, &scene->camera.position.x);
 
     glUniform1ui(glGetUniformLocation(program, "uNum_diffuse_cones"), state.vct.num_diffuse_cones);
     const std::vector<Vec4f> cones = generate_diffuse_cones(state.vct.num_diffuse_cones);
