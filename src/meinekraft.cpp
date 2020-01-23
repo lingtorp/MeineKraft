@@ -120,6 +120,8 @@ void imgui_styling() {
 
 /// Main engine constructor
 MeineKraft::MeineKraft() {
+  const Resolution res = FULL_HD;
+ 
   SDL_Init(SDL_INIT_EVERYTHING);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
@@ -128,7 +130,7 @@ MeineKraft::MeineKraft() {
   SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
   auto window_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_MOUSE_CAPTURE;
-  window = SDL_CreateWindow("MeineKraft", 0, 0, HD.width, HD.height, window_flags);
+  window = SDL_CreateWindow("MeineKraft", 0, 0, res.width, res.height, window_flags);
   SDL_GLContext context = SDL_GL_CreateContext(window);
   if (!context) { Log::error(std::string(SDL_GetError())); }
   SDL_GL_SetSwapInterval(0); // Disables vsync
@@ -146,8 +148,8 @@ MeineKraft::MeineKraft() {
   
   ImGui_ImplSdlGL3_Init(window);
 
-  renderer = new Renderer(HD);
-  renderer->update_projection_matrix(70.0f, HD);
+  renderer = new Renderer(res);
+  renderer->update_projection_matrix(70.0f, res);
 
   imgui_styling();
 }
@@ -472,10 +474,10 @@ void MeineKraft::mainloop() {
 
             ImGui::Text("Weights:");
             ImGui::Checkbox("Position", &renderer->state.bilateral_filtering.position_weight);
-            ImGui::SameLine(); ImGui::SliderFloat("Sigma##Position", &renderer->state.bilateral_filtering.position_sigma, 0.05f, 5.0f);
+            ImGui::SameLine(); ImGui::SliderFloat("Sigma##Position", &renderer->state.bilateral_filtering.position_sigma, 0.05f, 7.0f);
 
             ImGui::Checkbox("Normal", &renderer->state.bilateral_filtering.normal_weight);
-            ImGui::SameLine(); ImGui::SliderFloat("Sigma##Normal", &renderer->state.bilateral_filtering.normal_sigma, 0.05f, 5.0f);
+            ImGui::SameLine(); ImGui::SliderFloat("Sigma##Normal", &renderer->state.bilateral_filtering.normal_sigma, 0.05f, 7.0f);
           }
 
           if (ImGui::CollapsingHeader("Bilinear upsampling")) {
