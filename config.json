@@ -1,14 +1,25 @@
 {
-    "screenshot_mode": true,
+    "screenshot_mode": false,
     "render_state": {
-        "bilateral_filtering": true
+        "resolution": [1280, 720],
+        "render_passes": [
+            {
+                "name": "bilateral_filtering",
+                "enabled": true
+            }
+        ]
     },
     "scene": {
         "path": "Desktop/Meinekraft/Sponza/",
         "name": "Sponza.gltf",
         "camera": {
-            "position": [0.0, 0.0, 0.0],
-            "direction": [0.0, 0.0, 0.0]
+            "position": [-562.0, 583.0, -9.0],
+            "direction": [0.64, -0.30, -0.71],
+            "fov": 70.0
+        },
+        "directional_light": {
+            "itensity": [1.0, 1.0, 1.0],
+            "direction": [-1.0, -1.0, 0.0]
         }
     }
 }
