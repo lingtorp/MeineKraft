@@ -196,8 +196,8 @@ MeshManager::load_meshes(const std::string& directory, const std::string& file) 
 
   #ifdef VERBOSE_LEVEL_0
   Log::info("Loading scene: " + file);
-  Log::info("\t ... # meshes " + std::to_string(scene->mNumMeshes));
-  Log::info("\t ... # materials " + std::to_string(scene->mNumMaterials));
+  Log::info_indent(1, "# meshes " + std::to_string(scene->mNumMeshes));
+  Log::info_indent(1, "# materials " + std::to_string(scene->mNumMaterials));
   #endif
   
   std::vector<std::vector<std::pair<Texture::Type, std::string>>> texture_infos;
