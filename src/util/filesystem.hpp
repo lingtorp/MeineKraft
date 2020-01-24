@@ -97,6 +97,14 @@ namespace Filesystem {
     Log::info("Screenshot saved at: " + filepath.string());
     return true;
   }
-}
 
+  /// Saves the text passed in a file at filepath
+  inline void save_text_in_file(const std::string& filepath, const std::string& txt) {
+    std::ofstream file;
+    file.open(filepath + ".txt");
+    if (file.is_open()) {
+      file << txt;
+    }
+  }
+}
 #endif // MEINEKRAFT_FILESYSTEM_HPP
