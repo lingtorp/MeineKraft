@@ -1171,6 +1171,7 @@ void Renderer::render(const uint32_t delta) {
     const float metallic_aperature = glm::radians(state.vct.metallic_aperature);
     glUniform1f(glGetUniformLocation(program, "uMetallic_aperature"), metallic_aperature);
     glUniform1f(glGetUniformLocation(program, "uAmbient_decay"), state.vct.ambient_decay);
+    glUniform1f(glGetUniformLocation(program, "uSpecular_cone_trace_distance"), state.vct.specular_cone_trace_distance);
 
     glUniform3fv(glGetUniformLocation(program, "uCamera_position"), 1, &scene->camera.position.x);
 

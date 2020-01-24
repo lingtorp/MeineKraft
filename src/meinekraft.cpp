@@ -439,14 +439,23 @@ void MeineKraft::mainloop() {
             ImGui::SameLine();
             ImGui_HelpMarker("Note ambient is only available when 'Indirect' is used.");
 
-            ImGui::SliderInt("# diffuse cones", &renderer->state.vct.num_diffuse_cones, 4, renderer->state.vct.MAX_DIFFUSE_CONES);
+            if (ImGui::TreeNode("Diffuse cone settings")) {
+              ImGui::InputFloat("Roughness aperature (deg.)", &renderer->state.vct.roughness_aperature);
+              ImGui::SliderInt("# diffuse cones", &renderer->state.vct.num_diffuse_cones, 4, renderer->state.vct.MAX_DIFFUSE_CONES);
+              ImGui::TreePop();
+            }
 
-            ImGui::InputFloat("Roughness aperature (deg.)", &renderer->state.vct.roughness_aperature);
-            ImGui::InputFloat("Metallic aperature (deg.)", &renderer->state.vct.metallic_aperature);
+            if (ImGui::TreeNode("Specular cone settings")) {
+              ImGui::InputFloat("Metallic aperature (deg.)", &renderer->state.vct.metallic_aperature);
+              ImGui::SliderFloat("Trace distance", &renderer->state.vct.specular_cone_trace_distance, 0.1f, 1.0f);
+              ImGui::SameLine();
+              ImGui_HelpMarker("Specular cone trace distance in terms of factor of max scene length");
+              ImGui::TreePop();
+            }
           }
 
           if (ImGui::CollapsingHeader("Bilateral filtering", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.bilateral_filtering.execution_time / 1'000'000.0f, 100.0f * float(renderer->state.bilateral_filtering.execution_time) / float(renderer->state.total_execution_time));
+            ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.bilateral_filtering.execution_time[0] / 1'000'000.0f, 100.0f * float(renderer->state.bilateral_filtering.execution_time[0]) / float(renderer->state.total_execution_time));
 
             ImGui::Checkbox("Enabled##bilateral", &renderer->state.bilateral_filtering.enabled);
 

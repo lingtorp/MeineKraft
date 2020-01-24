@@ -33,6 +33,7 @@ uniform vec3  uAABB_centers[NUM_CLIPMAPS];
 uniform vec3  uAABB_mins[NUM_CLIPMAPS];
 uniform vec3  uAABB_maxs[NUM_CLIPMAPS];
 uniform float uAmbient_decay;                  // Crassin11 mentions but does not specify
+uniform float uSpecular_cone_trace_distance;
 
 // User customizable
 uniform float uRoughness_aperature; // Radians (half-angle of cone)
@@ -123,7 +124,7 @@ vec4 trace_diffuse_cone(const vec3 origin,
 vec4 trace_specular_cone(const vec3 origin,
                          const vec3 direction,
                          const float half_angle) {
-  const float max_distance = (1.0 / uScaling_factors[NUM_CLIPMAPS - 1]) / 4.0; 
+  const float max_distance = (1.0 / uScaling_factors[NUM_CLIPMAPS - 1]) * uSpecular_cone_trace_distance;
   const float start_lvl = floor(clipmap_lvl_from_distance(origin));
 
   float occlusion = 0.0;
