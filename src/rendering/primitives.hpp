@@ -326,14 +326,15 @@ struct RenderState {
   uint64_t frame           = 0;
   uint32_t entities        = 0;
   uint32_t graphic_batches = 0;
-  uint32_t draw_calls      = 0;      // TODO: Hook these two up and use them
-  uint32_t render_passes   = 0;      // TODO: Hook these two up and use them
+  uint32_t draw_calls      = 0;      // Number of draw calls issued this frame TODO: Hook up
+  uint32_t render_passes   = 0;      // Number of Renderpasses executed this frame
+  static const uint32_t execution_time_buffer_size = 5; // Size of the buffer for the execution time of each Renderpass
   uint64_t total_execution_time = 0; // NOTE: for all render passes in ns
 
   // Global illumination related
   struct {
     // NOTE: Execution time of lighting application only applies radiance does not compute it (hence very fast)
-    uint64_t execution_time = 0;      // NOTE: nanoseconds
+    uint64_t execution_time[execution_time_buffer_size] = {0};      // NOTE: nanoseconds
     bool shadowmapping = true;
     bool normalmapping = true;
     bool indirect = true;
@@ -345,36 +346,38 @@ struct RenderState {
   } lighting;
 
   struct {
-    uint64_t execution_time = 0; // NOTE: nanoseconds
+    uint64_t execution_time[execution_time_buffer_size] = {0}; // NOTE: nanoseconds
     bool enabled = true;
   } culling;
 
   // GBuffer generation pass (a.k.a geometry pass)
   struct {
-    uint64_t execution_time = 0; // NOTE: nanoseconds
+    uint64_t execution_time[execution_time_buffer_size] = {0}; // NOTE: nanoseconds
   } gbuffer;
 
   // Voxelization related (used by VCT pass)
   struct {
-    uint64_t execution_time = 0; // NOTE: nanoseconds
+    uint64_t execution_time[execution_time_buffer_size] = {0}; // NOTE: nanoseconds
+    bool always_voxelize = false;
     bool voxelize = true;        // NOTE: Toggled by the Renderer (a.k.a executed once)
     bool conservative_rasterization = false;
-    bool always_voxelize = false;
   } voxelization;
 
   // Voxel cone tracing related
   struct {
-    uint64_t execution_time;               // NOTE: nanoseconds
-    const uint32_t MAX_DIFFUSE_CONES = 12;
-    float roughness_aperature = 60.0f;     // 60 deg diffuse cone from [Rauwendaal, Crassin11]
-    float metallic_aperature   = 0.1f;     // 10 deg specular cone from [Crassin11]
-    int num_diffuse_cones = 6;             // [Crassin11], [Yeu13] suggests 5
-    float ambient_decay = 0.2f;            // [Crassin11] mentions but does not specify decay factor for scene ambient
+    uint64_t execution_time[execution_time_buffer_size] = {0}; // NOTE: nanoseconds
+    const uint32_t MAX_DIFFUSE_CONES = 12;     // FIXME: Diffuse cone hardcoded limit
+    float roughness_aperature = 60.0f;         // 60 deg diffuse cone from [Rauwendaal, Crassin11]
+    float metallic_aperature   = 0.1f;         // 10 deg specular cone from [Crassin11]
+    int num_diffuse_cones = 6;                 // [Crassin11], [Yeu13] suggests 5
+    float specular_cone_trace_distance = 0.5f; // Specular cone trace distance in terms of factor of max scene length
+    float ambient_decay = 0.2f;                // [Crassin11] mentions but does not specify decay factor for scene ambient
   } vct;
 
   // Direct/shadows related
   struct {
-    uint64_t execution_time = 0;                        // NOTE: nanoseconds
+    uint64_t execution_time_shadowmapping[execution_time_buffer_size] = {0}; // NOTE: nanoseconds, generating the depth map
+    uint64_t execution_time_shadow[execution_time_buffer_size] = {0};        // NOTE: nanoseconds, applying direct shadows
     bool enabled = true;                                // Enable direct lighting computation
     ShadowAlgorithm algorithm = ShadowAlgorithm::Plain; // See enum class ShadowAlgorithm
     float bias = 0.00025f;                              // Shadow bias along geometric normal of surface
@@ -387,7 +390,7 @@ struct RenderState {
 
   // Bilateral filtering related
   struct {
-    uint64_t execution_time = 0;        // NOTE: nanoseconds
+    uint64_t execution_time[execution_time_buffer_size] = {0}; // NOTE: nanoseconds
     bool enabled = false;               // Bilateral filtering pass to filter the radiance
     bool direct = false;                // Enable filtering of the direct radiance
     bool ambient = true;                // Enable filtering of the ambient radiance
@@ -404,7 +407,7 @@ struct RenderState {
 
   // Bilinear upsampling related
   struct {
-    uint64_t execution_time = 0; // NOTE: nanoseconds
+    uint64_t execution_time[execution_time_buffer_size] = {0}; // NOTE: nanoseconds
     bool enabled = true;
     bool ambient = true;
     bool indirect = true;
@@ -414,13 +417,13 @@ struct RenderState {
   // Voxel visualization related
   // FIXME: Voxel visualization does not work ...
   struct {
-    uint64_t execution_time = 0; // NOTE: nanoseconds
+    uint64_t execution_time[execution_time_buffer_size] = {0}; // NOTE: nanoseconds
     bool enabled = false;
   } voxel_visualization;
 
   // Final blit pass
   struct {
-    uint64_t execution_time = 0; // NOTE: nanoseconds
+    uint64_t execution_time[execution_time_buffer_size] = {0}; // NOTE: nanoseconds
   } blit;
 
   RenderState() = default;
