@@ -370,7 +370,7 @@ struct RenderState {
     float roughness_aperature = 60.0f;         // 60 deg diffuse cone from [Rauwendaal, Crassin11]
     float metallic_aperature   = 0.1f;         // 10 deg specular cone from [Crassin11]
     int num_diffuse_cones = 6;                 // [Crassin11], [Yeu13] suggests 5
-    float specular_cone_trace_distance = 0.5f; // Specular cone trace distance in terms of factor of max scene length
+    float specular_cone_trace_distance = 0.25f;// Specular cone trace distance in terms of factor of max scene length
     float ambient_decay = 0.2f;                // [Crassin11] mentions but does not specify decay factor for scene ambient
   } vct;
 
@@ -391,7 +391,7 @@ struct RenderState {
   // Bilateral filtering related
   struct {
     uint64_t execution_time[execution_time_buffer_size] = {0}; // NOTE: nanoseconds
-    bool enabled = false;               // Bilateral filtering pass to filter the radiance
+    bool enabled = true;                // Bilateral filtering pass to filter the radiance
     bool direct = false;                // Enable filtering of the direct radiance
     bool ambient = true;                // Enable filtering of the ambient radiance
     bool indirect = true;               // Enable filtering of the indirect radiance
@@ -408,7 +408,7 @@ struct RenderState {
   // Bilinear upsampling related
   struct {
     uint64_t execution_time[execution_time_buffer_size] = {0}; // NOTE: nanoseconds
-    bool enabled = true;
+    bool enabled = false;
     bool ambient = true;
     bool indirect = true;
     bool specular = true;
