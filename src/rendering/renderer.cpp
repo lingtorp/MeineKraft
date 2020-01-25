@@ -259,8 +259,8 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   glActiveTexture(GL_TEXTURE0 + gl_depth_texture_unit);
   glGenTextures(1, &gl_depth_texture);
   glBindTexture(GL_TEXTURE_2D, gl_depth_texture);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   // glTexParameteri(GL_TEXTURE_2D, GL_DEPTH_STENCIL_TEXTURE_MODE, GL_DEPTH_COMPONENT); // Default value (intention only to read depth values from texture)
   glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, screen.width, screen.height, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, nullptr);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, gl_depth_texture, 0);
@@ -272,8 +272,8 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   glGenTextures(1, &gl_geometric_normal_texture);
   glBindTexture(GL_TEXTURE_2D, gl_geometric_normal_texture);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_geometric_normal_texture, 0);
   glObjectLabel(GL_TEXTURE, gl_geometric_normal_texture, -1, "GBuffer geometric normal texture");
 
@@ -283,8 +283,8 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   glGenTextures(1, &gl_position_texture);
   glBindTexture(GL_TEXTURE_2D, gl_position_texture);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, gl_position_texture, 0);
   glObjectLabel(GL_TEXTURE, gl_position_texture, -1, "GBuffer position texture");
 
@@ -294,8 +294,8 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   glGenTextures(1, &gl_diffuse_texture);
   glBindTexture(GL_TEXTURE_2D, gl_diffuse_texture);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, screen.width, screen.height, 0, GL_RGBA, GL_FLOAT, nullptr);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, gl_diffuse_texture, 0);
   glObjectLabel(GL_TEXTURE, gl_diffuse_texture, -1, "GBuffer diffuse texture");
 
@@ -316,8 +316,8 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   glGenTextures(1, &gl_emissive_texture);
   glBindTexture(GL_TEXTURE_2D, gl_emissive_texture);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, gl_emissive_texture, 0);
   glObjectLabel(GL_TEXTURE, gl_emissive_texture, -1, "GBuffer emissive texture");
 
@@ -338,8 +338,8 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   glGenTextures(1, &gl_tangent_normal_texture);
   glBindTexture(GL_TEXTURE_2D, gl_tangent_normal_texture);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT6, gl_tangent_normal_texture, 0);
   glObjectLabel(GL_TEXTURE, gl_tangent_normal_texture, -1, "GBuffer tangent normal texture");
 
@@ -349,8 +349,8 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   glGenTextures(1, &gl_tangent_texture);
   glBindTexture(GL_TEXTURE_2D, gl_tangent_texture);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT7, gl_tangent_texture, 0);
   glObjectLabel(GL_TEXTURE, gl_tangent_texture, -1, "GBuffer tangent texture");
 
@@ -385,8 +385,8 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glActiveTexture(GL_TEXTURE0 + gl_shadowmapping_texture_unit); // FIXME: These are not neccessary when creating the texture only when they are used
     glGenTextures(1, &gl_shadowmapping_texture);
     glBindTexture(GL_TEXTURE_2D, gl_shadowmapping_texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST); 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); 
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexStorage2D(GL_TEXTURE_2D, 1, GL_DEPTH_COMPONENT16, state.shadow.SHADOWMAP_W, state.shadow.SHADOWMAP_H);
     glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, gl_shadowmapping_texture, 0);
     glObjectLabel(GL_TEXTURE, gl_shadowmapping_texture, -1, "Shadowmap texture");
@@ -497,8 +497,8 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glActiveTexture(GL_TEXTURE0 + gl_voxel_visualization_texture_unit);
     glGenTextures(1, &gl_voxel_visualization_texture);
     glBindTexture(GL_TEXTURE_2D, gl_voxel_visualization_texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, screen.width, screen.height, 0, GL_RGBA, GL_FLOAT, nullptr);
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_voxel_visualization_texture, 0);
     glObjectLabel(GL_TEXTURE, gl_voxel_visualization_texture, -1, "Voxel visualization texture");
@@ -561,8 +561,8 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glGenTextures(1, &gl_indirect_radiance_texture);
     glBindTexture(GL_TEXTURE_2D, gl_indirect_radiance_texture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_indirect_radiance_texture, 0);
     glObjectLabel(GL_TEXTURE, gl_indirect_radiance_texture, -1, "GBuffer indirect radiance texture");
 
@@ -572,8 +572,8 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glGenTextures(1, &gl_ambient_radiance_texture);
     glBindTexture(GL_TEXTURE_2D, gl_ambient_radiance_texture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_R16F, screen.width, screen.height, 0, GL_RED, GL_FLOAT, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, gl_ambient_radiance_texture, 0);
     glObjectLabel(GL_TEXTURE, gl_ambient_radiance_texture, -1, "GBuffer ambient radiance texture");
 
@@ -583,8 +583,8 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glGenTextures(1, &gl_specular_radiance_texture);
     glBindTexture(GL_TEXTURE_2D, gl_specular_radiance_texture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, gl_specular_radiance_texture, 0);
     glObjectLabel(GL_TEXTURE, gl_specular_radiance_texture, -1, "GBuffer specular radiance texture");
 
@@ -594,8 +594,8 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glGenTextures(1, &gl_direct_radiance_texture);
     glBindTexture(GL_TEXTURE_2D, gl_direct_radiance_texture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, gl_direct_radiance_texture, 0);
     glObjectLabel(GL_TEXTURE, gl_direct_radiance_texture, -1, "GBuffer direct radiance texture");
 
@@ -666,8 +666,8 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
 
       glGenTextures(1, &gl_bf_ping_out_texture);
       glBindTexture(GL_TEXTURE_2D, gl_bf_ping_out_texture);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
       glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, screen.width, screen.height, 0, GL_RGBA, GL_FLOAT, nullptr);
       glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_bf_ping_out_texture, 0);
       glObjectLabel(GL_TEXTURE, gl_bf_ping_out_texture, -1, "Bilateral filtering ping output texture");
@@ -737,8 +737,8 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
 
     glGenTextures(1, &gl_lighting_application_texture);
     glBindTexture(GL_TEXTURE_2D, gl_lighting_application_texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, screen.width, screen.height, 0, GL_RGBA, GL_FLOAT, nullptr);
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_lighting_application_texture, 0);
     glObjectLabel(GL_TEXTURE, gl_lighting_application_texture, -1, "Lighting application texture");
@@ -1694,8 +1694,8 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
     glActiveTexture(GL_TEXTURE0 + batch.gl_metallic_roughness_texture_unit);
     glGenTextures(1, &batch.gl_metallic_roughness_texture);
     glBindTexture(texture.gl_texture_target, batch.gl_metallic_roughness_texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexImage2D(texture.gl_texture_target, 0, GL_RGB, texture.data.width, texture.data.height, 0, GL_RGB, GL_UNSIGNED_BYTE, texture.data.pixels);
     glGenerateMipmap(GL_TEXTURE_2D);
   }
@@ -1706,8 +1706,8 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
     glActiveTexture(GL_TEXTURE0 + batch.gl_tangent_normal_texture_unit);
     glGenTextures(1, &batch.gl_tangent_normal_texture);
     glBindTexture(texture.gl_texture_target, batch.gl_tangent_normal_texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexImage2D(texture.gl_texture_target, 0, GL_RGB, texture.data.width, texture.data.height, 0, GL_RGB, GL_UNSIGNED_BYTE, texture.data.pixels);
     glGenerateMipmap(GL_TEXTURE_2D);
   }
@@ -1718,8 +1718,8 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
     glActiveTexture(GL_TEXTURE0 + batch.gl_emissive_texture_unit);
     glGenTextures(1, &batch.gl_emissive_texture);
     glBindTexture(texture.gl_texture_target, batch.gl_emissive_texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexImage2D(texture.gl_texture_target, 0, GL_RGB, texture.data.width, texture.data.height, 0, GL_RGB, GL_UNSIGNED_BYTE, texture.data.pixels);
   }
 
