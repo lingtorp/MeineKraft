@@ -12,14 +12,13 @@
 #include <GL/glew.h>
 #endif
 
-#if defined(__APPLE__)
-static const char *GLSL_VERSION = "#version 410 core \n";
-#elif defined(__linux__)
+#if defined(__linux__)
 static const char *GLSL_VERSION = "#version 450 core \n";
 #elif defined(WIN32)
 static const char *GLSL_VERSION = "#version 460 core \n";
 #endif
 
+/// Maps shader config flags to shader source code defines as used in the ubershaders
 static std::string shader_define_to_string(const Shader::Defines define) {
   switch (define) {
   case Shader::Defines::Diffuse2D:
