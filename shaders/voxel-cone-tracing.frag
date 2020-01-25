@@ -1,154 +1,193 @@
-// #version 450 core
+// NOTE: Performs fullscreen VCT
 
-#define NUM_CLIPMAPS 4
+uniform uint uScreen_height;
+uniform uint uScreen_width;
 
-const float M_PI = 3.141592653589793;
-
-uniform float uScreen_height;
-uniform float uScreen_width;
-
-uniform sampler3D uVoxelRadiance[NUM_CLIPMAPS];
-uniform sampler3D uVoxelOpacity[NUM_CLIPMAPS];
+uniform sampler3D uVoxel_radiance[NUM_CLIPMAPS];
+uniform sampler3D uVoxel_opacity[NUM_CLIPMAPS];
 
 uniform bool uNormalmapping;
 uniform sampler2D uTangent;
 uniform sampler2D uTangent_normal;
 
 uniform vec3 uCamera_position;
+uniform vec3 uDirectional_light_intensity;
+uniform vec3 uDirectional_light_direction;
+uniform float uVCT_shadow_cone_aperature; // Shadow cone aperature (deg.)
 
 // General textures
-uniform sampler2D uDiffuse;
 uniform sampler2D uPosition; // World space
 uniform sampler2D uNormal;
 uniform sampler2D uPBR_parameters;
-uniform sampler2D uEmissive;
 
+// Out textures
+layout(location = 0) out vec3  gIndirect_radiance;
+layout(location = 1) out float gAmbient_radiance;
+layout(location = 2) out vec3  gSpecular_radiance;
+layout(location = 3) out vec3  gDirect_radiance;
+
+// Voxel cone tracing related
+uniform float uVoxel_size_LOD0;
 uniform float uScaling_factors[NUM_CLIPMAPS];
-uniform int   uClipmap_sizes[NUM_CLIPMAPS];
 uniform vec3  uAABB_centers[NUM_CLIPMAPS];
 uniform vec3  uAABB_mins[NUM_CLIPMAPS];
 uniform vec3  uAABB_maxs[NUM_CLIPMAPS];
+uniform float uAmbient_decay;                  // Crassin11 mentions but does not specify
+uniform float uSpecular_cone_trace_distance;
 
 // User customizable
-uniform float uRoughness;
-uniform float uMetallic;
 uniform float uRoughness_aperature; // Radians (half-angle of cone)
 uniform float uMetallic_aperature;  // Radians (half-angle of cone)
-uniform bool  uDirect_lighting;
-uniform bool  uIndirect_lighting;
+
+// Computational toggles
+uniform bool uIndirect;
+uniform bool uSpecular;
+uniform bool uAmbient;
+uniform bool uDirect;
 
 uniform uint uNum_diffuse_cones;
 // (Vec3, float) = (direction, weight) for each cone
-layout(std140, binding = 8) buffer DiffuseCones {
+layout(std140, binding = 8) readonly buffer DiffuseCones {
   vec4 cones[];
 };
 
-// Material handling related stuff
-const float GAMMA = 2.2;
-const float INV_GAMMA = 1.0 / GAMMA;
-
-// Linear --> sRGB approximation
-// See http://chilliant.blogspot.com/2012/08/srgb-approximations-for-hlsl.html
-// Src: https://github.com/KhronosGroup/glTF-Sample-Viewer/blob/master/src/shaders/metallic-roughness.frag
-vec3 linear_to_sRGB(const vec3 color) {
-  return pow(color, vec3(INV_GAMMA));
-}
-
-// sRGB to linear approximation
-// See http://chilliant.blogspot.com/2012/08/srgb-approximations-for-hlsl.html
-// Src: https://github.com/KhronosGroup/glTF-Sample-Viewer/blob/master/src/shaders/metallic-roughness.frag
-vec4 sRGB_to_linear(const vec4 sRGB) {
-  return vec4(pow(sRGB.xyz, vec3(GAMMA)), sRGB.w);
-}
-
-bool is_inside_AABB(const vec3 aabb_min, const vec3 aabb_max, const vec3 p) {
-  if (p.x > aabb_max.x || p.x < aabb_min.x) { return false; }
-  if (p.y > aabb_max.y || p.y < aabb_min.y) { return false; }
-  if (p.z > aabb_max.z || p.z < aabb_min.z) { return false; }
-  return true;
-}
-
-vec3 world_to_clipmap_voxelspace(const vec3 pos,
-                                 const float scaling_factor,
-                                 const vec3 aabb_center) {
-  vec3 vpos = (pos - aabb_center) * scaling_factor;
-  vpos = clamp(vpos, vec3(-1.0), vec3(1.0));
-  return vpos * vec3(0.5) + vec3(0.5);
-}
-
 // Clipmap level passed on log2 assumption between levels
-uint clipmap_lvl_from_distance(const vec3 position) {
-  const vec3 clipmap_origin = uAABB_centers[0];
-  const float AABB_LOD0_radius = (1.0f / uScaling_factors[0]) / 2.0f;
-  return uint(log2((distance(position, clipmap_origin) / AABB_LOD0_radius) + 1));
+float clipmap_lvl_from_distance(const vec3 position) {
+  const float AABB_LOD0_radius = 0.5 * (1.0 / uScaling_factors[0]);
+  const float d = distance(position, uAABB_centers[0]) / AABB_LOD0_radius;
+  // return 0.0; FIXME:
+  // d in [0, 2)
+  if (d < 2.0) {
+    return d;
+  }
+  // d in [2, inf] from 2 hence log2(x) + 1 >= 2 where x >= 2	
+  return log2(d) + 1;
 }
 
-out vec4 color;
+// Beware of sampling outside the clipmap!
+vec4 sample_clipmap(const vec3 wp, const uint lvl) {
+  const vec3 p = world_to_clipmap_voxelspace(wp, uScaling_factors[lvl], uAABB_centers[lvl]);
+  const vec3 radiance = texture(uVoxel_radiance[lvl], p).rgb;
+  const float opacity = texture(uVoxel_opacity[lvl], p).r;
+  return vec4(radiance, opacity);
+}
 
-uniform float uVoxel_size_LOD0;
+// Sample point in world space
+vec4 sample_clipmap_linearly(const vec3 wp, const float lvl) {
+  const uint lvl0 = uint(floor(lvl));
 
-vec4 trace_cone(const vec3 origin,
-                const vec3 direction,
-                const float half_angle) {
+  const vec4 s0 = sample_clipmap(wp, lvl0);
+
+  const uint lvl1 = uint(ceil(lvl));
+
+  if (lvl0 == lvl1) { return s0; }
+
+  const vec4 s1 = sample_clipmap(wp, lvl1);
+
+  const vec4 s0s1 = mix(s0, s1, fract(lvl));
+  return s0s1;
+  // return vec4(s0s1.rgb * (lvl - fract(lvl)) * 0.1, s0s1.a); // NOTE: Deals with the rings
+}
+
+vec4 trace_diffuse_cone(const vec3 origin,
+                        const vec3 direction,
+                        const float half_angle) {
+  const float max_distance = (1.0 / uScaling_factors[NUM_CLIPMAPS - 1]) / 1.0; 
+  const float start_lvl = floor(clipmap_lvl_from_distance(origin));
+
   float occlusion = 0.0;
+  float opacity = 0.0;
   vec3 radiance = vec3(0.0);
+  float cone_distance = 0.0;
 
-  float cone_distance = uVoxel_size_LOD0; // Avoids self-occlusion/accumlation
-
-  const uint start_clipmap = clipmap_lvl_from_distance(origin);
-
-  while (cone_distance < 100.0 && occlusion < 1.0) {
-    const vec3 world_position = origin + cone_distance * direction;
+  while (cone_distance < max_distance && opacity < 1.0) {
+    const vec3 cone_position = origin + cone_distance * direction;
 
     const float cone_diameter = max(2.0 * tan(half_angle) * cone_distance, uVoxel_size_LOD0);
-
-    // uint clipmap = start_clipmap + uint(log2(cone_distance / uVoxel_size_LOD0));
-    const uint curr_clipmap = uint(floor(log2(cone_diameter / uVoxel_size_LOD0)));
-    const uint clipmap = min(max(start_clipmap, curr_clipmap), NUM_CLIPMAPS - 1);
-
-    if (!is_inside_AABB(uAABB_mins[clipmap], uAABB_maxs[clipmap], world_position)) { break; }
+    cone_distance += cone_diameter * 1.0; // 0.5 for cone tracing with radius step size
     
-    const vec3 p = world_to_clipmap_voxelspace(world_position, uScaling_factors[clipmap], uAABB_centers[clipmap]);
+    const float min_lvl  = floor(clipmap_lvl_from_distance(cone_position));
+    const float curr_lvl = log2(cone_diameter / uVoxel_size_LOD0);
+    const float lvl = min(max(max(start_lvl, curr_lvl), min_lvl), float(NUM_CLIPMAPS - 1));
 
-    // Front-to-back acculumation with pre-multiplied alpha
-    const float a = texture(uVoxelOpacity[clipmap], p).r;
-    radiance += (1.0 - occlusion) * a * texture(uVoxelRadiance[clipmap], p).rgb;
-    occlusion += (1.0 - occlusion) * a;
+    // Front-to-back acculumation without pre-multiplied alpha
+    const vec4 sampled = sample_clipmap_linearly(cone_position, lvl);
+    radiance  += (1.0 - opacity) * sampled.a * sampled.rgb;
+    opacity   += (1.0 - opacity) * sampled.a;
 
-    cone_distance += cone_diameter * 0.5; // Smoother result than whole cone diameter
+    occlusion += (1.0 - occlusion) * sampled.a / (1.0 + cone_distance * uAmbient_decay);
   }
 
-  return vec4(radiance, occlusion);
+  return vec4(radiance, 1.0 - occlusion);
 }
 
-uniform float uShadow_bias;
-uniform vec3 uDirectional_light_direction;
-uniform mat4 uLight_space_transform;
-uniform sampler2D uShadowmap;
+// FIXME: Specular cones still self-accumulate a fair bit
+vec4 trace_specular_cone(const vec3 origin,
+                         const vec3 direction,
+                         const float half_angle) {
+  const float max_distance = (1.0 / uScaling_factors[NUM_CLIPMAPS - 1]) * uSpecular_cone_trace_distance;
+  const float start_lvl = floor(clipmap_lvl_from_distance(origin));
 
-bool shadow(const vec3 world_position, const vec3 normal) {
-  vec4 lightspace_position = uLight_space_transform * vec4(world_position, 1.0);
-  lightspace_position.xyz /= lightspace_position.w;
-  lightspace_position = lightspace_position * 0.5 + 0.5;
+  float occlusion = 0.0;
+  vec3 radiance = vec3(0.0);
+  float cone_distance = uVoxel_size_LOD0 * exp2(start_lvl); // Avoids self-occlusion/accumulation
 
-  const float current_depth = lightspace_position.z;
+  while (cone_distance < max_distance && occlusion < 1.0) {
+    const vec3 cone_position = origin + cone_distance * direction;
 
-  if (current_depth < 1.0) { 
-    const float closest_shadowmap_depth = texture(uShadowmap, lightspace_position.xy).r;
+    const float cone_diameter = max(2.0 * tan(half_angle) * cone_distance, uVoxel_size_LOD0);
+    cone_distance += cone_diameter;
     
-    // Bias avoids the _majority_ of shadow acne
-    const float bias = uShadow_bias * dot(-uDirectional_light_direction, normal);
+    const float min_lvl = floor(clipmap_lvl_from_distance(cone_position));
+    const float curr_lvl = log2(cone_diameter / uVoxel_size_LOD0);
+    const float lvl = min(max(max(start_lvl, curr_lvl), min_lvl), float(NUM_CLIPMAPS - 1));
 
-    return closest_shadowmap_depth < current_depth - bias;
+    // Front-to-back acculumation without pre-multiplied alpha
+    const vec4 sampled = sample_clipmap_linearly(cone_position, lvl);
+    radiance  += (1.0 - occlusion) * sampled.a * sampled.rgb;
+    occlusion += (1.0 - occlusion) * sampled.a;
   }
-  return false;
+
+  return vec4(radiance, 1.0 - occlusion);
 }
-  
+
+// FIXME: Blocky shadows due to clipmap level sampling not 100%
+float vct_shadow(const vec3 origin, const vec3 normal, const vec3 direction) {
+  const float max_distance = (1.0 / uScaling_factors[NUM_CLIPMAPS - 1]) / 8.0;
+  const float start_lvl = floor(clipmap_lvl_from_distance(origin));
+
+  float occlusion = 0.0;
+  float cone_distance = 0.0;
+  const vec3 o = origin + (uVoxel_size_LOD0 * 1.5 * exp2(start_lvl)) * normal; // Avoids self-occlusion/accumulation
+
+  while (cone_distance < max_distance) {
+    const vec3 cone_position = o + cone_distance * direction;
+
+    // FIXME: Restrict shadow cones to clipmap AABBs to inc. perf.
+    // if (!is_inside_AABB(uAABB_mins[NUM_CLIPMAPS - 1], uAABB_maxs[NUM_CLIPMAPS - 1], cone_position)) {
+    //  return occlusion;
+    // }
+
+    const float cone_diameter = max(2.0 * tan(uVCT_shadow_cone_aperature) * cone_distance, uVoxel_size_LOD0);
+    cone_distance += cone_diameter * 1.0;
+
+    const float min_lvl = floor(clipmap_lvl_from_distance(cone_position));
+    const float curr_lvl = log2(cone_diameter / uVoxel_size_LOD0);
+    const float lvl = min(max(max(start_lvl, curr_lvl), min_lvl), float(NUM_CLIPMAPS - 1));
+
+    // Front-to-back acculumation
+    occlusion += (1.0 - occlusion) * sample_clipmap_linearly(cone_position, lvl).a;
+  }
+
+  return 1.0 - smoothstep(0.1, 0.95, occlusion);
+}
+
 void main() {
-  const vec2 frag_coord = vec2(gl_FragCoord.x / uScreen_width, gl_FragCoord.y / uScreen_height);
-
+  const vec2 frag_coord = vec2(gl_FragCoord.x / float(uScreen_width), gl_FragCoord.y / float(uScreen_height));
+  
   const vec3 origin = texture(uPosition, frag_coord).xyz;
-  vec3 normal = texture(uNormal, frag_coord).xyz;
+  const vec3 fNormal = texture(uNormal, frag_coord).xyz; 
+  vec3 normal = fNormal;
 
   // Tangent normal mapping & TBN tranformation
   const vec3 T = normalize(texture(uTangent, frag_coord).xyz);
@@ -167,30 +206,62 @@ void main() {
   const float metallic = texture(uPBR_parameters, frag_coord).b;
   const float roughness_aperature = uRoughness_aperature;
   const float metallic_aperature = uMetallic_aperature;
-  const vec4  diffuse = sRGB_to_linear(texture(uDiffuse, frag_coord));
 
-  // Diffuse cones
-  // FIXME: Weights should be the Lambertian cosine factor? 
-  color += diffuse * trace_cone(origin, normal, roughness_aperature);
-  for (uint i = 1; i < uNum_diffuse_cones; i++) {
-    const vec3 direction = (TBN * normalize(cones[i].xyz));
-    const float weight = cones[i].w; 
-    color += diffuse * trace_cone(origin, normalize(direction), roughness_aperature) * max(dot(direction, normal), 0.0);
-  }
+  // Indirect
+  {
+    float ambient_radiance = 0.0; // NOTE: Traced with diffuse cones
+    uint traced_cones = 1;
 
-  // Specular cone
-  const vec3 reflection = normalize(reflect(-(uCamera_position - origin), normal));
-  color += trace_cone(origin, reflection, metallic_aperature);
+    // Offset origin to avoid self-sampling
+    const float start_lvl = floor(clipmap_lvl_from_distance(origin));
+    const vec3 o = origin + (uVoxel_size_LOD0 * 1.5 * exp2(start_lvl)) * fNormal; 
 
-  if (!uIndirect_lighting) {
-    color.rgb = vec3(0.0);
-  }
+    const vec4 radiance = 2.0 * cones[0].w * trace_diffuse_cone(o, normal, roughness_aperature);
+    gIndirect_radiance += radiance.rgb;
+    ambient_radiance += radiance.a;
 
-  if (uDirect_lighting) {
-    if (!shadow(origin, normal)) {
-      color.rgb += diffuse.rgb * max(dot(-uDirectional_light_direction, normal), 0.0);
+    for (uint i = 1; i < uNum_diffuse_cones; i++) {
+      const vec3 d = TBN * cones[i].xyz;
+      if (dot(d, normal) < 0.0) { continue; }
+      const vec4 radiance = 2.0 * cones[i].w * trace_diffuse_cone(o, d, roughness_aperature);
+      gIndirect_radiance += radiance.rgb * max(dot(d, normal), 0.0);
+      ambient_radiance += radiance.a;
+      traced_cones++;
+    }
+
+    if (!uIndirect) {
+      gIndirect_radiance = vec3(0.0);
+    }
+
+    if (uAmbient) {
+      // NOTE: See generate_diffuse_cones for details about the division of M_PI
+      gAmbient_radiance = (ambient_radiance * M_PI_INV) / float(traced_cones);
     }
   }
 
-  color.rgb += texture(uEmissive, frag_coord).rgb;
+  if (uSpecular) {
+    const float aperture = metallic_aperature; 
+    const vec3 reflection = normalize(reflect(-(uCamera_position - origin), fNormal));
+    gSpecular_radiance = trace_specular_cone(origin, reflection, aperture).rgb;
+  }
+
+  if (uDirect) {
+    const float shadow = vct_shadow(origin, normal, -uDirectional_light_direction);
+    gDirect_radiance = shadow * uDirectional_light_intensity * max(dot(-uDirectional_light_direction, normal), 0.0);
+  }
+
+  // color.rgb = vec3(floor(clipmap_lvl_from_distance(origin)) / NUM_CLIPMAPS);
+  // color.rgb = sample_clipmap(origin, uint(floor(clipmap_lvl_from_distance(origin)))).rgb;
+
+  // if (is_inside_AABB(uAABB_mins[0], uAABB_maxs[0], origin)) {
+  //   color.rgb = sample_clipmap(origin, 0).rgb;
+  //	} else {
+  //   color.rgb = vec3(0.0);
+  // }
+  // color.rgb = sample_clipmap(origin, 0).rgb; // St?mmer inte ?verrens med distance funktionen!
+  // color.rgb = vec3(floor(clipmap_lvl_from_distance(origin)) == 0.0 ? 1.0 : 0.0);
+
+  // color.rgb = vec3(world_to_clipmap_voxelspace(origin, uScaling_factors[0], uAABB_centers[0]));
+  // color.rgb = sample_clipmap_linearly(origin, clipmap_lvl_from_distance(origin)).rgb;
+  // color.rgb = vec3(floor(clipmap_lvl_from_distance(origin)) / NUM_CLIPMAPS);
 }

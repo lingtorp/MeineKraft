@@ -4,21 +4,21 @@
 
 #include <iostream>
 #include <vector>
+#include <random>
 
 #include <glm/common.hpp>
-
-#if defined(__APPLE__)
-#include <cmath>
-#endif
 
 #if defined(__linux__)
 #include <math.h>
 #endif
 
+/// Clamps a number to between lo and hi, in other words: [lo, hi]
+inline float clamp(const float x, const float lo, const float hi) {
+  return std::min(std::max(x, lo), hi);
+}
+
 inline float mk_cosf(const float x) {
-#if defined(__APPLE__)
-  return std::cos(x);
-#elif defined(__linux__)
+#if defined(__linux__)
   return cosf(x);
 #elif defined(WIN32)
   return std::cosf(x);
@@ -26,9 +26,7 @@ inline float mk_cosf(const float x) {
 }
 
 inline float mk_sinf(const float x) {
-#if defined(__APPLE__)
-  return std::sin(x);
-#elif defined(__linux__)
+#if defined(__linux__)
   return sinf(x);
 #elif defined(WIN32)
   return std::sinf(x);
@@ -36,9 +34,7 @@ inline float mk_sinf(const float x) {
 }
 
 inline float mk_sqrtf(const float x) {
-#if defined(__APPLE__)
-  return std::sqrt(x);
-#elif defined(__linux__)
+#if defined(__linux__)
   return sqrt(x);
 #elif defined(WIN32)
   return std::sqrtf(x);
@@ -170,6 +166,27 @@ struct Vec3 {
     /// Dot product of this and the vector u
     constexpr inline T dot(const Vec3<T>& u) const { return x * u.x + y * u.y + z * u.z; }
 
+    /// Computes the element-wise raised to the power of e: (x^e, y^e, z^e)
+    /// See http://chilliant.blogspot.com/2012/08/srgb-approximations-for-hlsl.html
+    /// Src: https://github.com/KhronosGroup/glTF-Sample-Viewer/blob/master/src/shaders/metallic-roughness.frag
+    constexpr inline Vec3<T> pow(const float e) const {
+      return {std::pow(x, e), std::pow(y, e), std::pow(z, e)};
+    }
+
+    /// Returns a converted copy of the vector in linear RGB color space
+    /// See http://chilliant.blogspot.com/2012/08/srgb-approximations-for-hlsl.html
+    /// Src: https://github.com/KhronosGroup/glTF-Sample-Viewer/blob/master/src/shaders/metallic-roughness.frag
+    constexpr inline Vec3<T> sRGB_to_linear() const {
+      const float GAMMA = 2.2f;
+      return this->pow(GAMMA);
+    }
+
+    /// Returns a converted copy of the vector in sRGB color space
+    constexpr inline Vec3<T> linear_to_sRGB() const {
+      const float INV_GAMMA = 1.0f / 2.2f;
+      return this->pow(INV_GAMMA);
+    }
+
     /************ Operators ************/
     // Hashing operator
     inline size_t operator()() {
@@ -206,6 +223,10 @@ struct Vec3 {
 
     constexpr inline bool operator==(const Vec3& rhs) const {
         return (x == rhs.x) && (y == rhs.y) && (z == rhs.z);
+    }
+
+    constexpr inline bool operator!=(const Vec3& rhs) const {
+        return (x != rhs.x) || (y != rhs.y) || (z != rhs.z);
     }
 
     constexpr inline Vec3 operator/(const float& rhs) const {
@@ -245,7 +266,11 @@ template<typename T>
 struct Vec2 {
     T x, y;
     constexpr Vec2(const T x, const T y): x(x), y(y) {};
+    constexpr explicit Vec2(const T v): x(v), y(v) {};
     constexpr Vec2(): x(0.0f), y(0.0f) {};
+
+    /// Zeroed Vec2
+    constexpr static inline Vec2 zero() { return Vec2(); };
 
     /// Sum of the components of the vector
     constexpr inline T sum() const { return x + y; }
@@ -257,11 +282,20 @@ struct Vec2 {
     constexpr inline T dot(Vec2<T> u) const { return x * u.x + y * u.y; }
 
     /************ Operators ************/
+    /// Element-wise addition
     constexpr Vec2<T> operator+(const Vec2& rhs) const { return {x + rhs.x, y + rhs.y}; }
 
+    /// Element-wise multiplication
+    constexpr Vec2<T> operator*(const Vec2& rhs) const { return {x * rhs.x, y * rhs.y}; }
+
+    /// Element-wise subtraction
     constexpr Vec2<T> operator-(const Vec2& rhs) const { return {x - rhs.x, y - rhs.y}; }
 
+    /// Element-wise equality
     constexpr bool operator==(const Vec2& rhs) const { return x == rhs.x && y == rhs.y; }
+
+    /// Element-wise division
+    constexpr Vec2<T> operator/(const Vec2& rhs) const { return {x / rhs.x , y / rhs.y}; }
 
     /// Returns a copy of this vector normalized
     constexpr inline Vec2<T> normalize() const {
@@ -275,7 +309,7 @@ struct Vec2 {
     /// Length of the vector
     constexpr inline double length() const { return std::sqrt(std::pow(x, 2) + std::pow(y, 2)); }
 
-    friend std::ostream &operator<<(std::ostream& os, const Vec2& v) { return os << "(x: " << v.x << ", y: " << v.y << std::endl; }
+    friend std::ostream &operator<<(std::ostream& os, const Vec2& v) { return os << "(x: " << v.x << ", y: " << v.y << ")" << std::endl; }
 
     inline std::string to_string() const {
       return "(x:" + std::to_string(x) + " y:" + std::to_string(y) + ")";
@@ -411,5 +445,115 @@ using Vec2d = Vec2<double>;
 using Vec3d = Vec3<double>;
 using Vec4d = Vec4<double>;
 using Mat4d = Mat4<double>;
+
+/// Computes the Gaussian 1D kernel with the resulting standard deviation of 'sqrt(2) * sigma' and mean of zero
+/// when filtering twice over the returned box kernel window specified by 'dim' passed along one axis.
+/// Kernel radius passed is assumed to be exclusive of the origin/center (kernel_radisu + 1 + kernel_radius).
+/// Kernel radius of 3 becomes a 2D kernel window of (3 + 1 + 3) (7x7 effective 2D kernel).
+/// Kernel radius of 2 becomes a 2D kernel window of (2 + 1 + 2) (5x5 effective 2D kernel).
+/// Kernel radius of 1 becomes a 2D kernel window of (1 + 1 + 1) (3x3 effective 2D kernel).
+/// Gaussian function is sampled using strafified sampling with each strata using a uniform distribution.
+/// [1] suggests a kernel cutoff of 3*sigma and [2] a cutoff of 2*sigma, [0] 2*sigma + 1
+/// [0]: https://fiveko.com/tutorials/image-processing/gaussian-blur-filter/#gauss1d
+/// [1]: https:///www.crisluengo.net/archives/695
+/// [2]: https://people.csail.mit.edu/sparis/bf_course/
+static std::vector<float> gaussian_1d_kernel(const float sigma, const size_t kernel_radius) {
+  assert(sigma > 0.0 && "Sigma must be non-zero and positive.");
+  assert(kernel_radius > 0 && "Kernel radius must be larger than 0.");
+
+  // NOTE: No factor do to discretization normalizes the sample anyway
+  const auto gaussian = [](const float x, const float sigma) -> float {
+                          return exp(- 0.5f * x * x / (sigma * sigma));
+                        };
+
+  // Samples the Gaussian function uniformly in [x0, x1] with sigma and x1 > x0
+  const auto sampler = [&](const float x0, const float x1) -> float {
+                         const uint32_t iterations = 100;
+                         const float dx = abs(x1 - x0) / iterations;
+                         float sum = 0.0f;
+                         for (size_t i = 0; i < iterations; i++) {
+                           const float x = x0 + dx * i;
+                           sum += gaussian(x, sigma) * dx;
+                         }
+                         return sum;
+                       };
+
+  const size_t kernel_dim = kernel_radius + 1;
+  std::vector<float> kernel;
+  kernel.reserve(kernel_dim);
+
+  // Stratified sampling
+  const float kernel_cutoff = 2.0f * sigma + 1.0f;
+  const float strata_size = 2.0f * kernel_cutoff / float(2.0f * kernel_radius + 1); // Symmetric kernel
+
+  float cum_v = 0.0f; // Cumulative value
+
+  // NOTE: Center/origin strata is half on the positive and half on the negative interval
+  float x0 = -strata_size / 2.0f;
+  float x1 = strata_size / 2.0f;
+  const float v = sampler(x0, x1);
+  cum_v += v;
+  kernel.push_back(v);
+
+  for (size_t i = 0; i < kernel_dim - 1; i++) {
+    x0 += strata_size; x1 += strata_size; // Move interval
+    const float v = sampler(x0, x1);      // Sample interval
+    cum_v += 2.0f * v;                    // Count each side of origin                   
+    kernel.push_back(v);
+  }
+
+  // Normalization
+  for (auto& v : kernel) {
+    v /= cum_v;
+  }
+
+  return kernel;
+};
+
+/// Computes the Gaussian matrix of dimension 'size' with the variance 'sigma'
+static std::vector<float> gaussian_2d_kernel(const size_t size, const float sigma) {
+  assert(false); // TODO: Implement
+  assert(size % 2 == 1 && "Not a box filter kernel");
+  assert(size > 1 && "Kernel size too small");
+  assert(sigma > 0.0 && "Sigma not non-zero");
+
+  std::vector<float> kernel;
+
+  // FIXME: Gaussian is defined in multiple ways all over the internet, which one is the most correct?
+  const auto gaussian = [](const Vec2f& v, const float sigma) -> float {
+                          const float factor = 1.0f / (sigma * sigma * 2.0f * M_PI);
+                          return factor * exp(- 0.5f * (v.dot(v)) / (sigma * sigma));
+                        };
+
+  const Vec2f c = Vec2f::zero();
+
+  // Step size in Gaussian space
+  // TODO: Try symmetric stratified uniform sampling
+  // TODO: Find an algorithm for sampling the Gaussian function
+  const Vec2f delta = Vec2f::zero();
+
+  const int32_t R = size - 2; // Kernel radius
+  float sum = 0.0;            // Weight sum
+
+  // Sample kernel
+  for (int32_t i = -R; i <= R; i++) {
+    for (int32_t j = -R; j <= R; j++) {
+      const Vec2f offset = Vec2f(i, j) * delta;
+      const float weight = gaussian(c + offset, sigma);
+      kernel.push_back(weight);
+      sum += weight;
+    }
+  }
+
+  // Normalize kernel
+  for (int32_t i = -R; i <= R; i++) {
+    for (int32_t j = -R; j <= R; j++) {
+      const Vec2i wv = Vec2i(R, R) + Vec2i(i, j);
+      kernel[wv.x * size + wv.y] /= sum;
+    }
+  }
+
+  return kernel;
+};
 
 #endif // MEINEKRAFT_VECTOR_HPP

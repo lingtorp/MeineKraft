@@ -307,38 +307,133 @@ struct Plane {
 /// Opaque ID type used to reference resources throughout the engine
 typedef uint64_t ID;
 
-enum class ShadingModel: uint32_t {
+enum class ShadingModel: uint8_t {
   Unlit = 1,                        // Unlit, using its surface color 
   PhysicallyBased = 2,              // PBR using textures (default)
   PhysicallyBasedScalars = 3        // PBR using scalars instead of textures
 };
 
-/// Represents the state of the Render, used for ImGUI debug panes
-struct RenderState {
-	uint32_t camera_selection = 0;
+enum class ShadowAlgorithm : uint8_t {
+  Plain = 0,                     // Normal shadowmapping
+  PercentageCloserFiltering = 1, // PCF shadowing
+  VCT = 2                        // Voxel cone tracing based shadowing
+};
 
+/// Represents the state of the Render system, used for ImGUI debug panes
+/// NOTE: execution_time per render pass is NOT stable frame to frame after a render pass has changed, the pipeline needs to be static to be accurate
+struct RenderState {
+  // General renderer system information
   uint64_t frame           = 0;
-  uint64_t entities        = 0;
-  uint64_t graphic_batches = 0;
-  uint64_t draw_calls      = 0;
-  bool shadowmapping = true;
-  bool normalmapping = true;
+  uint32_t entities        = 0;
+  uint32_t graphic_batches = 0;
+  uint32_t draw_calls      = 0;      // Number of draw calls issued this frame TODO: Hook up
+  uint32_t render_passes   = 0;      // Number of Renderpasses executed this frame
+  static const uint32_t execution_time_buffer_size = 5; // Size of the buffer for the execution time of each Renderpass
+  uint64_t total_execution_time = 0; // NOTE: for all render passes in ns
+
+  // Global illumination related
+  struct {
+    // NOTE: Execution time of lighting application only applies radiance does not compute it (hence very fast)
+    uint64_t execution_time[execution_time_buffer_size] = {0};      // NOTE: nanoseconds
+    bool shadowmapping = true;
+    bool normalmapping = true;
+    bool indirect = true;
+    bool ambient  = true;             // Dependent on 'indirect' when VCT is used as GI algorithm
+    bool direct = true;
+    bool specular = true;
+    bool emissive = true;
+    int32_t downsample_modifier = 1;  // GI is performed in downsampled space (1 / modifier) * full_res
+  } lighting;
+
+  struct {
+    uint64_t execution_time[execution_time_buffer_size] = {0}; // NOTE: nanoseconds
+    bool enabled = true;
+  } culling;
+
+  // GBuffer generation pass (a.k.a geometry pass)
+  struct {
+    uint64_t execution_time[execution_time_buffer_size] = {0}; // NOTE: nanoseconds
+  } gbuffer;
+
+  // Voxelization related (used by VCT pass)
+  struct {
+    uint64_t execution_time[execution_time_buffer_size] = {0}; // NOTE: nanoseconds
+    bool always_voxelize = true;
+    bool voxelize = true;        // NOTE: Toggled by the Renderer (a.k.a executed once)
+    bool conservative_rasterization = false;
+  } voxelization;
 
   // Voxel cone tracing related
-  float roughness = 1.0f;
-  float metallic = 1.0f;
-  float roughness_aperature = 60.0f;
-  float metallic_aperature = 10.0f;  // 10 deg specular cone from [Crassin11]
-  bool voxelize = true;                     // NOTE: Toggled by the Renderer (a.k.a executed once)
-  bool conservative_rasterization = true;
-  bool direct_lighting = false;
-  bool indirect_lighting = true;
-  bool always_voxelize = true;
-  float shadow_bias = 0.0025f;
-  int num_diffuse_cones = 4;
+  struct {
+    uint64_t execution_time[execution_time_buffer_size] = {0}; // NOTE: nanoseconds
+    const uint32_t MAX_DIFFUSE_CONES = 12;     // FIXME: Diffuse cone hardcoded limit
+    float roughness_aperature = 60.0f;         // 60 deg diffuse cone from [Rauwendaal, Crassin11]
+    float metallic_aperature   = 0.1f;         // 10 deg specular cone from [Crassin11]
+    int num_diffuse_cones = 6;                 // [Crassin11], [Yeu13] suggests 5
+    float specular_cone_trace_distance = 0.25f;// Specular cone trace distance in terms of factor of max scene length
+    float ambient_decay = 0.2f;                // [Crassin11] mentions but does not specify decay factor for scene ambient
+  } vct;
+
+  // Direct/shadows related
+  struct {
+    uint64_t execution_time_shadowmapping[execution_time_buffer_size] = {0}; // NOTE: nanoseconds, generating the depth map
+    uint64_t execution_time_shadow[execution_time_buffer_size] = {0};        // NOTE: nanoseconds, applying direct shadows
+    bool enabled = true;                                // Enable direct lighting computation
+    ShadowAlgorithm algorithm = ShadowAlgorithm::Plain; // See enum class ShadowAlgorithm
+    float bias = 0.00025f;                              // Shadow bias along geometric normal of surface
+    int32_t pcf_samples = 2;                            // Number of depth samples taken with PCF
+    float vct_cone_aperature = 0.0050f;                 // Shadow cone aperature
+    int32_t shadowmap_resolution_step = 2;              // TODO: Hook up and use
+    const uint32_t SHADOWMAP_W = 2 * 2048;              // Shadowmap texture width
+    const uint32_t SHADOWMAP_H = SHADOWMAP_W;           // Shadowmap texture height
+  } shadow;
+
+  // Bilateral filtering related
+  struct {
+    uint64_t execution_time[execution_time_buffer_size] = {0}; // NOTE: nanoseconds
+    bool enabled = true;                // Bilateral filtering pass to filter the radiance
+    bool direct = false;                // Enable filtering of the direct radiance
+    bool ambient = true;                // Enable filtering of the ambient radiance
+    bool indirect = true;               // Enable filtering of the indirect radiance
+    bool specular = true;               // Enable filtering of the specular radiance
+    std::vector<float> kernel;          // Spatial kernel values generated from sigma and radius
+    float spatial_kernel_sigma = 0.2f;  // Sigma of the spatial upsampling kernel in texture space
+    uint32_t spatial_kernel_radius = 3; // Radius of the spatial upsampling kernel in texture space
+    bool position_weight = true;        // Enable position as a weight in filtering
+    float position_sigma = 2.0f;        // FIXME: How to set this value or tune it?
+    bool normal_weight = false;         // Enable normals as a weight in filtering
+    float normal_sigma = 2.0f;          // FIXME: How to set this value or tune it?
+    bool depth_weight = true;           // Enable depth as a weight in filtering
+    float depth_sigma = 2.0f;           // FIXME: How to set this value or tune it?
+  } bilateral_filtering;
+
+  // Bilinear upsampling related
+  struct {
+    uint64_t execution_time[execution_time_buffer_size] = {0}; // NOTE: nanoseconds
+    bool enabled = false;
+    bool ambient = true;
+    bool indirect = true;
+    bool specular = true;
+  } bilinear_upsample;
+
+  // Voxel visualization related
+  // FIXME: Voxel visualization does not work ...
+  struct {
+    uint64_t execution_time[execution_time_buffer_size] = {0}; // NOTE: nanoseconds
+    bool enabled = false;
+  } voxel_visualization;
+
+  // Final blit pass
+  struct {
+    uint64_t execution_time[execution_time_buffer_size] = {0}; // NOTE: nanoseconds
+  } blit;
 
   RenderState() = default;
-  RenderState(const RenderState& old) : frame(old.frame), shadowmapping(old.shadowmapping), normalmapping(old.normalmapping), camera_selection(old.camera_selection), roughness(old.roughness), roughness_aperature(old.roughness_aperature), metallic(old.metallic), metallic_aperature(old.metallic_aperature), voxelize(old.voxelize), conservative_rasterization(old.conservative_rasterization), direct_lighting(old.direct_lighting), indirect_lighting(old.indirect_lighting), always_voxelize(old.always_voxelize), shadow_bias(old.shadow_bias), num_diffuse_cones(old.num_diffuse_cones) {}
+
+  friend std::ostream &operator<<(std::ostream &os, const RenderState& state) {
+    // TODO: Implement ...
+    return os;
+  }
 };
 
 struct Resolution {
@@ -349,9 +444,11 @@ static auto HD      = Resolution{1280, 720};
 static auto FULL_HD = Resolution{1920, 1080};
 
 struct DirectionalLight {
+  Vec3f intensity;
   Vec3f position;
   Vec3f direction;
-  DirectionalLight(const Vec3f& position, const Vec3f& direction): position(position), direction(direction) {}
+  // TODO: Find a typical Directional light intensity
+  DirectionalLight(const Vec3f& position, const Vec3f& direction): position(position), direction(direction), intensity(Vec3f(1.0f)) {}
 
   friend std::ostream &operator<<(std::ostream &os, const DirectionalLight& l) {
     return os << "DirectionalLight(direction: " << l.direction << ", postiion: " << l.position << ")";
@@ -359,6 +456,7 @@ struct DirectionalLight {
 };
 
 struct AABB {
+  float scaling_factor = 1.0f;
 	Vec3f max;
 	Vec3f min;
 	AABB() = default;
@@ -385,7 +483,7 @@ struct AABB {
   inline AABB unit_scaled() const { return AABB(min / max_axis(), max / max_axis()); }
 
 	friend std::ostream& operator<<(std::ostream& os, const AABB& aabb) {
-		return os << "AABB(min: " << aabb.min << ", max: " << aabb.max << ")";
+		return os << "AABB(min: " << aabb.min << ", max: " << aabb.max << ", scale: " << aabb.scaling_factor << ")";
 	}
 };
 

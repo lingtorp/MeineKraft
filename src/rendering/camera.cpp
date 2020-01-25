@@ -1,51 +1,68 @@
 #include <algorithm>
+
 #include "../math/quaternion.hpp"
 #include "../rendering/primitives.hpp"
+#include "../util/logging.hpp"
 
 #include "camera.hpp"
 
-/*
-Camera::Camera(Vec3<float> position, Vec3<float> direction, Vec3<float> up):
-        position(position), direction(direction.normalize()), up(up.normalize()) {};
+Camera::Camera(nlohmann::json json) {
+  if (json == nullptr) {
+    Log::error("Tried to create a Camera from json with nullptr");
+    return;
+  }
 
-void Camera::move_forward() {
-  position = position + direction * 0.05f;
+  if (json.empty()) {
+    Log::error("Tried to create a Camera from empty json");
+    return;
+  }
+
+  const auto scene = json["scene"];
+  if (scene.empty()) {
+    Log::error("No scene object in json");
+    return;
+  }
+
+  const auto cam = scene["camera"];
+  if (cam.empty()) {
+    Log::error("No Camera json object in Scene json");
+    return;
+  }
+
+  const auto pos = cam["position"];
+  if (!pos.empty() && pos.is_array()) {
+    if (pos.size() != 3) {
+      Log::warn("Invalid array size in Camera.position");
+    } else {
+      this->position.x = pos[0];
+      this->position.y = pos[1];
+      this->position.z = pos[2];
+    }
+  } else {
+    Log::warn("No position array in Camera json");
+  }
+
+  const auto dir = cam["direction"];
+  if (!dir.empty() && dir.is_array()) {
+    if (dir.size() != 3) {
+      Log::warn("Invalid array size in Camera.direction");
+    } else {
+      this->direction.x = dir[0];
+      this->direction.y = dir[1];
+      this->direction.z = dir[2];
+    }
+  } else {
+    Log::warn("No direction array in Camera json");
+  }
+
+  // TODO: Implement Camera FoV
+  // const auto fov = cam["fov"];
+  // if (!fov.empty() && fov.is_float()) {
+  //   this->FoV = fov.get<float>();
+  // }
 }
 
-void Camera::move_left() {
-  position = position + direction.cross(up).normalize() * - 0.05f;
-}
-
-void Camera::move_right() {
-  position = position + direction.cross(up).normalize() * 0.05f;
-}
-
-void Camera::move_backward() {
-  position = position + direction * -0.05f;
-}
-
-void Camera::update() {
-  const float sensitivity = 1.0f;
-  const float dx = glm::radians(diff_vector.x * sensitivity);
-  const float dy = glm::radians(diff_vector.y * sensitivity);
-
-  quat rotation(direction.cross(up));
-  direction = rotation.rotate(direction, dy).normalize();
-  up = rotation.rotate(up, dy).normalize();
-
-  quat yrotation(up);
-  direction = yrotation.rotate(direction, dx).normalize();
-}
-*/
-
-/// Clamps a number to between lo and hi, in other words: [lo, hi]
-static double clamp(const double x, const double lo, const double hi) {
-  return std::min(std::max(x, lo), hi);
-}
-
-Camera::Camera(const Vec3f position, Vec3f direction, const Vec3f world_up) :
-  direction(direction), position(position), up(world_up),
-  pitch(0), yaw(0), velocity{ 0.0, 0.0, 0.0 }, max_velocity{ 5.0, 5.0, 5.0 }, acceleration{ {false, false}, {false, false}, {false, false} } {};
+Camera::Camera(const Vec3f position, Vec3f direction): direction(direction), position(position) {}
 
 void Camera::move_forward(bool move) {
   acceleration.x.x = move;

@@ -7,27 +7,29 @@
 
 **MeineKraft** is a **physically based rendering engine** written in **C++17** & **OpenGL 4.6**.
 
-The rendering engine is built around a core Entity-Component-System
-architecture. The main game struct in the engine is a object-oriented layer
-on top of the ECS core in order to make it slightly easier to write
-gameplay code while keeping the performance and data-oriented architecture intact.
+MeineKraft is built on a core Entity-Component-System architecture. Gameobjects
+in the engine is a lighweight object-oriented layer on top of the ECS core
+systems in order to make it slightly easier to write gameplay code while keeping
+the performance and data-oriented architecture intact.
 
-My intent is to follow up the implementation of the most interesting parts with some articles relating to my learning experience,
-these articles can be found on my personal [site](http://lingtorp.com) with the tag *MeineKraft*.
+Followup blogposts on the implementation of the most interesting parts can be
+found [here](http://lingtorp.com) with the tag *MeineKraft*.
 
 ## Features
 - [X] Voxel cone tracing based global illumination
-- - [X] normal mapping
-- - [X] 3D texture
-- - [ ] 3D clipmap
+- - [X] 3D clipmap
+- - [X] joing bilateral upsampling/filtering
 - - [X] isotropic voxels
 - - [X] emissive materials
 - - [X] (_optional_) opacity normalization subpass 
 - - [X] second-depth shadow mapping
+- - [X] percentage-closer filtering shadow mapping 
+- - [X] normal mapping
 - [X] Physically based BRDF
 - [X] glTF roughness, metallic material model
-- [X] ECS-architecture
+- [X] Entity-Component-System architecture
 - [X] JSON-based configuration
+- [X] Editor
 
 ## Documentation
 Relevant documentation for each part of the engine is located in the /documentation folder. 

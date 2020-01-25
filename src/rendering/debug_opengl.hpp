@@ -2,8 +2,9 @@
 #ifndef MEINEKRAFT_DEBUG_OPENGL_HPP
 #define MEINEKRAFT_DEBUG_OPENGL_HPP
 
-#include <glew.h>
-#include <SDL_opengl.h> 
+#include <GL/glew.h>
+#include <GL/gl.h>
+#include <SDL2/SDL_opengl.h> 
 
 #include "../util/logging.hpp"
 
@@ -105,6 +106,8 @@ struct OpenGLContextInfo {
 
   int max_compute_local_work_grp_invocations;
 
+  float largest_supported_anisotropy = 0.0f;
+
   OpenGLContextInfo(const size_t gl_major_version,
                     const size_t gl_minor_version) {
     #if defined(WIN32) || defined(__LINUX__)
@@ -124,15 +127,17 @@ struct OpenGLContextInfo {
     #ifdef VERBOSE
     GLint n = 0;
     glGetIntegerv(GL_NUM_EXTENSIONS, &n);
-    const char **extensions = (const char **)malloc(n * sizeof(char *));
     if (n > 0) {
       for (GLint i = 0; i < n; i++) {
-        extensions[i] = (char*)glGetStringi(GL_EXTENSIONS, i);
-        Log::info(std::string(extensions[i]));
+        const std::string str((char*)glGetStringi(GL_EXTENSIONS, i));
+        Log::info(str);
       }
     }
-    delete extensions;
     #endif
+
+    if (!GLEW_EXT_texture_sRGB_decode) {
+      Log::error("OpenGL extension sRGB_decode does not exist."); exit(-1);
+    }
 
     glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 0, &max_compute_local_work_grp_size_x);
     glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 1, &max_compute_local_work_grp_size_y);
@@ -167,6 +172,9 @@ struct OpenGLContextInfo {
 
     glGetIntegerv(GL_MAX_IMAGE_UNITS, &max_image_texture_units);
     Log::info("Max image texture units: " + std::to_string(max_image_texture_units));
+
+    glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &largest_supported_anisotropy);
+    Log::info("Anisotropy supported: " + std::to_string(largest_supported_anisotropy));
   }
 };
 
@@ -203,19 +211,6 @@ static void log_gl_error() {
   }
   Log::error(glewGetErrorString(err));
   Log::error("OpenGL error " + err_str + ":" + std::to_string(err));
-}
-
-/// Pass handling code - used for debuggging at this moment
-inline void pass_started(const std::string &msg) {
-#if defined(__LINUX__) || defined(WIN32)
-  glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, msg.c_str());
-#endif
-}
-
-inline void pass_ended() {
-#if defined(__LINUX__) || defined(WIN32)
-  glPopDebugGroup();
-#endif
 }
 
 #endif // MEINEKRAFT_DEBUG_OPENGL_HPP

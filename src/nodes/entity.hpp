@@ -68,23 +68,22 @@ struct JobSystem {
   }
 
   struct Worker {
-    enum class WorkerState: uint8_t { Working = 0, Ready = 1, Idle = 2, Exit = 3 };
+    enum State { Working = 0, Ready = 1, Idle = 2, Exit = 3 };
     Semaphore sem; // 0 working, 1 ready, 2 done/idle, 3 exit
     std::function<void()> workload;
     std::thread t;
 
-    Worker(): sem(2), t(&Worker::execute, this) {}
+    Worker(): sem(Worker::State::Idle), t(&Worker::execute, this) {}
     ~Worker() { t.join(); }
 
     void execute() {
-      while (!sem.try_peeq(3)) {
-        if (sem.try_peeq(1)) {
+      while (!sem.try_peeq(Worker::State::Exit)) {
+        if (sem.try_peeq(Worker::State::Ready)) {
           sem.try_wait();
           workload();
-          sem.post(2);
-        } else {
-          std::this_thread::sleep_for(std::chrono::microseconds(1));
+          sem.post(Worker::State::Idle);
         }
+        std::this_thread::yield();
       }
     }
   };
@@ -96,18 +95,19 @@ struct JobSystem {
     Log::info("JobSystem using " + std::to_string(num_threads) + " workers");
     thread_pool = std::vector<Worker>(num_threads);
   }
+
   ~JobSystem() {
     for (size_t i = 0; i < thread_pool.size(); i++) {
-      thread_pool[i].sem.post(3);
+      thread_pool[i].sem.post(Worker::State::Exit);
     }
     wait_on_all();
   }
 
-  // Async
+  /// Returns Job ID used to poll completion of work
   ID execute(const std::function<void()>& func) {
     uint64_t i = 0;
     while (true) {
-      if (thread_pool[i].sem.try_peeq(2)) {
+      if (thread_pool[i].sem.try_peeq(Worker::State::Idle)) {
         thread_pool[i].workload = std::move(func);
         thread_pool[i].sem.try_wait();
         return i;
@@ -122,7 +122,7 @@ struct JobSystem {
     while (done != thread_pool.size()) {
       done = 0;
       for (uint64_t i = 0; i < thread_pool.size(); i++) {
-        if (thread_pool[i].sem.try_peeq(2)) {
+        if (thread_pool[i].sem.try_peeq(Worker::State::Idle)) {
           done++;
         }
       }
@@ -135,7 +135,7 @@ struct JobSystem {
 
 struct ActionComponent {
   std::function<void(uint64_t, uint64_t)> action;
-  ActionComponent(const std::function<void(uint64_t, uint64_t)>& action): action(action) {}
+  ActionComponent(const std::function<void(const uint64_t, const uint64_t)>& action): action(action) {}
 };
 
 struct ActionSystem {

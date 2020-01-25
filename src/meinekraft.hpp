@@ -3,6 +3,7 @@
 #define MEINEKRAFT_APPLICATION_HPP
 
 /// NOTE: This header is forbidden from including other headers
+#include <stdint.h>
 
 #if defined(WIN32)
 #define OPENGL_MINOR_VERSION 6 // Windows 10
@@ -25,8 +26,13 @@ struct MeineKraft {
       return mk;
     };
 
-    Renderer* renderer = nullptr;
+    /// Screenshot mode lets the engine run for a couple of frames and then takes a screenshot and quits
+    bool screenshot_mode = false;
+    /// Number of frames to render before taking screenshot
+    const uint8_t screenshot_mode_frame_wait = 25;
+
     SDL_Window* window = nullptr;
+    Renderer* renderer = nullptr;
 
     /// MeineKraft initialization is done when this is called
     void init();

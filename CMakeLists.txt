@@ -37,7 +37,7 @@ set(RENDER_SRC_FILES "src/rendering/shader.cpp" "src/rendering/shader.hpp" "src/
         "src/rendering/renderer.cpp" "src/rendering/renderer.hpp"    "src/rendering/primitives.hpp"
         "src/rendering/camera.cpp"   "src/rendering/camera.hpp"      "src/rendering/debug_opengl.hpp"
         "src/rendering/light.hpp"    "src/rendering/meshmanager.cpp" "src/rendering/meshmanager.hpp" "src/rendering/texturemanager.hpp"
-        "src/rendering/renderpass.hpp" "src/rendering/renderpass.cpp")
+        "src/rendering/renderpass/renderpass.hpp" "src/rendering/renderpass/renderpass.cpp")
 source_group("render" FILES ${RENDER_SRC_FILES})
 
 set(UTIL_SRC_FILES "src/util/filemonitor.cpp" "src/util/filemonitor.hpp" "src/util/filesystem.hpp" "src/util/logging.hpp" "src/util/config.hpp" "src/util/config.cpp")

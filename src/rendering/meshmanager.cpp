@@ -196,8 +196,8 @@ MeshManager::load_meshes(const std::string& directory, const std::string& file) 
 
   #ifdef VERBOSE_LEVEL_0
   Log::info("Loading scene: " + file);
-  Log::info("\t ... # meshes " + std::to_string(scene->mNumMeshes));
-  Log::info("\t ... # materials " + std::to_string(scene->mNumMaterials));
+  Log::info_indent(1, "# meshes " + std::to_string(scene->mNumMeshes));
+  Log::info_indent(1, "# materials " + std::to_string(scene->mNumMaterials));
   #endif
   
   std::vector<std::vector<std::pair<Texture::Type, std::string>>> texture_infos;
@@ -380,11 +380,20 @@ MeshManager::load_meshes(const std::string& directory, const std::string& file) 
   return { mesh_ids, texture_infos };
 }
 
-Mesh MeshManager::mesh_from_id(ID id) {
+Mesh MeshManager::mesh_from_id(const ID id) {
   if (id < loaded_meshes.size()) {
     return loaded_meshes[id];
   } else {
-    Log::error("Non existent mesh id provided.");
+    Log::error("Non existent Mesh id provided.");
   }
   return {};
+}
+
+const Mesh* MeshManager::mesh_ptr_from_id(const ID id) {
+  if (id < loaded_meshes.size()) {
+    return &loaded_meshes[id];
+  } else {
+    Log::error("Non existent Mesh id provided.");
+  }
+  return nullptr;
 }

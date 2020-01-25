@@ -11,6 +11,8 @@
 #include "debug_opengl.hpp"
 #include "meshmanager.hpp"
 
+#define GL_EXT_texture_sRGB 1
+
 #ifdef _WIN32
 #include <glew.h>
 #include <SDL_image.h>
@@ -27,11 +29,14 @@ struct BoundingVolume {
   float radius = 1.0f; // Calculated somehow somewhere 
 };
 
-/// Material 
+/// Material, shader mirror defined in geometry shader
+/// NOTE: Must be aligned to 16 byte boundary as per shader requirements
 struct Material {
-  uint32_t diffuse_layer_idx  = 0;
-  ShadingModel shading_model  = ShadingModel::Unlit; // uint32_t
-  Vec2f pbr_scalar_parameters = {}; // (roughness, metallic)
+  uint32_t diffuse_layer_idx  = 0;                   // index into diffuse texture array
+  ShadingModel shading_model  = ShadingModel::Unlit; // uint8_t
+  Vec2f pbr_scalar_parameters = {};                  // (roughness, metallic)
+  Vec4f emissive_scalars = {};                       // emissive color when lacking texture, (vec3, padding)
+  Vec4f diffuse_scalars = {};                        // diffuse color when lacking texture, (vec3, padding)
 };
 
 /// Computes the largest sphere radius fully containing the mesh [Ritter's algorithm]
@@ -85,24 +90,45 @@ static BoundingVolume compute_bounding_volume(const Mesh& mesh) {
   return sphere;
 }
 
+// sRGB automatic mipmapping is performed correctly by OpenGL by default due to texture format [0]
+// [0]: https://github.com/KhronosGroup/OpenGL-Registry/blob/master/extensions/EXT/EXT_texture_sRGB_decode.txt
 struct GraphicsBatch {
-  explicit GraphicsBatch(const ID mesh_id): mesh_id(mesh_id), objects{}, mesh{MeshManager::mesh_from_id(mesh_id)}, 
-    layer_idxs{}, bounding_volume(compute_bounding_volume(mesh)) {};
-  
-  void init_buffer(const Texture& texture, uint32_t* gl_buffer, const uint32_t gl_texture_unit, uint32_t* buffer_capacity) {
+  GraphicsBatch() = delete;
+
+  explicit GraphicsBatch(const ID mesh_id): mesh_id(mesh_id), objects{}, mesh{MeshManager::mesh_ptr_from_id(mesh_id)},
+    layer_idxs{}, bounding_volume(compute_bounding_volume(*mesh)) {
+      if (!GLEW_EXT_texture_sRGB_decode) {
+        Log::error("OpenGL extension sRGB_decode does not exist."); exit(-1);
+      }
+    };
+
+  // TODO: Move GL resources
+  // GraphicsBatch(const GraphicsBatch&& other) {}
+
+  // TODO: Dealloc GL resources
+  // ~GraphicsBatch() {
+  //   Log::info("GraphicsBatch destructor called.");
+  //   MeshManager::dealloc_mesh(mesh_id);
+  // }
+
+  void init_buffer(const Texture& texture, uint32_t* gl_buffer, const uint32_t gl_texture_unit, uint32_t* buffer_capacity, const bool is_sRGB = false) {
     glActiveTexture(GL_TEXTURE0 + gl_texture_unit);
     glGenTextures(1, gl_buffer);
     glBindTexture(texture.gl_texture_target, *gl_buffer);
     const int default_buffer_size = 1;
-    const GLuint texture_format = texture.data.bytes_per_pixel == 3 ? GL_RGB8 : GL_RGBA8;
+    const GLuint texture_format = texture.data.bytes_per_pixel == 3 ? (is_sRGB ? GL_SRGB8_EXT : GL_RGB8) : (is_sRGB ? GL_SRGB8_ALPHA8_EXT : GL_RGBA8);
     const uint8_t mipmap_levels = uint8_t(std::log(std::max(texture.data.width, texture.data.height))) + 1;
     glTexStorage3D(texture.gl_texture_target, mipmap_levels, texture_format, texture.data.width, texture.data.height, texture.data.faces * default_buffer_size); // depth = layer faces
     glGenerateMipmap(texture.gl_texture_target);
     *buffer_capacity = default_buffer_size;
+
+    float aniso = 0.0f;
+    glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &aniso);
+    glTexParameterf(texture.gl_texture_target, GL_TEXTURE_MAX_ANISOTROPY_EXT, aniso);
   }
 
   /// Increases the texture buffer and copies over the old texture buffer (this seems to be the only way to do it)
-  void expand_texture_buffer(const Texture& texture, uint32_t* gl_buffer, uint32_t* texture_array_capacity, const uint32_t texture_unit) {
+  void expand_texture_buffer(const Texture& texture, uint32_t* gl_buffer, uint32_t* texture_array_capacity, const uint32_t texture_unit, const bool is_sRGB = false) {
     // Allocate new memory
     uint32_t gl_new_texture_array;
     glGenTextures(1, &gl_new_texture_array);
@@ -110,7 +136,7 @@ struct GraphicsBatch {
     glBindTexture(texture.gl_texture_target, gl_new_texture_array);
     uint32_t old_capacity = *texture_array_capacity;
     *texture_array_capacity = (uint32_t) std::ceil(*texture_array_capacity * 1.5f);
-    const GLuint texture_format = texture.data.bytes_per_pixel == 3 ? GL_RGB8 : GL_RGBA8;
+    const GLuint texture_format = texture.data.bytes_per_pixel == 3 ? (is_sRGB ? GL_SRGB8_EXT : GL_RGB8) : (is_sRGB ? GL_SRGB8_ALPHA8_EXT : GL_RGBA8);
     const uint8_t mipmap_levels = std::log(std::max(texture.data.width, texture.data.height)) + 1;
     glTexStorage3D(texture.gl_texture_target, mipmap_levels, texture_format, texture.data.width, texture.data.height, texture.data.faces * *texture_array_capacity);
     
@@ -123,6 +149,7 @@ struct GraphicsBatch {
   }
   
   /// Upload a texture to the diffuse array
+  /// NOTE: glTexSubImage3D does not care for sRGB or not, simply GL_RGB* variants of the format
   void upload(const Texture& texture, const uint32_t gl_texture_unit, const uint32_t gl_texture_array) {
     const GLuint texture_format = texture.data.bytes_per_pixel == 3 ? GL_RGB : GL_RGBA;
     glActiveTexture(GL_TEXTURE0 + gl_texture_unit);
@@ -137,7 +164,8 @@ struct GraphicsBatch {
     glGenerateMipmap(texture.gl_texture_target);
   }
 
-  void increase_entity_buffers() {
+  /// Reallocs all the Entity buffers (transforms, bounding volumes, materials, instance idx) with the amount 'units'
+  void increase_entity_buffers(const uint32_t units) {
     // FOR EACH BUFFER
     // 1. Create new larger buffer
     // 2. Map it
@@ -147,7 +175,7 @@ struct GraphicsBatch {
     // 6. Update the GraphicsBatch state 
     glBindVertexArray(gl_depth_vao); // TODO: Something in this function seems to affect VAO state, which?
     const auto flags = GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT | GL_MAP_WRITE_BIT;
-    const uint32_t new_buffer_size = std::ceil(buffer_size * 2.0f);
+    const uint32_t new_buffer_size = buffer_size + units;
 
     // Bounding volume buffer
     uint32_t new_gl_bounding_volume_buffer = 0;
@@ -174,7 +202,7 @@ struct GraphicsBatch {
     glGenBuffers(1, &new_gl_mbo);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, new_gl_mbo);
     glBufferStorage(GL_SHADER_STORAGE_BUFFER, new_buffer_size * sizeof(Material), nullptr, flags);
-    gl_material_buffer_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, new_buffer_size * sizeof(Material), flags);
+    gl_material_buffer_ptr = (Material*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, new_buffer_size * sizeof(Material), flags);
     glCopyNamedBufferSubData(gl_material_buffer, new_gl_mbo, 0, 0, buffer_size * sizeof(Material));
     glInvalidateBufferData(gl_material_buffer);
     glDeleteBuffers(1, &gl_material_buffer);
@@ -200,15 +228,20 @@ struct GraphicsBatch {
     buffer_size = new_buffer_size;
   }
 
-  ID mesh_id; 
-  Mesh mesh; 
+  // TODO: transforms, bounding volumes and material buffers need to be resizeable
+  // Use: glCopyNamnedBufferSubData to realloc the buffers when they near capacity
+
+  const ID mesh_id; // Mesh ID of the mesh represented in the GBatch
+  const Mesh* mesh; // Non-owned pointer to Mesh instance owned by MeshManager
+  // FIXME: Replace std::vectors and uint8_t* SSBO ptrs with raw typed ptrs & size, capacity, to support realloc
   struct {
     std::vector<Mat4f> transforms;
     std::vector<BoundingVolume> bounding_volumes;     // Bounding volumes (Spheres for now)
     std::vector<Material> materials;                  
   } objects;
-  std::unordered_map<ID, ID> data_idx;                // Entity ID to data position in data (objects struct)
-  std::vector<ID> entity_ids;                         // Entities in the batch
+  // FIXME: Remove data_idx, simply loop over entity_ids and find the index into the objects struct that way?
+  std::unordered_map<ID, ID> data_idx;                // Entity ID <--> index in objects struct
+  std::vector<ID> entity_ids;                         // Entity IDs in the batch
   
   /// Textures
   std::map<ID, uint32_t> layer_idxs;  // Texture ID to layer index mapping for all texture in batch
@@ -249,8 +282,8 @@ struct GraphicsBatch {
 
   uint32_t gl_instance_idx_buffer = 0; // Instance indices passed along the shader pipeline for fetching per instance data from various buffers
 
-  uint32_t gl_material_buffer = 0;           // Material b.o
-  uint8_t* gl_material_buffer_ptr = nullptr; // Ptr to mapped material buffer
+  uint32_t gl_material_buffer = 0;            // Material b.o
+  Material* gl_material_buffer_ptr = nullptr; // Ptr to mapped material buffer
 
   /// Depth pass variables
   uint32_t gl_depth_vao = 0;

@@ -6,8 +6,8 @@ layout(triangle_strip, max_vertices = 14) out;
 
 flat in uint vertex_ids[];
 
-layout(RGBA8) uniform readonly image3D uVoxelRadiance[NUM_CLIPMAPS];
-layout(RGBA8) uniform readonly image3D uVoxelOpacity[NUM_CLIPMAPS];
+layout(RGBA8) uniform readonly image3D uVoxel_radiance[NUM_CLIPMAPS];
+layout(RGBA8) uniform readonly image3D uVoxel_opacity[NUM_CLIPMAPS];
 
 uniform mat4 uCamera_view;
 uniform uint uClipmap_idx;
@@ -44,9 +44,9 @@ void main() {
   const uint Z = (vertex_id / (voxel_grid_dimension * voxel_grid_dimension)) % voxel_grid_dimension;
   const ivec3 vpos = ivec3(X, Y, Z);
 
-  const vec4 opacity = imageLoad(uVoxelOpacity[uClipmap_idx], vpos);
+  const vec4 opacity = imageLoad(uVoxel_opacity[uClipmap_idx], vpos);
   if (opacity == vec4(1.0)) {
-    voxel_color = vec4(imageLoad(uVoxelRadiance[uClipmap_idx], vpos).rgb, 1.0);
+    voxel_color = vec4(imageLoad(uVoxel_radiance[uClipmap_idx], vpos).rgb, 1.0);
 
     const float voxel_size = (1.0f / float(uScaling_factors[uClipmap_idx])) / float(voxel_grid_dimension);
     const vec3 voxel_center = vec3(vpos * voxel_size) + uAABB_mins[uClipmap_idx] + vec3(voxel_size / 2.0);

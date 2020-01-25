@@ -1,4 +1,8 @@
-# User-specific stuff:
+# MeineKraft
+tmp/
+build/
+
+# Jetbrains IDE stuff
 .idea/workspace.xml
 .idea/tasks.xml
 .idea/dictionaries

@@ -19,15 +19,8 @@ json Config::load_config(bool& success) {
   }
 
   json config = json::parse(json_str);
+  success = !config.empty();
 
-  // Camera
-  if (Filesystem::file_exists(Filesystem::tmp + "camera.json")) {
-    const std::string json_str = Filesystem::read_file(Filesystem::tmp + "camera.json");
-    const json camera_config = json::parse(json_str);
-    config.merge_patch(camera_config);
-  }
-
-  success = true;
   return config;
 }
 

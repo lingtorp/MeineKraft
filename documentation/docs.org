@@ -1,13 +1,50 @@
 * MeineKraft Documentation
 
 ** Introduction
+MeineKraft is a rendering engine coupled with an Entity-Component-System
+architecture that enables games so be created.
+
+The goal is to have minimalistic yet complete in-game editor with lots of small
+powerful tools that enables game development almost entirely within the engine
+GUI.
 
 ** Renderer architecture
+MeineKraft uses a deferred shading pipeline. There are various of render passes
+that can be selected and mixed into a custom pipeline.
 
+TODO: Image example of rendering pipeline
+
+*** Config file
+The configuration file is a json file located at the root folder in the project.
+This file contains various properties of the engine that can be modified and
+change such as the save folder path, fullscreen, render settings, etc.
+
+*** Properties
+- screenshot\_mode :: (bool) starts engine and sets up the scene takes a
+  screenshot and quits
+- scene :: (object) scene object to load at start up
+- - path :: (string) filepath to directory of the model
+- - name :: (string) filename of the model containing the scene
+- - camera :: (object) _Optional_ Camera object, defaults to center of loaded
+  scene otherwise world origin
+- - - position :: (vec3) position of the camera
+- - - direction :: (vec3) viewing direction of the camera
+- - - FoV :: (float) field of view of the camera
+- fullscreen :: (bool) starts the engine in fullscreen
+- resolution :: (object) window resolution at start up, default is full screen resolution
+- - width :: (int) window width
+- - height :: (int) window height
+ 
 ** Game engine architecture
+MeineKraft has a minimalistic Entity-Component-System in which every gameobject,
+called Entity, is mainly represented with a unique ID across all of the
+subsystems.
+
+Gameobjects usually inherits from Entity which is a minimal object-oriented
+layer on which games using MeineKraft can be built. By hooking into the various
+subsystems and using the Entity object the rest is up to the game creator.
 
 ** Gameplay architecture
-
 - Engine example
 - API example
 - etc

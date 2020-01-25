@@ -3,6 +3,9 @@
 #define MEINEKRAFT_LOGGING_HPP
 
 #include <iostream>
+#include <vector>
+
+#define DEBUG
 
 namespace Log {
   template<typename T>
@@ -19,10 +22,26 @@ namespace Log {
     std::cerr << msg << std::endl;
   }
 
+  // Template specialization over std::vector<T>
+  template<typename T>
+  static inline void log_to_console(const size_t indent, const std::vector<T>&msg, const std::string& type,
+                                    const char* file, const int line) {
+    for (const auto& item : msg) {
+      log_to_console(indent, item, type, file, line);
+    }
+  }
+
   // Non-indented versions
   #define error(msg) log_to_console(0, msg, "ERROR", __FILE__, __LINE__)
   #define warn(msg)  log_to_console(0, msg, "WARNING", __FILE__, __LINE__)
   #define info(msg)  log_to_console(0, msg, "INFO", __FILE__, __LINE__)
+
+  // Debug printouts are no operations when DEBUG is disabled
+#ifdef DEBUG
+  #define dbg(msg)   log_to_console(0, msg, "DEBUG", __FILE__, __LINE__)
+#else
+  #define dbg(msg)
+#endif
 
   // Indented versions
   #define info_indent(indent, msg) log_to_console(indent, msg, "INFO", __FILE__, __LINE__)
