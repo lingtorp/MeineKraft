@@ -93,6 +93,8 @@ static BoundingVolume compute_bounding_volume(const Mesh& mesh) {
 // sRGB automatic mipmapping is performed correctly by OpenGL by default due to texture format [0]
 // [0]: https://github.com/KhronosGroup/OpenGL-Registry/blob/master/extensions/EXT/EXT_texture_sRGB_decode.txt
 struct GraphicsBatch {
+  GraphicsBatch() = delete;
+
   explicit GraphicsBatch(const ID mesh_id): mesh_id(mesh_id), objects{}, mesh{MeshManager::mesh_ptr_from_id(mesh_id)},
     layer_idxs{}, bounding_volume(compute_bounding_volume(*mesh)) {
       if (!GLEW_EXT_texture_sRGB_decode) {
