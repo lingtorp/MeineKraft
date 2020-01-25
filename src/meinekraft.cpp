@@ -611,6 +611,9 @@ void MeineKraft::mainloop() {
 
             ImGui::Checkbox("Normal", &renderer->state.bilateral_filtering.normal_weight);
             ImGui::SameLine(); ImGui::SliderFloat("Sigma##Normal", &renderer->state.bilateral_filtering.normal_sigma, 0.05f, 12.0f);
+
+            ImGui::Checkbox("Depth", &renderer->state.bilateral_filtering.depth_weight);
+            ImGui::SameLine(); ImGui::SliderFloat("Sigma##Depth", &renderer->state.bilateral_filtering.depth_sigma, 0.05f, 12.0f);
           }
 
           if (ImGui::CollapsingHeader("Bilinear upsampling")) {
