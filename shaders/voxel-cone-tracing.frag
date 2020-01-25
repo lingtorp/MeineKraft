@@ -85,7 +85,8 @@ vec4 sample_clipmap_linearly(const vec3 wp, const float lvl) {
   const vec4 s1 = sample_clipmap(wp, lvl1);
 
   const vec4 s0s1 = mix(s0, s1, fract(lvl));
-  return vec4(s0s1.rgb * (lvl - fract(lvl)) * 0.1, s0s1.a); // NOTE: Deals with the rings
+  return s0s1;
+  // return vec4(s0s1.rgb * (lvl - fract(lvl)) * 0.1, s0s1.a); // NOTE: Deals with the rings
 }
 
 vec4 trace_diffuse_cone(const vec3 origin,
@@ -220,10 +221,8 @@ void main() {
     ambient_radiance += radiance.a;
 
     for (uint i = 1; i < uNum_diffuse_cones; i++) {
-      // Offset origin to avoid self-sampling
-      const vec3 d = cones[i].xyz;
-      if (dot(d, normal) < 0.0) { continue; }
       const vec3 d = TBN * cones[i].xyz;
+      if (dot(d, normal) < 0.0) { continue; }
       const vec4 radiance = 2.0 * cones[i].w * trace_diffuse_cone(o, d, roughness_aperature);
       gIndirect_radiance += radiance.rgb * max(dot(d, normal), 0.0);
       ambient_radiance += radiance.a;
