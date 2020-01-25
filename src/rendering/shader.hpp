@@ -17,7 +17,9 @@ struct Shader {
     DiffuseCubemap, // OpenGL texture target (GL_TEXTURE_CUBE_MAP)
     DiffuseRGB,     // Diffuse texture format 24 bit depth
     DiffuseRGBA,    // Diffuse texture format 32 bit depth
-    Emissive        // Has emissive texture
+    DiffuseScalars, // Diffuse scalars instead of texture
+    Emissive,       // Has emissive texture
+    EmissiveScalars // Emissive scalars instead of texture
   };
 
   Shader() = default;

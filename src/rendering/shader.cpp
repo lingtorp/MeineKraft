@@ -31,8 +31,14 @@ static std::string shader_define_to_string(const Shader::Defines define) {
   case Shader::Defines::DiffuseRGBA:
     return "#define DIFFUSE_RGBA \n";
     break;
+  case Shader::Defines::DiffuseScalars:
+    return "#define DIFFUSE_SCALARS \n";
+    break;
   case Shader::Defines::Emissive:
     return "#define HAS_EMISSIVE_TEXTURE \n";
+    break;
+  case Shader::Defines::EmissiveScalars:
+    return "#define HAS_EMISSIVE_SCALARS \n";
     break;
   default:
     Log::error("Invalid shader define passed");
@@ -41,7 +47,7 @@ static std::string shader_define_to_string(const Shader::Defines define) {
 }
 
 /// NOTE: Tries to parse out where and what went wrong in the shader
-std::string try_to_parse_shader_err_msg(const std::string& shader_src, const std::string& err_msg) {
+static std::string try_to_parse_shader_err_msg(const std::string& shader_src, const std::string& err_msg) {
   return err_msg; // TODO: Implement ...
 }
 
