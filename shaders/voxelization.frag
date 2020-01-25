@@ -4,9 +4,10 @@
 
 // layout (pixel_center_integer) in vec4 gl_FragCoord; // Conserv. raster. 
 in vec3 fNormal;   
-in vec3 fPosition; // World space position
+in vec3 fPosition;        // World space position
 in vec2 fTextureCoord;
-in vec4 fAABB;    // Bounding triangle (conservative rasterization)
+in vec4 fAABB;            // Bounding triangle (conservative rasterization)
+flat in uint fInstanceIdx; // Object geometry instance idx
 
 uniform int uClipmap_sizes[NUM_CLIPMAPS];
 layout(R32UI) uniform restrict coherent volatile uimage3D uVoxel_radiance[NUM_CLIPMAPS];
@@ -19,6 +20,20 @@ uniform bool uConservative_rasterization;
 uniform vec3 uCamera_position;
 uniform vec3 uAABB_centers[NUM_CLIPMAPS];
 uniform float uScaling_factors[NUM_CLIPMAPS];
+
+/// Mirrors struct declaration in graphicsbatch.hpp
+struct Material {
+  uint diffuse_layer_idx;
+  uint shading_model;
+  vec2 pbr_scalar_parameters; // (roughness, metallic)
+  vec4 emissive_scalars;      // instead of emissive texture, (vec3, padding)
+  vec4 diffuse_scalars;       // instead of diffuse texture, (vec3, padding)
+};
+
+// Default binding set in geometry.frag shader
+layout(std140, binding = 3) readonly buffer MaterialBlock {
+    Material materials[];
+};
 
 ivec3 voxel_coordinate_from_world_pos(const vec3  p,   // World position
                                       const vec3  c,   // AABB center
@@ -77,6 +92,7 @@ float shadow(const vec3 world_position, const vec3 normal) {
 }
 
 void main() {
+  const Material material = materials[fInstanceIdx];
   const uint clipmap = gl_ViewportIndex;
 
   // FIXME: Used in Nopper's (non-working) conservative rasterization
@@ -91,8 +107,8 @@ void main() {
                                                      uAABB_centers[clipmap],
                                                      uClipmap_sizes[clipmap],
                                                      uScaling_factors[clipmap]);
-  const vec3 radiance = texture(uDiffuse, vec3(fTextureCoord, 0)).rgb;
-  const vec3 emissive = texture(uEmissive, fTextureCoord).rgb;
+  const vec3 radiance = texture(uDiffuse, vec3(fTextureCoord, 0)).rgb + material.diffuse_scalars.rgb;
+  const vec3 emissive = texture(uEmissive, fTextureCoord).rgb + material.emissive_scalars.rgb;
 
   // Inject radiance if voxel NOT in shadow
   const vec3 value = uDirectional_light_intensity * shadow(fPosition, fNormal) * radiance + emissive;

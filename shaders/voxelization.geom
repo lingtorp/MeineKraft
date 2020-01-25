@@ -11,6 +11,7 @@ in VS_OUT {
     in vec3 gsNormal;
     in vec2 gsTextureCoord;
     in vec3 gsPosition;
+    flat in uint gsInstanceIdx;
 } gs_in[];
 
 uniform mat4 uOrthos[NUM_CLIPMAPS];
@@ -20,11 +21,14 @@ out vec3 fNormal;
 out vec3 fPosition; // World space position
 out vec2 fTextureCoord;
 out vec4 fAABB;
+flat out uint fInstanceIdx;
 
+// User defined element-wise maximum (Should be in GLSL?)
 vec2 vmax(const vec2 a, const vec2 b) {
   return vec2(max(a.x, b.x), max(a.y, b.y));
 }
 
+// User defined element-wise minimum (Should be in GLSL?)
 vec2 vmin(const vec2 a, const vec2 b) { 
   return vec2(min(a.x, b.x), min(a.y, b.y));
 }
@@ -144,6 +148,7 @@ void main() {
         fNormal = gs_in_gsNormal[i];
         fPosition = gs_in_gsPosition[i];
         fTextureCoord = gs_in_gsTextureCoord[i];
+        fInstanceIdx = gs_in[i].gsInstanceIdx;
         gl_ViewportIndex = gl_InvocationID;
         EmitVertex();
     }

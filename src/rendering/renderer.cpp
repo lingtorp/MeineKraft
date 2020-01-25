@@ -1604,6 +1604,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
 void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
   // Handle the config of the Shader from the component
   std::set<Shader::Defines> comp_shader_config;
+  Material material;
 
   if (comp.diffuse_texture.data.pixels) {
     switch (comp.diffuse_texture.gl_texture_target) {
@@ -1615,6 +1616,7 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
       break;
     default:
       Log::error("Depth shader diffuse texture type not handled.");
+      return;
     }
 
     if (comp.diffuse_texture.data.bytes_per_pixel == 3) {
@@ -1622,13 +1624,17 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
     } else {
       comp_shader_config.insert(Shader::Defines::DiffuseRGBA);
     }
+  } else if (comp.diffuse_scalars != Vec3f::zero()) {
+    comp_shader_config.insert(Shader::Defines::DiffuseScalars);
+    material.diffuse_scalars = comp.diffuse_scalars;
   }
 
   if (comp.emissive_texture.data.pixels) {
     comp_shader_config.insert(Shader::Defines::Emissive);
+  } else if (comp.emissive_scalars != Vec3f::zero()) {
+    comp_shader_config.insert(Shader::Defines::EmissiveScalars);
+    material.emissive_scalars = comp.emissive_scalars;
   }
-
-  Material material;
 
   // Shader configuration and mesh id defines the uniqueness of a GBatch
   // FIXME: Does not take every texture into account ...
@@ -1733,6 +1739,8 @@ void Renderer::remove_component(const ID eid) {
   for (auto& batch : graphics_batches) {
     for (auto& id : batch.entity_ids) {
       if (id == eid) {
+        // FIXME: Remove the Entity rendercomponent data from the objects struct in GBatch as well
+        // FIXME: Delegate to the GBatch perhaps makes more sense?
         std::swap(id, batch.entity_ids.back());
         batch.entity_ids.pop_back();
 

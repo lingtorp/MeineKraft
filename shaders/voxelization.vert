@@ -11,6 +11,7 @@ out VS_OUT {
     out vec3 gsNormal;
     out vec2 gsTextureCoord;
     out vec3 gsPosition;
+    flat out uint gsInstanceIdx;
 } vs_out;
 
 void main() {
@@ -19,4 +20,5 @@ void main() {
     vs_out.gsNormal = normal;
     vs_out.gsTextureCoord = texcoord;
     vs_out.gsPosition = p.xyz;
+    vs_out.gsInstanceIdx = instance_idx;
 }
