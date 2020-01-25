@@ -1084,6 +1084,9 @@ void Renderer::render(const uint32_t delta) {
       const uint32_t gl_models_binding_point = 2; // Defaults to 2 in geometry.vert shader
       glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_models_binding_point, batch.gl_depth_model_buffer);
 
+      const uint32_t gl_material_binding_point = 3; // Defaults to 3 in geometry.frag shader
+      glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_material_binding_point, batch.gl_material_buffer);
+
       const uint64_t draw_cmd_offset = batch.gl_curr_ibo_idx * sizeof(DrawElementsIndirectCommand);
       glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (const void *)draw_cmd_offset, 1, sizeof(DrawElementsIndirectCommand));
 		}
@@ -1532,7 +1535,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glGenBuffers(1, &batch.gl_material_buffer);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, batch.gl_material_buffer);
     glBufferStorage(GL_SHADER_STORAGE_BUFFER, GraphicsBatch::INIT_BUFFER_SIZE * sizeof(Material), nullptr, flags);
-    batch.gl_material_buffer_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, GraphicsBatch::INIT_BUFFER_SIZE * sizeof(Material), flags);
+    batch.gl_material_buffer_ptr = (Material*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, GraphicsBatch::INIT_BUFFER_SIZE * sizeof(Material), flags);
     glObjectLabel(GL_BUFFER, batch.gl_material_buffer, -1, "Material SSBO");
 
     // Setup GL_DRAW_INDIRECT_BUFFER for indirect drawing (basically a command buffer)
@@ -1759,7 +1762,7 @@ void Renderer::remove_component(const ID eid) {
 void Renderer::add_graphics_state(GraphicsBatch& batch, const RenderComponent& comp, Material material, ID entity_id) {
   if (batch.entity_ids.size() + 1 >= batch.buffer_size) {
     Log::warn("GraphicsBatch MAX_OBJECTS REACHED");
-    batch.increase_entity_buffers();
+    batch.increase_entity_buffers(10);
   }
 
   batch.entity_ids.push_back(entity_id);
@@ -1783,7 +1786,7 @@ void Renderer::add_graphics_state(GraphicsBatch& batch, const RenderComponent& c
   material.shading_model = comp.shading_model;
 
   batch.objects.materials.push_back(material);
-  dest = batch.gl_material_buffer_ptr + (batch.objects.materials.size() - 1) * sizeof(Material);
+  dest = (uint8_t*) &batch.gl_material_buffer_ptr[batch.objects.materials.size() - 1];
   std::memcpy(dest, &batch.objects.materials.back(), sizeof(Material));
 }
 

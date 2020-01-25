@@ -199,7 +199,7 @@ struct GraphicsBatch {
     glGenBuffers(1, &new_gl_mbo);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, new_gl_mbo);
     glBufferStorage(GL_SHADER_STORAGE_BUFFER, new_buffer_size * sizeof(Material), nullptr, flags);
-    gl_material_buffer_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, new_buffer_size * sizeof(Material), flags);
+    gl_material_buffer_ptr = (Material*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, new_buffer_size * sizeof(Material), flags);
     glCopyNamedBufferSubData(gl_material_buffer, new_gl_mbo, 0, 0, buffer_size * sizeof(Material));
     glInvalidateBufferData(gl_material_buffer);
     glDeleteBuffers(1, &gl_material_buffer);
@@ -225,15 +225,20 @@ struct GraphicsBatch {
     buffer_size = new_buffer_size;
   }
 
-  ID mesh_id; 
-  const Mesh* mesh;
+  // TODO: transforms, bounding volumes and material buffers need to be resizeable
+  // Use: glCopyNamnedBufferSubData to realloc the buffers when they near capacity
+
+  const ID mesh_id; // Mesh ID of the mesh represented in the GBatch
+  const Mesh* mesh; // Non-owned pointer to Mesh instance owned by MeshManager
+  // FIXME: Replace std::vectors and uint8_t* SSBO ptrs with raw typed ptrs & size, capacity, to support realloc
   struct {
     std::vector<Mat4f> transforms;
     std::vector<BoundingVolume> bounding_volumes;     // Bounding volumes (Spheres for now)
     std::vector<Material> materials;                  
   } objects;
-  std::unordered_map<ID, ID> data_idx;                // Entity ID to data position in data (objects struct)
-  std::vector<ID> entity_ids;                         // Entities in the batch
+  // FIXME: Remove data_idx, simply loop over entity_ids and find the index into the objects struct that way?
+  std::unordered_map<ID, ID> data_idx;                // Entity ID <--> index in objects struct
+  std::vector<ID> entity_ids;                         // Entity IDs in the batch
   
   /// Textures
   std::map<ID, uint32_t> layer_idxs;  // Texture ID to layer index mapping for all texture in batch
@@ -274,8 +279,8 @@ struct GraphicsBatch {
 
   uint32_t gl_instance_idx_buffer = 0; // Instance indices passed along the shader pipeline for fetching per instance data from various buffers
 
-  uint32_t gl_material_buffer = 0;           // Material b.o
-  uint8_t* gl_material_buffer_ptr = nullptr; // Ptr to mapped material buffer
+  uint32_t gl_material_buffer = 0;            // Material b.o
+  Material* gl_material_buffer_ptr = nullptr; // Ptr to mapped material buffer
 
   /// Depth pass variables
   uint32_t gl_depth_vao = 0;
