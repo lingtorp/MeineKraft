@@ -225,6 +225,10 @@ struct Vec3 {
         return (x == rhs.x) && (y == rhs.y) && (z == rhs.z);
     }
 
+    constexpr inline bool operator!=(const Vec3& rhs) const {
+        return (x != rhs.x) || (y != rhs.y) || (z != rhs.z);
+    }
+
     constexpr inline Vec3 operator/(const float& rhs) const {
       return Vec3(x / rhs, y / rhs, z / rhs);
     }
