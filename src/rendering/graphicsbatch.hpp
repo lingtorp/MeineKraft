@@ -164,7 +164,8 @@ struct GraphicsBatch {
     glGenerateMipmap(texture.gl_texture_target);
   }
 
-  void increase_entity_buffers() {
+  /// Reallocs all the Entity buffers (transforms, bounding volumes, materials, instance idx) with the amount 'units'
+  void increase_entity_buffers(const uint32_t units) {
     // FOR EACH BUFFER
     // 1. Create new larger buffer
     // 2. Map it
@@ -174,7 +175,7 @@ struct GraphicsBatch {
     // 6. Update the GraphicsBatch state 
     glBindVertexArray(gl_depth_vao); // TODO: Something in this function seems to affect VAO state, which?
     const auto flags = GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT | GL_MAP_WRITE_BIT;
-    const uint32_t new_buffer_size = std::ceil(buffer_size * 2.0f);
+    const uint32_t new_buffer_size = buffer_size + units;
 
     // Bounding volume buffer
     uint32_t new_gl_bounding_volume_buffer = 0;
