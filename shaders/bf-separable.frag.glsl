@@ -18,11 +18,6 @@ uniform bool uNormal_weight;
 uniform float uNormal_sigma;
 uniform sampler2D uNormal;
 
-// NOTE: Uses multiple edge-stopping functions that takes into
-// account ray-traced, normal, position buffer.
-// Title: Edge-Avoiding À-Trous Wavelet Transform for fast GI Filtering
-// https://jo.dreggn.org/home/2010_atrous.pdf
-
 // NOTE: Spatial kernel in texture space
 #define MAX_KERNEL_ELEMENTS 15
 uniform uint uKernel_dim; // Resulting kernel dim is x**2
