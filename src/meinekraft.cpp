@@ -607,10 +607,10 @@ void MeineKraft::mainloop() {
 
             ImGui::Text("Weights:");
             ImGui::Checkbox("Position", &renderer->state.bilateral_filtering.position_weight);
-            ImGui::SameLine(); ImGui::SliderFloat("Sigma##Position", &renderer->state.bilateral_filtering.position_sigma, 0.05f, 7.0f);
+            ImGui::SameLine(); ImGui::SliderFloat("Sigma##Position", &renderer->state.bilateral_filtering.position_sigma, 0.05f, 12.0f);
 
             ImGui::Checkbox("Normal", &renderer->state.bilateral_filtering.normal_weight);
-            ImGui::SameLine(); ImGui::SliderFloat("Sigma##Normal", &renderer->state.bilateral_filtering.normal_sigma, 0.05f, 7.0f);
+            ImGui::SameLine(); ImGui::SliderFloat("Sigma##Normal", &renderer->state.bilateral_filtering.normal_sigma, 0.05f, 12.0f);
           }
 
           if (ImGui::CollapsingHeader("Bilinear upsampling")) {
@@ -694,14 +694,14 @@ void MeineKraft::mainloop() {
           const std::string graphicsbatches_title = "Graphics batches (" + std::to_string(renderer->graphics_batches.size()) + ")";
           if (ImGui::CollapsingHeader(graphicsbatches_title.c_str())) {
             for (size_t batch_num = 0; batch_num < renderer->graphics_batches.size(); batch_num++) {
-              const auto& batch = renderer->graphics_batches[batch_num];
+              auto& batch = renderer->graphics_batches[batch_num];
              
               const std::string batch_title = "Batch #" + std::to_string(batch_num + 1) + " (" + std::to_string(batch.entity_ids.size()) + ")";
               if (ImGui::CollapsingHeader(batch_title.c_str())) {
 
                 const std::string member_title = "Members##" + batch_title;
                 if (ImGui::CollapsingHeader(member_title.c_str())) {
-                  for (const auto& id : batch.entity_ids) {
+                  for (const auto& [id, idx]  : batch.data_idx) {
                     ImGui::Text("Entity id: %lu", id);
 
                     const std::string* name = NameSystem::instance().get_name_from_entity_referenced(id);
@@ -713,6 +713,21 @@ void MeineKraft::mainloop() {
                     ImGui::InputFloat3("Position", &transform->position.x);
                     ImGui::InputFloat3("Rotation", &transform->rotation.x);
                     ImGui::InputFloat("Scale", &transform->scale);
+
+                    switch (batch.objects.materials[idx].shading_model) {
+                    case ShadingModel::Unlit:
+                      break;
+                    case ShadingModel::PhysicallyBased:
+                      // TODO: Show texture used for various properties
+                      break;
+                    case ShadingModel::PhysicallyBasedScalars:
+                      float* emissive = &batch.gl_material_buffer_ptr[idx].emissive_scalars.x;
+                      ImGui::ColorEdit3("Emissive", emissive);
+                      float* diffuse = &batch.gl_material_buffer_ptr[idx].diffuse_scalars.x;
+                      ImGui::ColorEdit3("Diffuse", diffuse);
+                      break;
+                    }
+
                     ImGui::PopID();
 
                     if (ImGui::Button("Remove")) {
