@@ -1323,6 +1323,9 @@ void Renderer::render(const uint32_t delta) {
         glUniform1i(glGetUniformLocation(program, "uNormal_weight"), state.bilateral_filtering.normal_weight);
         glUniform1i(glGetUniformLocation(program, "uNormal"), gl_geometric_normal_texture_unit);
         glUniform1f(glGetUniformLocation(program, "uNormal_sigma"), state.bilateral_filtering.normal_sigma);
+        glUniform1i(glGetUniformLocation(program, "uDepth_weight"), state.bilateral_filtering.depth_weight);
+        glUniform1i(glGetUniformLocation(program, "uDepth"), gl_depth_texture_unit);
+        glUniform1f(glGetUniformLocation(program, "uDepth_sigma"), state.bilateral_filtering.depth_sigma);
 
         // NOTE: Second iteration uses the upsampled intermediate result
         const Vec2f input_pixel_size = Vec2(1.0f / screen.width, 1.0f / screen.height);
