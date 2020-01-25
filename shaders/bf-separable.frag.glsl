@@ -18,6 +18,10 @@ uniform bool uNormal_weight;
 uniform float uNormal_sigma;
 uniform sampler2D uNormal;
 
+uniform bool uDepth_weight;
+uniform float uDepth_sigma;
+uniform sampler2D uDepth;
+
 // NOTE: Spatial kernel in texture space
 #define MAX_KERNEL_ELEMENTS 15
 uniform uint uKernel_dim; // Resulting kernel dim is x**2
@@ -48,6 +52,13 @@ float weights(const vec2 c, const vec2 p) {
     const vec3 norm_p = texture(uNormal, p).xyz;
     const vec3 dn = norm_c - norm_p;
     w *= gaussian(dot(dn, dn), uNormal_sigma);
+  }
+
+  if (uDepth_weight) {
+    const float depth_c = texture(uDepth, c).r;
+    const float depth_p = texture(uDepth, p).r;
+    const float dd = abs(depth_c - depth_p);
+    w *= gaussian(dd, uDepth_sigma);
   }
 
   return w;

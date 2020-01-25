@@ -358,7 +358,7 @@ struct RenderState {
   // Voxelization related (used by VCT pass)
   struct {
     uint64_t execution_time[execution_time_buffer_size] = {0}; // NOTE: nanoseconds
-    bool always_voxelize = false;
+    bool always_voxelize = true;
     bool voxelize = true;        // NOTE: Toggled by the Renderer (a.k.a executed once)
     bool conservative_rasterization = false;
   } voxelization;
@@ -403,6 +403,8 @@ struct RenderState {
     float position_sigma = 2.0f;        // FIXME: How to set this value or tune it?
     bool normal_weight = false;         // Enable normals as a weight in filtering
     float normal_sigma = 2.0f;          // FIXME: How to set this value or tune it?
+    bool depth_weight = true;           // Enable depth as a weight in filtering
+    float depth_sigma = 2.0f;           // FIXME: How to set this value or tune it?
   } bilateral_filtering;
 
   // Bilinear upsampling related
