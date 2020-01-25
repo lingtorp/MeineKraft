@@ -39,7 +39,6 @@ struct DrawElementsIndirectCommand {
 
 /// Indicates the start of a Renderpass (must be paried with pass_ended);
 inline void Renderer::pass_started(const std::string &name) {
-  gl_query_render_pass_names[state.render_passes] = name;
   glBeginQuery(GL_TIME_ELAPSED, gl_query_ids[state.render_passes]);
   glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, name.c_str());
   state.render_passes++;
