@@ -445,13 +445,12 @@ static auto FULL_HD = Resolution{1920, 1080};
 
 struct DirectionalLight {
   Vec3f intensity;
-  Vec3f position;
   Vec3f direction;
   // TODO: Find a typical Directional light intensity
-  DirectionalLight(const Vec3f& position, const Vec3f& direction): position(position), direction(direction), intensity(Vec3f(1.0f)) {}
+  DirectionalLight(const Vec3f& direction): direction(direction), intensity(Vec3f(1.0f)) {}
 
   friend std::ostream &operator<<(std::ostream &os, const DirectionalLight& l) {
-    return os << "DirectionalLight(direction: " << l.direction << ", postiion: " << l.position << ")";
+    return os << "DirectionalLight(direction: " << l.direction << ")";
   }
 };
 

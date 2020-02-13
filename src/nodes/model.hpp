@@ -19,6 +19,9 @@ struct Scene {
   /// Scene main camera
   Camera camera;
 
+  /// Scene directional light
+  DirectionalLight directional_light = DirectionalLight(Vec3f(0.0f, -1.0f, -0.3f));
+
   Scene() = default;
   Scene(const std::string& directory, const std::string& file);
 
