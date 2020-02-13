@@ -332,6 +332,14 @@ public:
         rows[3] = Vec4<T>{0.0f, 0.0f, 0.0f, 1.0f};
     }
 
+    /// Identity matrix with scalar
+    constexpr Mat4<T>(const T s) {
+        rows[0] = Vec4<T>{s   , 0.0f, 0.0f, 0.0f};
+        rows[1] = Vec4<T>{0.0f, s   , 0.0f, 0.0f};
+        rows[2] = Vec4<T>{0.0f, 0.0f, s   , 0.0f};
+        rows[3] = Vec4<T>{0.0f, 0.0f, 0.0f, s   };
+    }
+
     /// Translation - positions the matrix projection in space ...
     constexpr inline Mat4<T> set_translation(const Vec3<T>& vec) const {
         Mat4<T> matrix;
