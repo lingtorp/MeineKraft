@@ -342,7 +342,7 @@ struct RenderState {
     bool direct = true;
     bool specular = true;
     bool emissive = true;
-    int32_t downsample_modifier = 1;  // GI is performed in downsampled space (1 / modifier) * full_res
+    int32_t downsample_modifier = 2;  // GI is performed in downsampled space (1 / modifier) * full_res
   } lighting;
 
   struct {
@@ -396,6 +396,7 @@ struct RenderState {
     bool ambient = true;                // Enable filtering of the ambient radiance
     bool indirect = true;               // Enable filtering of the indirect radiance
     bool specular = true;               // Enable filtering of the specular radiance
+    bool pixel_diff = false;            // Toggled. Saves pre/post screenshot of the currently enabled filters
     std::vector<float> kernel;          // Spatial kernel values generated from sigma and radius
     float spatial_kernel_sigma = 0.2f;  // Sigma of the spatial upsampling kernel in texture space
     uint32_t spatial_kernel_radius = 3; // Radius of the spatial upsampling kernel in texture space
@@ -406,6 +407,12 @@ struct RenderState {
     bool depth_weight = true;           // Enable depth as a weight in filtering
     float depth_sigma = 2.0f;           // FIXME: How to set this value or tune it?
   } bilateral_filtering;
+
+  // Bilateral upsampling related
+  struct {
+    uint64_t execution_time[execution_time_buffer_size] = {0}; // NOTE: nanoseconds
+    bool enabled = false;               // Bilateral upsampling pass based on the bilateral_filtering states
+  } bilateral_upsampling;
 
   // Bilinear upsampling related
   struct {
@@ -470,16 +477,17 @@ struct AABB {
 	// Along z-axis
 	inline float breadth() const { return std::abs(max.z - min.z); }
 
+  /// Returns true if all the sides are equal
 	inline bool is_cubic() const { return width() == height() && height() == breadth(); }
 
+  /// Returns the midpoint/center of the AABB
 	inline Vec3f center() const { return min + ((max - min) / 2.0f); }
 
+  /// Returns the magnitude of the largest axis of the AABB
   inline float max_axis() const {
     const std::array<float, 3> axis = {width(), height(), breadth()};
     return *std::max_element(axis.begin(), axis.end());
   }
- 
-  inline AABB unit_scaled() const { return AABB(min / max_axis(), max / max_axis()); }
 
 	friend std::ostream& operator<<(std::ostream& os, const AABB& aabb) {
 		return os << "AABB(min: " << aabb.min << ", max: " << aabb.max << ", scale: " << aabb.scaling_factor << ")";

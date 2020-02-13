@@ -13,10 +13,15 @@
 
 #include "../../include/json/json.hpp"
 
+// TODO: Refactor the camera movement system
+
 struct Camera {
   Camera() = default;
   Camera(nlohmann::json json);
   Camera(const Vec3f position, const Vec3f direction);
+
+  /// Field of View in degrees
+  float fov = 70.0f;
 
   /// Where x-axis is direction (forward from the camera) and the other axis are relative to it
   Vec3f direction = Vec3f::Z();
@@ -30,6 +35,7 @@ struct Camera {
   /// Pitch and yaw of the camera
   float pitch = 0.0f;
   float yaw = 0.0f;
+  float roll = 0.0f; // FIXME: Unused for now
 
   /// Velocity in the three axis
   Vec3d velocity = Vec3d::zero();
@@ -60,7 +66,11 @@ struct Camera {
   /// Calculates the a new direction vector based on the current rotation
   glm::mat4 transform() const;
 
-	friend std::ostream& operator<<(std::ostream& os, const Camera& cam) {
+  /// Computes the projection matrix and returns it
+  glm::mat4 projection(const float aspect) const;
+
+  // TODO: Print more members
+  friend std::ostream& operator<<(std::ostream& os, const Camera& cam) {
     return os << "Camera(position: " << cam.direction << ", direction: " << cam.direction << ")" << std::endl;
   }
 };

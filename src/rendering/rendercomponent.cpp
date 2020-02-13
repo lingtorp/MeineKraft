@@ -102,9 +102,11 @@ RenderComponent::load_scene_models(const std::string& directory, const std::stri
   return render_components;
 }
 
-void RenderComponent::set_cube_map_texture(const std::vector<std::string>& faces) {
+void RenderComponent::set_cube_map_texture(const std::array<std::string, 6>& faces) {
   // FIXME: Assumes the diffuse texture?
-  const auto resource = TextureResource{faces};
+  std::vector<std::string> rsrcs(faces.size());
+  std::copy(faces.begin(), faces.end(), rsrcs.begin());
+  const auto resource = TextureResource{rsrcs};
   diffuse_texture.id = resource.to_hash();
   diffuse_texture.data = TextureManager::textures[diffuse_texture.id];
   diffuse_texture.gl_texture_target = GL_TEXTURE_CUBE_MAP_ARRAY;

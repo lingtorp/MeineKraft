@@ -19,7 +19,9 @@
 struct World {
   std::vector<Entity*> graph;
  
-  explicit World() {}
+  explicit World() {
+    spawn_entity(MeshPrimitive::Sphere);
+  }
 
   Entity* spawn_entity(const MeshPrimitive mesh_primitive) {
     Entity* entity = new Entity();
@@ -29,14 +31,14 @@ struct World {
     NameSystem::instance().add_name_to_entity(name, entity->id);
 
     TransformComponent transform;
-    transform.position = Vec3f(0.0f, 300.0f, 0.0f);
-    transform.scale = 100.0f;
+    transform.position = Vec3f(800.0f, 200.0f, 0.0f);
+    transform.scale = 60.0f;
     entity->attach_component(transform);
 
     RenderComponent render;
     render.set_mesh(mesh_primitive);
     render.set_shading_model(ShadingModel::PhysicallyBasedScalars);
-    const auto color = Vec3f(0.2f, 0.3f, 0.1f);
+    const auto color = Vec3f(0.75f, 0.75f, 0.75f);
     render.set_emissive_color(color);
     render.set_diffuse_color(color);
     entity->attach_component(render);

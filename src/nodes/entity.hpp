@@ -205,7 +205,6 @@ public:
 /// Minimal object-oriented wrapper for a collection of components a.k.a a game object/entity
 struct Entity {
     ID id;
-    // uint64_t components = NO_COMPONENTS;
 
     Entity(): id(EntitySystem::instance().new_entity()) {}
     ~Entity() {

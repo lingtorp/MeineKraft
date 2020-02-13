@@ -80,9 +80,9 @@ static uint32_t get_next_free_image_unit(bool peek = false) {
   return next_image_unit;
 }
 
-void Renderer::load_environment_map(const std::vector<std::string>& faces) {
+void Renderer::load_environment_map(const std::array<std::string, 6>& faces) {
   Texture texture;
-  const auto resource = TextureResource{faces};
+  const auto resource = TextureResource{{faces[0], faces[1], faces[2], faces[3], faces[4], faces[5]}};
   texture.data = Texture::load_textures(resource);
   if (texture.data.pixels) {
     texture.gl_texture_target = GL_TEXTURE_CUBE_MAP_ARRAY;
@@ -200,14 +200,6 @@ std::vector<Vec4f> generate_diffuse_cones(const size_t count) {
   const float w0 = 2.0f * M_PI * (-0.5 * std::cos(M_PI / count) * std::cos(M_PI / count) + 0.5);
   cones[0] = Vec4f(0.0f, 1.0f, 0.0f, w0);
 
-  // Diffuse cones from [Yeu13]
-  // cones.push_back(Vec4f(0.0f, 0.5f, 0.866025f, w0));
-  // cones.push_back(Vec4f(0.823639f, 0.5f, 0.267617f, w0));
-  // cones.push_back(Vec4f(0.509037f, 0.5f, -0.700629f, w0));
-  // cones.push_back(Vec4f(-0.509037f, 0.5f, -0.700629f, w0));
-  // cones.push_back(Vec4f(-0.823639f, 0.5f, 0.267617f, w0));
-  // return cones;
-
   for (size_t i = 0; i < count - 1; i++) {
     const Vec3f direction = Vec3f(std::cos(theta) * std::sin(i * rad_delta),
                                   std::sin(theta) * std::sin(theta),
@@ -249,118 +241,182 @@ std::vector<AABB> generate_clipmaps_from_scene_aabb(const AABB& scene,
 Renderer::~Renderer() = default;
 
 Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{} {
-  /// Global geometry pass framebuffer
-  glGenFramebuffers(1, &gl_depth_fbo);
-  glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
-  glObjectLabel(GL_FRAMEBUFFER, gl_depth_fbo, -1, "GBuffer FBO");
+  {
+    /// Global geometry pass framebuffer
+    glGenFramebuffers(1, &gl_depth_fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
+    glObjectLabel(GL_FRAMEBUFFER, gl_depth_fbo, -1, "GBuffer FBO");
 
-  // Global depth buffer
-  gl_depth_texture_unit = get_next_free_texture_unit();
-  glActiveTexture(GL_TEXTURE0 + gl_depth_texture_unit);
-  glGenTextures(1, &gl_depth_texture);
-  glBindTexture(GL_TEXTURE_2D, gl_depth_texture);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  // glTexParameteri(GL_TEXTURE_2D, GL_DEPTH_STENCIL_TEXTURE_MODE, GL_DEPTH_COMPONENT); // Default value (intention only to read depth values from texture)
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, screen.width, screen.height, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, nullptr);
-  glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, gl_depth_texture, 0);
-  glObjectLabel(GL_TEXTURE, gl_depth_texture, -1, "GBuffer depth texture");
+    // Global depth buffer
+    gl_depth_texture_unit = get_next_free_texture_unit();
+    glActiveTexture(GL_TEXTURE0 + gl_depth_texture_unit);
+    glGenTextures(1, &gl_depth_texture);
+    glBindTexture(GL_TEXTURE_2D, gl_depth_texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    // glTexParameteri(GL_TEXTURE_2D, GL_DEPTH_STENCIL_TEXTURE_MODE, GL_DEPTH_COMPONENT); // Default value (intention only to read depth values from texture)
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, screen.width, screen.height, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, nullptr);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, gl_depth_texture, 0);
+    glObjectLabel(GL_TEXTURE, gl_depth_texture, -1, "GBuffer depth texture");
 
-  // Global normal buffer
-  gl_geometric_normal_texture_unit = get_next_free_texture_unit();
-  glActiveTexture(GL_TEXTURE0 + gl_geometric_normal_texture_unit);
-  glGenTextures(1, &gl_geometric_normal_texture);
-  glBindTexture(GL_TEXTURE_2D, gl_geometric_normal_texture);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_geometric_normal_texture, 0);
-  glObjectLabel(GL_TEXTURE, gl_geometric_normal_texture, -1, "GBuffer geometric normal texture");
+    // Global normal buffer
+    gl_geometric_normal_texture_unit = get_next_free_texture_unit();
+    glActiveTexture(GL_TEXTURE0 + gl_geometric_normal_texture_unit);
+    glGenTextures(1, &gl_geometric_normal_texture);
+    glBindTexture(GL_TEXTURE_2D, gl_geometric_normal_texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_geometric_normal_texture, 0);
+    glObjectLabel(GL_TEXTURE, gl_geometric_normal_texture, -1, "GBuffer geometric normal texture");
 
-  // Global position buffer
-  gl_position_texture_unit = get_next_free_texture_unit();
-  glActiveTexture(GL_TEXTURE0 + gl_position_texture_unit);
-  glGenTextures(1, &gl_position_texture);
-  glBindTexture(GL_TEXTURE_2D, gl_position_texture);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, gl_position_texture, 0);
-  glObjectLabel(GL_TEXTURE, gl_position_texture, -1, "GBuffer position texture");
+    // Global position buffer
+    gl_position_texture_unit = get_next_free_texture_unit();
+    glActiveTexture(GL_TEXTURE0 + gl_position_texture_unit);
+    glGenTextures(1, &gl_position_texture);
+    glBindTexture(GL_TEXTURE_2D, gl_position_texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, gl_position_texture, 0);
+    glObjectLabel(GL_TEXTURE, gl_position_texture, -1, "GBuffer position texture");
 
-  // Global diffuse buffer
-  gl_diffuse_texture_unit = get_next_free_texture_unit();
-  glActiveTexture(GL_TEXTURE0 + gl_diffuse_texture_unit);
-  glGenTextures(1, &gl_diffuse_texture);
-  glBindTexture(GL_TEXTURE_2D, gl_diffuse_texture);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, screen.width, screen.height, 0, GL_RGBA, GL_FLOAT, nullptr);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, gl_diffuse_texture, 0);
-  glObjectLabel(GL_TEXTURE, gl_diffuse_texture, -1, "GBuffer diffuse texture");
+    // Global diffuse buffer
+    gl_diffuse_texture_unit = get_next_free_texture_unit();
+    glActiveTexture(GL_TEXTURE0 + gl_diffuse_texture_unit);
+    glGenTextures(1, &gl_diffuse_texture);
+    glBindTexture(GL_TEXTURE_2D, gl_diffuse_texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, screen.width, screen.height, 0, GL_RGBA, GL_FLOAT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, gl_diffuse_texture, 0);
+    glObjectLabel(GL_TEXTURE, gl_diffuse_texture, -1, "GBuffer diffuse texture");
 
-  // Global PBR parameters buffer
-  gl_pbr_parameters_texture_unit = get_next_free_texture_unit();
-  glActiveTexture(GL_TEXTURE0 + gl_pbr_parameters_texture_unit);
-  glGenTextures(1, &gl_pbr_parameters_texture);
-  glBindTexture(GL_TEXTURE_2D, gl_pbr_parameters_texture);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, gl_pbr_parameters_texture, 0);
-  glObjectLabel(GL_TEXTURE, gl_pbr_parameters_texture, -1, "GBuffer PBR parameters texture");
+    // Global PBR parameters buffer
+    gl_pbr_parameters_texture_unit = get_next_free_texture_unit();
+    glActiveTexture(GL_TEXTURE0 + gl_pbr_parameters_texture_unit);
+    glGenTextures(1, &gl_pbr_parameters_texture);
+    glBindTexture(GL_TEXTURE_2D, gl_pbr_parameters_texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, gl_pbr_parameters_texture, 0);
+    glObjectLabel(GL_TEXTURE, gl_pbr_parameters_texture, -1, "GBuffer PBR parameters texture");
 
-  // Global emissive map
-  gl_emissive_texture_unit = get_next_free_texture_unit();
-  glActiveTexture(GL_TEXTURE0 + gl_emissive_texture_unit);
-  glGenTextures(1, &gl_emissive_texture);
-  glBindTexture(GL_TEXTURE_2D, gl_emissive_texture);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, gl_emissive_texture, 0);
-  glObjectLabel(GL_TEXTURE, gl_emissive_texture, -1, "GBuffer emissive texture");
+    // Global emissive map
+    gl_emissive_texture_unit = get_next_free_texture_unit();
+    glActiveTexture(GL_TEXTURE0 + gl_emissive_texture_unit);
+    glGenTextures(1, &gl_emissive_texture);
+    glBindTexture(GL_TEXTURE_2D, gl_emissive_texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, gl_emissive_texture, 0);
+    glObjectLabel(GL_TEXTURE, gl_emissive_texture, -1, "GBuffer emissive texture");
 
-  // Global shading model id
-  gl_shading_model_texture_unit = get_next_free_texture_unit();
-  glActiveTexture(GL_TEXTURE0 + gl_shading_model_texture_unit);
-  glGenTextures(1, &gl_shading_model_texture);
-  glBindTexture(GL_TEXTURE_2D, gl_shading_model_texture);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, screen.width, screen.height, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, nullptr);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT5, gl_shading_model_texture, 0);
-  glObjectLabel(GL_TEXTURE, gl_shading_model_texture, -1, "GBuffer shading ID texture");
+    // Global shading model id
+    gl_shading_model_texture_unit = get_next_free_texture_unit();
+    glActiveTexture(GL_TEXTURE0 + gl_shading_model_texture_unit);
+    glGenTextures(1, &gl_shading_model_texture);
+    glBindTexture(GL_TEXTURE_2D, gl_shading_model_texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, screen.width, screen.height, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT5, gl_shading_model_texture, 0);
+    glObjectLabel(GL_TEXTURE, gl_shading_model_texture, -1, "GBuffer shading ID texture");
 
-  // Global tangent space normal map
-  gl_tangent_normal_texture_unit = get_next_free_texture_unit();
-  glActiveTexture(GL_TEXTURE0 + gl_tangent_normal_texture_unit); 
-  glGenTextures(1, &gl_tangent_normal_texture);
-  glBindTexture(GL_TEXTURE_2D, gl_tangent_normal_texture);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT6, gl_tangent_normal_texture, 0);
-  glObjectLabel(GL_TEXTURE, gl_tangent_normal_texture, -1, "GBuffer tangent normal texture");
+    // Global tangent space normal map
+    gl_tangent_normal_texture_unit = get_next_free_texture_unit();
+    glActiveTexture(GL_TEXTURE0 + gl_tangent_normal_texture_unit);
+    glGenTextures(1, &gl_tangent_normal_texture);
+    glBindTexture(GL_TEXTURE_2D, gl_tangent_normal_texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT6, gl_tangent_normal_texture, 0);
+    glObjectLabel(GL_TEXTURE, gl_tangent_normal_texture, -1, "GBuffer tangent normal texture");
 
-  // Global tangent map
-  gl_tangent_texture_unit = get_next_free_texture_unit();
-  glActiveTexture(GL_TEXTURE0 + gl_tangent_texture_unit);
-  glGenTextures(1, &gl_tangent_texture);
-  glBindTexture(GL_TEXTURE_2D, gl_tangent_texture);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT7, gl_tangent_texture, 0);
-  glObjectLabel(GL_TEXTURE, gl_tangent_texture, -1, "GBuffer tangent texture");
+    // Global tangent map
+    gl_tangent_texture_unit = get_next_free_texture_unit();
+    glActiveTexture(GL_TEXTURE0 + gl_tangent_texture_unit);
+    glGenTextures(1, &gl_tangent_texture);
+    glBindTexture(GL_TEXTURE_2D, gl_tangent_texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT7, gl_tangent_texture, 0);
+    glObjectLabel(GL_TEXTURE, gl_tangent_texture, -1, "GBuffer tangent texture");
 
-  uint32_t depth_attachments[8] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT5, GL_COLOR_ATTACHMENT6, GL_COLOR_ATTACHMENT7 };
-  glDrawBuffers(8, depth_attachments);
+    uint32_t attachments[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT5, GL_COLOR_ATTACHMENT6, GL_COLOR_ATTACHMENT7 };
+    glDrawBuffers(std::size(attachments), attachments);
 
-  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-    Log::error("GBuffer framebuffer status not complete.");
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+      Log::error("GBuffer framebuffer status not complete.");
+    }
   }
 
+  /// Downsample pass for gbuffer
+  {
+    /// Downsampled global geometry pass framebuffer
+    glGenFramebuffers(1, &gbuffer_downsampled.gl_fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, gbuffer_downsampled.gl_fbo);
+    glObjectLabel(GL_FRAMEBUFFER, gbuffer_downsampled.gl_fbo, -1, "GBuffer (downsampled) FBO");
+
+    // TODO: Just create a new passthrough pass that renders to downsampled color attachments with the gbuffer textures as input
+
+    // Global downsampled position buffer
+    gbuffer_downsampled.gl_position_texture_unit = get_next_free_texture_unit();
+    glActiveTexture(GL_TEXTURE0 + gbuffer_downsampled.gl_position_texture_unit);
+    glGenTextures(1, &gbuffer_downsampled.gl_position_texture);
+    glBindTexture(GL_TEXTURE_2D, gbuffer_downsampled.gl_position_texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gbuffer_downsampled.gl_position_texture, 0);
+    glObjectLabel(GL_TEXTURE, gbuffer_downsampled.gl_position_texture, -1, "GBuffer (downsampled) position texture");
+
+    // Global downsampled normal buffer
+    gbuffer_downsampled.gl_normal_texture_unit = get_next_free_texture_unit();
+    glActiveTexture(GL_TEXTURE0 + gbuffer_downsampled.gl_normal_texture_unit);
+    glGenTextures(1, &gbuffer_downsampled.gl_normal_texture);
+    glBindTexture(GL_TEXTURE_2D, gbuffer_downsampled.gl_normal_texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, gbuffer_downsampled.gl_normal_texture, 0);
+    glObjectLabel(GL_TEXTURE, gbuffer_downsampled.gl_normal_texture, -1, "GBuffer (downsampled) normal texture");
+
+    uint32_t attachments[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+    glDrawBuffers(std::size(attachments), attachments);
+
+    // Reuse shadowmap depth attachment for FBO completeness (disabled anyway)
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, gl_shadowmapping_texture, 0);
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+      Log::error("GBuffer (downsampled) framebuffer status not complete.");
+    }
+
+    gbuffer_downsampled.shader = new Shader(Filesystem::base + "shaders/generic-passthrough.vert.glsl",
+                                            Filesystem::base + "shaders/gbuffer-downsampled.frag.glsl");
+    const auto [ok, err_msg] = gbuffer_downsampled.shader->compile();
+    if (!ok) {
+      Log::error("Gbuffer (downsampled) shader error: " + err_msg); exit(1);
+    }
+
+    const auto program = gbuffer_downsampled.shader->gl_program;
+    glUseProgram(program);
+
+    glGenVertexArrays(1, &gbuffer_downsampled.gl_vao);
+    glBindVertexArray(gbuffer_downsampled.gl_vao);
+
+    GLuint gl_vbo = 0;
+    glGenBuffers(1, &gl_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, gl_vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(Primitive::quad), &Primitive::quad, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
+    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
+  }
+
+  // TODO: Rework pointlights
   /// Create SSBO for the PointLights
   pointlights.emplace_back(PointLight(Vec3f(200.0f)));
   glGenBuffers(1, &gl_pointlights_ssbo);
@@ -381,6 +437,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glGenFramebuffers(1, &gl_shadowmapping_fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, gl_shadowmapping_fbo);
 		glObjectLabel(GL_FRAMEBUFFER, gl_shadowmapping_fbo, -1, "Shadowmap FBO");
+
     gl_shadowmapping_texture_unit = get_next_free_texture_unit();
     glActiveTexture(GL_TEXTURE0 + gl_shadowmapping_texture_unit); // FIXME: These are not neccessary when creating the texture only when they are used
     glGenTextures(1, &gl_shadowmapping_texture);
@@ -503,8 +560,8 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_voxel_visualization_texture, 0);
     glObjectLabel(GL_TEXTURE, gl_voxel_visualization_texture, -1, "Voxel visualization texture");
 
-    const uint32_t fbo_attachments[1] = {GL_COLOR_ATTACHMENT0};
-    glDrawBuffers(1, fbo_attachments);
+    const uint32_t attachments[] = { GL_COLOR_ATTACHMENT0 };
+    glDrawBuffers(std::size(attachments), attachments);
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
       Log::error("Voxel visualization FBO not complete"); exit(1);
@@ -567,6 +624,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glObjectLabel(GL_TEXTURE, gl_indirect_radiance_texture, -1, "GBuffer indirect radiance texture");
 
     // Global ambient radiance map
+    // FIXME: Resize the texture depending on the downsample factor in order for the screendumps to be good
     gl_ambient_radiance_texture_unit = get_next_free_texture_unit();
     glActiveTexture(GL_TEXTURE0 + gl_ambient_radiance_texture_unit);
     glGenTextures(1, &gl_ambient_radiance_texture);
@@ -599,8 +657,8 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, gl_direct_radiance_texture, 0);
     glObjectLabel(GL_TEXTURE, gl_direct_radiance_texture, -1, "GBuffer direct radiance texture");
 
-    const uint32_t fbo_attachments[4] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3 };
-    glDrawBuffers(4, fbo_attachments);
+    const uint32_t attachments[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3 };
+    glDrawBuffers(std::size(attachments), attachments);
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
       Log::error("VCT fbo not complete"); log_gl_error(); exit(-1);
@@ -672,8 +730,8 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
       glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_bf_ping_out_texture, 0);
       glObjectLabel(GL_TEXTURE, gl_bf_ping_out_texture, -1, "Bilateral filtering ping output texture");
 
-      const uint32_t fbo_attachments[1] = { GL_COLOR_ATTACHMENT0 };
-      glDrawBuffers(1, fbo_attachments);
+      const uint32_t attachments[] = { GL_COLOR_ATTACHMENT0 };
+      glDrawBuffers(std::size(attachments), attachments);
 
       if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
         Log::error("Bilateral filtering ping FBO not complete"); exit(-1);
@@ -697,8 +755,8 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
 
       glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_ambient_radiance_texture, 0); // NOTE: Use w/e temp. texture for FBO completeness
 
-      const uint32_t fbo_attachments[1] = { GL_COLOR_ATTACHMENT0 };
-      glDrawBuffers(1, fbo_attachments);
+      const uint32_t attachments[] = { GL_COLOR_ATTACHMENT0 };
+      glDrawBuffers(std::size(attachments), attachments);
 
       if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
         Log::error("Bilateral filtering pong FBO not complete"); exit(-1);
@@ -745,8 +803,8 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
 
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_lighting_application_texture, 0);
 
-    const uint32_t fbo_attachments[1] = { GL_COLOR_ATTACHMENT0 };
-    glDrawBuffers(1, fbo_attachments);
+    const uint32_t attachments[1] = { GL_COLOR_ATTACHMENT0 };
+    glDrawBuffers(std::size(attachments), attachments);
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
       Log::error("Lighting application FBO not complete"); exit(-1);
@@ -778,8 +836,8 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
 
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_bf_ping_out_texture, 0);
 
-    const uint32_t fbo_attachments[1] = { GL_COLOR_ATTACHMENT0 };
-    glDrawBuffers(1, fbo_attachments);
+    const uint32_t attachments[] = { GL_COLOR_ATTACHMENT0 };
+    glDrawBuffers(std::size(attachments), attachments);
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
       Log::error("Bilinear upsampling FBO not complete"); exit(-1);
@@ -811,8 +869,8 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
 
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_direct_radiance_texture, 0);
 
-    const uint32_t fbo_attachments[1] = { GL_COLOR_ATTACHMENT0 };
-    glDrawBuffers(1, fbo_attachments);
+    const uint32_t attachments[] = { GL_COLOR_ATTACHMENT0 };
+    glDrawBuffers(std::size(attachments), attachments);
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
       Log::error("Direct lighting FBO not complete"); exit(-1);
@@ -834,6 +892,23 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
   glEnable(GL_CULL_FACE);
   glCullFace(GL_BACK);
+}
+
+// Src: https://github.com/g-truc/glm/blob/0.9.5/glm/gtc/matrix_transform.inl
+static Mat4f perspective(const float fovy, const Resolution& screen, const float z_near, const float z_far) {
+  assert(fovy != 0.0f);
+  assert(z_near != z_far);
+
+  const float aspect = (float)screen.width / (float)screen.height;
+  const float tan_half_fov = std::tan(fovy / 2.0f);
+
+  Mat4f m(0.0f);
+  m[0][0] = 1.0f / (aspect * tan_half_fov);
+  m[1][1] = 1.0f / tan_half_fov;
+  m[2][2] = - (z_far + z_near) / (z_far - z_near);
+  m[2][3] = 1.0f;
+  m[3][2] = (2.0f * z_far * z_near) / (z_far + z_near);
+  return m;
 }
 
 bool Renderer::init() {
@@ -860,6 +935,9 @@ void Renderer::render(const uint32_t delta) {
   const uint8_t TIME_IDX = state.frame % RenderState::execution_time_buffer_size;
 
   GLuint last_executed_fbo = 0; // NOTE: This FBO's default buffer is blitted to the screen
+
+  const float aspect = static_cast<float>(screen.width) / static_cast<float>(screen.height);
+  const auto projection_matrix = scene->camera.projection(aspect);
 
   const glm::mat4 camera_transform = projection_matrix * scene->camera.transform(); // TODO: Camera handling needs to be reworked
 
@@ -930,7 +1008,7 @@ void Renderer::render(const uint32_t delta) {
 
   state.shadow.execution_time_shadowmapping[TIME_IDX] = gl_query_time_buffer_ptr[state.render_passes];
   pass_started("Directional shadow mapping pass");
-  const glm::mat4 light_space_transform = shadowmap_transform(scene->aabb, directional_light);
+  const glm::mat4 light_space_transform = shadowmap_transform(scene->aabb, scene->directional_light);
   {
     glCullFace(GL_FRONT);
     glBindFramebuffer(GL_FRAMEBUFFER, gl_shadowmapping_fbo);
@@ -962,12 +1040,12 @@ void Renderer::render(const uint32_t delta) {
     pass_started("Geometry pass");
 
     glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
-    glEnable(GL_DEPTH_TEST);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); // Always update the depth buffer with the new values
     for (size_t i = 0; i < graphics_batches.size(); i++) {
       const auto& batch = graphics_batches[i];
       const auto program = batch.depth_shader.gl_program;
       glUseProgram(program);
+      glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, glm::value_ptr(projection_matrix));
       glBindVertexArray(batch.gl_depth_vao);
       glBindBuffer(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo); // GL_DRAW_INDIRECT_BUFFER is global context state
 
@@ -1000,6 +1078,30 @@ void Renderer::render(const uint32_t delta) {
       const uint64_t draw_cmd_offset = batch.gl_curr_ibo_idx * sizeof(DrawElementsIndirectCommand);
       glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (const void*) draw_cmd_offset, 1, sizeof(DrawElementsIndirectCommand));
     }
+
+    pass_ended();
+  }
+
+  /// Downsample pass
+  {
+    pass_started("Downsample pass");
+
+    glBindFramebuffer(GL_FRAMEBUFFER, gbuffer_downsampled.gl_fbo);
+    glBindVertexArray(gbuffer_downsampled.gl_vao);
+
+    const auto program = gbuffer_downsampled.shader->gl_program;
+    glUseProgram(program);
+
+    const auto div = state.lighting.downsample_modifier;
+    const Vec2f input_pixel_size = Vec2(float(div) / (screen.width), float(div) / (screen.height));
+    glUniform2fv(glGetUniformLocation(program, "uInput_pixel_size"), 1, &input_pixel_size.x);
+
+    glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glViewport(0, 0, screen.width / div, screen.height / div);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glViewport(0, 0, screen.width, screen.height);
 
     pass_ended();
   }
@@ -1044,8 +1146,8 @@ void Renderer::render(const uint32_t delta) {
 
     // Shadowmapping
     glUniform1f(glGetUniformLocation(program, "uShadow_bias"), state.shadow.bias);
-    glUniform3fv(glGetUniformLocation(program, "uDirectional_light_direction"), 1, &directional_light.direction.x);
-    glUniform3fv(glGetUniformLocation(program, "uDirectional_light_intensity"), 1, &directional_light.intensity.x);
+    glUniform3fv(glGetUniformLocation(program, "uDirectional_light_direction"), 1, &scene->directional_light.direction.x);
+    glUniform3fv(glGetUniformLocation(program, "uDirectional_light_intensity"), 1, &scene->directional_light.intensity.x);
     glUniformMatrix4fv(glGetUniformLocation(program, "uLight_space_transform"), 1, GL_FALSE, glm::value_ptr(light_space_transform));
     glUniform1i(glGetUniformLocation(program, "uShadowmap"), gl_shadowmapping_texture_unit);
     glUniform1iv(glGetUniformLocation(program, "uClipmap_sizes"), NUM_CLIPMAPS, clipmaps.size);
@@ -1246,8 +1348,8 @@ void Renderer::render(const uint32_t delta) {
     glUniform1f(glGetUniformLocation(program, "uVCT_shadow_cone_aperature"), state.shadow.vct_cone_aperature);
     glUniform1ui(glGetUniformLocation(program, "uShadow_algorithm"), static_cast<uint32_t>(state.shadow.algorithm));
     glUniform1f(glGetUniformLocation(program, "uShadow_bias"), state.shadow.bias);
-    glUniform3fv(glGetUniformLocation(program, "uDirectional_light_intensity"), 1, &directional_light.intensity.x);
-    glUniform3fv(glGetUniformLocation(program, "uDirectional_light_direction"), 1, &directional_light.direction.x);
+    glUniform3fv(glGetUniformLocation(program, "uDirectional_light_intensity"), 1, &scene->directional_light.intensity.x);
+    glUniform3fv(glGetUniformLocation(program, "uDirectional_light_direction"), 1, &scene->directional_light.direction.x);
     glUniformMatrix4fv(glGetUniformLocation(program, "uLight_space_transform"), 1, GL_FALSE, glm::value_ptr(light_space_transform));
     glUniform1i(glGetUniformLocation(program, "uShadowmap"), gl_shadowmapping_texture_unit);
     glUniform1ui(glGetUniformLocation(program, "uShadowmap_width"), state.shadow.SHADOWMAP_W);
@@ -1275,6 +1377,7 @@ void Renderer::render(const uint32_t delta) {
 
     state.bilateral_filtering.kernel = gaussian_1d_kernel(state.bilateral_filtering.spatial_kernel_sigma, state.bilateral_filtering.spatial_kernel_radius);
 
+    // NOTE: Joint bilateral filtering of a noisy signal with one or more 'robust' signals
     const auto bilateral_filtering_pass = [&](const uint32_t in_texture, const uint32_t in_texture_unit, const float div = 1.0f) {
       // TODO: Reduce to one single shader, reuse that one twice instead
       // Ping
@@ -1293,11 +1396,9 @@ void Renderer::render(const uint32_t delta) {
         glUniform1i(glGetUniformLocation(program, "uDepth"), gl_depth_texture_unit);
         glUniform1f(glGetUniformLocation(program, "uDepth_sigma"), state.bilateral_filtering.depth_sigma);
 
-        const Vec2f input_pixel_size = Vec2(1.0f / (screen.width * float(div)), 1.0f / (screen.height * float(div)));
-        glUniform2fv(glGetUniformLocation(program, "uInput_pixel_size"), 1, &input_pixel_size.x);
-
-        const Vec2f output_pixel_size = Vec2(1.0f / screen.width, 1.0f / screen.height);
-        glUniform2fv(glGetUniformLocation(program, "uOutput_pixel_size"), 1, &output_pixel_size.x);
+        const Vec2f pixel_size = Vec2(1.0f / screen.width, 1.0f / screen.height);
+        glUniform2fv(glGetUniformLocation(program, "uInput_pixel_size"), 1, &pixel_size.x);
+        glUniform2fv(glGetUniformLocation(program, "uOutput_pixel_size"), 1, &pixel_size.x);
 
         glUniform1ui(glGetUniformLocation(program, "uKernel_dim"), state.bilateral_filtering.kernel.size());
         glUniform1fv(glGetUniformLocation(program, "uKernel"), state.bilateral_filtering.kernel.size(), state.bilateral_filtering.kernel.data());
@@ -1327,12 +1428,9 @@ void Renderer::render(const uint32_t delta) {
         glUniform1i(glGetUniformLocation(program, "uDepth"), gl_depth_texture_unit);
         glUniform1f(glGetUniformLocation(program, "uDepth_sigma"), state.bilateral_filtering.depth_sigma);
 
-        // NOTE: Second iteration uses the upsampled intermediate result
-        const Vec2f input_pixel_size = Vec2(1.0f / screen.width, 1.0f / screen.height);
-        glUniform2fv(glGetUniformLocation(program, "uInput_pixel_size"), 1, &input_pixel_size.x);
-
-        const Vec2f output_pixel_size = Vec2(1.0f / screen.width, 1.0f / screen.height);
-        glUniform2fv(glGetUniformLocation(program, "uOutput_pixel_size"), 1, &output_pixel_size.x);
+        const Vec2f pixel_size = Vec2(1.0f / screen.width, 1.0f / screen.height);
+        glUniform2fv(glGetUniformLocation(program, "uInput_pixel_size"), 1, &pixel_size.x);
+        glUniform2fv(glGetUniformLocation(program, "uOutput_pixel_size"), 1, &pixel_size.x);
 
         glUniform1ui(glGetUniformLocation(program, "uKernel_dim"), state.bilateral_filtering.kernel.size());
         glUniform1fv(glGetUniformLocation(program, "uKernel"), state.bilateral_filtering.kernel.size(), state.bilateral_filtering.kernel.data());
@@ -1345,6 +1443,23 @@ void Renderer::render(const uint32_t delta) {
       }
     };
 
+    // Pre-filtering screenshot
+    const auto get_texture = [&](const uint32_t gl_texture) -> Vec3f* {
+      const size_t buf_size = sizeof(Vec3f) * screen.width * screen.height;
+      Vec3f *pixels = (Vec3f*) calloc(buf_size, 1);
+      glGetTextureImage(gl_texture, 0, GL_RGB, GL_FLOAT, buf_size, (void*) pixels);
+      return pixels;
+    };
+
+    Vec3f* ambient_radiance_pixels = nullptr;
+    Vec3f* indirect_radiance_pixels = nullptr;
+    Vec3f* specular_radiance_pixels = nullptr;
+    if (state.bilateral_filtering.pixel_diff) {
+      if (state.bilateral_filtering.ambient)  { ambient_radiance_pixels = get_texture(gl_ambient_radiance_texture); };
+      if (state.bilateral_filtering.indirect) { indirect_radiance_pixels = get_texture(gl_indirect_radiance_texture); };
+      if (state.bilateral_filtering.specular) { specular_radiance_pixels = get_texture(gl_specular_radiance_texture); };
+    }
+
     // Declare input & output texture
     const float div = state.lighting.downsample_modifier;
     if (state.bilateral_filtering.ambient)  { bilateral_filtering_pass(gl_ambient_radiance_texture,  gl_ambient_radiance_texture_unit, div);  }
@@ -1352,9 +1467,106 @@ void Renderer::render(const uint32_t delta) {
     if (state.bilateral_filtering.specular) { bilateral_filtering_pass(gl_specular_radiance_texture, gl_specular_radiance_texture_unit, div); }
     if (state.bilateral_filtering.direct)   { bilateral_filtering_pass(gl_direct_radiance_texture,   gl_direct_radiance_texture_unit);   }
 
-    last_executed_fbo = gl_bf_pong_fbo;
+    const auto save_pixel_diff = [&](const std::string& filename, const Vec3f* pre, const Vec3f* post) {
+      const std::string pre_fp  = Filesystem::save_image_as_ppm(Filesystem::tmp + "pre-"  + filename, pre, screen.width, screen.height, div);
+      const std::string post_fp = Filesystem::save_image_as_ppm(Filesystem::tmp + "post-" + filename, post, screen.width, screen.height, div);
+      const std::string out_fp = Filesystem::tmp + "diff-" + filename + ".png";
+      const std::string cmd = "compare -highlight-color white " + pre_fp + " " + post_fp + " " + out_fp;
+      std::system(cmd.c_str());
+      Log::info("Saved pixel difference: " + out_fp);
+      delete pre;
+      delete post;
+    };
+
+    // Post-filtering screenshot
+    if (state.bilateral_filtering.pixel_diff) {
+      if (state.bilateral_filtering.ambient)   { save_pixel_diff("ambient-radiance",  ambient_radiance_pixels, get_texture(gl_ambient_radiance_texture)); };
+      if (state.bilateral_filtering.indirect)  { save_pixel_diff("indirect-radiance", indirect_radiance_pixels, get_texture(gl_indirect_radiance_texture)); };
+      if (state.bilateral_filtering.specular)  { save_pixel_diff("specular-radiance", specular_radiance_pixels, get_texture(gl_specular_radiance_texture)); };
+      state.bilateral_filtering.pixel_diff = false;
+    }
 
     pass_ended();
+   
+    /// Bilateral upsampling
+    if (state.bilateral_upsampling.enabled && state.lighting.downsample_modifier > 1) {
+      pass_started("Bilateral upsampling pass");
+
+      // NOTE: Joint bilateral upsampling of a filtered low-res noisy signal with one or more high-res 'robust' signal
+      const auto bilateral_upsampling_pass = [&](const uint32_t in_texture, const uint32_t in_texture_unit, const float div = 1.0f) {
+        // TODO: Reduce to one single shader, reuse that one twice instead
+        // Ping
+        {
+          const auto program = bf_ping_shader->gl_program;
+          glUseProgram(program);
+          glBindFramebuffer(GL_FRAMEBUFFER, gl_bf_ping_fbo);
+
+          glUniform1i(glGetUniformLocation(program, "uPosition_weight"), state.bilateral_filtering.position_weight);
+          glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
+          glUniform1f(glGetUniformLocation(program, "uPosition_sigma"), state.bilateral_filtering.position_sigma);
+          glUniform1i(glGetUniformLocation(program, "uNormal_weight"), state.bilateral_filtering.normal_weight);
+          glUniform1i(glGetUniformLocation(program, "uNormal"), gl_geometric_normal_texture_unit);
+          glUniform1f(glGetUniformLocation(program, "uNormal_sigma"), state.bilateral_filtering.normal_sigma);
+          glUniform1i(glGetUniformLocation(program, "uDepth_weight"), state.bilateral_filtering.depth_weight);
+          glUniform1i(glGetUniformLocation(program, "uDepth"), gl_depth_texture_unit);
+          glUniform1f(glGetUniformLocation(program, "uDepth_sigma"), state.bilateral_filtering.depth_sigma);
+
+          const Vec2f pixel_size = Vec2(1.0f / screen.width, 1.0f / screen.height);
+          glUniform2fv(glGetUniformLocation(program, "uInput_pixel_size"), 1, &pixel_size.x);
+          glUniform2fv(glGetUniformLocation(program, "uOutput_pixel_size"), 1, &pixel_size.x);
+
+          glUniform1ui(glGetUniformLocation(program, "uKernel_dim"), state.bilateral_filtering.kernel.size());
+          glUniform1fv(glGetUniformLocation(program, "uKernel"), state.bilateral_filtering.kernel.size(), state.bilateral_filtering.kernel.data());
+
+          glUniform1i(glGetUniformLocation(program, "uInput"), in_texture_unit);
+          // glUniform1i(glGetUniformLocation(program, "uOutput"), 0); // NOTE: Default to 0 in shader
+
+          glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+          glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        }
+
+        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT); // Due to incoherent mem. access need to sync read and usage of voxel data
+
+        // Pong
+        {
+          const auto program = bf_pong_shader->gl_program;
+          glUseProgram(program);
+          glBindFramebuffer(GL_FRAMEBUFFER, gl_bf_pong_fbo);
+
+          glUniform1i(glGetUniformLocation(program, "uPosition_weight"), state.bilateral_filtering.position_weight);
+          glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
+          glUniform1f(glGetUniformLocation(program, "uPosition_sigma"), state.bilateral_filtering.position_sigma);
+          glUniform1i(glGetUniformLocation(program, "uNormal_weight"), state.bilateral_filtering.normal_weight);
+          glUniform1i(glGetUniformLocation(program, "uNormal"), gl_geometric_normal_texture_unit);
+          glUniform1f(glGetUniformLocation(program, "uNormal_sigma"), state.bilateral_filtering.normal_sigma);
+          glUniform1i(glGetUniformLocation(program, "uDepth_weight"), state.bilateral_filtering.depth_weight);
+          glUniform1i(glGetUniformLocation(program, "uDepth"), gl_depth_texture_unit);
+          glUniform1f(glGetUniformLocation(program, "uDepth_sigma"), state.bilateral_filtering.depth_sigma);
+
+          const Vec2f pixel_size = Vec2(1.0f / screen.width, 1.0f / screen.height);
+          glUniform2fv(glGetUniformLocation(program, "uInput_pixel_size"), 1, &pixel_size.x);
+          glUniform2fv(glGetUniformLocation(program, "uOutput_pixel_size"), 1, &pixel_size.x);
+
+          glUniform1ui(glGetUniformLocation(program, "uKernel_dim"), state.bilateral_filtering.kernel.size());
+          glUniform1fv(glGetUniformLocation(program, "uKernel"), state.bilateral_filtering.kernel.size(), state.bilateral_filtering.kernel.data());
+
+          glUniform1i(glGetUniformLocation(program, "uInput"), gl_bf_ping_out_texture_unit);
+          glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, in_texture, 0);
+
+          glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+          glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        }
+      };
+
+      // Declare input & output texture
+      const float div = state.lighting.downsample_modifier;
+      if (state.bilateral_filtering.ambient)  { bilateral_upsampling_pass(gl_ambient_radiance_texture,  gl_ambient_radiance_texture_unit, div);  }
+      if (state.bilateral_filtering.indirect) { bilateral_upsampling_pass(gl_indirect_radiance_texture, gl_indirect_radiance_texture_unit, div); }
+      if (state.bilateral_filtering.specular) { bilateral_upsampling_pass(gl_specular_radiance_texture, gl_specular_radiance_texture_unit, div); }
+      if (state.bilateral_filtering.direct)   { bilateral_upsampling_pass(gl_direct_radiance_texture,   gl_direct_radiance_texture_unit);   }
+
+      pass_ended();
+    }
   }
 
   /// Bilinear upsampling
@@ -1470,22 +1682,13 @@ void Renderer::render(const uint32_t delta) {
   }
 }
 
-void Renderer::update_projection_matrix(const float fov, const Resolution& new_screen) {
-  // TODO: Adjust all the passes textures sizes & all the global texture buffers
-  const float aspect = (float)new_screen.width / (float)new_screen.height;
-  this->projection_matrix = glm::perspective(glm::radians(fov), aspect, 0.1f, 3000.0f);
-  glViewport(0, 0, new_screen.width, new_screen.height);
-  screen = new_screen;
-}
-
 void Renderer::link_batch(GraphicsBatch& batch) {
   /// Geometry pass setup
   {
     /// Shaderbindings
     const auto program = batch.depth_shader.gl_program;
     glUseProgram(program);
-    glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, glm::value_ptr(projection_matrix));
-    
+
     glUniform1i(glGetUniformLocation(program, "diffuse"), batch.gl_diffuse_texture_unit);
     glUniform1i(glGetUniformLocation(program, "pbr_parameters"), batch.gl_metallic_roughness_texture_unit);
     glUniform1i(glGetUniformLocation(program, "emissive"), batch.gl_emissive_texture_unit);
@@ -1562,6 +1765,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glEnableVertexAttribArray(glGetAttribLocation(program, "instance_idx"));
     glVertexAttribDivisor(glGetAttribLocation(program, "instance_idx"), 1);
   }
+
   /// Shadowmap pass setup
   {
     const auto program = shadowmapping_shader->gl_program;
@@ -1582,6 +1786,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
     glEnableVertexAttribArray(glGetAttribLocation(program, "instance_idx"));
     glVertexAttribDivisor(glGetAttribLocation(program, "instance_idx"), 1);
   }
+
   /// Voxelization pass setup
   {
 	  const auto program = voxelization_shader->gl_program;
@@ -1821,12 +2026,12 @@ void Renderer::update_transforms() {
 }
 
 /// Pixels starts at the lower left corner then row major order
-Vec3f* Renderer::take_screenshot() const {
+Vec3f* Renderer::take_screenshot(const uint32_t gl_fbo) const {
   glPixelStorei(GL_PACK_ROW_LENGTH, 0);
   glPixelStorei(GL_PACK_SKIP_PIXELS, 0);
   glPixelStorei(GL_PACK_SKIP_ROWS, 0);
   glPixelStorei(GL_PACK_ALIGNMENT, 1);
-  glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+  glBindFramebuffer(GL_READ_FRAMEBUFFER, gl_fbo);
   Vec3f* pixels = (Vec3f*) calloc(1, sizeof(Vec3f) * screen.width * screen.height);
   glReadPixels(0, 0, screen.width, screen.height, GL_RGB, GL_FLOAT, &pixels[0].x);
   return pixels;

@@ -31,7 +31,7 @@ struct RenderComponent {
 
   /// Sets the cube map texture to the bounded mesh
   /// order; right, left, top, bot, back, front
-  void set_cube_map_texture(const std::vector<std::string>& faces);
+  void set_cube_map_texture(const std::array<std::string, 6>& faces);
 
   /// Sets the emissive color of the object (uses texture if defined)
   void set_emissive_color(const Vec3f& color) {

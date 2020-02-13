@@ -160,3 +160,7 @@ glm::mat4 Camera::transform() const {
   glm::vec3 p(position.x, position.y, position.z);
   return glm::lookAt(p, p + d, u);
 }
+
+glm::mat4 Camera::projection(const float aspect) const {
+  return glm::perspective(glm::radians(fov), aspect, 0.1f, 3000.0f);
+}

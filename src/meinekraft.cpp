@@ -266,7 +266,6 @@ MeineKraft::MeineKraft() {
   ImGui_ImplSdlGL3_Init(window);
 
   renderer = new Renderer(res);
-  renderer->update_projection_matrix(70.0f, res);
 
   imgui_styling();
 }
@@ -385,7 +384,7 @@ void MeineKraft::mainloop() {
             case SDL_WINDOWEVENT_RESIZED:
               Resolution screen;
               SDL_GetWindowSize(window, &screen.width, &screen.height);
-              renderer->update_projection_matrix(70.0f, screen);
+              // TODO: Support screen resizing?
               break;
             case SDL_WINDOWEVENT_FOCUS_GAINED:
               throttle_rendering = false;
@@ -441,6 +440,7 @@ void MeineKraft::mainloop() {
           if (ImGui::BeginMenu("MeineKraft")) {
             if (ImGui::MenuItem("Quit", "ESC")) { done = true; }
             if (ImGui::MenuItem("Screenshot")) { take_screenshot = true; }
+            if (ImGui::MenuItem("Pixel diff")) { renderer->state.bilateral_filtering.pixel_diff = true; }
             if (ImGui::MenuItem("Dump performance data")) { dump_performance_data(renderer); }
             if (ImGui::MenuItem("Hide GUI")) {  } // TODO: Implement
             ImGui::EndMenu();
@@ -486,7 +486,7 @@ void MeineKraft::mainloop() {
           if (ImGui::CollapsingHeader("Global settings")) {
             ImGui::Checkbox("Normal mapping", &renderer->state.lighting.normalmapping);
             ImGui::SliderInt("Downsample modifier", &renderer->state.lighting.downsample_modifier, 1, 4);
-            ImGui::SameLine(); ImGui_HelpMarker("GI is performed in lower resolution by factor 1/x");
+            ImGui::SameLine(); ImGui_HelpMarker("GI is performed in lower resolution by a of factor 1/x");
 
             if (ImGui::TreeNode("GPU view frustum culling")) {
               ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.culling.execution_time[0] / 1'000'000.0f, 100.0f * float(renderer->state.culling.execution_time[0]) / float(renderer->state.total_execution_time));
@@ -671,10 +671,10 @@ void MeineKraft::mainloop() {
 
           // Directional light
           if (ImGui::CollapsingHeader("Directional light")) {
-            ImGui::InputFloat3("Direction##directional_light", &renderer->directional_light.direction.x);
+            ImGui::InputFloat3("Direction##directional_light", &renderer->scene->directional_light.direction.x);
             ImGui::SameLine(); ImGui_HelpMarker("Direction is negative.");
 
-            ImGui::ColorEdit3("Intensity##directional_light", &renderer->directional_light.intensity.x);
+            ImGui::ColorEdit3("Intensity##directional_light", &renderer->scene->directional_light.intensity.x);
             ImGui::SameLine(); ImGui_HelpMarker("Intensity or color of the light."); // FIXME: May or may not exceed 1.0??
           }
 
@@ -701,6 +701,13 @@ void MeineKraft::mainloop() {
              
               const std::string batch_title = "Batch #" + std::to_string(batch_num + 1) + " (" + std::to_string(batch.entity_ids.size()) + ")";
               if (ImGui::CollapsingHeader(batch_title.c_str())) {
+
+                const std::string shader_title = "Shader##" + batch_title;
+                if (ImGui::CollapsingHeader(shader_title.c_str())) {
+                  // TODO: Open shader view
+                  // ImGui::Text(batch.shader.vertex_filepath);
+                  // ImGui::Checkbox("Vertex shader: [X]");
+                }
 
                 const std::string member_title = "Members##" + batch_title;
                 if (ImGui::CollapsingHeader(member_title.c_str())) {

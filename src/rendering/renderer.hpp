@@ -26,26 +26,23 @@ struct Renderer {
   Renderer(const Resolution& screen);
   ~Renderer();
 
-  /// Post allocation initialization
+  /// Post allocation initialization called at engine startup
   bool init();
 
-  /// Main render function, renders all the graphics batches
+  /// Renders one frame function using the Renderstate in 'state'
   void render(const uint32_t delta);
   
   /// Adds the data of a RenderComponent to a internal batch
   void add_component(const RenderComponent comp, const ID entity_id);
 
-  // TODO: Implement ...
-  void remove_component(ID entity_id); // TODO: Implement
-
-  /// Updates all the shaders projection matrices in order to support resizing of the window
-  void update_projection_matrix(const float fov, const Resolution& screen);
+  /// Removes the RenderComponent associated with the EID if there exists one
+  void remove_component(ID entity_id);
 
   // TODO: Document ...
-  void load_environment_map(const std::vector<std::string>& faces);
+  void load_environment_map(const std::array<std::string, 6>& faces);
 
   /// Returns the default framebuffer color in callee-owned ptr
-  Vec3f* take_screenshot() const;
+  Vec3f* take_screenshot(const uint32_t gl_fbo = 0) const;
 
   RenderState state;
   Resolution screen;
@@ -53,12 +50,11 @@ struct Renderer {
 
 	Scene *scene = nullptr;
   std::vector<PointLight> pointlights;
-  DirectionalLight directional_light = DirectionalLight(Vec3f(0.0f, 0.5f, 0.5f), Vec3f(0.0f, -1.0f, -0.3f));
 private:
-  glm::mat4 projection_matrix; 
-
   // Render pass handling related
+  /// Called when a rendering pass is started
   void pass_started(const std::string &msg);
+  /// Called when a rendering pass is ended
   void pass_ended();
 
   const static size_t MAX_RENDER_PASSES = 25;
@@ -67,8 +63,13 @@ private:
   uint64_t* gl_query_time_buffer_ptr = nullptr;
   std::array<uint32_t, MAX_RENDER_PASSES> gl_query_ids = {};
 
+  // TODO: Document
   void add_graphics_state(GraphicsBatch& batch, const RenderComponent& comp, Material material, ID entity_id);
+
+  // TODO: Document
   void update_transforms();
+
+  // TODO: Document
   void link_batch(GraphicsBatch& batch);
 
   /// View frustum culling shader
@@ -177,21 +178,38 @@ private:
   // Shading model 
   uint32_t gl_shading_model_texture_unit = 0;
   uint32_t gl_shading_model_texture = 0;
-  // Radiance textures
+  // Indirect radiance from GI
   uint32_t gl_indirect_radiance_texture_unit = 0;
   uint32_t gl_indirect_radiance_texture = 0;
-
+  // Ambient radiance from GI
   uint32_t gl_ambient_radiance_texture_unit = 0;
   uint32_t gl_ambient_radiance_texture = 0;
-
+  // Specular radiance from GI
   uint32_t gl_specular_radiance_texture_unit = 0;
   uint32_t gl_specular_radiance_texture = 0;
-
+  // Direct radiance
   uint32_t gl_direct_radiance_texture_unit = 0;
   uint32_t gl_direct_radiance_texture = 0;
 
-  //  Environment map
-  Texture environment_map; 
+  /// Downsampled global buffers
+  struct {
+    Shader* shader = nullptr;
+    uint32_t gl_vao = 0;
+    uint32_t gl_fbo = 0;
+
+    // FIXME: Not working due to depth map being broken
+    uint32_t gl_depth_texture = 0;
+    uint32_t gl_depth_texture_unit = 0;
+
+    uint32_t gl_position_texture = 0;
+    uint32_t gl_position_texture_unit = 0;
+
+    uint32_t gl_normal_texture = 0;
+    uint32_t gl_normal_texture_unit = 0;
+  } gbuffer_downsampled;
+ 
+  //    Environment map
+  Texture environment_map;
   uint32_t gl_environment_map_texture_unit = 0;
 };
 
