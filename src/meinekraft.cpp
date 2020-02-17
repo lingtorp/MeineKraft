@@ -201,6 +201,16 @@ static void dump_performance_data(const struct Renderer* render) {
     obj["bilateral_filtering"]["time_percent"] = time / total_time;
   }
 
+  if (render->state.bilateral_upsample.enabled) {
+    float time = 0.0f;
+    for (size_t i = 0; i < RenderState::execution_time_buffer_size; i++) {
+      time += render->state.bilateral_upsample.execution_time[i] / 1'000'000.0f;
+    }
+    time /= RenderState::execution_time_buffer_size;
+    obj["bilateral_upsampling"]["time_ms"] = time;
+    obj["bilateral_upsampling"]["time_percent"] = time / total_time;
+  }
+
   if (render->state.bilinear_upsample.enabled) {
     float time = 0.0f;
     for (size_t i = 0; i < RenderState::execution_time_buffer_size; i++) {
@@ -478,7 +488,6 @@ void MeineKraft::mainloop() {
           ImGui::Text("Average %lu ms/frame (%.1f FPS)", delta, io.Framerate);
           ImGui::Text("Frame: %lu", renderer->state.frame);
           ImGui::Text("Resolution: (%u, %u)", renderer->screen.width, renderer->screen.height);
-          ImGui::Text("Draw calls per frame: %u", renderer->state.draw_calls);
           ImGui::Text("Render passes: %u", renderer->state.render_passes);
           ImGui::Text("Render passes total time (ms): %.1f", renderer->state.total_execution_time / 1'000'000.0f);
           // TODO: Change resolution, memory usage, textures, render pass execution times, etc
@@ -487,6 +496,9 @@ void MeineKraft::mainloop() {
             ImGui::Checkbox("Normal mapping", &renderer->state.lighting.normalmapping);
             ImGui::SliderInt("Downsample modifier", &renderer->state.lighting.downsample_modifier, 1, 4);
             ImGui::SameLine(); ImGui_HelpMarker("GI is performed in lower resolution by a of factor 1/x");
+
+            ImGui::Checkbox("Capture render pass timings", &renderer->state.capture_execution_timings);
+            ImGui::SameLine(); ImGui_HelpMarker("Performance timings updated or not");
 
             if (ImGui::TreeNode("GPU view frustum culling")) {
               ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.culling.execution_time[0] / 1'000'000.0f, 100.0f * float(renderer->state.culling.execution_time[0]) / float(renderer->state.total_execution_time));
@@ -581,7 +593,7 @@ void MeineKraft::mainloop() {
           if (ImGui::CollapsingHeader("Bilateral filtering", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.bilateral_filtering.execution_time[0] / 1'000'000.0f, 100.0f * float(renderer->state.bilateral_filtering.execution_time[0]) / float(renderer->state.total_execution_time));
 
-            ImGui::Checkbox("Enabled##bilateral", &renderer->state.bilateral_filtering.enabled);
+            ImGui::Checkbox("Enabled##filtering", &renderer->state.bilateral_filtering.enabled);
 
             ImGui::Text("Filter:");
             ImGui::Checkbox("Direct##filtering", &renderer->state.bilateral_filtering.direct);
@@ -614,6 +626,18 @@ void MeineKraft::mainloop() {
 
             ImGui::Checkbox("Depth", &renderer->state.bilateral_filtering.depth_weight);
             ImGui::SameLine(); ImGui::SliderFloat("Sigma##Depth", &renderer->state.bilateral_filtering.depth_sigma, 0.05f, 12.0f);
+          }
+
+          if (ImGui::CollapsingHeader("Bilateral upsampling")) {
+            ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.bilateral_upsample.execution_time[0] / 1'000'000.0f, 100.0f * float(renderer->state.bilateral_upsample.execution_time[0]) / float(renderer->state.total_execution_time));
+
+            ImGui::Checkbox("Enabled##bilateralupsample", &renderer->state.bilateral_upsample.enabled);
+
+            ImGui::Checkbox("Indirect##bilateral", &renderer->state.bilateral_upsample.indirect);
+            ImGui::SameLine();
+            ImGui::Checkbox("Specular##bilateral", &renderer->state.bilateral_upsample.specular);
+            ImGui::SameLine();
+            ImGui::Checkbox("Ambient##bilateral", &renderer->state.bilateral_upsample.ambient);
           }
 
           if (ImGui::CollapsingHeader("Bilinear upsampling")) {

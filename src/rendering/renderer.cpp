@@ -678,7 +678,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   /// Bilateral filtering pass
   {
     bf_ping_shader = new Shader(Filesystem::base + "shaders/generic-passthrough.vert.glsl",
-                                Filesystem::base + "shaders/bf-separable.frag.glsl");
+                                Filesystem::base + "shaders/bilateral-filtering.frag.glsl");
 
     // NOTE: Include order matters
     const std::string include0 = Filesystem::read_file(Filesystem::base + "shaders/voxel-cone-tracing-utils.glsl");
@@ -693,7 +693,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     }
 
     bf_pong_shader = new Shader(Filesystem::base + "shaders/generic-passthrough.vert.glsl",
-                                Filesystem::base + "shaders/bf-separable.frag.glsl");
+                                Filesystem::base + "shaders/bilateral-filtering.frag.glsl");
 
     bf_pong_shader->add(include1);
     bf_pong_shader->add(include0);
@@ -728,13 +728,13 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
       glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, screen.width, screen.height, 0, GL_RGBA, GL_FLOAT, nullptr);
       glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_bf_ping_out_texture, 0);
-      glObjectLabel(GL_TEXTURE, gl_bf_ping_out_texture, -1, "Bilateral filtering ping output texture");
+      glObjectLabel(GL_TEXTURE, gl_bf_ping_out_texture, -1, "Bilateral ping output texture");
 
       const uint32_t attachments[] = { GL_COLOR_ATTACHMENT0 };
       glDrawBuffers(std::size(attachments), attachments);
 
       if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-        Log::error("Bilateral filtering ping FBO not complete"); exit(-1);
+        Log::error("Bilateral ping FBO not complete"); exit(-1);
       }
     }
 
@@ -808,6 +808,95 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
       Log::error("Lighting application FBO not complete"); exit(-1);
+    }
+  }
+
+  /// Bilateral upsampling
+  {
+    bs_ping_shader = new Shader(Filesystem::base + "shaders/generic-passthrough.vert.glsl",
+                                Filesystem::base + "shaders/bilateral-upsampling.frag.glsl");
+
+    // NOTE: Include order matters
+    const std::string include0 = Filesystem::read_file(Filesystem::base + "shaders/voxel-cone-tracing-utils.glsl");
+    const std::string include1 = Filesystem::read_file(Filesystem::base + "shaders/bilateral-filtering-utils.glsl");
+    bs_ping_shader->add(include1);
+    bs_ping_shader->add(include0);
+    bs_ping_shader->add("#define VERTICAL_STEP_DIR \n");
+
+    const auto [ok, msg] = bs_ping_shader->compile();
+    if (!ok) {
+      Log::error(msg); exit(-1);
+    }
+
+    bs_pong_shader = new Shader(Filesystem::base + "shaders/generic-passthrough.vert.glsl",
+                                Filesystem::base + "shaders/bilateral-upsampling.frag.glsl");
+
+    bs_pong_shader->add(include1);
+    bs_pong_shader->add(include0);
+    bs_pong_shader->add("#define HORIZONTAL_STEP_DIR \n");
+
+    const auto [ok_pong, msg_pong] = bs_pong_shader->compile();
+    if (!ok_pong) {
+      Log::error(msg_pong); exit(-1);
+    }
+
+    // Ping buffer
+    {
+      const uint32_t program = bs_ping_shader->gl_program;
+      glUseProgram(program);
+      glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
+      glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
+
+      GLuint gl_vbo = 0;
+      glGenBuffers(1, &gl_vbo);
+      glBindBuffer(GL_ARRAY_BUFFER, gl_vbo);
+      glBufferData(GL_ARRAY_BUFFER, sizeof(Primitive::quad), &Primitive::quad, GL_STATIC_DRAW);
+
+      glGenFramebuffers(1, &gl_bs_ping_fbo);
+      glBindFramebuffer(GL_FRAMEBUFFER, gl_bs_ping_fbo);
+
+      gl_bs_ping_out_texture_unit = get_next_free_texture_unit();
+      glActiveTexture(GL_TEXTURE0 + gl_bs_ping_out_texture_unit);
+
+      glGenTextures(1, &gl_bs_ping_out_texture);
+      glBindTexture(GL_TEXTURE_2D, gl_bs_ping_out_texture);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, screen.width, screen.height, 0, GL_RGBA, GL_FLOAT, nullptr);
+      glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_bs_ping_out_texture, 0);
+      glObjectLabel(GL_TEXTURE, gl_bs_ping_out_texture, -1, "Bilateral upsampling ping output texture");
+
+      const uint32_t attachments[] = { GL_COLOR_ATTACHMENT0 };
+      glDrawBuffers(std::size(attachments), attachments);
+
+      if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        Log::error("Bilateral upsampling ping FBO not complete"); exit(-1);
+      }
+    }
+
+    // Pong buffer
+    {
+      const uint32_t program = bs_pong_shader->gl_program;
+      glUseProgram(program);
+      glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
+      glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
+
+      GLuint gl_vbo = 0;
+      glGenBuffers(1, &gl_vbo);
+      glBindBuffer(GL_ARRAY_BUFFER, gl_vbo);
+      glBufferData(GL_ARRAY_BUFFER, sizeof(Primitive::quad), &Primitive::quad, GL_STATIC_DRAW);
+
+      glGenFramebuffers(1, &gl_bs_pong_fbo);
+      glBindFramebuffer(GL_FRAMEBUFFER, gl_bs_pong_fbo);
+
+      glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_ambient_radiance_texture, 0); // NOTE: Use w/e temp. texture for FBO completeness
+
+      const uint32_t attachments[] = { GL_COLOR_ATTACHMENT0 };
+      glDrawBuffers(std::size(attachments), attachments);
+
+      if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        Log::error("Bilateral upsampling pong FBO not complete"); exit(-1);
+      }
     }
   }
 
@@ -1097,6 +1186,7 @@ void Renderer::render(const uint32_t delta) {
     glUniform2fv(glGetUniformLocation(program, "uInput_pixel_size"), 1, &input_pixel_size.x);
 
     glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "uNormal"), gl_geometric_normal_texture_unit);
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glViewport(0, 0, screen.width / div, screen.height / div);
@@ -1471,6 +1561,7 @@ void Renderer::render(const uint32_t delta) {
       const std::string pre_fp  = Filesystem::save_image_as_ppm(Filesystem::tmp + "pre-"  + filename, pre, screen.width, screen.height, div);
       const std::string post_fp = Filesystem::save_image_as_ppm(Filesystem::tmp + "post-" + filename, post, screen.width, screen.height, div);
       const std::string out_fp = Filesystem::tmp + "diff-" + filename + ".png";
+      // FIXME: Compare using grayscale not binary white-black?
       const std::string cmd = "compare -highlight-color white " + pre_fp + " " + post_fp + " " + out_fp;
       std::system(cmd.c_str());
       Log::info("Saved pixel difference: " + out_fp);
@@ -1489,7 +1580,8 @@ void Renderer::render(const uint32_t delta) {
     pass_ended();
    
     /// Bilateral upsampling
-    if (state.bilateral_upsampling.enabled && state.lighting.downsample_modifier > 1) {
+    if (state.bilateral_upsample.enabled && state.lighting.downsample_modifier > 1) {
+      state.bilateral_upsample.execution_time[TIME_IDX] = gl_query_time_buffer_ptr[state.render_passes];
       pass_started("Bilateral upsampling pass");
 
       // NOTE: Joint bilateral upsampling of a filtered low-res noisy signal with one or more high-res 'robust' signal
@@ -1497,9 +1589,9 @@ void Renderer::render(const uint32_t delta) {
         // TODO: Reduce to one single shader, reuse that one twice instead
         // Ping
         {
-          const auto program = bf_ping_shader->gl_program;
+          const auto program = bs_ping_shader->gl_program;
           glUseProgram(program);
-          glBindFramebuffer(GL_FRAMEBUFFER, gl_bf_ping_fbo);
+          glBindFramebuffer(GL_FRAMEBUFFER, gl_bs_ping_fbo);
 
           glUniform1i(glGetUniformLocation(program, "uPosition_weight"), state.bilateral_filtering.position_weight);
           glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
@@ -1511,9 +1603,11 @@ void Renderer::render(const uint32_t delta) {
           glUniform1i(glGetUniformLocation(program, "uDepth"), gl_depth_texture_unit);
           glUniform1f(glGetUniformLocation(program, "uDepth_sigma"), state.bilateral_filtering.depth_sigma);
 
-          const Vec2f pixel_size = Vec2(1.0f / screen.width, 1.0f / screen.height);
-          glUniform2fv(glGetUniformLocation(program, "uInput_pixel_size"), 1, &pixel_size.x);
-          glUniform2fv(glGetUniformLocation(program, "uOutput_pixel_size"), 1, &pixel_size.x);
+          const Vec2f input_pixel_size = Vec2(1.0f / (screen.width * div), 1.0f / (screen.height * div));
+          glUniform2fv(glGetUniformLocation(program, "uInput_pixel_size"), 1, &input_pixel_size.x);
+
+          const Vec2f output_pixel_size = Vec2(1.0f / screen.width, 1.0f / screen.height);
+          glUniform2fv(glGetUniformLocation(program, "uOutput_pixel_size"), 1, &output_pixel_size.x);
 
           glUniform1ui(glGetUniformLocation(program, "uKernel_dim"), state.bilateral_filtering.kernel.size());
           glUniform1fv(glGetUniformLocation(program, "uKernel"), state.bilateral_filtering.kernel.size(), state.bilateral_filtering.kernel.data());
@@ -1529,9 +1623,9 @@ void Renderer::render(const uint32_t delta) {
 
         // Pong
         {
-          const auto program = bf_pong_shader->gl_program;
+          const auto program = bs_pong_shader->gl_program;
           glUseProgram(program);
-          glBindFramebuffer(GL_FRAMEBUFFER, gl_bf_pong_fbo);
+          glBindFramebuffer(GL_FRAMEBUFFER, gl_bs_pong_fbo);
 
           glUniform1i(glGetUniformLocation(program, "uPosition_weight"), state.bilateral_filtering.position_weight);
           glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
@@ -1543,14 +1637,16 @@ void Renderer::render(const uint32_t delta) {
           glUniform1i(glGetUniformLocation(program, "uDepth"), gl_depth_texture_unit);
           glUniform1f(glGetUniformLocation(program, "uDepth_sigma"), state.bilateral_filtering.depth_sigma);
 
-          const Vec2f pixel_size = Vec2(1.0f / screen.width, 1.0f / screen.height);
-          glUniform2fv(glGetUniformLocation(program, "uInput_pixel_size"), 1, &pixel_size.x);
-          glUniform2fv(glGetUniformLocation(program, "uOutput_pixel_size"), 1, &pixel_size.x);
+          const Vec2f input_pixel_size = Vec2(1.0f / screen.width, 1.0f / screen.height);
+          glUniform2fv(glGetUniformLocation(program, "uInput_pixel_size"), 1, &input_pixel_size.x);
+
+          const Vec2f output_pixel_size = Vec2(1.0f / screen.width, 1.0f / screen.height);
+          glUniform2fv(glGetUniformLocation(program, "uOutput_pixel_size"), 1, &output_pixel_size.x);
 
           glUniform1ui(glGetUniformLocation(program, "uKernel_dim"), state.bilateral_filtering.kernel.size());
           glUniform1fv(glGetUniformLocation(program, "uKernel"), state.bilateral_filtering.kernel.size(), state.bilateral_filtering.kernel.data());
 
-          glUniform1i(glGetUniformLocation(program, "uInput"), gl_bf_ping_out_texture_unit);
+          glUniform1i(glGetUniformLocation(program, "uInput"), gl_bs_ping_out_texture_unit);
           glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, in_texture, 0);
 
           glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -1560,10 +1656,9 @@ void Renderer::render(const uint32_t delta) {
 
       // Declare input & output texture
       const float div = state.lighting.downsample_modifier;
-      if (state.bilateral_filtering.ambient)  { bilateral_upsampling_pass(gl_ambient_radiance_texture,  gl_ambient_radiance_texture_unit, div);  }
-      if (state.bilateral_filtering.indirect) { bilateral_upsampling_pass(gl_indirect_radiance_texture, gl_indirect_radiance_texture_unit, div); }
-      if (state.bilateral_filtering.specular) { bilateral_upsampling_pass(gl_specular_radiance_texture, gl_specular_radiance_texture_unit, div); }
-      if (state.bilateral_filtering.direct)   { bilateral_upsampling_pass(gl_direct_radiance_texture,   gl_direct_radiance_texture_unit);   }
+      if (state.bilateral_upsample.ambient)  { bilateral_upsampling_pass(gl_ambient_radiance_texture,  gl_ambient_radiance_texture_unit, div);  }
+      if (state.bilateral_upsample.indirect) { bilateral_upsampling_pass(gl_indirect_radiance_texture, gl_indirect_radiance_texture_unit, div); }
+      if (state.bilateral_upsample.specular) { bilateral_upsampling_pass(gl_specular_radiance_texture, gl_specular_radiance_texture_unit, div); }
 
       pass_ended();
     }
@@ -1674,11 +1769,13 @@ void Renderer::render(const uint32_t delta) {
 
   state.graphic_batches = graphics_batches.size();
 
-  /// Query for the GPU execution time for the render passes
-  glBindBuffer(GL_QUERY_BUFFER, gl_execution_time_query_buffer);
-  for (size_t i = 0; i < state.render_passes; i++) {
-    glGetQueryObjectui64v(gl_query_ids[i], GL_QUERY_RESULT_NO_WAIT, (GLuint64*) (sizeof(GLuint64) * i));
-    state.total_execution_time += gl_query_time_buffer_ptr[i]; // NOTE: Not 100% exact due to timings and changing pipeline
+  if (state.capture_execution_timings) {
+    /// Query for the GPU execution time for the render passes
+    glBindBuffer(GL_QUERY_BUFFER, gl_execution_time_query_buffer);
+    for (size_t i = 0; i < state.render_passes; i++) {
+      glGetQueryObjectui64v(gl_query_ids[i], GL_QUERY_RESULT_NO_WAIT, (GLuint64*) (sizeof(GLuint64) * i));
+      state.total_execution_time += gl_query_time_buffer_ptr[i]; // NOTE: Not 100% exact due to timings and changing pipeline
+    }
   }
 }
 

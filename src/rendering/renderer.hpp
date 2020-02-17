@@ -119,7 +119,7 @@ private:
   uint32_t gl_vct_diffuse_cones_ssbo = 0;
   uint8_t* gl_vct_diffuse_cones_ssbo_ptr = nullptr;
 
-  // Bilateral filtering rasterization shader pass related
+  // Bilateral filtering shader pass
   Shader* bf_ping_shader = nullptr;
   Shader* bf_pong_shader = nullptr;
   uint32_t gl_bf_vao = 0;
@@ -127,6 +127,15 @@ private:
   uint32_t gl_bf_pong_fbo = 0;
   uint32_t gl_bf_ping_out_texture = 0;
   uint32_t gl_bf_ping_out_texture_unit = 0;
+
+  // Bilateral upsampling shader pass
+  Shader* bs_ping_shader = nullptr;
+  Shader* bs_pong_shader = nullptr;
+  uint32_t gl_bs_vao = 0;
+  uint32_t gl_bs_ping_fbo = 0;
+  uint32_t gl_bs_pong_fbo = 0;
+  uint32_t gl_bs_ping_out_texture = 0;
+  uint32_t gl_bs_ping_out_texture_unit = 0;
 
   // Filtering related
   std::vector<float> kernel = {}; // Gaussian 1D separable kernel weights

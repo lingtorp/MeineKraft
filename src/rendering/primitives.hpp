@@ -326,10 +326,10 @@ struct RenderState {
   uint64_t frame           = 0;
   uint32_t entities        = 0;
   uint32_t graphic_batches = 0;
-  uint32_t draw_calls      = 0;      // Number of draw calls issued this frame TODO: Hook up
   uint32_t render_passes   = 0;      // Number of Renderpasses executed this frame
   static const uint32_t execution_time_buffer_size = 5; // Size of the buffer for the execution time of each Renderpass
-  uint64_t total_execution_time = 0; // NOTE: for all render passes in ns
+  bool capture_execution_timings = true; // Enables querying for render pass execution times, lowers performance
+  uint64_t total_execution_time = 0;     // NOTE: for all render passes in ns
 
   // Global illumination related
   struct {
@@ -404,15 +404,18 @@ struct RenderState {
     float position_sigma = 2.0f;        // FIXME: How to set this value or tune it?
     bool normal_weight = false;         // Enable normals as a weight in filtering
     float normal_sigma = 2.0f;          // FIXME: How to set this value or tune it?
-    bool depth_weight = true;           // Enable depth as a weight in filtering
+    bool depth_weight = false;          // Enable depth as a weight in filtering
     float depth_sigma = 2.0f;           // FIXME: How to set this value or tune it?
   } bilateral_filtering;
 
   // Bilateral upsampling related
   struct {
     uint64_t execution_time[execution_time_buffer_size] = {0}; // NOTE: nanoseconds
-    bool enabled = false;               // Bilateral upsampling pass based on the bilateral_filtering states
-  } bilateral_upsampling;
+    bool enabled = true;               // Bilateral upsampling pass based on the bilateral_filtering states
+    bool ambient = true;
+    bool indirect = true;
+    bool specular = true;
+  } bilateral_upsample;
 
   // Bilinear upsampling related
   struct {
