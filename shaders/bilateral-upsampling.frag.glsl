@@ -28,7 +28,7 @@ uniform sampler2D uDepth_low_res;
 /// returns bottom left texel in low-res normalized texture space: [0, 1]
 vec2 get_bottom_left_low_res_texel(const vec2 p) {
   const vec2 t = p * uInput_pixel_size; // [0, 1] in low-res
-  return (floor(t * uInput_texture_size - 0.5) + 0.5) / uInput_texture_size; // [0, 1] in low-res
+  return (floor(t * uInput_texture_size - 0.5) + 0.5) / uInput_texture_size;
 }
 
 /// Coarse bilinear weights from high-res texture coordinates: BL, BR, TL, TR
@@ -36,7 +36,7 @@ vec2 get_bottom_left_low_res_texel(const vec2 p) {
 /// 'BL' is bottom left texel in low-res texture space: [0, 1]
 vec4 get_bilinear_weights(const vec2 p, const vec2 BL) {
   const vec2 t = p * uInput_pixel_size; // [0, 1] in low-res
-  const vec2 f = fract((t - BL) * (1.0 / uInput_texture_size)); // [0, 1] in texel square in high-res texture space
+  const vec2 f = fract(t - BL) / (1.0 / uInput_texture_size);
   vec4 weights;
   weights.r = (1.0 - f.x) * (1.0 - f.y); // Bottom left
   weights.g = f.x * (1.0 - f.y);         // Bottom right
@@ -100,6 +100,4 @@ void main() {
   }
 
   uOutput /= total_weight;
-
-  // uOutput = texture(uInput, BL).rgb;
 }
