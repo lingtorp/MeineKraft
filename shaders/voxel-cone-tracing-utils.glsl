@@ -5,6 +5,7 @@
 #define NUM_CLIPMAPS 4
 
 // Mathematical constants
+const float EPSILON = 0.001;
 const float M_PI = 3.1415926535897932384626433832795;
 const float M_2PI = 2 * M_PI;
 const float M_PI_2 = 1.57079632679489661923;

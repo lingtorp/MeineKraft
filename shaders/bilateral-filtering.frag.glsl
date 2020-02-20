@@ -41,21 +41,21 @@ float weights(const vec2 c, const vec2 p) {
   float w = 1.0;
 
   if (uPosition_weight) {
-    const vec3 pos_c = texture(uPosition, c).xyz;
+    const vec3 pos_c = texture(uPosition, c).xyz; // FIXME: Fetched more than once
     const vec3 pos_p = texture(uPosition, p).xyz;
     const vec3 dp = pos_c - pos_p;
     w *= gaussian(dot(dp, dp), uPosition_sigma);
   }
 
   if (uNormal_weight) {
-    const vec3 norm_c = texture(uNormal, c).xyz;
+    const vec3 norm_c = texture(uNormal, c).xyz; // FIXME: Fetched more than once
     const vec3 norm_p = texture(uNormal, p).xyz;
     const vec3 dn = norm_c - norm_p;
     w *= gaussian(dot(dn, dn), uNormal_sigma);
   }
 
   if (uDepth_weight) {
-    const float depth_c = texture(uDepth, c).r;
+    const float depth_c = texture(uDepth, c).r;  // FIXME: Fetched more than once
     const float depth_p = texture(uDepth, p).r;
     const float dd = abs(depth_c - depth_p);
     w *= gaussian(dd, uDepth_sigma);
@@ -96,7 +96,7 @@ void main() {
   }
 
   // Only normalize again if there are any other weights
-  if (uPosition_weight || uNormal_weight) {
+  if (uPosition_weight || uNormal_weight || uDepth_weight) {
     uOutput /= cum_w;
   }
 }

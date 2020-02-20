@@ -247,8 +247,9 @@ static void dump_performance_data(const struct Renderer* render) {
 
 /// Main engine constructor
 MeineKraft::MeineKraft() {
+  // TODO: Enable configuration to set windows position, size and whether or not to be centered
   const Resolution res = FULL_HD;
- 
+
   SDL_Init(SDL_INIT_EVERYTHING);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
@@ -494,7 +495,7 @@ void MeineKraft::mainloop() {
 
           if (ImGui::CollapsingHeader("Global settings")) {
             ImGui::Checkbox("Normal mapping", &renderer->state.lighting.normalmapping);
-            ImGui::SliderInt("Downsample modifier", &renderer->state.lighting.downsample_modifier, 1, 4);
+            ImGui::SliderInt("Downsample modifier", &renderer->state.lighting.downsample_modifier, 1, 8);
             ImGui::SameLine(); ImGui_HelpMarker("GI is performed in lower resolution by a of factor 1/x");
 
             ImGui::Checkbox("Capture render pass timings", &renderer->state.capture_execution_timings);
@@ -619,37 +620,55 @@ void MeineKraft::mainloop() {
 
             ImGui::Text("Weights:");
             ImGui::Checkbox("Position", &renderer->state.bilateral_filtering.position_weight);
-            ImGui::SameLine(); ImGui::SliderFloat("Sigma##Position", &renderer->state.bilateral_filtering.position_sigma, 0.05f, 12.0f);
+            ImGui::SameLine(); ImGui::SliderFloat("Sigma##Position", &renderer->state.bilateral_filtering.position_sigma, 0.05f, renderer->state.bilateral_filtering.spatial_kernel_sigma);
 
             ImGui::Checkbox("Normal", &renderer->state.bilateral_filtering.normal_weight);
-            ImGui::SameLine(); ImGui::SliderFloat("Sigma##Normal", &renderer->state.bilateral_filtering.normal_sigma, 0.05f, 12.0f);
+            ImGui::SameLine(); ImGui::SliderFloat("Sigma##Normal", &renderer->state.bilateral_filtering.normal_sigma, 0.05f, 8.0f);
 
             ImGui::Checkbox("Depth", &renderer->state.bilateral_filtering.depth_weight);
-            ImGui::SameLine(); ImGui::SliderFloat("Sigma##Depth", &renderer->state.bilateral_filtering.depth_sigma, 0.05f, 12.0f);
+            ImGui::SameLine(); ImGui::SliderFloat("Sigma##Depth", &renderer->state.bilateral_filtering.depth_sigma, 0.05f, 8.0f);
           }
 
-          if (ImGui::CollapsingHeader("Bilateral upsampling")) {
-            ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.bilateral_upsample.execution_time[0] / 1'000'000.0f, 100.0f * float(renderer->state.bilateral_upsample.execution_time[0]) / float(renderer->state.total_execution_time));
+          if (ImGui::CollapsingHeader("Upsampling", ImGuiTreeNodeFlags_DefaultOpen)) {
+            static int s = 0;
+            ImGui::RadioButton("Joint bilateral", &s, 0); ImGui::SameLine();
+            ImGui::RadioButton("Bilinear", &s, 1);
+            ImGui::RadioButton("Nearest neighbor", &s, 2);
 
-            ImGui::Checkbox("Enabled##bilateralupsample", &renderer->state.bilateral_upsample.enabled);
+            ImGui::Separator();
 
-            ImGui::Checkbox("Indirect##bilateral", &renderer->state.bilateral_upsample.indirect);
-            ImGui::SameLine();
-            ImGui::Checkbox("Specular##bilateral", &renderer->state.bilateral_upsample.specular);
-            ImGui::SameLine();
-            ImGui::Checkbox("Ambient##bilateral", &renderer->state.bilateral_upsample.ambient);
-          }
+            // Joint bilateral upsampling
+            if (s == 0) {
+              renderer->state.bilateral_upsample.enabled = true;
+              renderer->state.bilinear_upsample.enabled = false;
 
-          if (ImGui::CollapsingHeader("Bilinear upsampling")) {
-            ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.bilinear_upsample.execution_time[0] / 1'000'000.0f, 100.0f * float(renderer->state.bilinear_upsample.execution_time[0]) / float(renderer->state.total_execution_time));
+              ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.bilateral_upsample.execution_time[0] / 1'000'000.0f, 100.0f * float(renderer->state.bilateral_upsample.execution_time[0]) / float(renderer->state.total_execution_time));
 
-            ImGui::Checkbox("Enabled##bilinear", &renderer->state.bilinear_upsample.enabled);
+              ImGui::Checkbox("Indirect##bilateralupsample", &renderer->state.bilateral_upsample.indirect);
+              ImGui::SameLine();
+              ImGui::Checkbox("Specular##bilateralupsample", &renderer->state.bilateral_upsample.specular);
+              ImGui::SameLine();
+              ImGui::Checkbox("Ambient##bilateralupsample", &renderer->state.bilateral_upsample.ambient);
+            }
 
-            ImGui::Checkbox("Indirect##bilinear", &renderer->state.bilinear_upsample.indirect);
-            ImGui::SameLine();
-            ImGui::Checkbox("Specular##bilinear", &renderer->state.bilinear_upsample.specular);
-            ImGui::SameLine();
-            ImGui::Checkbox("Ambient##bilinear", &renderer->state.bilinear_upsample.ambient);
+            // Bilinear upsampling
+            if (s == 1 || s == 2) {
+              renderer->state.bilateral_upsample.enabled = false;
+              renderer->state.bilinear_upsample.enabled = true;
+
+              // Nearest neighbor
+              if (s == 2) {
+                renderer->state.bilinear_upsample.nearest_neighbor = true;
+              }
+
+              ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.bilinear_upsample.execution_time[0] / 1'000'000.0f, 100.0f * float(renderer->state.bilinear_upsample.execution_time[0]) / float(renderer->state.total_execution_time));
+
+              ImGui::Checkbox("Indirect##bilinear", &renderer->state.bilinear_upsample.indirect);
+              ImGui::SameLine();
+              ImGui::Checkbox("Specular##bilinear", &renderer->state.bilinear_upsample.specular);
+              ImGui::SameLine();
+              ImGui::Checkbox("Ambient##bilinear", &renderer->state.bilinear_upsample.ambient);
+            }
           }
 
           ImGui::PopItemWidth();
@@ -726,6 +745,10 @@ void MeineKraft::mainloop() {
               const std::string batch_title = "Batch #" + std::to_string(batch_num + 1) + " (" + std::to_string(batch.entity_ids.size()) + ")";
               if (ImGui::CollapsingHeader(batch_title.c_str())) {
 
+                if (ImGui::Button("Delete batch")) {
+                  // TODO: Delete the whole batch and all the components
+                }
+
                 const std::string shader_title = "Shader##" + batch_title;
                 if (ImGui::CollapsingHeader(shader_title.c_str())) {
                   // TODO: Open shader view
@@ -741,6 +764,7 @@ void MeineKraft::mainloop() {
                     const std::string* name = NameSystem::instance().get_name_from_entity_referenced(id);
                     ImGui::Text("Name: %s", name->c_str());
                     // ImGui::InputText("Name", name->c_str(), name->size()); // TODO: Change Entity name
+                    // NameSystem::instance().update_name(id, name);
 
                     TransformComponent* transform = TransformSystem::instance().lookup_referenced(id);
                     ImGui::PushID(transform);

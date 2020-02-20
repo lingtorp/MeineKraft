@@ -398,8 +398,8 @@ struct RenderState {
     bool specular = true;               // Enable filtering of the specular radiance
     bool pixel_diff = false;            // Toggled. Saves pre/post screenshot of the currently enabled filters
     std::vector<float> kernel;          // Spatial kernel values generated from sigma and radius
-    float spatial_kernel_sigma = 0.2f;  // Sigma of the spatial upsampling kernel in texture space
-    uint32_t spatial_kernel_radius = 3; // Radius of the spatial upsampling kernel in texture space
+    float spatial_kernel_sigma = 0.8f;  // Sigma of the spatial upsampling kernel in texture space
+    uint32_t spatial_kernel_radius = 5; // Radius of the spatial upsampling kernel in texture space
     bool position_weight = true;        // Enable position as a weight in filtering
     float position_sigma = 2.0f;        // FIXME: How to set this value or tune it?
     bool normal_weight = false;         // Enable normals as a weight in filtering
@@ -421,6 +421,7 @@ struct RenderState {
   struct {
     uint64_t execution_time[execution_time_buffer_size] = {0}; // NOTE: nanoseconds
     bool enabled = false;
+    bool nearest_neighbor = false;
     bool ambient = true;
     bool indirect = true;
     bool specular = true;

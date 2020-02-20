@@ -8,7 +8,7 @@
 #if defined(WIN32)
 #define OPENGL_MINOR_VERSION 6 // Windows 10
 #elif defined(__linux__)
-#define OPENGL_MINOR_VERSION 5 // Ubuntu 18.10 (default)
+#define OPENGL_MINOR_VERSION 6 // Ubuntu 18.10 (default)
 #elif defined(__APPLE__)
 #define OPENGL_MINOR_VERSION 1 // macOS (deprecated)
 #endif

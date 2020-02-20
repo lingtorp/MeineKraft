@@ -130,10 +130,8 @@ private:
 
   // Bilateral upsampling shader pass
   Shader* bs_ping_shader = nullptr;
-  Shader* bs_pong_shader = nullptr;
   uint32_t gl_bs_vao = 0;
   uint32_t gl_bs_ping_fbo = 0;
-  uint32_t gl_bs_pong_fbo = 0;
   uint32_t gl_bs_ping_out_texture = 0;
   uint32_t gl_bs_ping_out_texture_unit = 0;
 
@@ -206,7 +204,7 @@ private:
     uint32_t gl_vao = 0;
     uint32_t gl_fbo = 0;
 
-    // FIXME: Not working due to depth map being broken
+    // FIXME: Not working due to depth map being broken?
     uint32_t gl_depth_texture = 0;
     uint32_t gl_depth_texture_unit = 0;
 

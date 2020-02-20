@@ -48,7 +48,7 @@ namespace Filesystem {
   /// Tries to save the pixels as RGB PPM format
   /// Returns filepath to the saved file if it was created successfully, otherwise empty string
   inline std::string save_image_as_ppm(const std::string filename, const Vec3f* pixels, const size_t w, const size_t h, const float downsample_factor = 1.0f) {
-    assert(downsample_factor > 1.0f && "Downsample factor must be larger or equal to 1.0");
+    assert(downsample_factor >= 1.0f && "Downsample factor must be larger or equal to 1.0");
 
     std::filesystem::path filepath = filename;
 

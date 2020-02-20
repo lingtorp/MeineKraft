@@ -1,5 +1,8 @@
 {
     "screenshot_mode": false,
+    "window": {
+        "center": true
+    },
     "render_state": {
         "resolution": [1280, 720],
         "render_passes": [
