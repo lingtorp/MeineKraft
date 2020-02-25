@@ -45,7 +45,7 @@ inline void Renderer::pass_started(const std::string &name) {
 }
 
 /// Indicates the end of a Renderpass (must be paired with pass_started)
-inline void Renderer::pass_ended() {
+inline void Renderer::pass_ended() const {
   glPopDebugGroup();
   glEndQuery(GL_TIME_ELAPSED);
 }
@@ -362,8 +362,6 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glBindFramebuffer(GL_FRAMEBUFFER, gbuffer_downsampled.gl_fbo);
     glObjectLabel(GL_FRAMEBUFFER, gbuffer_downsampled.gl_fbo, -1, "GBuffer (downsampled) FBO");
 
-    // TODO: Just create a new passthrough pass that renders to downsampled color attachments with the gbuffer textures as input
-
     // Global downsampled position buffer
     gbuffer_downsampled.gl_position_texture_unit = get_next_free_texture_unit();
     glActiveTexture(GL_TEXTURE0 + gbuffer_downsampled.gl_position_texture_unit);
@@ -389,7 +387,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     uint32_t attachments[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
     glDrawBuffers(std::size(attachments), attachments);
 
-    // Reuse shadowmap depth attachment for FBO completeness (disabled anyway)
+    // NOTE: Reuse shadowmap depth attachment for FBO completeness (disabled anyway)
     glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, gl_shadowmapping_texture, 0);
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
       Log::error("GBuffer (downsampled) framebuffer status not complete.");
@@ -1110,17 +1108,17 @@ void Renderer::render(const uint32_t delta) {
       glBindTexture(GL_TEXTURE_2D_ARRAY, batch.gl_diffuse_texture_array);
 
       if (batch.gl_metallic_roughness_texture != 0) {
-        glActiveTexture(GL_TEXTURE0 + batch.gl_metallic_roughness_texture_unit);
+        glActiveTexture(GL_TEXTURE0 + batch.gl_metallic_roughness_texture_unit); // TODO: Replace with DSA
         glBindTexture(GL_TEXTURE_2D, batch.gl_metallic_roughness_texture);
       }
 
       if (batch.gl_tangent_normal_texture != 0) {
-        glActiveTexture(GL_TEXTURE0 + batch.gl_tangent_normal_texture_unit);
+        glActiveTexture(GL_TEXTURE0 + batch.gl_tangent_normal_texture_unit); // TODO: Replace with DSA
         glBindTexture(GL_TEXTURE_2D, batch.gl_tangent_normal_texture);
       }
 
       if (batch.gl_emissive_texture != 0) {
-        glActiveTexture(GL_TEXTURE0 + batch.gl_emissive_texture_unit);
+        glActiveTexture(GL_TEXTURE0 + batch.gl_emissive_texture_unit); // TODO: Replace with DSA
         glBindTexture(GL_TEXTURE_2D, batch.gl_emissive_texture);
       }
 
@@ -1133,6 +1131,7 @@ void Renderer::render(const uint32_t delta) {
 
   /// Downsample pass
   {
+    state.gbuffer_downsample.execution_time[TIME_IDX] = gl_query_time_buffer_ptr[state.render_passes];
     pass_started("Downsample pass");
 
     glBindFramebuffer(GL_FRAMEBUFFER, gbuffer_downsampled.gl_fbo);
@@ -1176,18 +1175,21 @@ void Renderer::render(const uint32_t delta) {
     glUseProgram(program);
 
     // Orthogonal projection along +z-axis
+    // TODO: Precompute these - add notification when changed and precompute the new ones
     glm::mat4 orthos[NUM_CLIPMAPS];
     for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
       orthos[i] = orthographic_projection(clipmaps.aabb[i]);
     }
     glUniformMatrix4fv(glGetUniformLocation(program, "uOrthos"), NUM_CLIPMAPS, GL_FALSE, glm::value_ptr(orthos[0]));
 
+    // TODO: Precompute these - add notification when changed and precompute the new ones
     float scaling_factors[NUM_CLIPMAPS];
     for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
       scaling_factors[i] = 1.0f / clipmaps.aabb[i].max_axis();
     }
     glUniform1fv(glGetUniformLocation(program, "uScaling_factors"), NUM_CLIPMAPS, scaling_factors);
 
+    // TODO: Precompute these - add notification when changed and precompute the new ones
     Vec3f aabb_centers[NUM_CLIPMAPS];
     for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
       aabb_centers[i] = clipmaps.aabb[i].center();
@@ -1215,6 +1217,7 @@ void Renderer::render(const uint32_t delta) {
     glDepthMask(GL_FALSE);
     glDisable(GL_CULL_FACE);
     glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+    // TODO: Precompute these - add notification when changed and precompute the new ones
     Vec4f viewports[NUM_CLIPMAPS];
     for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
       viewports[i] = Vec4f(0.0f, 0.0f, clipmaps.size[i], clipmaps.size[i]);
@@ -1339,11 +1342,13 @@ void Renderer::render(const uint32_t delta) {
     glUniform3fv(glGetUniformLocation(program, "uCamera_position"), 1, &scene->camera.position.x);
 
     glUniform1ui(glGetUniformLocation(program, "uNum_diffuse_cones"), state.vct.num_diffuse_cones);
+    // TODO: Precompute these - add notification when changed and precompute the new ones
     const std::vector<Vec4f> cones = generate_diffuse_cones(state.vct.num_diffuse_cones);
     std::memcpy(gl_vct_diffuse_cones_ssbo_ptr, cones.data(), cones.size() * sizeof(Vec4f));
 
     glUniform1i(glGetUniformLocation(program, "uNormalmapping"), state.lighting.normalmapping);
 
+    // TODO: Precompute these - add notification when changed and precompute the new ones
     float scaling_factors[NUM_CLIPMAPS];
     for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
       scaling_factors[i] = 1.0f / clipmaps.aabb[i].max_axis();
@@ -1353,10 +1358,12 @@ void Renderer::render(const uint32_t delta) {
     const float voxel_size_LOD0 = clipmaps.aabb[0].max_axis() / float(clipmaps.size[0]);
     glUniform1f(glGetUniformLocation(program, "uVoxel_size_LOD0"), voxel_size_LOD0);
 
+    // TODO: Precompute these - add notification when changed and precompute the new ones
     Vec3f clipmap_aabb_centers[NUM_CLIPMAPS];
     Vec3f clipmap_aabb_mins[NUM_CLIPMAPS];
     Vec3f clipmap_aabb_maxs[NUM_CLIPMAPS];
 
+    // TODO: Precompute these - add notification when changed and precompute the new ones
     for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
       clipmap_aabb_centers[i] = clipmaps.aabb[i].center();
       clipmap_aabb_mins[i] = clipmaps.aabb[i].min;
@@ -1478,6 +1485,7 @@ void Renderer::render(const uint32_t delta) {
         glUniform1i(glGetUniformLocation(program, "uDepth"), gl_depth_texture_unit);
         glUniform1f(glGetUniformLocation(program, "uDepth_sigma"), state.bilateral_filtering.depth_sigma);
 
+        // FIXME: This does not seem to use the lower resolution when filtering?
         const Vec2f pixel_size = Vec2(1.0f / screen.width, 1.0f / screen.height);
         glUniform2fv(glGetUniformLocation(program, "uInput_pixel_size"), 1, &pixel_size.x);
         glUniform2fv(glGetUniformLocation(program, "uOutput_pixel_size"), 1, &pixel_size.x);

@@ -123,6 +123,7 @@ static void dump_performance_data(const struct Renderer* render) {
 
   nlohmann::json obj;
 
+  // GPU view frustum culling
   if (render->state.culling.enabled) {
     float time = 0.0f;
     for (size_t i = 0; i < RenderState::execution_time_buffer_size; i++) {
@@ -155,6 +156,18 @@ static void dump_performance_data(const struct Renderer* render) {
     obj["gbuffer"]["time_percent"] = time / total_time;
   }
 
+  // Gbuffer downsample pass
+  if (render->state.lighting.downsample_modifier > 1) {
+    float time = 0.0f;
+    for (size_t i = 0; i < RenderState::execution_time_buffer_size; i++) {
+      time += render->state.gbuffer_downsample.execution_time[i] / 1'000'000.0f;
+    }
+    time /= RenderState::execution_time_buffer_size;
+    obj["gbuffer_downsample"]["time_ms"] = time;
+    obj["gbuffer_downsample"]["time_percent"] = time / total_time;
+  }
+
+  // Voxelization pass
   if (render->state.voxelization.always_voxelize) {
     float time = 0.0f;
     for (size_t i = 0; i < RenderState::execution_time_buffer_size; i++) {
@@ -191,6 +204,7 @@ static void dump_performance_data(const struct Renderer* render) {
     obj["shadow_application"]["time_percent"] = time1 / total_time;
   }
 
+  // Bilateral filtering pass
   if (render->state.bilateral_filtering.enabled) {
     float time = 0.0f;
     for (size_t i = 0; i < RenderState::execution_time_buffer_size; i++) {
@@ -201,6 +215,7 @@ static void dump_performance_data(const struct Renderer* render) {
     obj["bilateral_filtering"]["time_percent"] = time / total_time;
   }
 
+  // Bilateral upsampling pass
   if (render->state.bilateral_upsample.enabled) {
     float time = 0.0f;
     for (size_t i = 0; i < RenderState::execution_time_buffer_size; i++) {
@@ -211,6 +226,7 @@ static void dump_performance_data(const struct Renderer* render) {
     obj["bilateral_upsampling"]["time_percent"] = time / total_time;
   }
 
+  // Bilinear upsampling pass
   if (render->state.bilinear_upsample.enabled) {
     float time = 0.0f;
     for (size_t i = 0; i < RenderState::execution_time_buffer_size; i++) {
@@ -221,6 +237,7 @@ static void dump_performance_data(const struct Renderer* render) {
     obj["bilinear_upsampling"]["time_percent"] = time / total_time;
   }
 
+  // Voxel visualization pass
   if (render->state.voxel_visualization.enabled) {
     float time = 0.0f;
     for (size_t i = 0; i < RenderState::execution_time_buffer_size; i++) {
@@ -322,6 +339,7 @@ void MeineKraft::mainloop() {
 
   /// Window handling
   bool throttle_rendering = false;
+  bool throttle_rendering_enabled = true; // NOTE: Enables the flag 'throttle_rendering'
 
   while (!done) {
       current_tick = std::chrono::high_resolution_clock::now();
@@ -401,7 +419,7 @@ void MeineKraft::mainloop() {
               throttle_rendering = false;
               break;
             case SDL_WINDOWEVENT_FOCUS_LOST:
-              throttle_rendering = true; // FIXME: May cause problems when RenderDoc is attached
+              throttle_rendering = true; // FIXME: May cause problems when RenderDoc/Nsight is attached
               break;
           }
           break;
@@ -419,7 +437,7 @@ void MeineKraft::mainloop() {
     world.tick();
 
     /// Render the world
-    if (!throttle_rendering) {      
+    if (!throttle_rendering && throttle_rendering_enabled) {
       renderer->render(delta);
     }
 
@@ -437,8 +455,8 @@ void MeineKraft::mainloop() {
     if (screenshot_mode && renderer->state.frame > screenshot_mode_frame_wait) { return; }
 
     /// ImGui - Debug instruments
-    if (!throttle_rendering) {
-      // pass_started("ImGui"); // FIXME: Render pass started fence for debug info
+    if (!throttle_rendering && throttle_rendering_enabled) {
+      begin_gl_cmds("ImGui");
 
       ImGui_ImplSdlGL3_NewFrame(window);
       auto io = ImGui::GetIO();
@@ -501,11 +519,15 @@ void MeineKraft::mainloop() {
             ImGui::Checkbox("Capture render pass timings", &renderer->state.capture_execution_timings);
             ImGui::SameLine(); ImGui_HelpMarker("Performance timings updated or not");
 
+            ImGui::Checkbox("Throttle rendering in background", &throttle_rendering_enabled);
+            ImGui::SameLine(); ImGui_HelpMarker("Disables rendering when in the background.");
+
             if (ImGui::TreeNode("GPU view frustum culling")) {
               ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.culling.execution_time[0] / 1'000'000.0f, 100.0f * float(renderer->state.culling.execution_time[0]) / float(renderer->state.total_execution_time));
               ImGui::Checkbox("Enabled##culling", &renderer->state.culling.enabled);
               ImGui::TreePop();
             }
+
 
             if (ImGui::TreeNode("Depth map generation")) {
               ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.shadow.execution_time_shadowmapping[0] / 1'000'000.0f, 100.0f * float(renderer->state.shadow.execution_time_shadowmapping[0]) / float(renderer->state.total_execution_time));
@@ -515,6 +537,12 @@ void MeineKraft::mainloop() {
             if (ImGui::TreeNode("Global buffer generation")) {
               ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.gbuffer.execution_time[0] / 1'000'000.0f, 100.0f * float(renderer->state.gbuffer.execution_time[0]) / float(renderer->state.total_execution_time));
               ImGui::TreePop();
+              if (renderer->state.lighting.downsample_modifier > 1) {
+                if (ImGui::TreeNode("Global buffer downsample pass")) {
+                  ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.gbuffer_downsample.execution_time[0] / 1'000'000.0f, 100.0f * float(renderer->state.gbuffer_downsample.execution_time[0]) / float(renderer->state.total_execution_time));
+                  ImGui::TreePop();
+                }
+              }
             }
 
             if (ImGui::TreeNode("Final blit pass")) {
@@ -813,7 +841,7 @@ void MeineKraft::mainloop() {
         }
 
         ImGui::Render();
-        // pass_ended(); // FIXME: Render pass handling outside Renderer not allowed
+        end_gl_cmds();
       }
     }
     SDL_GL_SwapWindow(window);

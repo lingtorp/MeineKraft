@@ -55,7 +55,7 @@ private:
   /// Called when a rendering pass is started
   void pass_started(const std::string &msg);
   /// Called when a rendering pass is ended
-  void pass_ended();
+  void pass_ended() const;
 
   const static size_t MAX_RENDER_PASSES = 25;
   /// Render pass execution time query buffer

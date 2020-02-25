@@ -347,6 +347,10 @@ struct RenderState {
 
   struct {
     uint64_t execution_time[execution_time_buffer_size] = {0}; // NOTE: nanoseconds
+  } gbuffer_downsample;
+
+  struct {
+    uint64_t execution_time[execution_time_buffer_size] = {0}; // NOTE: nanoseconds
     bool enabled = true;
   } culling;
 
@@ -442,7 +446,7 @@ struct RenderState {
   RenderState() = default;
 
   friend std::ostream &operator<<(std::ostream &os, const RenderState& state) {
-    // TODO: Implement ...
+    // TODO: Implement printable struct RenderState
     return os;
   }
 };

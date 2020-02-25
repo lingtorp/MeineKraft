@@ -213,4 +213,14 @@ static void log_gl_error() {
   Log::error("OpenGL error " + err_str + ":" + std::to_string(err));
 }
 
+/// OpenGL debug group marker with name 'name', must pair with 'end_gl_cmds'
+static inline void begin_gl_cmds(const std::string& name) {
+  glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, name.c_str());
+}
+
+/// End the OpenGL debug group marker begun with 'begin_gl_cmds'
+static inline void end_gl_cmds() {
+  glPopDebugGroup();
+}
+
 #endif // MEINEKRAFT_DEBUG_OPENGL_HPP
