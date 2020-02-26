@@ -1,4 +1,5 @@
 // NOTE: Bilinear upsampling of uInput texture
+// File: bilinear-upsampling.frag.glsl
 
 uniform sampler2D uInput;
 

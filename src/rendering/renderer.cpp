@@ -1481,8 +1481,6 @@ void Renderer::render(const uint32_t delta) {
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
       }
 
-      glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT); // Due to incoherent mem. access need to sync read and usage of voxel data
-
       // Pong
       {
         const auto program = bf_pong_shader->gl_program;
@@ -1627,12 +1625,8 @@ void Renderer::render(const uint32_t delta) {
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
       }
 
-      glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT); // Due to incoherent mem. access need to sync read and usage
-
       // Pong - copies the color attacment of ping's FBO
-      {
-        glCopyTextureSubImage2D(in_texture, 0, 0, 0, 0, 0, screen.width, screen.height);
-      }
+      glCopyTextureSubImage2D(in_texture, 0, 0, 0, 0, 0, screen.width, screen.height);
 
       glTextureParameteri(in_texture, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
       glTextureParameteri(in_texture, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -1671,7 +1665,7 @@ void Renderer::render(const uint32_t delta) {
 
       // Ping
       {
-        const float d = float(state.lighting.downsample_modifier);
+        const float d = state.lighting.downsample_modifier;
         const Vec2f output_pixel_size = Vec2f(1.0f / (screen.width * d), 1.0f / (screen.height * d));
         glUniform2fv(glGetUniformLocation(program, "uOutput_pixel_size"), 1, &output_pixel_size.x);
 
@@ -1681,18 +1675,8 @@ void Renderer::render(const uint32_t delta) {
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
       }
 
-      glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT); // Due to incoherent mem. access need to sync read and usage of voxel data
-
-      // Pong
-      {
-        const Vec2f output_pixel_size = Vec2f(1.0f / screen.width, 1.0f / screen.height);
-        glUniform2fv(glGetUniformLocation(program, "uOutput_pixel_size"), 1, &output_pixel_size.x);
-
-        glUniform1i(glGetUniformLocation(program, "uInput"), gl_bf_ping_out_texture_unit);
-        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, in_texture, 0);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-      }
+      // Pong - copies the color attacment of ping's FBO
+      glCopyTextureSubImage2D(in_texture, 0, 0, 0, 0, 0, screen.width, screen.height);
     };
 
     if (state.bilinear_upsample.ambient)  { bilinear_upsample(gl_ambient_radiance_texture, gl_ambient_radiance_texture_unit);   }
