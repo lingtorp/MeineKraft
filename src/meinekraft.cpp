@@ -672,11 +672,23 @@ void MeineKraft::mainloop() {
 
               ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.bilateral_upsample.execution_time[0] / 1'000'000.0f, 100.0f * float(renderer->state.bilateral_upsample.execution_time[0]) / float(renderer->state.total_execution_time));
 
+              ImGui::Text("Radiance:");
               ImGui::Checkbox("Indirect##bilateralupsample", &renderer->state.bilateral_upsample.indirect);
               ImGui::SameLine();
               ImGui::Checkbox("Specular##bilateralupsample", &renderer->state.bilateral_upsample.specular);
               ImGui::SameLine();
               ImGui::Checkbox("Ambient##bilateralupsample", &renderer->state.bilateral_upsample.ambient);
+
+              ImGui::Separator();
+
+              ImGui::Text("Weights:");
+              ImGui::Checkbox("Depth##bilateralupsample", &renderer->state.bilateral_upsample.depth_weight);
+              ImGui::SameLine();
+              ImGui::Checkbox("Normal##bilateralupsample", &renderer->state.bilateral_upsample.normal_weight);
+              ImGui::SameLine();
+              ImGui::Checkbox("Position##bilateralupsample", &renderer->state.bilateral_upsample.position_weight);
+
+              ImGui::Checkbox("Normal mapping##bilateralupsample", &renderer->state.bilateral_upsample.normal_mapping);
             }
 
             // Bilinear upsampling
