@@ -419,6 +419,10 @@ struct RenderState {
     bool ambient = true;
     bool indirect = true;
     bool specular = true;
+    bool depth_weight = true;          // Depth guidance texture used to upsample image
+    bool normal_weight = false;        // Normal guidance texture used to upsample image
+    bool position_weight = false;      // Position guidance texture used to upsample image
+    bool normal_mapping = false;
   } bilateral_upsample;
 
   // Bilinear upsampling related
