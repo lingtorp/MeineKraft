@@ -51,9 +51,9 @@ inline void Renderer::pass_ended() const {
 }
 
 static uint32_t get_next_free_texture_unit(bool peek = false) {
-  int32_t max_texture_units;
+  int32_t max_texture_units = 0;
   glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max_texture_units);
-  static int32_t next_texture_unit = -1;
+  static int32_t next_texture_unit = 0;
   if (peek) {
     return (next_texture_unit + 1) % max_texture_units;
   }
