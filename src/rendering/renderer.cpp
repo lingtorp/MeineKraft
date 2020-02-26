@@ -1464,7 +1464,7 @@ void Renderer::render(const uint32_t delta) {
         glUniform1i(glGetUniformLocation(program, "uDepth"), gl_depth_texture_unit);
         glUniform1f(glGetUniformLocation(program, "uDepth_sigma"), state.bilateral_filtering.depth_sigma);
 
-        const Vec2f pixel_size = Vec2(1.0f / screen.width, 1.0f / screen.height);
+        const Vec2f pixel_size = Vec2f(1.0f / screen.width, 1.0f / screen.height);
         glUniform2fv(glGetUniformLocation(program, "uInput_pixel_size"), 1, &pixel_size.x);
         glUniform2fv(glGetUniformLocation(program, "uOutput_pixel_size"), 1, &pixel_size.x);
 
@@ -1475,6 +1475,7 @@ void Renderer::render(const uint32_t delta) {
         // glUniform1i(glGetUniformLocation(program, "uOutput"), 0); // NOTE: Default to 0 in shader
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glViewport(0, 0, screen.width / div, screen.height / div);
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
       }
 
@@ -1496,8 +1497,7 @@ void Renderer::render(const uint32_t delta) {
         glUniform1i(glGetUniformLocation(program, "uDepth"), gl_depth_texture_unit);
         glUniform1f(glGetUniformLocation(program, "uDepth_sigma"), state.bilateral_filtering.depth_sigma);
 
-        // FIXME: This does not seem to use the lower resolution when filtering?
-        const Vec2f pixel_size = Vec2(1.0f / screen.width, 1.0f / screen.height);
+        const Vec2f pixel_size = Vec2f(1.0f / screen.width, 1.0f / screen.height);
         glUniform2fv(glGetUniformLocation(program, "uInput_pixel_size"), 1, &pixel_size.x);
         glUniform2fv(glGetUniformLocation(program, "uOutput_pixel_size"), 1, &pixel_size.x);
 
@@ -1508,8 +1508,11 @@ void Renderer::render(const uint32_t delta) {
         glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, in_texture, 0);
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glViewport(0, 0, screen.width / div, screen.height / div);
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
       }
+
+      glViewport(0, 0, screen.width, screen.height);
     };
 
     // Pre-filtering screenshot
