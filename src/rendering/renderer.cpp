@@ -66,7 +66,7 @@ static uint32_t get_next_free_texture_unit(bool peek = false) {
 }
 
 static uint32_t get_next_free_image_unit(bool peek = false) {
-  int32_t max_image_units;
+  int32_t max_image_units = 0;
   glGetIntegerv(GL_MAX_IMAGE_UNITS, &max_image_units);
   static int32_t next_image_unit = -1;
   if (peek) {
