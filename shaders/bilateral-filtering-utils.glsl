@@ -52,5 +52,10 @@ float spatial(const ivec2 p, const ivec2 q) {
   return gaussian_1d(uSigmaSpatial, d);
 }
 
-// TODO: Euclidean distance in WORLD SPACE
-// float spatial_ws(const ivec2p, const ivec2 q) {}
+/// Converts 'depth' to linear: [0, 1]
+float linearize_depth(const float depth) {
+  const float near = 0.1;   // FIXME: Hard coded camera dependent
+  const float far = 3000.0; // FIXME: Hard coded camera dependent
+  const float z = depth * 2.0 - 1.0; // to NDC
+  return (2.0 * near * far) / (far + near - z * (far - near));
+}

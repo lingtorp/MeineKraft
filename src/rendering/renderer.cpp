@@ -826,8 +826,10 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
                                 Filesystem::base + "shaders/bilateral-upsampling.frag.glsl");
 
     // NOTE: Include order matters
-    const std::string include = Filesystem::read_file(Filesystem::base + "shaders/voxel-cone-tracing-utils.glsl");
-    bs_ping_shader->add(include);
+    const std::string include0 = Filesystem::read_file(Filesystem::base + "shaders/voxel-cone-tracing-utils.glsl");
+    const std::string include1 = Filesystem::read_file(Filesystem::base + "shaders/bilateral-filtering-utils.glsl");
+    bs_ping_shader->add(include1);
+    bs_ping_shader->add(include0);
 
     const auto [ok, msg] = bs_ping_shader->compile();
     if (!ok) {

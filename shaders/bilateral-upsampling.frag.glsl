@@ -50,14 +50,6 @@ vec4 get_bilinear_weights(const vec2 p, const vec2 BL) {
   return weights;
 }
 
-/// Converts 'depth' to linear: [0, 1]
-float linearize_depth(const float depth) {
-  const float near = 0.1;   // FIXME: Hard coded camera dependent
-  const float far = 3000.0; // FIXME: Hard coded camera dependent
-  const float z = depth * 2.0 - 1.0; // to NDC
-  return (2.0 * near * far) / (far + near - z * (far - near));
-}
-
 /// Depths weights depending on similarity to high-res depth
 /// Src: https://www.ppsloan.org/publications/ProxyPG.pdf
 vec4 get_depth_weights(const vec2 p, const vec2 coarse_samples[4]) {
@@ -67,7 +59,7 @@ vec4 get_depth_weights(const vec2 p, const vec2 coarse_samples[4]) {
   for (uint i = 0; i < 4; i++) {
     const float coarse = linearize_depth(texture(uDepth_low_res, coarse_samples[i]).r);
     const float diff = abs(coarse - fine_depth);
-    weights[i] = min(1.0 / (diff + EPSILON), 1.0);
+    weights[i] = min(1.0 / (diff + EPSILON), 1.0); // FIXME: in [0, 1]?
   }
 
   return weights;

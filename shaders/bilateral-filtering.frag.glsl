@@ -55,9 +55,9 @@ float weights(const vec2 c, const vec2 p) {
   }
 
   if (uDepth_weight) {
-    const float depth_c = texture(uDepth, c).r;  // FIXME: Fetched more than once
-    const float depth_p = texture(uDepth, p).r;
-    const float dd = abs(depth_c - depth_p);
+    const float depth_c = linearize_depth(texture(uDepth, c).r);  // FIXME: Fetched more than once
+    const float depth_p = linearize_depth(texture(uDepth, p).r);
+    const float dd = 1.0 / (EPSILON + abs(depth_c - depth_p)); // [0,1]?
     w *= gaussian(dd, uDepth_sigma);
   }
 
