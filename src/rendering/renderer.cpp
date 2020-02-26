@@ -384,7 +384,18 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, gbuffer_downsampled.gl_normal_texture, 0);
     glObjectLabel(GL_TEXTURE, gbuffer_downsampled.gl_normal_texture, -1, "GBuffer (downsampled) normal texture");
 
-    uint32_t attachments[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+    // Global downsampled depth buffer
+    gbuffer_downsampled.gl_depth_texture_unit = get_next_free_texture_unit();
+    glActiveTexture(GL_TEXTURE0 + gbuffer_downsampled.gl_depth_texture_unit);
+    glGenTextures(1, &gbuffer_downsampled.gl_depth_texture);
+    glBindTexture(GL_TEXTURE_2D, gbuffer_downsampled.gl_depth_texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, screen.width, screen.height, 0, GL_RED, GL_FLOAT, nullptr);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, gbuffer_downsampled.gl_depth_texture, 0);
+    glObjectLabel(GL_TEXTURE, gbuffer_downsampled.gl_depth_texture, -1, "GBuffer (downsampled) depth texture");
+
+    uint32_t attachments[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
     glDrawBuffers(std::size(attachments), attachments);
 
     // NOTE: Reuse shadowmap depth attachment for FBO completeness (disabled anyway)
@@ -1140,13 +1151,13 @@ void Renderer::render(const uint32_t delta) {
     const auto program = gbuffer_downsampled.shader->gl_program;
     glUseProgram(program);
 
-    // FIXME: Downsample depth or skip it??
     const auto div = state.lighting.downsample_modifier;
     const Vec2f input_pixel_size = Vec2(float(div) / (screen.width), float(div) / (screen.height));
     glUniform2fv(glGetUniformLocation(program, "uInput_pixel_size"), 1, &input_pixel_size.x);
 
     glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
     glUniform1i(glGetUniformLocation(program, "uNormal"), gl_geometric_normal_texture_unit);
+    glUniform1i(glGetUniformLocation(program, "uDepth"), gl_depth_texture_unit);
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glViewport(0, 0, screen.width / div, screen.height / div);
@@ -1570,15 +1581,22 @@ void Renderer::render(const uint32_t delta) {
         glTextureParameteri(gbuffer_downsampled.gl_position_texture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glTextureParameteri(gbuffer_downsampled.gl_position_texture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-        glUniform1i(glGetUniformLocation(program, "uPosition_weight"), state.bilateral_filtering.position_weight);
+        glTextureParameteri(gbuffer_downsampled.gl_depth_texture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTextureParameteri(gbuffer_downsampled.gl_depth_texture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+        glUniform1i(glGetUniformLocation(program, "uPosition_weight"), state.bilateral_upsample.position_weight);
         glUniform1i(glGetUniformLocation(program, "uPosition_high_res"), gl_position_texture_unit);
         glUniform1i(glGetUniformLocation(program, "uPosition_low_res"), gbuffer_downsampled.gl_position_texture_unit);
 
-        glUniform1i(glGetUniformLocation(program, "uNormal_weight"), state.bilateral_filtering.normal_weight);
+        glUniform1i(glGetUniformLocation(program, "uNormal_weight"), state.bilateral_upsample.normal_weight);
         glUniform1i(glGetUniformLocation(program, "uNormal_high_res"), gl_geometric_normal_texture_unit);
         glUniform1i(glGetUniformLocation(program, "uNormal_low_res"), gbuffer_downsampled.gl_normal_texture_unit);
 
-        glUniform1i(glGetUniformLocation(program, "uDepth_weight"), state.bilateral_filtering.depth_weight);
+        glUniform1i(glGetUniformLocation(program, "uTangent"), gl_tangent_texture_unit);
+        glUniform1i(glGetUniformLocation(program, "uTangent_normal"), gl_tangent_normal_texture_unit);
+        glUniform1i(glGetUniformLocation(program, "uNormal_mapping"), state.bilateral_upsample.normal_mapping);
+
+        glUniform1i(glGetUniformLocation(program, "uDepth_weight"), state.bilateral_upsample.depth_weight);
         glUniform1i(glGetUniformLocation(program, "uDepth_high_res"), gl_depth_texture_unit);
         glUniform1i(glGetUniformLocation(program, "uDepth_low_res"), gbuffer_downsampled.gl_depth_texture_unit);
 
