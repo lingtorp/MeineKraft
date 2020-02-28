@@ -307,7 +307,7 @@ struct Plane {
 /// Opaque ID type used to reference resources throughout the engine
 typedef uint64_t ID;
 
-enum class ShadingModel: uint8_t {
+enum class ShadingModel: uint32_t {
   Unlit = 1,                        // Unlit, using its surface color 
   PhysicallyBased = 2,              // PBR using textures (default)
   PhysicallyBasedScalars = 3        // PBR using scalars instead of textures

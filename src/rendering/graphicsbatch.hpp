@@ -33,7 +33,7 @@ struct BoundingVolume {
 /// NOTE: Must be aligned to 16 byte boundary as per shader requirements
 struct Material {
   uint32_t diffuse_layer_idx  = 0;                   // index into diffuse texture array
-  ShadingModel shading_model  = ShadingModel::Unlit; // uint8_t
+  ShadingModel shading_model  = ShadingModel::Unlit; // uint32_t
   Vec2f pbr_scalar_parameters = {};                  // (roughness, metallic)
   Vec4f emissive_scalars = {};                       // emissive color when lacking texture, (vec3, padding)
   Vec4f diffuse_scalars = {};                        // diffuse color when lacking texture, (vec3, padding)
