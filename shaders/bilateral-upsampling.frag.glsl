@@ -71,22 +71,28 @@ vec4 get_normal_weights(const vec2 p, const vec2 coarse_samples[4]) {
   const vec3 fNormal = texture(uNormal_high_res, p).xyz;
   vec3 normal = fNormal;
 
+  // Tangent normal mapping & TBN tranformation
   if (uNormal_mapping) {
-    // Tangent normal mapping & TBN tranformation
     const vec3 T = normalize(texture(uTangent, p).xyz);
     const vec3 B = normalize(cross(normal, T));
     const vec3 N = normalize(normal);
-    mat3 TBN = mat3(1.0);
+    const mat3 TBN = mat3(T, B, N);
+    const vec3 tangent = texture(uTangent_normal, p).xyz;
 
-    TBN = mat3(T, B, N);
-    const vec3 tangent_normal = normalize(2.0 * (texture(uTangent_normal, p).xyz - vec3(0.5)));
-    normal = normalize(TBN * tangent_normal);
+    //  No tangent map data available
+    if (dot(tangent, tangent) <= EPSILON) {
+      return vec4(1.0);
+    }
+
+    const vec3 TN = normalize(2.0 * tangent - vec3(0.5));
+
+    normal = normalize(TBN * TN);
   }
 
   vec4 weights;
   for (uint i = 0; i < 4; i++) {
     const vec3 coarse = normalize(texture(uNormal_low_res, coarse_samples[i]).xyz);
-    weights[i] = min(max(pow(dot(normal, coarse), 32), 0.0), 1.0);
+    weights[i] = clamp(pow(dot(normal, coarse), 32), 0.0, 1.0);
   }
 
   return weights;
@@ -100,7 +106,7 @@ vec4 get_position_weights(const vec2 p, const vec2 coarse_samples[4]) {
   vec4 weights;
   for (uint i = 0; i < 4; i++) {
     const vec3 coarse = texture(uPosition_low_res, coarse_samples[i]).xyz;
-    const float dist = max(1.0 / (EPSILON + distance(fine, coarse)), 1.0);
+    const float dist = clamp(1.0 / (EPSILON + distance(fine, coarse)), 0.0, 1.0);
     weights[i] = dist;
   }
 

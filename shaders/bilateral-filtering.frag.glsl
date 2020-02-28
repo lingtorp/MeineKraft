@@ -57,13 +57,14 @@ float weights(const vec2 c, const vec2 p) {
   if (uDepth_weight) {
     const float depth_c = linearize_depth(texture(uDepth, c).r);  // FIXME: Fetched more than once
     const float depth_p = linearize_depth(texture(uDepth, p).r);
-    const float dd = 1.0 / (EPSILON + abs(depth_c - depth_p)); // [0,1]?
+    const float dd = clamp(1.0 / (EPSILON + abs(depth_c - depth_p)), 0.0, 1.0);
     w *= gaussian(dd, uDepth_sigma);
   }
 
   return w;
 }
 
+// TODO: Normalmapping in filtering?
 void main() {
   const vec2 c_i = gl_FragCoord.xy * uInput_pixel_size;
   const vec2 c_o = gl_FragCoord.xy * uOutput_pixel_size;
