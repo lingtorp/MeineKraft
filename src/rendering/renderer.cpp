@@ -633,7 +633,6 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     glObjectLabel(GL_TEXTURE, gl_indirect_radiance_texture, -1, "GBuffer indirect radiance texture");
 
     // Global ambient radiance map
-    // FIXME: Resize the texture depending on the downsample factor in order for the screendumps to be good
     gl_ambient_radiance_texture_unit = get_next_free_texture_unit();
     glActiveTexture(GL_TEXTURE0 + gl_ambient_radiance_texture_unit);
     glGenTextures(1, &gl_ambient_radiance_texture);
@@ -1539,9 +1538,9 @@ void Renderer::render(const uint32_t delta) {
     if (state.bilateral_filtering.specular) { bilateral_filtering_pass(gl_specular_radiance_texture, gl_specular_radiance_texture_unit, div); }
     if (state.bilateral_filtering.direct)   { bilateral_filtering_pass(gl_direct_radiance_texture,   gl_direct_radiance_texture_unit);   }
 
-    const auto save_pixel_diff = [&](const std::string& filename, const Vec3f* pre, const Vec3f* post) {
-      const std::string pre_fp  = Filesystem::save_image_as_ppm(Filesystem::tmp + "pre-"  + filename, pre, screen.width, screen.height, div);
-      const std::string post_fp = Filesystem::save_image_as_ppm(Filesystem::tmp + "post-" + filename, post, screen.width, screen.height, div);
+    const auto save_pixel_diff = [&](const std::string& filename, const Vec3f* pre, const Vec3f* post, const TextureFormat fmt = TextureFormat::RGB32F) {
+      const std::string pre_fp  = Filesystem::save_image_as_ppm(Filesystem::tmp + "pre-"  + filename, pre, screen.width, screen.height, div, fmt);
+      const std::string post_fp = Filesystem::save_image_as_ppm(Filesystem::tmp + "post-" + filename, post, screen.width, screen.height, div, fmt);
       const std::string out_fp = Filesystem::tmp + "diff-" + filename + ".png";
       // FIXME: Compare using grayscale not binary white-black?
       const std::string cmd = "compare -highlight-color white " + pre_fp + " " + post_fp + " " + out_fp;
@@ -1553,7 +1552,7 @@ void Renderer::render(const uint32_t delta) {
 
     // Post-filtering screenshot
     if (state.bilateral_filtering.pixel_diff) {
-      if (state.bilateral_filtering.ambient)   { save_pixel_diff("ambient-radiance",  ambient_radiance_pixels, get_texture(gl_ambient_radiance_texture)); };
+      if (state.bilateral_filtering.ambient)   { save_pixel_diff("ambient-radiance",  ambient_radiance_pixels, get_texture(gl_ambient_radiance_texture), TextureFormat::R32F); };
       if (state.bilateral_filtering.indirect)  { save_pixel_diff("indirect-radiance", indirect_radiance_pixels, get_texture(gl_indirect_radiance_texture)); };
       if (state.bilateral_filtering.specular)  { save_pixel_diff("specular-radiance", specular_radiance_pixels, get_texture(gl_specular_radiance_texture)); };
       state.bilateral_filtering.pixel_diff = false;

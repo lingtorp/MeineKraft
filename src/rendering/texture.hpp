@@ -43,6 +43,11 @@ struct TextureResource {
   }
 };
 
+enum class TextureFormat {
+  RGB32F,
+  R32F
+};
+
 struct Texture {
   static RawTexture load_textures(const TextureResource& resource);
   
@@ -53,6 +58,8 @@ struct Texture {
 
   /// OpenGL texture target; CUBE_MAP, CUBE_MAP_ARRAY, TEXTURE_2D, etc
   uint32_t gl_texture_target = 0;
+
+  TextureFormat format; // FIXME: Use!
 
   enum class Type: uint8_t {
     Diffuse,              // A.k.a albedo/base_color

@@ -10,6 +10,7 @@
 
 #include "logging.hpp"
 #include "../math/vector.hpp"
+#include "../rendering/texture.hpp"
 
 // TODO: Make the paths dynamic rather than static
 namespace Filesystem {
@@ -19,7 +20,7 @@ namespace Filesystem {
 #elif defined(_WIN32) || defined(_WIN64)
   const std::string base = "C:/Users/Alexander/repos/MeineKraft/";
 #endif
-  
+
 #if defined(__linux__)
   const std::string home = "/home/alexander/";
 #elif defined(_WIN32) || defined(_WIN64)
@@ -47,7 +48,7 @@ namespace Filesystem {
 
   /// Tries to save the pixels as RGB PPM format
   /// Returns filepath to the saved file if it was created successfully, otherwise empty string
-  inline std::string save_image_as_ppm(const std::string filename, const Vec3f* pixels, const size_t w, const size_t h, const float downsample_factor = 1.0f) {
+  inline std::string save_image_as_ppm(const std::string filename, const Vec3f* pixels, const size_t w, const size_t h, const float downsample_factor = 1.0f, const TextureFormat fmt = TextureFormat::RGB32F) {
     assert(downsample_factor >= 1.0f && "Downsample factor must be larger or equal to 1.0");
 
     std::filesystem::path filepath = filename;
@@ -97,9 +98,18 @@ namespace Filesystem {
     for (int32_t y = starty; y >= stopy; y--) {
       for (uint32_t x = startx; x < stopx; x++) {
         const Vec3f& p = pixels[y * w + x];
-        file << std::to_string(static_cast<uint8_t>(p.x * 255.0f)) + " ";
-        file << std::to_string(static_cast<uint8_t>(p.y * 255.0f)) + " ";
-        file << std::to_string(static_cast<uint8_t>(p.z * 255.0f)) + " ";
+        switch (fmt) {
+          case TextureFormat::RGB32F:
+            file << std::to_string(static_cast<uint8_t>(p.x * 255.0f)) + " ";
+            file << std::to_string(static_cast<uint8_t>(p.y * 255.0f)) + " ";
+            file << std::to_string(static_cast<uint8_t>(p.z * 255.0f)) + " ";
+            break;
+          case TextureFormat::R32F:
+            file << std::to_string(static_cast<uint8_t>(p.x * 255.0f)) + " ";
+            file << std::to_string(static_cast<uint8_t>(p.x * 255.0f)) + " ";
+            file << std::to_string(static_cast<uint8_t>(p.x * 255.0f)) + " ";
+            break;
+        }
       }
     }
 
