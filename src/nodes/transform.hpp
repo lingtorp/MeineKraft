@@ -33,7 +33,7 @@ public:
 struct TransformComponent {
   Vec3f position = Vec3f(0.0f, 0.0f, 0.0f); // World position
   float scale = 1.0f;
-  Vec3f rotation = Vec3f(0.0f, 0.0f, 0.0f); // Rotation in degrees around (x, y, z)
+  Vec3f rotation = Vec3f(0.0f, 0.0f, 0.0f); // Rotation in degrees around (x, y, z) = (roll, pitch, yaw)?
 };
 
 // FIXME
@@ -55,10 +55,12 @@ public:
     return instance;
   }
 
+  // TODO: Document
   void reset_dirty() {
     dirty_idx = 0;
   }
 
+  // TODO: Document
   std::vector<ID> get_dirty_transform_ids() const {
     if (data_ids.size() == 0) {
       return {};
@@ -82,6 +84,7 @@ public:
     return &data[data_idxs[id]];
   }
 
+  // TODO: Document
   void set_transform(const TransformComponent& transform, const ID id) {
     if (data_idxs[id] <= dirty_idx) { // If transform is already dirty
       data[data_idxs[id]] = transform;
@@ -102,12 +105,14 @@ public:
     } 
   }
 
+  // TODO: Document
   void add_component(const TransformComponent& component, const ID id) {
     data.emplace_back(component);
     data_idxs[id] = data.size() - 1;
     data_ids.emplace_back(id);
   }
 
+  // TODO: Document
   void remove_component(const ID id) {
     if (data_idxs.find(id) == data_idxs.cend()) { return; }
     data.erase(data.cbegin() + data_idxs[id]);

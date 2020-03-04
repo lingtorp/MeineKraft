@@ -42,6 +42,9 @@ inline void Renderer::pass_started(const std::string &name) {
   glBeginQuery(GL_TIME_ELAPSED, gl_query_ids[state.render_passes]);
   glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, name.c_str());
   state.render_passes++;
+  if (state.render_passes > MAX_RENDER_PASSES) {
+    Log::warn("Maximum render passes");
+  }
 }
 
 /// Indicates the end of a Renderpass (must be paired with pass_started)
@@ -982,6 +985,10 @@ bool Renderer::init() {
     Log::info("Voxel size: "    + std::to_string(aabbs[i].max_axis() / clipmaps.size[i]));
     Log::info("Voxel d^3: "     + std::to_string(clipmaps.size[i]));
   }
+
+  const std::vector<float> kernel = gaussian_1d_kernel(0.8, 1);
+  Log::info(kernel);
+
   return true;
 }
 

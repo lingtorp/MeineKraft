@@ -20,10 +20,10 @@ struct World {
   std::vector<Entity*> graph;
  
   explicit World() {
-    spawn_entity(MeshPrimitive::Sphere);
+    spawn_entity(MeshPrimitive::Sphere, Vec3f(800.0f, 200.0f, 0.0f), 60.0f);
   }
 
-  Entity* spawn_entity(const MeshPrimitive mesh_primitive) {
+  Entity* spawn_entity(const MeshPrimitive mesh_primitive, const Vec3f position = Vec3f(), const float scale = 1.0f) {
     Entity* entity = new Entity();
     graph.push_back(entity);
 
@@ -31,8 +31,8 @@ struct World {
     NameSystem::instance().add_name_to_entity(name, entity->id);
 
     TransformComponent transform;
-    transform.position = Vec3f(800.0f, 200.0f, 0.0f);
-    transform.scale = 60.0f;
+    transform.position = position;
+    transform.scale = scale;
     entity->attach_component(transform);
 
     RenderComponent render;
@@ -45,8 +45,7 @@ struct World {
 
     return entity;
   }
-
-  // TODO: Update all Entities 
+  // TODO: Update all Entities
   void tick() {}
 };
 

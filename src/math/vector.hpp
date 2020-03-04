@@ -461,7 +461,7 @@ using Mat4d = Mat4<double>;
 /// Kernel radius of 2 becomes a 2D kernel window of (2 + 1 + 2) (5x5 effective 2D kernel).
 /// Kernel radius of 1 becomes a 2D kernel window of (1 + 1 + 1) (3x3 effective 2D kernel).
 /// Gaussian function is sampled using strafified sampling with each strata using a uniform distribution.
-/// [1] suggests a kernel cutoff of 3*sigma and [2] a cutoff of 2*sigma, [0] 2*sigma + 1
+/// [1] suggests a kernel cutoff of 3*sigma, [2] a cutoff of 2*sigma, [0] 2*sigma + 1
 /// [0]: https://fiveko.com/tutorials/image-processing/gaussian-blur-filter/#gauss1d
 /// [1]: https:///www.crisluengo.net/archives/695
 /// [2]: https://people.csail.mit.edu/sparis/bf_course/
@@ -491,7 +491,7 @@ static std::vector<float> gaussian_1d_kernel(const float sigma, const size_t ker
   kernel.reserve(kernel_dim);
 
   // Stratified sampling
-  const float kernel_cutoff = 2.0f * sigma + 1.0f;
+  const float kernel_cutoff = 2.0f * sigma + 1.0f; // Using cutoff from [0]
   const float strata_size = 2.0f * kernel_cutoff / float(2.0f * kernel_radius + 1); // Symmetric kernel
 
   float cum_v = 0.0f; // Cumulative value
@@ -513,52 +513,6 @@ static std::vector<float> gaussian_1d_kernel(const float sigma, const size_t ker
   // Normalization
   for (auto& v : kernel) {
     v /= cum_v;
-  }
-
-  return kernel;
-};
-
-/// Computes the Gaussian matrix of dimension 'size' with the variance 'sigma'
-static std::vector<float> gaussian_2d_kernel(const size_t size, const float sigma) {
-  assert(false); // TODO: Implement
-  assert(size % 2 == 1 && "Not a box filter kernel");
-  assert(size > 1 && "Kernel size too small");
-  assert(sigma > 0.0 && "Sigma not non-zero");
-
-  std::vector<float> kernel;
-
-  // FIXME: Gaussian is defined in multiple ways all over the internet, which one is the most correct?
-  const auto gaussian = [](const Vec2f& v, const float sigma) -> float {
-                          const float factor = 1.0f / (sigma * sigma * 2.0f * M_PI);
-                          return factor * exp(- 0.5f * (v.dot(v)) / (sigma * sigma));
-                        };
-
-  const Vec2f c = Vec2f::zero();
-
-  // Step size in Gaussian space
-  // TODO: Try symmetric stratified uniform sampling
-  // TODO: Find an algorithm for sampling the Gaussian function
-  const Vec2f delta = Vec2f::zero();
-
-  const int32_t R = size - 2; // Kernel radius
-  float sum = 0.0;            // Weight sum
-
-  // Sample kernel
-  for (int32_t i = -R; i <= R; i++) {
-    for (int32_t j = -R; j <= R; j++) {
-      const Vec2f offset = Vec2f(i, j) * delta;
-      const float weight = gaussian(c + offset, sigma);
-      kernel.push_back(weight);
-      sum += weight;
-    }
-  }
-
-  // Normalize kernel
-  for (int32_t i = -R; i <= R; i++) {
-    for (int32_t j = -R; j <= R; j++) {
-      const Vec2i wv = Vec2i(R, R) + Vec2i(i, j);
-      kernel[wv.x * size + wv.y] /= sum;
-    }
   }
 
   return kernel;
