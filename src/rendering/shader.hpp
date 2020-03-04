@@ -19,7 +19,8 @@ struct Shader {
     DiffuseRGBA,    // Diffuse texture format 32 bit depth
     DiffuseScalars, // Diffuse scalars instead of texture
     Emissive,       // Has emissive texture
-    EmissiveScalars // Emissive scalars instead of texture
+    EmissiveScalars,// Emissive scalars instead of texture
+    TangentNormals, // Has tangent normals
   };
 
   Shader() = default;

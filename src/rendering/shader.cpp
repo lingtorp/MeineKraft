@@ -40,6 +40,9 @@ static std::string shader_define_to_string(const Shader::Defines define) {
   case Shader::Defines::EmissiveScalars:
     return "#define HAS_EMISSIVE_SCALARS \n";
     break;
+  case Shader::Defines::TangentNormals:
+    return "#define HAS_TANGENT_NORMALS \n";
+    break;
   default:
     Log::error("Invalid shader define passed");
     return "This will ensure that shader compilation does not work :)";

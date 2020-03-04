@@ -1467,6 +1467,8 @@ void Renderer::render(const uint32_t delta) {
         glUniform1f(glGetUniformLocation(program, "uPosition_sigma"), state.bilateral_filtering.position_sigma);
         glUniform1i(glGetUniformLocation(program, "uNormal_weight"), state.bilateral_filtering.normal_weight);
         glUniform1i(glGetUniformLocation(program, "uNormal"), gl_geometric_normal_texture_unit);
+        glUniform1i(glGetUniformLocation(program, "uTangent"), gl_tangent_texture_unit);
+        glUniform1i(glGetUniformLocation(program, "uTangent_normal"), gl_tangent_normal_texture_unit);
         glUniform1f(glGetUniformLocation(program, "uNormal_sigma"), state.bilateral_filtering.normal_sigma);
         glUniform1i(glGetUniformLocation(program, "uDepth_weight"), state.bilateral_filtering.depth_weight);
         glUniform1i(glGetUniformLocation(program, "uDepth"), gl_depth_texture_unit);
@@ -1498,6 +1500,8 @@ void Renderer::render(const uint32_t delta) {
         glUniform1f(glGetUniformLocation(program, "uPosition_sigma"), state.bilateral_filtering.position_sigma);
         glUniform1i(glGetUniformLocation(program, "uNormal_weight"), state.bilateral_filtering.normal_weight);
         glUniform1i(glGetUniformLocation(program, "uNormal"), gl_geometric_normal_texture_unit);
+        glUniform1i(glGetUniformLocation(program, "uTangent_normal"), gl_tangent_normal_texture_unit);
+        glUniform1i(glGetUniformLocation(program, "uTangent"), gl_tangent_texture_unit);
         glUniform1f(glGetUniformLocation(program, "uNormal_sigma"), state.bilateral_filtering.normal_sigma);
         glUniform1i(glGetUniformLocation(program, "uDepth_weight"), state.bilateral_filtering.depth_weight);
         glUniform1i(glGetUniformLocation(program, "uDepth"), gl_depth_texture_unit);
@@ -1757,7 +1761,7 @@ void Renderer::render(const uint32_t delta) {
     /// Query for the GPU execution time for the render passes
     glBindBuffer(GL_QUERY_BUFFER, gl_execution_time_query_buffer);
     for (size_t i = 0; i < state.render_passes; i++) {
-      glGetQueryObjectui64v(gl_query_ids[i], GL_QUERY_RESULT_NO_WAIT, (GLuint64*) (sizeof(GLuint64) * i));
+      glGetQueryObjectui64v(gl_query_ids[i], GL_QUERY_RESULT_NO_WAIT, reinterpret_cast<GLuint64*>(sizeof(GLuint64) * i));
       state.total_execution_time += gl_query_time_buffer_ptr[i]; // NOTE: Not 100% exact due to timings and changing pipeline
     }
   }
@@ -1930,6 +1934,11 @@ void Renderer::add_component(const RenderComponent comp, const ID entity_id) {
     comp_shader_config.insert(Shader::Defines::EmissiveScalars);
     material.emissive_scalars = comp.emissive_scalars;
   }
+
+  // TODO: Tangent normals state 
+  // if (comp.normal_texture.data.pixels) {
+  //   comp_shader_config.insert(Shader::Defines:Emissive:TangentNormals);
+  // }
 
   // Shader configuration and mesh id defines the uniqueness of a GBatch
   // FIXME: Does not take every texture into account ...
