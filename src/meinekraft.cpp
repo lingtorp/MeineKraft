@@ -118,10 +118,15 @@ void imgui_styling() {
   style->Colors[ImGuiCol_ModalWindowDarkening] = ImVec4(1.00f, 0.98f, 0.95f, 0.73f);
 }
 
-static void dump_performance_data(const struct Renderer* render) {
+static void dump_performance_data(const struct Renderer* render, const size_t fps) {
   const float total_time = render->state.total_execution_time / 1'000'000'00.0f;
 
   nlohmann::json obj;
+
+  // General information
+  {
+    obj["general"]["fps"] = fps;
+  }
 
   // GPU view frustum culling
   if (render->state.culling.enabled) {
@@ -339,7 +344,7 @@ void MeineKraft::mainloop() {
 
   /// Window handling
   bool throttle_rendering = false;
-  bool throttle_rendering_enabled = true; // NOTE: Enables the flag 'throttle_rendering'
+  bool throttle_rendering_enabled = false; // NOTE: Enables the flag 'throttle_rendering'
 
   while (!done) {
       current_tick = std::chrono::high_resolution_clock::now();
@@ -437,7 +442,7 @@ void MeineKraft::mainloop() {
     world.tick();
 
     /// Render the world
-    if (!throttle_rendering && throttle_rendering_enabled) {
+    if (!throttle_rendering || !throttle_rendering_enabled) {
       renderer->render(delta);
     }
 
@@ -455,7 +460,7 @@ void MeineKraft::mainloop() {
     if (screenshot_mode && renderer->state.frame > screenshot_mode_frame_wait) { return; }
 
     /// ImGui - Debug instruments
-    if (!throttle_rendering && throttle_rendering_enabled) {
+    if (!throttle_rendering || !throttle_rendering_enabled) {
       begin_gl_cmds("ImGui");
 
       ImGui_ImplSdlGL3_NewFrame(window);
@@ -470,7 +475,7 @@ void MeineKraft::mainloop() {
             if (ImGui::MenuItem("Quit", "ESC")) { done = true; }
             if (ImGui::MenuItem("Screenshot")) { take_screenshot = true; }
             if (ImGui::MenuItem("Pixel diff")) { renderer->state.bilateral_filtering.pixel_diff = true; }
-            if (ImGui::MenuItem("Dump performance data")) { dump_performance_data(renderer); }
+            if (ImGui::MenuItem("Dump performance data")) { dump_performance_data(renderer, io.Framerate); }
             if (ImGui::MenuItem("Hide GUI")) {  } // TODO: Implement
             ImGui::EndMenu();
           }
@@ -624,6 +629,8 @@ void MeineKraft::mainloop() {
 
             ImGui::Checkbox("Enabled##filtering", &renderer->state.bilateral_filtering.enabled);
 
+            ImGui::Checkbox("Normalmapping##filtering", &renderer->state.bilateral_filtering.normalmapping);
+
             ImGui::Text("Filter:");
             ImGui::Checkbox("Direct##filtering", &renderer->state.bilateral_filtering.direct);
             ImGui::SameLine();
@@ -634,6 +641,7 @@ void MeineKraft::mainloop() {
             ImGui::Checkbox("Ambient##filtering", &renderer->state.bilateral_filtering.ambient);
 
             ImGui::Separator();
+
             ImGui::Text("Gaussian spatial kernel weights");
             ImGui::BeginChild("spatial_kernel", ImVec2(0, 3.5f * ImGui::GetTextLineHeight()), true, ImGuiWindowFlags_HorizontalScrollbar);
             for (const float& weight : renderer->state.bilateral_filtering.kernel) {

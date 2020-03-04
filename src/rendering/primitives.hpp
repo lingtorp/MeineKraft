@@ -410,6 +410,7 @@ struct RenderState {
     float normal_sigma = 2.0f;          // FIXME: How to set this value or tune it?
     bool depth_weight = false;          // Enable depth as a weight in filtering
     float depth_sigma = 2.0f;           // FIXME: How to set this value or tune it?
+    bool normalmapping = false;         // Enable displacement of normals when normals used as weight in filtering
   } bilateral_filtering;
 
   // Bilateral upsampling related
