@@ -18,6 +18,11 @@ uniform bool uNormal_weight;
 uniform float uNormal_sigma;
 uniform sampler2D uNormal;
 
+// Normalmapping
+uniform bool uNormal_mapping;
+uniform sampler2D uTangent;
+uniform sampler2D uTangent_normal;
+
 uniform bool uDepth_weight;
 uniform float uDepth_sigma;
 uniform sampler2D uDepth;
@@ -36,7 +41,7 @@ const vec2 STEP_DIR = vec2(1.0, 0.0);
 const vec2 STEP_DIR = vec2(0.0, 1.0);
 #endif
 
-// 'c' = pixel currently being shade, 'p' some other pixel
+/// Computes the filtering weights for 'c' (center) and 'p' another pixel
 float weights(const vec2 c, const vec2 p) {
   float w = 1.0;
 
@@ -48,8 +53,48 @@ float weights(const vec2 c, const vec2 p) {
   }
 
   if (uNormal_weight) {
-    const vec3 norm_c = texture(uNormal, c).xyz; // FIXME: Fetched more than once
-    const vec3 norm_p = texture(uNormal, p).xyz;
+    vec3 norm_c = texture(uNormal, c).xyz; // FIXME: Computed more than once
+    vec3 norm_p = texture(uNormal, p).xyz; // FIXME: Computed more than once
+
+    // Tangent normal mapping & TBN tranformation
+    if (uNormal_mapping) {
+      // Normal at c
+      {
+        const vec3 T = normalize(texture(uTangent, c).xyz);
+        const vec3 B = normalize(cross(norm_c, T));
+        const vec3 N = normalize(norm_c);
+        const mat3 TBN = mat3(T, B, N);
+
+        const vec3 tangent = texture(uTangent_normal, c).xyz;
+        const vec3 TN = normalize(2.0 * tangent - vec3(0.5));
+
+        // No tangent map data available
+        if (dot(tangent, tangent) <= EPSILON) {
+          norm_c = normalize(vec3(1.0));
+        } else {
+          norm_c = normalize(TBN * TN);
+        }
+      }
+
+      // Normal at p
+      {
+        const vec3 T = normalize(texture(uTangent, p).xyz);
+        const vec3 B = normalize(cross(norm_p, T));
+        const vec3 N = normalize(norm_p);
+        const mat3 TBN = mat3(T, B, N);
+
+        const vec3 tangent = texture(uTangent_normal, p).xyz;
+        const vec3 TN = normalize(2.0 * tangent - vec3(0.5));
+
+        // No tangent map data available
+        if (dot(tangent, tangent) <= EPSILON) {
+          norm_p = normalize(vec3(1.0));
+        } else {
+          norm_p = normalize(TBN * TN);
+        }
+      }
+    }
+
     const vec3 dn = norm_c - norm_p;
     w *= gaussian(dot(dn, dn), uNormal_sigma);
   }
