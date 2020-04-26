@@ -20,16 +20,6 @@
             "direction": [0.64, -0.30, -0.71],
             "fov": 70.0
         },
-        "camera2": {
-            "position": [-682, 532, -374],
-            "direction": [0.82, -0.52, 0.20],
-            "fov": 70.0
-        },
-        "camera3": {
-            "position": [-1175, 281, -29],
-            "direction": [0.94, -0.00, -0.32],
-            "fov": 70.0
-        },
         "directional_light": {
             "itensity": [1.0, 1.0, 1.0],
             "direction": [-1.0, -1.0, 0.0]
