@@ -298,7 +298,7 @@ struct Plane {
   }
 
   /// Normalizes the plane's equation and returns it
-  static inline Vec4f normalize(const Vec4f& p) {
+  static inline Plane normalize(const Plane& p) {
     const float mag = std::sqrt(p.x * p.x + p.y * p.y + p.z * p.z);
     return Vec4f(p.x / mag, p.y / mag, p.z / mag, p.w / mag);
   }
@@ -370,9 +370,9 @@ struct RenderState {
   // Voxel cone tracing related
   struct {
     uint64_t execution_time[execution_time_buffer_size] = {0}; // NOTE: nanoseconds
-    const uint32_t MAX_DIFFUSE_CONES = 12;     // FIXME: Diffuse cone hardcoded limit
-    float roughness_aperature = 60.0f;         // 60 deg diffuse cone from [Rauwendaal, Crassin11]
-    float metallic_aperature   = 0.1f;         // 10 deg specular cone from [Crassin11]
+    const uint32_t MAX_DIFFUSE_CONES = 12;     // Diffuse cone hardcoded limit
+    float roughness_aperature = 60.0f;         // 60 deg diffuse cone used by [Rauwendaal, Crassin11]
+    float metallic_aperature   = 1.0f;         // Measured in half-angled, 10 deg specular cone used by [Crassin11]
     int num_diffuse_cones = 6;                 // [Crassin11], [Yeu13] suggests 5
     float specular_cone_trace_distance = 0.25f;// Specular cone trace distance in terms of factor of max scene length
     float ambient_decay = 0.2f;                // [Crassin11] mentions but does not specify decay factor for scene ambient
@@ -395,7 +395,7 @@ struct RenderState {
   // Bilateral filtering related
   struct {
     uint64_t execution_time[execution_time_buffer_size] = {0}; // NOTE: nanoseconds
-    bool enabled = true;                // Bilateral filtering pass to filter the radiance
+    bool enabled = false;                // Bilateral filtering pass to filter the radiance
     bool direct = false;                // Enable filtering of the direct radiance
     bool ambient = true;                // Enable filtering of the ambient radiance
     bool indirect = true;               // Enable filtering of the indirect radiance
@@ -420,7 +420,7 @@ struct RenderState {
     bool ambient = true;
     bool indirect = true;
     bool specular = true;
-    bool depth_weight = true;          // Depth guidance texture used to upsample image
+    bool depth_weight = false;          // Depth guidance texture used to upsample image
     bool normal_weight = false;        // Normal guidance texture used to upsample image
     bool position_weight = false;      // Position guidance texture used to upsample image
     bool normal_mapping = false;

@@ -46,8 +46,12 @@ namespace Filesystem {
     std::filesystem::create_directory(filepath);
   }
 
+  inline std::string save_image_as_png(const std::string filename, const Vec3f* pixels, const size_t w, const size_t h, const float downsample_factor = 1.0f, const TextureFormat fmt = TextureFormat::RGB32F) {
+    assert(downsample_factor >= 1.0f && "Downsample factor must be larger or equal to 1.0");
+    assert(false && "Unimplemented PNG support");
+  }
+
   /// Tries to save the pixels as RGB PPM format
-  /// Returns filepath to the saved file if it was created successfully, otherwise empty string
   inline std::string save_image_as_ppm(const std::string filename, const Vec3f* pixels, const size_t w, const size_t h, const float downsample_factor = 1.0f, const TextureFormat fmt = TextureFormat::RGB32F) {
     assert(downsample_factor >= 1.0f && "Downsample factor must be larger or equal to 1.0");
 
@@ -117,6 +121,17 @@ namespace Filesystem {
 
     Log::info("Screenshot saved at: " + filepath.string());
     return filepath;
+  }
+
+  /// Returns filepath to the saved file if it was created successfully, otherwise empty string
+  inline std::string save_image_as(const std::string filename, const ImageFormat img_fmt, const Vec3f* pixels, const size_t w, const size_t h, const float downsample_factor = 1.0f, const TextureFormat texture_fmt = TextureFormat::RGB32F) {
+    switch (img_fmt) {
+      case ImageFormat::PPM:
+        return Filesystem::save_image_as_ppm(filename, pixels, w, h, downsample_factor, texture_fmt);
+      case ImageFormat::PNG:
+        return Filesystem::save_image_as_png(filename, pixels, w, h, downsample_factor, texture_fmt);
+    }
+    Log::warn("Unsupported imageformat"); // FIXME: Which imageformat?
   }
 
   /// Saves the text passed in a file at filepath

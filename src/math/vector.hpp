@@ -5,6 +5,7 @@
 #include <iostream>
 #include <vector>
 #include <random>
+#include <algorithm>
 
 #include <glm/common.hpp>
 
@@ -138,6 +139,9 @@ struct Vec3 {
     /// Squared length of the vector
     constexpr inline T sqr_length() const { return x * x + y * y + z * z; }
 
+    /// Sets the vectors elements to the absolute value
+    constexpr inline void abs() { x = std::abs(x); y = std::abs(y); z = std::abs(z); };
+
     /// Normalizes a copy of this vector and returns it
     constexpr inline Vec3<T> normalize() const {
         const float length = this->length();
@@ -165,6 +169,11 @@ struct Vec3 {
 
     /// Dot product of this and the vector u
     constexpr inline T dot(const Vec3<T>& u) const { return x * u.x + y * u.y + z * u.z; }
+
+    /// Clamps the elements in place of the vector between 'low' and 'high'
+    constexpr inline void clamp(const T low, const T high) {
+      x = std::clamp(x, low, high); y = std::clamp(y, low, high); z = std::clamp(z, low, high);
+    }
 
     /// Computes the element-wise raised to the power of e: (x^e, y^e, z^e)
     /// See http://chilliant.blogspot.com/2012/08/srgb-approximations-for-hlsl.html
@@ -245,6 +254,10 @@ struct Vec3 {
 
     constexpr inline void operator*=(const T rhs) {
       x *= rhs; y *= rhs; z *= rhs;
+    }
+
+    constexpr inline void operator+=(const Vec3& rhs) {
+      x += rhs.x; y += rhs.y; z += rhs.z;
     }
 
     inline glm::vec3 as_glm() const {

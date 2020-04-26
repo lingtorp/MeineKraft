@@ -130,12 +130,12 @@ static glm::mat4 shadowmap_transform(const AABB& aabb, const DirectionalLight& l
 // NOTE: AABB passed is assumed to be the Scene AABB
 static glm::mat4 orthographic_projection(const AABB& aabb) {
   const float voxel_grid_dimension = aabb.max_axis() / 2.0f;
-	const float left   = -voxel_grid_dimension;
-	const float right  =  voxel_grid_dimension;
-	const float bottom = -voxel_grid_dimension;
-	const float top    =  voxel_grid_dimension;
-	const float znear  =  0.0f;
-	const float zfar   =  2.0f * voxel_grid_dimension;
+  const float left   = -voxel_grid_dimension;
+  const float right  =  voxel_grid_dimension;
+  const float bottom = -voxel_grid_dimension;
+  const float top    =  voxel_grid_dimension;
+  const float znear  =  0.0f;
+  const float zfar   =  2.0f * voxel_grid_dimension;
 
   const glm::mat4 ortho  = glm::ortho(left, right, bottom, top, znear, zfar);
   const glm::vec3 center = aabb.center().as_glm();
@@ -868,7 +868,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
       glDrawBuffers(std::size(attachments), attachments);
 
       if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-        Log::error("Bilateral upsampling pingFBO not complete"); exit(-1);
+        Log::error("Bilateral upsampling ping FBO not complete"); exit(-1);
       }
     }
   }
@@ -985,10 +985,6 @@ bool Renderer::init() {
     Log::info("Voxel size: "    + std::to_string(aabbs[i].max_axis() / clipmaps.size[i]));
     Log::info("Voxel d^3: "     + std::to_string(clipmaps.size[i]));
   }
-
-  const std::vector<float> kernel = gaussian_1d_kernel(0.8, 1);
-  Log::info(kernel);
-
   return true;
 }
 
@@ -997,21 +993,25 @@ void Renderer::render(const uint32_t delta) {
   state.render_passes = 0;
   state.total_execution_time = 0;
 
+  // Asserts downsampling factor
+  if (state.lighting.downsample_modifier % 2 != 0 || state.lighting.downsample_modifier <= 0) {
+    state.lighting.downsample_modifier = 1;
+  }
+
   // Help variable for the indexing of executing timings of the render passes
   const uint8_t TIME_IDX = state.frame % RenderState::execution_time_buffer_size;
 
   GLuint last_executed_fbo = 0; // NOTE: This FBO's default buffer is blitted to the screen
 
-  const float aspect = static_cast<float>(screen.width) / static_cast<float>(screen.height);
-  const auto projection_matrix = scene->camera.projection(aspect);
+  const float aspect_ratio = static_cast<float>(screen.width) / static_cast<float>(screen.height);
+  const auto projection_matrix = scene->camera.projection(aspect_ratio);
 
   const glm::mat4 camera_transform = projection_matrix * scene->camera.transform(); // TODO: Camera handling needs to be reworked
 
   /// Renderer caches the transforms of components thus we need to fetch the ones who changed during the last frame
-  if (state.frame % 10 == 0) {
-    TransformSystem::instance().reset_dirty();
-  }
+  // FIXME: This is a bad design?
   update_transforms();
+  TransformSystem::instance().reset_dirty();
 
   static GLsync syncs[3] = {nullptr, nullptr, nullptr};
 
@@ -1106,7 +1106,7 @@ void Renderer::render(const uint32_t delta) {
     pass_started("Geometry pass");
 
     glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); // Always update the depth buffer with the new values
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     for (size_t i = 0; i < graphics_batches.size(); i++) {
       const auto& batch = graphics_batches[i];
       const auto program = batch.depth_shader.gl_program;
@@ -1136,10 +1136,8 @@ void Renderer::render(const uint32_t delta) {
         glBindTexture(GL_TEXTURE_2D, batch.gl_tangent_normal_texture);
       }
 
-      if (batch.gl_emissive_texture != 0) {
-        glActiveTexture(GL_TEXTURE0 + batch.gl_emissive_texture_unit); // TODO: Replace with DSA
-        glBindTexture(GL_TEXTURE_2D, batch.gl_emissive_texture);
-      }
+      glActiveTexture(GL_TEXTURE0 + batch.gl_emissive_texture_unit); // TODO: Replace with DSA
+      glBindTexture(GL_TEXTURE_2D, batch.gl_emissive_texture);
 
       const uint64_t draw_cmd_offset = batch.gl_curr_ibo_idx * sizeof(DrawElementsIndirectCommand);
       glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (const void*) draw_cmd_offset, 1, sizeof(DrawElementsIndirectCommand));
@@ -1574,6 +1572,7 @@ void Renderer::render(const uint32_t delta) {
 
   /// Bilateral upsampling
   if (state.bilateral_upsample.enabled && state.lighting.downsample_modifier > 1) {
+    assert(!state.bilinear_upsample.enabled);
     state.bilateral_upsample.execution_time[TIME_IDX] = gl_query_time_buffer_ptr[state.render_passes];
     pass_started("Bilateral upsampling pass");
 

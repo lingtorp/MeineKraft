@@ -3,8 +3,8 @@
 #define MEINEKRAFT_MODEL_HPP
 
 #include "../rendering/camera.hpp"
-#include "entity.hpp"
 #include "../rendering/rendercomponent.hpp"
+#include "entity.hpp"
 
 class Model: public Entity {
 public:

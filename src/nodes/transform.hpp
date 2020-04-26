@@ -37,7 +37,7 @@ struct TransformComponent {
 };
 
 // FIXME
-inline static Mat4f compute_transform(const TransformComponent& comp) {
+static Mat4f compute_transform(const TransformComponent& comp) {
   return rotate(comp.rotation).scale(comp.scale).translate(comp.position);
 }
 
@@ -57,7 +57,8 @@ public:
 
   // TODO: Document
   void reset_dirty() {
-    dirty_idx = 0;
+    dirty_idx = data.size() - 1;
+    // dirty_idx = 0;
   }
 
   // TODO: Document
@@ -75,17 +76,19 @@ public:
 
   /// Looking up with a non-existant ID returns the first element in the data, returns copy otherwise
   TransformComponent lookup(const ID id) {
+    assert(data_idxs.count(id) == 1);
     return data[data_idxs[id]]; 
   }
 
   /// Marks the data as dirty and returns a ptr to it
   TransformComponent* lookup_referenced(const ID id) {
+    assert(data_idxs.count(id) == 1);
     set_transform(data[data_idxs[id]], id); // Marks the data as dirty
     return &data[data_idxs[id]];
   }
 
   // TODO: Document
-  void set_transform(const TransformComponent& transform, const ID id) {
+  void set_transform(const TransformComponent& transform, const ID id) { // FIXME: Does not work
     if (data_idxs[id] <= dirty_idx) { // If transform is already dirty
       data[data_idxs[id]] = transform;
       return;
@@ -106,8 +109,10 @@ public:
   }
 
   // TODO: Document
+  // Overwrites if there already exists a component for the ID
   void add_component(const TransformComponent& component, const ID id) {
     data.emplace_back(component);
+    assert(data_idxs.count(id) == 0);
     data_idxs[id] = data.size() - 1;
     data_ids.emplace_back(id);
   }

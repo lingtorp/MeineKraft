@@ -23,6 +23,7 @@
 #include "sdl2/SDL_opengl.h"
 #endif 
 
+// TODO: Remove, this is a sphere, call it and use it for what it is
 /// Bounding volume in the shape of a sphere
 struct BoundingVolume {
   Vec3f position;      // Center position of the sphere         

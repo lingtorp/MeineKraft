@@ -1,8 +1,10 @@
 #include "meinekraft.hpp"
 
 #include <chrono>
+#include <SDL2/SDL_events.h>
 
 #include "imgui/imgui.h"
+#include "nodes/physics_system.hpp"
 #include "rendering/primitives.hpp"
 #include "rendering/renderer.hpp"
 #include "../include/imgui/imgui_impl_sdl.h"
@@ -21,7 +23,7 @@
 // ImGui global GUI settings
 struct {
   bool render_system_window = true;  // Render system information and config. window
-  bool scene_graph_window = false;   // Scene graph of Graphic entities
+  bool scene_graph_window = true;    // Scene graph of Graphic entities
   bool logger_window = false;        // TODO: Logger of engine messages
   bool console_window = false;       // TODO: Console for engine commands
   bool help_window = false;          // TODO: Helpful keyboard shortcuts, displayed on first launch
@@ -121,6 +123,11 @@ void imgui_styling() {
 static void dump_performance_data(const struct Renderer* render, const size_t fps) {
   const float total_time = render->state.total_execution_time / 1'000'000'00.0f;
 
+  float OH = 0.0f;
+  float GI = 0.0f;
+  float GB = 0.0f;
+  float DS = 0.0f;
+
   nlohmann::json obj;
 
   // General information
@@ -137,6 +144,7 @@ static void dump_performance_data(const struct Renderer* render, const size_t fp
     time /= RenderState::execution_time_buffer_size;
     obj["culling"]["time_ms"] = time;
     obj["culling"]["time_percent"] = time / total_time;
+    OH += time / total_time;
   }
 
   // Lighting application
@@ -148,6 +156,7 @@ static void dump_performance_data(const struct Renderer* render, const size_t fp
     time /= RenderState::execution_time_buffer_size;
     obj["lighting_application"]["time_ms"] = time;
     obj["lighting_application"]["time_percent"] = time / total_time;
+    OH += time / total_time;
   }
 
   // Gbuffer generation
@@ -159,6 +168,7 @@ static void dump_performance_data(const struct Renderer* render, const size_t fp
     time /= RenderState::execution_time_buffer_size;
     obj["gbuffer"]["time_ms"] = time;
     obj["gbuffer"]["time_percent"] = time / total_time;
+    GI += time / total_time;
   }
 
   // Gbuffer downsample pass
@@ -170,6 +180,7 @@ static void dump_performance_data(const struct Renderer* render, const size_t fp
     time /= RenderState::execution_time_buffer_size;
     obj["gbuffer_downsample"]["time_ms"] = time;
     obj["gbuffer_downsample"]["time_percent"] = time / total_time;
+    GI += time / total_time;
   }
 
   // Voxelization pass
@@ -181,6 +192,7 @@ static void dump_performance_data(const struct Renderer* render, const size_t fp
     time /= RenderState::execution_time_buffer_size;
     obj["voxelization"]["time_ms"] = time;
     obj["voxelization"]["time_percent"] = time / total_time;
+    GI += time / total_time;
   }
 
   // VCT
@@ -192,6 +204,7 @@ static void dump_performance_data(const struct Renderer* render, const size_t fp
     time /= RenderState::execution_time_buffer_size;
     obj["vct"]["time_ms"] = time;
     obj["vct"]["time_percent"] = time / total_time;
+    GI += time / total_time;
   }
 
   if (render->state.shadow.enabled) {
@@ -207,10 +220,11 @@ static void dump_performance_data(const struct Renderer* render, const size_t fp
     obj["depth_map_generation"]["time_percent"] = time0 / total_time;
     obj["shadow_application"]["time_ms"] = time1;
     obj["shadow_application"]["time_percent"] = time1 / total_time;
+    GI += (time0 + time1) / total_time;
   }
 
   // Bilateral filtering pass
-  if (render->state.bilateral_filtering.enabled) {
+  if (render->state.bilateral_filtering.enabled && render->state.lighting.downsample_modifier > 1) {
     float time = 0.0f;
     for (size_t i = 0; i < RenderState::execution_time_buffer_size; i++) {
       time += render->state.bilateral_filtering.execution_time[i] / 1'000'000.0f;
@@ -221,7 +235,7 @@ static void dump_performance_data(const struct Renderer* render, const size_t fp
   }
 
   // Bilateral upsampling pass
-  if (render->state.bilateral_upsample.enabled) {
+  if (render->state.bilateral_upsample.enabled && render->state.lighting.downsample_modifier > 1) {
     float time = 0.0f;
     for (size_t i = 0; i < RenderState::execution_time_buffer_size; i++) {
       time += render->state.bilateral_upsample.execution_time[i] / 1'000'000.0f;
@@ -232,7 +246,7 @@ static void dump_performance_data(const struct Renderer* render, const size_t fp
   }
 
   // Bilinear upsampling pass
-  if (render->state.bilinear_upsample.enabled) {
+  if (render->state.bilinear_upsample.enabled && render->state.lighting.downsample_modifier > 1) {
     float time = 0.0f;
     for (size_t i = 0; i < RenderState::execution_time_buffer_size; i++) {
       time += render->state.bilinear_upsample.execution_time[i] / 1'000'000.0f;
@@ -262,9 +276,62 @@ static void dump_performance_data(const struct Renderer* render, const size_t fp
     time /= RenderState::execution_time_buffer_size;
     obj["blit"]["time_ms"] = time;
     obj["blit"]["time_percent"] = time / total_time;
+    OH += time / total_time;
+  }
+
+  // OH + GI
+  {
+    obj["OH"]["time_percentage"] = OH;
+    obj["GI"]["time_percentage"] = GI;
   }
 
   Filesystem::save_text_in_file(Filesystem::tmp + "performance_data", obj.dump(2));
+}
+
+void record_fps_loop(struct Renderer* renderer) {
+  const auto component = ActionComponent([=](const uint64_t frame,
+                                             const uint64_t delta) -> bool {
+        static auto step = 0;
+        static const auto MEASUREMENTS = 90;
+        static std::array<uint32_t, MEASUREMENTS> fps;
+
+        if (step == 0) {
+          renderer->scene->camera.position = Vec3f(-562.0f, 583.0f, -9.0f);
+          renderer->scene->camera.direction = Vec3f(0.64f, -0.3f, -0.71f);
+        }
+        else if (step == 29) {
+          renderer->scene->camera.position = Vec3f(-956.0f, 837.0f, -505.0f);
+          renderer->scene->camera.direction = Vec3f(0.66f, -0.61f, 0.42f);
+        }
+        else if (step == 59) {
+          renderer->scene->camera.position = Vec3f(1123.0f, 182.0f, -101.0f);
+          renderer->scene->camera.direction = Vec3f(-1.0f, -0.1f, 0.0f);
+        }
+
+        fps[step] = 1'000.0f / delta;
+        renderer->scene->camera.position += Vec3f(0.05f) * step;
+
+        step++;
+
+        if (step == MEASUREMENTS) {
+          std::string txt;
+          float avg_fps = 0.0f;
+          for (size_t i = 0; i < fps.size(); i++) {
+            txt += "(" + std::to_string(i) + ", " + std::to_string(fps[i]) + ") \n";
+            avg_fps += fps[i];
+          }
+          avg_fps /= fps.size();
+          txt += "\n AVG FPS: " + std::to_string(avg_fps) + "\n";
+          Filesystem::save_text_in_file(Filesystem::tmp + "fps", txt);
+        }
+
+        return step == MEASUREMENTS;
+      });
+  ActionSystem::instance().add_component(component);
+}
+
+void record_screenshot_loop(struct Renderer* renderer) {
+
 }
 
 /// Main engine constructor
@@ -335,11 +402,12 @@ void MeineKraft::mainloop() {
   bool done = false;
   auto last_tick = std::chrono::high_resolution_clock::now();
   auto current_tick = last_tick;
-  int64_t delta = 0;
+  int64_t delta_ms = 0;
+  int64_t delta_ns = 0;
 
   /// Delta values
   const int num_deltas = 150;
-  float deltas[num_deltas];
+  float deltas_ms[num_deltas];
   bool take_screenshot = false;
 
   /// Window handling
@@ -348,7 +416,8 @@ void MeineKraft::mainloop() {
 
   while (!done) {
       current_tick = std::chrono::high_resolution_clock::now();
-      delta = std::chrono::duration_cast<std::chrono::milliseconds>(current_tick - last_tick).count();
+      delta_ms = std::chrono::duration_cast<std::chrono::milliseconds>(current_tick - last_tick).count();
+      delta_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(current_tick - last_tick).count();
       last_tick = current_tick;
 
       /// Process input
@@ -361,6 +430,12 @@ void MeineKraft::mainloop() {
           renderer->scene->camera.pitch += event.motion.yrel;
           renderer->scene->camera.yaw += event.motion.xrel;
           renderer->scene->camera.direction = renderer->scene->camera.recalculate_direction();
+          break;
+
+        case SDL_MOUSEBUTTONDOWN:
+          if (!ImGui::IsMouseHoveringAnyWindow()) {
+            world.spawn_entity(MeshPrimitive::Sphere, renderer->scene->camera.position, renderer->scene->camera.direction, 20.0f);
+          }
           break;
 
         case SDL_KEYDOWN:
@@ -412,6 +487,7 @@ void MeineKraft::mainloop() {
           case SDLK_e:
             renderer->scene->camera.move_up(false);
           }
+          break;
 
         case SDL_WINDOWEVENT:
           switch (event.window.event) {
@@ -428,22 +504,26 @@ void MeineKraft::mainloop() {
               break;
           }
           break;
+
         case SDL_QUIT:
           done = true;
           break;
       }
     }
-    renderer->scene->camera.position = renderer->scene->camera.update(delta);
+    renderer->scene->camera.position = renderer->scene->camera.update(delta_ms);
 
     /// Run all actions
-    ActionSystem::instance().execute_actions(renderer->state.frame, delta);
+    ActionSystem::instance().execute_actions(renderer->state.frame, delta_ms);
 
     /// Let the game do its thing
     world.tick();
 
+    /// Physics computations
+    PhysicsSystem::instance().update_system(delta_ms);
+
     /// Render the world
     if (!throttle_rendering || !throttle_rendering_enabled) {
-      renderer->render(delta);
+      renderer->render(delta_ms);
     }
 
     if (screenshot_mode && renderer->state.frame > screenshot_mode_frame_wait) {
@@ -503,13 +583,41 @@ void MeineKraft::mainloop() {
           ImGui::PushItemWidth(90.0f);
 
           static size_t i = -1; i = (i + 1) % num_deltas;
-          deltas[i] = float(delta);
-          const ImVec4 color = imgui_color_for_value(float(delta), 16.0f, 20.0f);
+          deltas_ms[i] = float(delta_ms);
+          const ImVec4 color = imgui_color_for_value(float(delta_ms), 16.0f, 20.0f);
           ImGui::PushStyleColor(ImGuiCol_PlotLines, color);
-          ImGui::PlotLines("", deltas, num_deltas, 0, "ms / frame", 0.0f, 50.0f, ImVec2(ImGui::GetWindowWidth(), 80));
+          ImGui::PlotLines("", deltas_ms, num_deltas, 0, "ms / frame", 0.0f, 50.0f, ImVec2(ImGui::GetWindowWidth(), 80));
           ImGui::PopStyleColor();
 
-          ImGui::Text("Average %lu ms/frame (%.1f FPS)", delta, io.Framerate);
+          // Measurements recording
+          if (ImGui::Button("Record FPS loop")) {
+            record_fps_loop(renderer);
+          }
+
+          if (ImGui::Button("Record screenshot loop")) {
+            record_screenshot_loop(renderer);
+          }
+
+          if (ImGui::Button("Camera 1")) {
+            renderer->scene->camera.position = Vec3f(-562.0f, 583.0f, -9.0f);
+            renderer->scene->camera.direction = Vec3f(0.64f, -0.3f, -0.71f);
+          }
+
+          ImGui::SameLine();
+
+          if (ImGui::Button("Camera 2")) {
+            renderer->scene->camera.position = Vec3f(-956.0f, 837.0f, -505.0f);
+            renderer->scene->camera.direction = Vec3f(0.66f, -0.61f, 0.42f);
+          }
+
+          ImGui::SameLine();
+
+          if (ImGui::Button("Camera 3")) {
+            renderer->scene->camera.position = Vec3f(1123.0f, 182.0f, -101.0f);
+            renderer->scene->camera.direction = Vec3f(-1.0f, -0.1f, 0.0f);
+          }
+
+          ImGui::Text("Average %lu ms/frame (%.1f FPS)", delta_ms, io.Framerate);
           ImGui::Text("Frame: %lu", renderer->state.frame);
           ImGui::Text("Resolution: (%u, %u)", renderer->screen.width, renderer->screen.height);
           ImGui::Text("Render passes: %u", renderer->state.render_passes);
@@ -616,10 +724,40 @@ void MeineKraft::mainloop() {
             }
 
             if (ImGui::TreeNode("Specular cone settings")) {
-              ImGui::InputFloat("Metallic aperature (deg.)", &renderer->state.vct.metallic_aperature);
-              ImGui::SliderFloat("Trace distance", &renderer->state.vct.specular_cone_trace_distance, 0.1f, 1.0f);
+              ImGui::InputFloat("Metallic aperature (half ang. deg.)", &renderer->state.vct.metallic_aperature);
+              if (ImGui::Button("1")) {
+               renderer->state.vct.metallic_aperature = 1.0f;
+              }
+              if (ImGui::Button("2")) {
+               renderer->state.vct.metallic_aperature = 2.0f;
+              }
+              if (ImGui::Button("3")) {
+               renderer->state.vct.metallic_aperature = 3.0f;
+              }
+              if (ImGui::Button("4")) {
+               renderer->state.vct.metallic_aperature = 4.0f;
+              }
+              if (ImGui::Button("5")) {
+               renderer->state.vct.metallic_aperature = 5.0f;
+              }
+              ImGui::SliderFloat("Trace distance", &renderer->state.vct.specular_cone_trace_distance, 0.0625f, 1.0f);
               ImGui::SameLine();
               ImGui_HelpMarker("Specular cone trace distance in terms of factor of max scene length");
+              if (ImGui::Button("1")) {
+               renderer->state.vct.specular_cone_trace_distance = 1.0f; 
+              }
+              if (ImGui::Button("1/2")) {
+               renderer->state.vct.specular_cone_trace_distance = 1.0f / 2.0f;
+              }
+              if (ImGui::Button("1/4")) {
+               renderer->state.vct.specular_cone_trace_distance = 1.0f / 4.0f;
+              }
+              if (ImGui::Button("1/8")) {
+               renderer->state.vct.specular_cone_trace_distance = 1.0f / 8.0f;
+              }
+              if (ImGui::Button("1/16")) {
+               renderer->state.vct.specular_cone_trace_distance = 1.0f / 16.0f;
+              }
               ImGui::TreePop();
             }
           }
@@ -656,7 +794,7 @@ void MeineKraft::mainloop() {
 
             ImGui::Text("Weights:");
             ImGui::Checkbox("Position", &renderer->state.bilateral_filtering.position_weight);
-            ImGui::SameLine(); ImGui::SliderFloat("Sigma##Position", &renderer->state.bilateral_filtering.position_sigma, 0.05f, renderer->state.bilateral_filtering.spatial_kernel_sigma);
+            ImGui::SameLine(); ImGui::SliderFloat("Sigma##Position", &renderer->state.bilateral_filtering.position_sigma, 0.05f, 8.0f);
 
             ImGui::Checkbox("Normal", &renderer->state.bilateral_filtering.normal_weight);
             ImGui::SameLine(); ImGui::SliderFloat("Sigma##Normal", &renderer->state.bilateral_filtering.normal_sigma, 0.05f, 8.0f);

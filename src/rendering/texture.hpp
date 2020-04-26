@@ -16,7 +16,7 @@
 #include "../util/logging.hpp"
 
 /// Opaque ID type used to reference resources throughout the engine
-typedef uint64_t ID;
+typedef uint64_t ID; // FIXME: Wtf, double defined?
 
 struct RawTexture {
   uint8_t* pixels = nullptr;
@@ -41,6 +41,11 @@ struct TextureResource {
     }
     return hash;
   }
+};
+
+enum class ImageFormat {
+  PPM,
+  PNG
 };
 
 enum class TextureFormat {

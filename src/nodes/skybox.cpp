@@ -3,6 +3,7 @@
 #include "../rendering/rendercomponent.hpp"
 #include "../util/filesystem.hpp"
 #include "../rendering/renderer.hpp"
+#include "transform.hpp"
 
 Skybox::Skybox(): Entity() {
   NameSystem::instance().add_name_to_entity("Skybox", this->id);

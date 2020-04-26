@@ -4,9 +4,8 @@
 
 #include "../meinekraft.hpp"
 
-#include "../rendering/rendercomponent.hpp"
-#include "transform.hpp"
-#include "../rendering/renderer.hpp"
+#include "../rendering/primitives.hpp"
+#include "../util/logging.hpp"
 
 #include <algorithm>
 #include <functional>
@@ -133,35 +132,35 @@ struct JobSystem {
 
 /*********************************************************************************/
 
+/// Task for the ActionSystem
 struct ActionComponent {
-  std::function<void(uint64_t, uint64_t)> action;
-  ActionComponent(const std::function<void(const uint64_t, const uint64_t)>& action): action(action) {}
+  std::function<bool(uint64_t, uint64_t)> action;
+  ActionComponent(const std::function<bool(const uint64_t, const uint64_t)>& action): action(action) {}
 };
 
+/// Simple single-threaded FIFO task system that are executed by the ActionSystem
 struct ActionSystem {
   ActionSystem() {}
   ~ActionSystem() {}
+
   /// Singleton instance
   static ActionSystem& instance() {
     static ActionSystem instance;
     return instance;
   }
 
-  std::vector<ActionComponent> components;
-
+  /// TODO: Document
   void add_component(const ActionComponent& component) {
-    components.emplace_back(component);
+    comps.emplace_back(component);
   }
 
-  void remove_component(const ID id) {
-    // TODO: Implement
-  }
-
+  /// TODO: Document
   void execute_actions(const uint64_t frame, const uint64_t dt) {
-    for (const auto& component : components) {
-      component.action(frame, dt);
-    }
+    comps.erase(std::remove_if(comps.begin(), comps.end(), [&](const ActionComponent &comp) { return comp.action(frame, dt); }), comps.end());
   }
+
+private:
+  std::vector<ActionComponent> comps;
 };
 
 /*********************************************************************************/
@@ -175,6 +174,7 @@ private:
 public:
   EntitySystem() {}
   ~EntitySystem() {}
+
   /// Singleton instance
   static EntitySystem& instance() {
     static EntitySystem instance;
@@ -202,41 +202,30 @@ public:
 
 /*********************************************************************************/
 
+struct RenderComponent;
+struct TransformComponent;
+struct PhysicsComponent;
+struct ActionComponent;
+
 /// Minimal object-oriented wrapper for a collection of components a.k.a a game object/entity
 struct Entity {
     ID id;
 
-    Entity(): id(EntitySystem::instance().new_entity()) {}
-    ~Entity() {
-      EntitySystem::instance().destroy_entity(id);
-      // TODO: Add all of them?
-      // if (components & RENDER_COMPONENT) { Renderer::instance().remove_component(id); }
-    }
+    Entity();
+    ~Entity();
 
     /** Component handling for convenience **/
-    inline void attach_component(const RenderComponent& component) const {
-      MeineKraft::instance().renderer->add_component(component, id);
-    }
+    void attach_component(const RenderComponent& component) const;
 
-    inline void attach_component(const TransformComponent& component) const {
-      TransformSystem::instance().add_component(component, id);
-    }
+    void attach_component(const TransformComponent& component) const;
 
-    inline void attach_component(const ActionComponent& component) const {
-      ActionSystem::instance().add_component(component);
-    }
+    void attach_component(const PhysicsComponent& component) const;
 
-    inline void detach_component(const RenderComponent& component) const {
-      MeineKraft::instance().renderer->remove_component(id);
-    }
+    void attach_component(const ActionComponent& component) const;
 
-    inline void detach_component(const TransformComponent& component) const {
-      TransformSystem::instance().remove_component(id);
-    }
+    void detach_component(const RenderComponent& component) const;
 
-    inline void detach_component(const ActionComponent& component) const {
-      ActionSystem::instance().remove_component(id);
-    }
+    void detach_component(const TransformComponent& component) const;
 };
 
 #endif // MEINEKRAFT_ENTITY_HPP
