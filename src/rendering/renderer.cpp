@@ -1351,7 +1351,7 @@ void Renderer::render(const uint32_t delta) {
     glUniform1i(glGetUniformLocation(program, "uDirect"), state.lighting.direct && state.shadow.algorithm == ShadowAlgorithm::VCT);
     const float roughness_aperature = glm::radians(state.vct.roughness_aperature);
     glUniform1f(glGetUniformLocation(program, "uRoughness_aperature"), roughness_aperature);
-    const float metallic_aperature = glm::radians(state.vct.metallic_aperature);
+    const float metallic_aperature = glm::radians(state.vct.metallic_aperature / 2.0f);
     glUniform1f(glGetUniformLocation(program, "uMetallic_aperature"), metallic_aperature);
     glUniform1f(glGetUniformLocation(program, "uAmbient_decay"), state.vct.ambient_decay);
     glUniform1f(glGetUniformLocation(program, "uSpecular_cone_trace_distance"), state.vct.specular_cone_trace_distance);
@@ -1447,7 +1447,7 @@ void Renderer::render(const uint32_t delta) {
   }
 
   state.bilateral_filtering.kernel = gaussian_1d_kernel(state.bilateral_filtering.spatial_kernel_sigma, state.bilateral_filtering.spatial_kernel_radius);
-  if (state.bilateral_filtering.enabled) {
+  if (state.bilateral_filtering.enabled && state.lighting.downsample_modifier > 1) {
     state.bilateral_filtering.execution_time[TIME_IDX] = gl_query_time_buffer_ptr[state.render_passes];
     pass_started("Bilateral filtering pass");
 
@@ -1459,6 +1459,21 @@ void Renderer::render(const uint32_t delta) {
         const auto program = bf_ping_shader->gl_program;
         glUseProgram(program);
         glBindFramebuffer(GL_FRAMEBUFFER, gl_bf_ping_fbo);
+
+        glTextureParameteri(in_texture, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTextureParameteri(in_texture, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+        glTextureParameteri(gl_geometric_normal_texture, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTextureParameteri(gl_geometric_normal_texture, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+        glTextureParameteri(gl_position_texture, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTextureParameteri(gl_position_texture, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+        glTextureParameteri(gl_depth_texture, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTextureParameteri(gl_depth_texture, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+        glTextureParameteri(gl_bf_ping_out_texture, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTextureParameteri(gl_bf_ping_out_texture, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
         glUniform1i(glGetUniformLocation(program, "uPosition_weight"), state.bilateral_filtering.position_weight);
         glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
@@ -1584,17 +1599,17 @@ void Renderer::render(const uint32_t delta) {
         glUseProgram(program);
         glBindFramebuffer(GL_FRAMEBUFFER, gl_bs_ping_fbo);
 
-        glTextureParameteri(in_texture, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTextureParameteri(in_texture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTextureParameteri(in_texture, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
-        glTextureParameteri(gbuffer_downsampled.gl_normal_texture, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTextureParameteri(gbuffer_downsampled.gl_normal_texture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glTextureParameteri(gbuffer_downsampled.gl_normal_texture, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
         glTextureParameteri(gbuffer_downsampled.gl_position_texture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTextureParameteri(gbuffer_downsampled.gl_position_texture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTextureParameteri(gbuffer_downsampled.gl_position_texture, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
         glTextureParameteri(gbuffer_downsampled.gl_depth_texture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTextureParameteri(gbuffer_downsampled.gl_depth_texture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTextureParameteri(gbuffer_downsampled.gl_depth_texture, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
         glUniform1i(glGetUniformLocation(program, "uPosition_weight"), state.bilateral_upsample.position_weight);
         glUniform1i(glGetUniformLocation(program, "uPosition_high_res"), gl_position_texture_unit);
@@ -1636,9 +1651,6 @@ void Renderer::render(const uint32_t delta) {
 
       // Pong - copies the color attacment of ping's FBO
       glCopyTextureSubImage2D(in_texture, 0, 0, 0, 0, 0, screen.width, screen.height);
-
-      glTextureParameteri(in_texture, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-      glTextureParameteri(in_texture, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     };
 
     // Declare input & output texture
@@ -1651,6 +1663,7 @@ void Renderer::render(const uint32_t delta) {
 
   /// Bilinear upsampling
   if (state.bilinear_upsample.enabled && state.lighting.downsample_modifier > 1) {
+    assert(!state.bilateral_upsample.enabled);
     state.bilinear_upsample.execution_time[TIME_IDX] = gl_query_time_buffer_ptr[state.render_passes];
     pass_started("Bilinear upsampling pass");
 
@@ -1666,10 +1679,11 @@ void Renderer::render(const uint32_t delta) {
         glTextureParameteri(gl_bf_ping_out_texture, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTextureParameteri(gl_bf_ping_out_texture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
       } else {
+        // Bilinear upsampling
         glTextureParameteri(in_texture, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTextureParameteri(in_texture, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTextureParameteri(gl_bf_ping_out_texture, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTextureParameteri(gl_bf_ping_out_texture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTextureParameteri(gl_bf_ping_out_texture, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTextureParameteri(gl_bf_ping_out_texture, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
       }
 
       // Ping
