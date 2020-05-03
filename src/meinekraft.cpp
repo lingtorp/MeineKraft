@@ -4,28 +4,34 @@
 #include <SDL2/SDL_events.h>
 
 #include "imgui/imgui.h"
-#include "nodes/physics_system.hpp"
+#include "../include/imgui/imgui_impl_sdl.h"
+
 #include "rendering/primitives.hpp"
 #include "rendering/renderer.hpp"
-#include "../include/imgui/imgui_impl_sdl.h"
 #include "rendering/camera.hpp"
-#include "nodes/model.hpp"
-#include "util/filesystem.hpp"
-#include "scene/world.hpp"
 #include "rendering/debug_opengl.hpp"
+#include "nodes/model.hpp"
 #include "nodes/skybox.hpp"
+#include "nodes/physics_system.hpp"
 #include "scene/world.hpp"
 #include "rendering/graphicsbatch.hpp"
+#include "util/filesystem.hpp"
 #include "util/config.hpp"
+#include "util/logging_system.hpp"
+#include "util/mkass.hpp"
+// #include "network/network_system.hpp"
 
 // TODO: Try to update ImGui some day
 
 // ImGui global GUI settings
 struct {
+  bool imgui_test_window = false;    // ImGui demonstration window
   bool render_system_window = true;  // Render system information and config. window
   bool scene_graph_window = true;    // Scene graph of Graphic entities
-  bool logger_window = false;        // TODO: Logger of engine messages
-  bool console_window = false;       // TODO: Console for engine commands
+  bool logger_window = true;         // TODO: Logger of engine messages
+  bool console_window = true;        // TODO: Console for engine commands
+  bool network_window = false;       // TODO: Network system
+  bool scripting_window = true;      // Scripting window for writing small programs
   bool help_window = false;          // TODO: Helpful keyboard shortcuts, displayed on first launch
   bool about_window = false;         // TODO: Displays some information about the application
 } Gui;
@@ -74,6 +80,10 @@ void imgui_styling() {
   style->ScrollbarRounding = 9.0f;
   style->GrabMinSize = 20.0f;
   style->GrabRounding = 3.0f;
+
+  style->AntiAliasedLines = true;
+  style->AntiAliasedShapes = true;
+  style->FrameRounding = true;
 
   style->Colors[ImGuiCol_Text] = ImVec4(0.80f, 0.80f, 0.83f, 1.00f);
   style->Colors[ImGuiCol_TextDisabled] = ImVec4(0.24f, 0.23f, 0.29f, 1.00f);
@@ -386,6 +396,8 @@ void MeineKraft::init() {
   screenshot_mode = config["screenshot_mode"].get<bool>();
 
   renderer->init();
+  LoggingSystem::instance().init();
+  MkAssProgramManager::instance().init();
 }
 
 MeineKraft::~MeineKraft() {
@@ -413,6 +425,7 @@ void MeineKraft::mainloop() {
   /// Window handling
   bool throttle_rendering = false;
   bool throttle_rendering_enabled = false; // NOTE: Enables the flag 'throttle_rendering'
+  bool keyboard_enabled = true;
 
   while (!done) {
       current_tick = std::chrono::high_resolution_clock::now();
@@ -439,6 +452,9 @@ void MeineKraft::mainloop() {
           break;
 
         case SDL_KEYDOWN:
+          if (!keyboard_enabled) {
+            break;
+          }
           switch (event.key.keysym.sym) {
           case SDLK_w:
             renderer->scene->camera.move_forward(true);
@@ -548,7 +564,9 @@ void MeineKraft::mainloop() {
 
       //  Main window
       {
-        // ImGui::ShowTestWindow(); // NOTE: Shows demo of ImGui widgets
+        if (Gui.imgui_test_window) {
+          ImGui::ShowTestWindow(); // NOTE: Shows demo of ImGui widgets
+        }
 
         if (ImGui::BeginMainMenuBar()) {
           if (ImGui::BeginMenu("MeineKraft")) {
@@ -556,17 +574,21 @@ void MeineKraft::mainloop() {
             if (ImGui::MenuItem("Screenshot")) { take_screenshot = true; }
             if (ImGui::MenuItem("Pixel diff")) { renderer->state.bilateral_filtering.pixel_diff = true; }
             if (ImGui::MenuItem("Dump performance data")) { dump_performance_data(renderer, io.Framerate); }
-            if (ImGui::MenuItem("Hide GUI")) {  } // TODO: Implement
+            if (ImGui::MenuItem("Hide GUI")) { memset(&Gui, 0, sizeof(Gui)); }
             ImGui::EndMenu();
           }
 
           if (ImGui::BeginMenu("Windows")) {
             if (ImGui::MenuItem("Render system", "CTRL+R")) { Gui.render_system_window = !Gui.render_system_window; }
-            if (ImGui::MenuItem("Logger system", "CTRL+L")) { Gui.logger_window = !Gui.logger_window; }
-            if (ImGui::MenuItem("Scene graph",   "CTRL+S")) { Gui.scene_graph_window = !Gui.scene_graph_window; }
+            if (ImGui::MenuItem("Logger system", "CTRL+L")) { Gui.logger_window        = !Gui.logger_window; }
+            if (ImGui::MenuItem("Scene graph",   "CTRL+S")) { Gui.scene_graph_window   = !Gui.scene_graph_window; }
+            if (ImGui::MenuItem("Scripting",     "CTRL+P")) { Gui.scripting_window     = !Gui.scripting_window; }
+            if (ImGui::MenuItem("Console",       "CTRL+C")) { Gui.console_window       = !Gui.console_window; }
             ImGui::Separator();
             if (ImGui::MenuItem("Close all ..")) {  }; // TODO: Implement ...
             if (ImGui::MenuItem("Reset position ..")) {  }; // TODO: Implement ...
+            ImGui::Separator();
+            if (ImGui::MenuItem("ImGui demo")) { Gui.imgui_test_window = !Gui.imgui_test_window; }
             ImGui::EndMenu();
           }
 
@@ -596,25 +618,6 @@ void MeineKraft::mainloop() {
 
           if (ImGui::Button("Record screenshot loop")) {
             record_screenshot_loop(renderer);
-          }
-
-          if (ImGui::Button("Camera 1")) {
-            renderer->scene->camera.position = Vec3f(-562.0f, 583.0f, -9.0f);
-            renderer->scene->camera.direction = Vec3f(0.64f, -0.3f, -0.71f);
-          }
-
-          ImGui::SameLine();
-
-          if (ImGui::Button("Camera 2")) {
-            renderer->scene->camera.position = Vec3f(-956.0f, 837.0f, -505.0f);
-            renderer->scene->camera.direction = Vec3f(0.66f, -0.61f, 0.42f);
-          }
-
-          ImGui::SameLine();
-
-          if (ImGui::Button("Camera 3")) {
-            renderer->scene->camera.position = Vec3f(1123.0f, 182.0f, -101.0f);
-            renderer->scene->camera.direction = Vec3f(-1.0f, -0.1f, 0.0f);
           }
 
           ImGui::Text("Average %lu ms/frame (%.1f FPS)", delta_ms, io.Framerate);
@@ -948,9 +951,11 @@ void MeineKraft::mainloop() {
                     ImGui::Text("Entity id: %lu", id);
 
                     const std::string* name = NameSystem::instance().get_name_from_entity_referenced(id);
-                    ImGui::Text("Name: %s", name->c_str());
-                    // ImGui::InputText("Name", name->c_str(), name->size()); // TODO: Change Entity name
-                    // NameSystem::instance().update_name(id, name);
+                    char new_name[128] = {0};
+                    ImGui::InputText("Name", new_name, sizeof(new_name));
+                    if (ImGui::Button("Confirm")) {
+                      // NameSystem::instance().update_name(id, std::string(new_name));
+                    }
 
                     TransformComponent* transform = TransformSystem::instance().lookup_referenced(id);
                     ImGui::PushID(transform);
@@ -972,15 +977,15 @@ void MeineKraft::mainloop() {
                       break;
                     }
 
-                    ImGui::PopID();
-
                     if (ImGui::Button("Remove")) {
                       renderer->remove_component(id);
                     }
                     ImGui::SameLine();
                     if (ImGui::Button("Clone")) {
-                      // TODO: Clone Entity: entity-clone();
+                      NameSystem::instance().add_name_to_entity(std::string(new_name), id);
                     }
+
+                    ImGui::PopID();
                   }
                 }
               }
@@ -991,11 +996,73 @@ void MeineKraft::mainloop() {
         }
 
         if (Gui.logger_window) {
-          ImGui::Begin("Logger system", &Gui.logger_window);
-          // TODO: Implement logger system window
-          // for (const auto& item : Logger::msgs) {
-          // }
-          ImGui::End();
+          LoggingSystem::instance().draw_gui(&Gui.logger_window);
+        }
+
+        if (Gui.network_window) {
+          // NetworkSystem::instance().draw_gui(&Gui.network_window);
+        }
+
+        if (Gui.scripting_window) {
+          ImGui::SetWindowSize(ImVec2(500, 450), ImGuiSetCond_Once);
+
+          if (ImGui::Begin("Scripting window")) {
+            keyboard_enabled = !ImGui::IsRootWindowOrAnyChildFocused();
+
+            // static char buf[1024] = {"start:\n"
+            //                       "\tADDI 0 1\n"
+            //                       "\tCALL Log::info\n"
+            //                       "\tJUMP start\n"};
+            static char buf[1024] = {"start:\n"
+                                  "\tADDI 0 1\n"
+                                  "\tCALL Log::info\n"
+                                  "\tCMPI 0 4\n"
+                                  "\tBRNEQ start\n"
+                                  "\tCALL exit\n"};
+            // static char buf[1024] = {"start:\n"
+            //                       "\tCALL counter\n"
+            //                       "\tBRNEQ start\n"
+            //                       "\tCALL exit\n"
+            //                      "counter:\n"
+            //                       "\tADDI 0 1\n"
+            //                       "\tCALL Log::info\n"
+            //                       "\tCMPI 0 4\n"
+            //                       "\tRET"
+            // };
+
+            if (ImGui::Button("Run")) {
+              MkAssContext& ctx = MkAssProgramManager::instance().new_ctx();
+              ctx.register_external_symbol("log::info", [](MkAssContext& ctx){
+                                                          Log::info("\t[MkAssContext]: " + std::to_string(ctx.regs[0]));
+                                                        });
+              ctx.register_external_symbol("exit",      [](MkAssContext& ctx){
+                                                          Log::info("\t[MkAssContext]: exited");
+                                                          ctx.exit = true;
+                                                        });
+              MkAssProgramManager::instance().run(ctx, std::string(buf));
+            }
+
+            ImGui::BeginChild("##script", ImVec2(200,200), true, ImGuiWindowFlags_HorizontalScrollbar);
+            ImGui::InputTextMultiline(" ", buf, sizeof(buf));
+            ImGui::EndChild();
+            ImGui::SameLine();
+            ImGui::BeginChild("##runtime", ImVec2(200,200), true, ImGuiWindowFlags_HorizontalScrollbar);
+            ImGui::InputTextMultiline(" ", buf, sizeof(buf));
+            ImGui::EndChild();
+
+            MkAssProgramManager::instance().draw_gui();
+
+
+            ImGui::End();
+          }
+        }
+
+        if (Gui.console_window) {
+          if (ImGui::Begin("Console window")) {
+            keyboard_enabled = !ImGui::IsRootWindowOrAnyChildFocused();
+            ImGui::Text("> ls -a -systems");
+            ImGui::End();
+          }
         }
 
         ImGui::Render();

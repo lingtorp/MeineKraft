@@ -48,3 +48,50 @@ subsystems and using the Entity object the rest is up to the game creator.
 - Engine example
 - API example
 - etc
+
+
+* Coding convention
+Enforced with the clang-formatter script, found here.
+
+* TODOs
+
+[] Enforce coding conventions through a clang-formatter script
+
+
+** Logging
+- Callable from all threads
+- Tags for various things: DBG, INFO, WARN, ERR
+- Logging to console and to the editor
+  - Configurable at runtime
+
+** Network
+- Rocket League-esque environment
+-
+
+** Scripting
+ - Emulator for a small MIPS-like assembly (Mkass)
+ - Small compiler for a scripting language (Mklang)
+
+   Mkass example
+   '0x0 start:
+    0x1 ADDI r0, 0x1
+    0x2 CALLI print 0x1 r0 // Call immediate <function> <#args> <args..>
+    0x2 EQI r0, 0xA
+    0x3 CJMP start'
+
+  Mklang example
+    Entity:
+      fn new()
+        print("Hello world from Entity!")
+      end
+    end
+
+    World:
+      fn update(u32 dt)
+        print("Hello world!")
+      end
+
+      fn World::new():
+        print("New world!")
+      end
+    end

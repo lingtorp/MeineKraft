@@ -209,23 +209,26 @@ struct ActionComponent;
 
 /// Minimal object-oriented wrapper for a collection of components a.k.a a game object/entity
 struct Entity {
+    uint32_t components = 0;
     ID id;
 
     Entity();
     ~Entity();
 
+    ID clone() const;
+
     /** Component handling for convenience **/
-    void attach_component(const RenderComponent& component) const;
+    void attach_component(const RenderComponent& component) ;
 
-    void attach_component(const TransformComponent& component) const;
+    void attach_component(const TransformComponent& component) ;
 
-    void attach_component(const PhysicsComponent& component) const;
+    void attach_component(const PhysicsComponent& component) ;
 
-    void attach_component(const ActionComponent& component) const;
+    void attach_component(const ActionComponent& component) ;
 
-    void detach_component(const RenderComponent& component) const;
+    void detach_component(const RenderComponent& component) ;
 
-    void detach_component(const TransformComponent& component) const;
+    void detach_component(const TransformComponent& component) ;
 };
 
 #endif // MEINEKRAFT_ENTITY_HPP

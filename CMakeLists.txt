@@ -40,7 +40,7 @@ set(RENDER_SRC_FILES "src/rendering/shader.cpp" "src/rendering/shader.hpp" "src/
         "src/rendering/renderpass/renderpass.hpp" "src/rendering/renderpass/renderpass.cpp")
 source_group("render" FILES ${RENDER_SRC_FILES})
 
-set(UTIL_SRC_FILES "src/util/filemonitor.cpp" "src/util/filemonitor.hpp" "src/util/filesystem.hpp" "src/util/logging.hpp" "src/util/config.hpp" "src/util/config.cpp")
+set(UTIL_SRC_FILES "src/util/filemonitor.cpp" "src/util/filemonitor.hpp" "src/util/filesystem.hpp" "src/util/logging.hpp" "src/util/logging.cpp" "src/util/config.hpp" "src/util/config.cpp" "src/util/logging_system.hpp" "src/util/logging_system.cpp" "src/util/mkass.cpp" "src/util/mkass.hpp")
 source_group("util" FILES ${UTIL_SRC_FILES})
 
 set(SCENE_SRC_FILES "src/scene/world.cpp" "src/scene/world.hpp")
