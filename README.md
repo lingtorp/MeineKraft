@@ -1,4 +1,4 @@
-# MeineKraft
+# :exclamation: MeineKraft :exclamation:
 
 [![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](https://lbesson.mit-license.org/)
 [![](https://img.shields.io/badge/twitter-follow-blue.svg)](https://twitter.com/ALingtorp)
@@ -12,12 +12,12 @@ in the engine is a lighweight object-oriented layer on top of the ECS core
 systems in order to make it slightly easier to write gameplay code while keeping
 the performance and data-oriented architecture intact.
 
-Followup blogposts on the implementation of the most interesting parts can be
+:memo: Blogposts on the implementation of the most interesting parts can be
 found [here](http://lingtorp.com) with the tag *MeineKraft*.
 
-## Features
+## Features :trophy:
 - [X] Voxel cone tracing based global illumination
-- - [X] 3D clipmap
+- - [X] 3D clipmap 
 - - [X] joing bilateral upsampling/filtering
 - - [X] isotropic voxels
 - - [X] emissive materials
@@ -31,10 +31,10 @@ found [here](http://lingtorp.com) with the tag *MeineKraft*.
 - [X] JSON-based configuration
 - [X] Editor
 
-## Documentation
+## Documentation :memo:
 Relevant documentation for each part of the engine is located in the /documentation folder. 
 
-## Dependencies
+## Dependencies :floppy_disk:
 * [dear imgui](https://github.com/ocornut/imgui) - editor GUI
 * [assimp](https://github.com/syoyo/assimp) - model/scene importing
 * [SDL2](https://www.libsdl.org/) - window creation, input handling
@@ -44,7 +44,7 @@ Relevant documentation for each part of the engine is located in the /documentat
 
 Platforms supported: Windows and Linux
 
-## Build
+## Build :computer:
 **NOTE:** Before continueing go to the file util/filesystem.hpp and adjust the filepaths so that they match your system.
 ### Linux (Ubuntu 18.10)
 ```bash
@@ -62,7 +62,7 @@ Clone Vcpkg, build it, then run.
 Launch CMake-GUI and select MeineKraft repository and then create a build directory and select it.
 Generate the Visual Studio 2017/2019 solution and simply build and run it via Visual Studio.
 
-# License
+# License :books:
 The MIT License (MIT)
 Copyright (c) 2017 Alexander Lingtorp
 
