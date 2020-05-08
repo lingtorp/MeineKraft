@@ -11,6 +11,7 @@
 #include <array>
 #include <cstring>
 #include <cassert>
+#include <thread>
 
 #include "logging.hpp"
 
@@ -25,13 +26,17 @@
 /// Runtime context of the MkAss language
 /// Provides as small virtual machine context for execution
 struct MkAssContext {
-  bool pause = false; // Pauses execution at the next instruction
-  bool exit = false;  // Set to true to stop execution
-  size_t pc = 0;
-  std::array<size_t, 4> regs  = {0}; // Registers
-  std::array<size_t, 4> stack = {0}; // Stack
-  size_t sp = 0;                     // Stack pointer (current top of the stack)
-  bool compare_flag = false;
+  size_t ins_exed = 0; // [Ins]tructions [exe]cute[d]
+  int32_t ips = 1;    // [I]nstructions [p]er [s]econd: Negative means inf - go asap
+  bool pause = false;  // Pauses execution at the next instruction
+  bool exit = false;   // Set to true to stop execution
+  size_t pc = 0;       // [P]rogram [c]ounter
+  static const int32_t NUM_REGS = 4;        // # registers of VM
+  std::array<size_t, NUM_REGS> regs  = {0}; // Registers
+  std::array<size_t, 4> stack        = {0}; // Stack
+  size_t sp = 0;                            // Stack pointer (current top of the stack)
+  bool compare_flag = false;                // Comparison instructions set this and branches use it
+
   std::unordered_map<std::string, std::function<void(MkAssContext&)>> external_symbol_table = {};
 
   // Registers a handler for the external symbol used in the context
@@ -98,11 +103,44 @@ namespace MkAss {
     }
   };
 
+  // Parses arguments on the form 'X', '0xY', '0bZ'
+  inline int32_t parse_numberic_arg(const char* arg) {
+    const size_t str_lng = strlen(arg);
+    assert(str_lng > 0);
+
+    int32_t value = 0;
+    if (arg[0] == '0' && arg[1] == 'x') {
+      Log::error("No support for hexadecimal args."); assert(false);
+    } else if (arg[0] == '0' && arg[1] == 'b') {
+      Log::error("No support for binary args."); assert(false);
+    } else {
+       value = std::atoi(arg);
+    }
+
+    return value;
+  }
+
+  // Parses arguments on the form '<chars><num>' where 0 <= <num> < # MkAssCtx.regs
+  inline uint32_t parse_register_arg(const char* arg) {
+    const size_t str_lng = strlen(arg);
+    assert(str_lng > 0);
+
+    const int reg = std::atoi(arg);
+    if (reg < 0) {
+      Log::error("Register argument parsing failed.");
+      return 0;
+    }
+
+    assert(0 <= reg && reg < MkAssContext::NUM_REGS);
+    return reg;
+  }
+
+  // TODO: Split tokenization (aka compilation) and execution to enable static calls to external functions. Query undefined symbols etc
   std::vector<MkAss::Token> tokenize(MkAssContext& ctx, std::string src) {
     std::vector<MkAss::Token> tokens = {};
     size_t num_tokens = 0;
 
-    std::transform(src.begin(), src.end(), src.begin(), [](unsigned char c){ return std::tolower(c); });
+    std::transform(src.begin(), src.end(), src.begin(), [](const unsigned char c){ return std::tolower(c); });
    
     // Tokenize
     constexpr char delimiters[] = " \n\t";
@@ -126,7 +164,7 @@ namespace MkAss {
 
       // Label statements
       if (s[s_lng - 1] == ':') {
-        s[s_lng - 1] = '\0'; // FIXME: Ugly hack
+        s[s_lng - 1] = '\0'; // FIXME: Ugly hack to avoid having ':' in the label name
         Log::info("Label: " + std::string(s));
 
         Token token;
@@ -144,9 +182,8 @@ namespace MkAss {
 
         Token token;
         token.type = Token::Type::addi;
-        token.args[0] = std::atoi(arg0); // TODO: handle rX
-        assert(0 <= token.args[0] && token.args[0] < 4);
-        token.args[1] = std::atoi(arg1);
+        token.args[0] = parse_register_arg(arg0);
+        token.args[1] = parse_numberic_arg(arg1);
         tokens.push_back(token);
       }
       else if (strcmp(s, "call") == 0) {
@@ -176,8 +213,8 @@ namespace MkAss {
 
         Token token;
         token.type = Token::Type::cmpi;
-        token.args[0] = std::atoi(arg0);
-        token.args[1] = std::atoi(arg1);
+        token.args[0] = parse_register_arg(arg0);
+        token.args[1] = parse_numberic_arg(arg1);
         tokens.push_back(token);
       }
       else if (strcmp(s, "brneq") == 0) {
@@ -198,7 +235,7 @@ namespace MkAss {
       }
       else {
         Log::warn("Unrecognized statement: " + std::string(s));
-        return {};
+        return tokens;
       }
     }
 
@@ -244,13 +281,14 @@ namespace MkAss {
     return tokens;
   }
 
-  void run(MkAssContext& ctx, const std::string& src) {
-    const std::vector<MkAss::Token> tokens = MkAss::tokenize(ctx, src);
+  void run(MkAssContext& ctx, const std::vector<MkAss::Token>& tokens) {
     if (tokens.size() == 0) {
       return;
     }
 
-    while (!ctx.exit) {
+    // TODO: Utilize IPS
+    bool done = false;
+    while (!ctx.exit || done) {
       if (ctx.pause) { continue; }
 
       const Token& token = tokens[ctx.pc];
@@ -293,55 +331,27 @@ namespace MkAss {
         default: assert(false);
       }
 
+      ctx.ins_exed++;
       ctx.pc++;
+
+      if (ctx.ips < 0) { continue; }
+      std::this_thread::sleep_for(std::chrono::milliseconds(1000 * ctx.ips));
     }
   }
 };
 
 #include "imgui/imgui.h"
 
-struct MkAssProgramManager {
-  struct MkAssRuntimeContext {
-    const std::string src;
-    MkAssContext runtime_ctx;
-  };
- 
-  std::vector<MkAssContext> ctxs;
+namespace MkAss {
+  void draw_gui(MkAssContext& ctx) {
+    for (size_t i = 0; i < ctx.regs.size(); i++) {
+      ImGui::Text("R%lu: %lu \t", i, ctx.regs[i]); ImGui::SameLine();
+    }
 
-  static MkAssProgramManager& instance() {
-    static MkAssProgramManager obj;
-    return obj;
-  }
-
-  bool init() {
-    return true;
-  }
-
-  void draw_gui() {
-    for (size_t c = 0; c < ctxs.size(); c++) {
-      MkAssContext& ctx = ctxs[c];
-
-      for (size_t i = 0; i < ctx.regs.size(); i++) {
-        ImGui::Text("R%lu: %lu \t", i, ctx.regs[i]); ImGui::SameLine();
-      }
+    if (ImGui::CollapsingHeader("Settings")) {
+      ImGui::InputInt("Instructions per seconds", &ctx.ips);
     }
   }
-
-  MkAssContext& new_ctx() {
-    MkAssContext ctx;
-    ctxs.push_back(ctx);
-    return ctxs.back();
-  }
-
-  void run(MkAssContext& ctx, std::string src) {
-    MkAss::run(ctx, src);
-  }
-
-  void step() {
-    // TODO: ?
-  }
 };
-
-
 
 #endif // MEINEKRAFT_MKASS_HPP

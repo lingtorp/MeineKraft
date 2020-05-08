@@ -397,7 +397,6 @@ void MeineKraft::init() {
 
   renderer->init();
   LoggingSystem::instance().init();
-  MkAssProgramManager::instance().init();
 }
 
 MeineKraft::~MeineKraft() {
@@ -1013,45 +1012,111 @@ void MeineKraft::mainloop() {
             //                       "\tADDI 0 1\n"
             //                       "\tCALL Log::info\n"
             //                       "\tJUMP start\n"};
-            static char buf[1024] = {"start:\n"
-                                  "\tADDI 0 1\n"
-                                  "\tCALL Log::info\n"
-                                  "\tCMPI 0 4\n"
-                                  "\tBRNEQ start\n"
-                                  "\tCALL exit\n"};
             // static char buf[1024] = {"start:\n"
-            //                       "\tCALL counter\n"
-            //                       "\tBRNEQ start\n"
-            //                       "\tCALL exit\n"
-            //                      "counter:\n"
             //                       "\tADDI 0 1\n"
             //                       "\tCALL Log::info\n"
             //                       "\tCMPI 0 4\n"
-            //                       "\tRET"
-            // };
+            //                       "\tBRNEQ start\n"
+            //                       "\tCALL exit\n\n\n\n"};
+            static char buf[1024] = {"start:\n"
+                                  "\tCALL counter\n"
+                                  "\tBRNEQ start\n"
+                                  "\tCALL exit\n"
+                                 "counter:\n"
+                                  "\tADDI R0 1\n"
+                                  "\tCALL Log::info\n"
+                                  "\tCMPI R0 4\n"
+                                  "\tRET\n"
+            };
 
-            if (ImGui::Button("Run")) {
-              MkAssContext& ctx = MkAssProgramManager::instance().new_ctx();
-              ctx.register_external_symbol("log::info", [](MkAssContext& ctx){
-                                                          Log::info("\t[MkAssContext]: " + std::to_string(ctx.regs[0]));
-                                                        });
-              ctx.register_external_symbol("exit",      [](MkAssContext& ctx){
-                                                          Log::info("\t[MkAssContext]: exited");
-                                                          ctx.exit = true;
-                                                        });
-              MkAssProgramManager::instance().run(ctx, std::string(buf));
+            if (ImGui::Button("Compile")) {
+              Log::warn("TODO: Implement me!");
             }
 
-            ImGui::BeginChild("##script", ImVec2(200,200), true, ImGuiWindowFlags_HorizontalScrollbar);
-            ImGui::InputTextMultiline(" ", buf, sizeof(buf));
-            ImGui::EndChild();
             ImGui::SameLine();
-            ImGui::BeginChild("##runtime", ImVec2(200,200), true, ImGuiWindowFlags_HorizontalScrollbar);
-            ImGui::InputTextMultiline(" ", buf, sizeof(buf));
-            ImGui::EndChild();
 
-            MkAssProgramManager::instance().draw_gui();
+            static MkAssContext ctx;
 
+            if (!ctx.exit) {
+              if (ImGui::Button("Run")) {
+                ctx = MkAssContext();
+
+                ctx.register_external_symbol("log::info", [](MkAssContext& ctx){
+                                                            Log::info("\t[MkAssContext]: " + std::to_string(ctx.regs[0]));
+                                                          });
+                ctx.register_external_symbol("exit",      [](MkAssContext& ctx){
+                                                            Log::info("\t[MkAssContext]: exited");
+                                                            ctx.exit = true;
+                                                          });
+
+                const std::string src = std::string(buf);
+                const std::vector<MkAss::Token> tokens = MkAss::tokenize(ctx, src);
+                MkAss::run(ctx, tokens);
+              }
+            } else {
+              if (ImGui::Button("Exit")) {
+                ctx.exit = true;
+              }
+            }
+
+            ImGui::SameLine();
+
+            if (ImGui::Button("Step")) {
+              Log::warn("TODO: Implement me!");
+            }
+
+            const ImVec2 size = ImVec2(260,450);
+
+            {
+              ImGui::BeginChild("##assembly", size, true, ImGuiWindowFlags_NoScrollbar);
+
+              const ImVec4 linnum_color {0.3, 0.7, 0.9, 1.0};
+              const ImVec4 linnum_color0{0.7, 0.3, 0.9, 1.0};
+
+              ImGui::BeginChild("##linnum", ImVec2(15,450), false, ImGuiWindowFlags_NoScrollbar);
+              ImGui::PushItemWidth(ImGui::GetWindowWidth());
+              for (int i = 0; i < 20; i++) {
+                if (ctx.pc == i) {
+                  ImGui::TextColored(linnum_color0, "%u", i);
+                } else {
+                  ImGui::TextColored(linnum_color, "%u", i);
+                }
+              }
+              ImGui::PopItemWidth();
+              ImGui::EndChild();
+
+              ImGui::SameLine();
+
+              ImGui::PushItemWidth(ImGui::GetWindowWidth());
+              ImGui::InputTextMultiline(" ", buf, sizeof(buf), size);
+              ImGui::PopItemWidth();
+              ImGui::EndChild();
+            }
+
+            ImGui::SameLine();
+
+            {
+              ImGui::BeginChild("##runtime", size, true, ImGuiWindowFlags_NoScrollbar);
+
+              const ImVec4 linnum_color{0.3, 0.7, 0.9, 1.0};
+
+              ImGui::BeginChild("##linnum", ImVec2(15,450), false, ImGuiWindowFlags_NoScrollbar);
+              ImGui::PushItemWidth(ImGui::GetWindowWidth());
+              for (int i = 0; i < 20; i++) {
+                ImGui::TextColored(linnum_color, "%u", i);
+              }
+              ImGui::PopItemWidth();
+              ImGui::EndChild();
+
+              ImGui::SameLine();
+
+              ImGui::PushItemWidth(ImGui::GetWindowWidth());
+              ImGui::InputTextMultiline(" ", buf, sizeof(buf), size);
+              ImGui::PopItemWidth();
+              ImGui::EndChild();
+            }
+
+            MkAss::draw_gui(ctx);
 
             ImGui::End();
           }
