@@ -63,7 +63,7 @@ namespace MkAss {
 
     friend std::ostream& operator<<(std::ostream& os, const Token& t) {
       std::string type_str = "Token{type: ";
-      std::string data_str;
+      std::string data_str = "";
       switch (t.type) {
         case Token::Type::addi:
           type_str += "addi";
@@ -86,10 +86,13 @@ namespace MkAss {
           data_str = "label: " + std::string(t.label.name) + "(" + "addr: " + std::to_string(t.label.addr) + ")";
           break;
         case Token::Type::cmpi:
-          type_str = "cmpi";
+          type_str += "cmpi";
           data_str = "r" + std::to_string(t.args[0]) + ", imm.:" + std::to_string(t.args[1]);
           break;
-        default: assert(false);
+        case Token::Type::ret:
+          type_str += "ret";
+          break;
+        default: Log::error("Undefined instruction"); assert(false);
       }
       return os << type_str << ", " << data_str << "}";
     }
@@ -186,6 +189,13 @@ namespace MkAss {
         token.label.name = arg0;
         tokens.push_back(token);
       }
+      else if (strcmp(s, "ret") == 0) {
+        Log::info(std::string(s));
+
+        Token token;
+        token.type = Token::Type::ret;
+        tokens.push_back(token);
+      }
       else {
         Log::warn("Unrecognized statement: " + std::string(s));
         return {};
@@ -236,6 +246,9 @@ namespace MkAss {
 
   void run(MkAssContext& ctx, const std::string& src) {
     const std::vector<MkAss::Token> tokens = MkAss::tokenize(ctx, src);
+    if (tokens.size() == 0) {
+      return;
+    }
 
     while (!ctx.exit) {
       if (ctx.pause) { continue; }
@@ -254,14 +267,14 @@ namespace MkAss {
           break;
         case MkAss::Token::Type::call:
           if (token.label.addr == -1) {
-            // External
+            // External call
             if (ctx.external_symbol_table.count(token.label.name) == 0) {
               Log::error("[MkRuntime]: Runtime failure. External symbol " + std::string(token.label.name) + " not registered");
             } else {
               ctx.external_symbol_table[token.label.name](ctx);
             }
           } else {
-            // TODO: Internal
+            // Interal call
             ctx.stack[ctx.sp++] = ctx.pc;
             ctx.pc = token.label.addr;
           }
@@ -275,7 +288,7 @@ namespace MkAss {
           }
           break;
         case MkAss::Token::Type::ret:
-          ctx.pc = ctx.stack[ctx.sp--];
+          ctx.pc = ctx.stack[--ctx.sp];
           break;
         default: assert(false);
       }
