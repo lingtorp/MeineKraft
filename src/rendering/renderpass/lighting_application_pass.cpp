@@ -71,7 +71,6 @@ bool LightingApplicationRenderPass::render(Renderer* render) {
   const Resolution screen = render->screen;
   RenderState& state = render->state;
 
-  // state.lighting.execution_time[TIME_IDX] = gl_query_time_buffer_ptr[state.render_passes];
   render->pass_started("Lighting application pass");
 
   const auto program = shader->gl_program;

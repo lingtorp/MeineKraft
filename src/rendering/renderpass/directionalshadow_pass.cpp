@@ -48,7 +48,6 @@ bool DirectionalShadowRenderPass::setup(Renderer* render) {
 }
 
 bool DirectionalShadowRenderPass::render(Renderer* render) {
-  // state.shadow.execution_time_shadowmapping[TIME_IDX] = gl_query_time_buffer_ptr[state.render_passes];
   render->pass_started("Directional shadow mapping pass");
 
   glCullFace(GL_FRONT);

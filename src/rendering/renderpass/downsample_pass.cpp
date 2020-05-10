@@ -92,7 +92,6 @@ bool DownsampleRenderPass::render(Renderer* render) {
   const float width = render->screen.width;
   const float height = render->screen.height;
 
-  // render->state.gbuffer_downsample.execution_time[TIME_IDX] = gl_query_time_buffer_ptr[state.render_passes];
   render->pass_started("Downsample pass");
 
   glBindFramebuffer(GL_FRAMEBUFFER, gl_fbo);

@@ -151,7 +151,6 @@ bool GbufferRenderPass::render(Renderer* render) {
   const Resolution screen = render->screen;
   const RenderState state = render->state;
 
-  // state.gbuffer.execution_time[TIME_IDX] = gl_query_time_buffer_ptr[state.render_passes]; // FIXME
   render->pass_started("Geometry pass");
 
   glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);

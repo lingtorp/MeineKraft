@@ -40,18 +40,13 @@
 
 /// Indicates the start of a Renderpass (must be paried with pass_ended);
 inline void Renderer::pass_started(const std::string &name) {
-  glBeginQuery(GL_TIME_ELAPSED, gl_query_ids[state.render_passes]);
   glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, name.c_str());
   state.render_passes++;
-  if (state.render_passes > MAX_RENDER_PASSES) {
-    Log::warn("Maximum render passes");
-  }
 }
 
 /// Indicates the end of a Renderpass (must be paired with pass_started)
 inline void Renderer::pass_ended() const {
   glPopDebugGroup();
-  glEndQuery(GL_TIME_ELAPSED);
 }
 
 uint32_t Renderer::get_next_free_texture_unit(bool peek) {
@@ -233,19 +228,6 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
   const uint32_t gl_pointlight_ssbo_binding_point_idx = 4; // Default value in lightning.frag
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_pointlight_ssbo_binding_point_idx, gl_pointlights_ssbo);
   std::memcpy(gl_pointlights_ssbo_ptr, pointlights.data(), pointlights.size() * sizeof(PointLight));
-  // TODO: Remove querying stuff
-  /// Rendering pass execution time query buffer
-  {
-    glGenQueries(MAX_RENDER_PASSES, &gl_query_ids[0]);
-
-    glGenBuffers(1, &gl_execution_time_query_buffer);
-    glBindBuffer(GL_QUERY_BUFFER, gl_execution_time_query_buffer);
-    const auto flags = GL_MAP_READ_BIT | GL_MAP_PERSISTENT_BIT;
-    glBufferStorage(GL_QUERY_BUFFER, MAX_RENDER_PASSES * sizeof(GLuint64), nullptr, flags);
-    gl_query_time_buffer_ptr = (uint64_t*) glMapBufferRange(GL_QUERY_BUFFER, 0, MAX_RENDER_PASSES * sizeof(GLuint64), flags);
-    glObjectLabel(GL_BUFFER, gl_execution_time_query_buffer, -1, "Renderpass execution time buffer");
-  }
-
 
   glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
   glEnable(GL_CULL_FACE);
@@ -287,15 +269,11 @@ bool Renderer::init() {
 void Renderer::render(const uint32_t delta) {
   state.frame++;
   state.render_passes = 0;
-  state.total_execution_time = 0;
 
   // Asserts downsampling factor
   if (state.lighting.downsample_modifier % 2 != 0 || state.lighting.downsample_modifier <= 0) {
     state.lighting.downsample_modifier = 1;
   }
-
-  // Help variable for the indexing of executing timings of the render passes
-  const uint8_t TIME_IDX = state.frame % RenderState::execution_time_buffer_size;
 
   const float aspect_ratio = static_cast<float>(screen.width) / static_cast<float>(screen.height);
   projection_matrix = scene->camera.projection(aspect_ratio);
@@ -380,7 +358,6 @@ void Renderer::render(const uint32_t delta) {
 
   /// Copy final pass into default FBO
   {
-    state.blit.execution_time[TIME_IDX] = gl_query_time_buffer_ptr[state.render_passes];
     pass_started("Final blit pass");
 
     glBindFramebuffer(GL_READ_FRAMEBUFFER, lighting_application_pass->gl_lighting_application_fbo);
@@ -400,15 +377,6 @@ void Renderer::render(const uint32_t delta) {
   #endif
 
   state.graphic_batches = graphics_batches.size();
-
-  if (state.capture_execution_timings) {
-    /// Query for the GPU execution time for the render passes
-    glBindBuffer(GL_QUERY_BUFFER, gl_execution_time_query_buffer);
-    for (size_t i = 0; i < state.render_passes; i++) {
-      glGetQueryObjectui64v(gl_query_ids[i], GL_QUERY_RESULT_NO_WAIT, reinterpret_cast<GLuint64*>(sizeof(GLuint64) * i));
-      state.total_execution_time += gl_query_time_buffer_ptr[i]; // NOTE: Not 100% exact due to timings and changing pipeline
-    }
-  }
 }
 
 void Renderer::link_batch(GraphicsBatch& batch) {

@@ -124,13 +124,6 @@ struct Renderer {
   // TODO: Document
   uint32_t get_next_free_image_unit(bool peek = false);
 
-  // TODO: Remove querying ...
-  const static size_t MAX_RENDER_PASSES = 25;
-  /// Render pass execution time query buffer
-  uint32_t gl_execution_time_query_buffer = 0;
-  uint64_t* gl_query_time_buffer_ptr = nullptr;
-  std::array<uint32_t, MAX_RENDER_PASSES> gl_query_ids = {};
-
   Scene *scene = nullptr;
   std::vector<PointLight> pointlights;
 // private:
