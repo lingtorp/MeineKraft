@@ -25,6 +25,7 @@ ID Entity::clone() const {
     if (components & RENDER_SYSTEM_COMPONENT_TAG) {
         // TODO: Implement clone function
     }
+    return 0;
 }
 
 /** Component handling for convenience **/

@@ -37,7 +37,14 @@ set(RENDER_SRC_FILES "src/rendering/shader.cpp" "src/rendering/shader.hpp" "src/
         "src/rendering/renderer.cpp" "src/rendering/renderer.hpp"    "src/rendering/primitives.hpp"
         "src/rendering/camera.cpp"   "src/rendering/camera.hpp"      "src/rendering/debug_opengl.hpp"
         "src/rendering/light.hpp"    "src/rendering/meshmanager.cpp" "src/rendering/meshmanager.hpp" "src/rendering/texturemanager.hpp"
-        "src/rendering/renderpass/renderpass.hpp" "src/rendering/renderpass/renderpass.cpp")
+        "src/rendering/renderpass/renderpass.hpp" "src/rendering/renderpass/renderpass.cpp"
+        "src/rendering/renderpass/downsample_pass.hpp" "src/rendering/renderpass/downsample_pass.cpp"
+        "src/rendering/renderpass/directionalshadow_pass.hpp" "src/rendering/renderpass/directionalshadow_pass.cpp"
+        "src/rendering/renderpass/gbuffer_pass.hpp" "src/rendering/renderpass/gbuffer_pass.cpp"
+        "src/rendering/renderpass/lighting_application_pass.hpp" "src/rendering/renderpass/lighting_application_pass.cpp"
+        "src/rendering/renderpass/direct_lighting_pass.hpp" "src/rendering/renderpass/direct_lighting_pass.cpp"
+        "src/rendering/renderpass/voxelization_pass.hpp" "src/rendering/renderpass/voxelization_pass.cpp"
+        "src/rendering/renderpass/voxel_cone_tracing_pass.hpp" "src/rendering/renderpass/voxel_cone_tracing_pass.cpp")
 source_group("render" FILES ${RENDER_SRC_FILES})
 
 set(UTIL_SRC_FILES "src/util/filemonitor.cpp" "src/util/filemonitor.hpp" "src/util/filesystem.hpp" "src/util/logging.hpp" "src/util/logging.cpp" "src/util/config.hpp" "src/util/config.cpp" "src/util/logging_system.hpp" "src/util/logging_system.cpp" "src/util/mkass.cpp" "src/util/mkass.hpp")

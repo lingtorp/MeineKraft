@@ -13,7 +13,16 @@
 
 #include "../nodes/model.hpp"
 #include "../nodes/entity.hpp"
+
 #include "../util/filesystem.hpp"
+
+#include "renderpass/downsample_pass.hpp"
+#include "renderpass/gbuffer_pass.hpp"
+#include "renderpass/directionalshadow_pass.hpp"
+#include "renderpass/lighting_application_pass.hpp"
+#include "renderpass/direct_lighting_pass.hpp"
+#include "renderpass/voxelization_pass.hpp"
+#include "renderpass/voxel_cone_tracing_pass.hpp"
 
 #include "camera.hpp"
 #include "debug_opengl.hpp"
@@ -24,18 +33,6 @@
 #include <glm/common.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-
-/// Draw struct taken from OpenGL (see: glMultiDrawElementsIndirect)
-struct DrawElementsIndirectCommand {
-  uint32_t count = 0;         // # elements (i.e indices)
-  uint32_t instanceCount = 0; // # instances (kind of drawcalls)
-  uint32_t firstIndex = 0;    // index of the first element in the EBO
-  uint32_t baseVertex = 0;    // indices[i] + baseVertex
-  uint32_t baseInstance = 0;  // instance = [gl_InstanceID / divisor] + baseInstance
-  uint32_t padding0 = 0;      // Padding due to GLSL layout std140 16B alignment rule
-  uint32_t padding1 = 0;
-  uint32_t padding2 = 0;
-};
 
 /// Indicates the start of a Renderpass (must be paried with pass_ended);
 inline void Renderer::pass_started(const std::string &name) {
@@ -53,7 +50,7 @@ inline void Renderer::pass_ended() const {
   glEndQuery(GL_TIME_ELAPSED);
 }
 
-static uint32_t get_next_free_texture_unit(bool peek = false) {
+uint32_t Renderer::get_next_free_texture_unit(bool peek) {
   int32_t max_texture_units = 0;
   glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max_texture_units);
   static int32_t next_texture_unit = 0;
@@ -68,7 +65,7 @@ static uint32_t get_next_free_texture_unit(bool peek = false) {
   return next_texture_unit;
 }
 
-static uint32_t get_next_free_image_unit(bool peek = false) {
+uint32_t Renderer::get_next_free_image_unit(bool peek) {
   int32_t max_image_units = 0;
   glGetIntegerv(GL_MAX_IMAGE_UNITS, &max_image_units);
   static int32_t next_image_unit = -1;
@@ -128,7 +125,7 @@ static glm::mat4 shadowmap_transform(const AABB& aabb, const DirectionalLight& l
 
 // FIXME: Use the same form as above or vice versa
 // NOTE: AABB passed is assumed to be the Scene AABB
-static glm::mat4 orthographic_projection(const AABB& aabb) {
+glm::mat4 Renderer::orthographic_projection(const AABB& aabb) {
   const float voxel_grid_dimension = aabb.max_axis() / 2.0f;
   const float left   = -voxel_grid_dimension;
   const float right  =  voxel_grid_dimension;
@@ -179,50 +176,6 @@ std::array<glm::vec4, 6> extract_planes(const glm::mat4& mat) {
   return { normalize(left_plane), normalize(right_plane), normalize(bot_plane), normalize(top_plane), normalize(near_plane), normalize(far_plane) };
 }
 
-/// Generates diffuse cones on the hemisphere (Vec3f: cone-direction, float: cone-weight)
-/// NOTE: Weights does NOT sum to 2PI, the steradians of a hemisphere, but PI
-std::vector<Vec4f> generate_diffuse_cones(const size_t count) {
-  assert(count >= 0);
-
-  if (count == 0) {
-    return {};
-  }
-
-  std::vector<Vec4f> cones(count);
-
-  if (count == 1) {
-    cones[0] = Vec4f(0.0f, 1.0f, 0.0f, M_PI);
-    return cones;
-  }
-
-  const float rad_delta = 2.0f * M_PI / (count - 1.0f);
-  const float theta = glm::radians(45.0f);
-
-  // Normal cone
-  // NOTE: Weight derived from integration of theta: [0, 2pi], psi: [0, pi/count] of sin(theta) * cos(theta)
-  const float w0 = 2.0f * M_PI * (-0.5 * std::cos(M_PI / count) * std::cos(M_PI / count) + 0.5);
-  cones[0] = Vec4f(0.0f, 1.0f, 0.0f, w0);
-
-  for (size_t i = 0; i < count - 1; i++) {
-    const Vec3f direction = Vec3f(std::cos(theta) * std::sin(i * rad_delta),
-                                  std::sin(theta) * std::sin(theta),
-                                  std::cos(i * rad_delta)).normalize();
-    cones[i + 1] = Vec4f(direction, (M_PI - cones[0].w) / (count - 1.0f));
-  }
-
-  float sum = 0.0f;
-  for (const auto& cone : cones) {
-    sum += cone.w;
-    assert(cone.w > 0.0f && "Diffuse cone generated with negative weight.");
-  }
-
-  const float tolerance = 0.001f;
-  const float diff = std::abs(M_PI - sum);
-  assert(diff <= tolerance && "Diffuse cones dont weight up to M_PI");
-
-  return cones;
-}
-
 // Center perserved generation of scaled AABBs of the Scene AABB
 std::vector<AABB> generate_clipmaps_from_scene_aabb(const AABB& scene,
                                                     const size_t num_clipmaps) {
@@ -244,188 +197,42 @@ std::vector<AABB> generate_clipmaps_from_scene_aabb(const AABB& scene,
 Renderer::~Renderer() = default;
 
 Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{} {
-  {
-    /// Global geometry pass framebuffer
-    glGenFramebuffers(1, &gl_depth_fbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
-    glObjectLabel(GL_FRAMEBUFFER, gl_depth_fbo, -1, "GBuffer FBO");
+  // Rendergraph construction and setup
+  gbuffer_pass = new GbufferRenderPass();
+  downsample_pass = new DownsampleRenderPass();
+  shadow_pass = new DirectionalShadowRenderPass();
+  direct_lighting_pass = new DirectLightingRenderPass();
+  lighting_application_pass = new LightingApplicationRenderPass();
+  voxel_cone_tracing_pass = new VoxelConeTracingRenderPass();
+  voxelization_pass = new VoxelizationRenderPass();
 
-    // Global depth buffer
-    gl_depth_texture_unit = get_next_free_texture_unit();
-    glActiveTexture(GL_TEXTURE0 + gl_depth_texture_unit);
-    glGenTextures(1, &gl_depth_texture);
-    glBindTexture(GL_TEXTURE_2D, gl_depth_texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    // glTexParameteri(GL_TEXTURE_2D, GL_DEPTH_STENCIL_TEXTURE_MODE, GL_DEPTH_COMPONENT); // Default value (intention only to read depth values from texture)
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, screen.width, screen.height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, gl_depth_texture, 0);
-    glObjectLabel(GL_TEXTURE, gl_depth_texture, -1, "GBuffer depth texture");
+  voxelization_pass->shadow_pass = shadow_pass;
+  voxelization_pass->gbuffer_pass = gbuffer_pass;
 
-    // Global normal buffer
-    gl_geometric_normal_texture_unit = get_next_free_texture_unit();
-    glActiveTexture(GL_TEXTURE0 + gl_geometric_normal_texture_unit);
-    glGenTextures(1, &gl_geometric_normal_texture);
-    glBindTexture(GL_TEXTURE_2D, gl_geometric_normal_texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_geometric_normal_texture, 0);
-    glObjectLabel(GL_TEXTURE, gl_geometric_normal_texture, -1, "GBuffer geometric normal texture");
+  voxel_cone_tracing_pass->gbuffer_pass = gbuffer_pass;
 
-    // Global position buffer
-    gl_position_texture_unit = get_next_free_texture_unit();
-    glActiveTexture(GL_TEXTURE0 + gl_position_texture_unit);
-    glGenTextures(1, &gl_position_texture);
-    glBindTexture(GL_TEXTURE_2D, gl_position_texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, gl_position_texture, 0);
-    glObjectLabel(GL_TEXTURE, gl_position_texture, -1, "GBuffer position texture");
+  downsample_pass->shadow_pass = shadow_pass;
+  downsample_pass->gbuffer_pass = gbuffer_pass;
 
-    // Global diffuse buffer
-    gl_diffuse_texture_unit = get_next_free_texture_unit();
-    glActiveTexture(GL_TEXTURE0 + gl_diffuse_texture_unit);
-    glGenTextures(1, &gl_diffuse_texture);
-    glBindTexture(GL_TEXTURE_2D, gl_diffuse_texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, screen.width, screen.height, 0, GL_RGBA, GL_FLOAT, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, gl_diffuse_texture, 0);
-    glObjectLabel(GL_TEXTURE, gl_diffuse_texture, -1, "GBuffer diffuse texture");
+  lighting_application_pass->gbuffer_pass = gbuffer_pass;
+  lighting_application_pass->voxel_cone_tracing_pass = voxel_cone_tracing_pass;
 
-    // Global PBR parameters buffer
-    gl_pbr_parameters_texture_unit = get_next_free_texture_unit();
-    glActiveTexture(GL_TEXTURE0 + gl_pbr_parameters_texture_unit);
-    glGenTextures(1, &gl_pbr_parameters_texture);
-    glBindTexture(GL_TEXTURE_2D, gl_pbr_parameters_texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, gl_pbr_parameters_texture, 0);
-    glObjectLabel(GL_TEXTURE, gl_pbr_parameters_texture, -1, "GBuffer PBR parameters texture");
+  direct_lighting_pass->gbuffer_pass = gbuffer_pass;
+  direct_lighting_pass->shadow_pass  = shadow_pass;
 
-    // Global emissive map
-    gl_emissive_texture_unit = get_next_free_texture_unit();
-    glActiveTexture(GL_TEXTURE0 + gl_emissive_texture_unit);
-    glGenTextures(1, &gl_emissive_texture);
-    glBindTexture(GL_TEXTURE_2D, gl_emissive_texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, gl_emissive_texture, 0);
-    glObjectLabel(GL_TEXTURE, gl_emissive_texture, -1, "GBuffer emissive texture");
+  // NOTE: Order important for certain passes
+  render_passes.push_back(gbuffer_pass);
+  render_passes.push_back(downsample_pass);
+  render_passes.push_back(shadow_pass);
+  render_passes.push_back(lighting_application_pass);
+  render_passes.push_back(direct_lighting_pass);
+  render_passes.push_back(voxelization_pass);
+  render_passes.push_back(voxel_cone_tracing_pass);
 
-    // Global shading model id
-    gl_shading_model_texture_unit = get_next_free_texture_unit();
-    glActiveTexture(GL_TEXTURE0 + gl_shading_model_texture_unit);
-    glGenTextures(1, &gl_shading_model_texture);
-    glBindTexture(GL_TEXTURE_2D, gl_shading_model_texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, screen.width, screen.height, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT5, gl_shading_model_texture, 0);
-    glObjectLabel(GL_TEXTURE, gl_shading_model_texture, -1, "GBuffer shading ID texture");
-
-    // Global tangent space normal map
-    gl_tangent_normal_texture_unit = get_next_free_texture_unit();
-    glActiveTexture(GL_TEXTURE0 + gl_tangent_normal_texture_unit);
-    glGenTextures(1, &gl_tangent_normal_texture);
-    glBindTexture(GL_TEXTURE_2D, gl_tangent_normal_texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT6, gl_tangent_normal_texture, 0);
-    glObjectLabel(GL_TEXTURE, gl_tangent_normal_texture, -1, "GBuffer tangent normal texture");
-
-    // Global tangent map
-    gl_tangent_texture_unit = get_next_free_texture_unit();
-    glActiveTexture(GL_TEXTURE0 + gl_tangent_texture_unit);
-    glGenTextures(1, &gl_tangent_texture);
-    glBindTexture(GL_TEXTURE_2D, gl_tangent_texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT7, gl_tangent_texture, 0);
-    glObjectLabel(GL_TEXTURE, gl_tangent_texture, -1, "GBuffer tangent texture");
-
-    uint32_t attachments[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT5, GL_COLOR_ATTACHMENT6, GL_COLOR_ATTACHMENT7 };
-    glDrawBuffers(std::size(attachments), attachments);
-
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-      Log::error("GBuffer framebuffer status not complete.");
+  for (auto render_pass : render_passes) {
+    if (!render_pass->setup(this)) {
+      Log::warn("RenderPass failed to init");
     }
-  }
-
-  /// Downsample pass for gbuffer
-  {
-    /// Downsampled global geometry pass framebuffer
-    glGenFramebuffers(1, &gbuffer_downsampled.gl_fbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, gbuffer_downsampled.gl_fbo);
-    glObjectLabel(GL_FRAMEBUFFER, gbuffer_downsampled.gl_fbo, -1, "GBuffer (downsampled) FBO");
-
-    // Global downsampled position buffer
-    gbuffer_downsampled.gl_position_texture_unit = get_next_free_texture_unit();
-    glActiveTexture(GL_TEXTURE0 + gbuffer_downsampled.gl_position_texture_unit);
-    glGenTextures(1, &gbuffer_downsampled.gl_position_texture);
-    glBindTexture(GL_TEXTURE_2D, gbuffer_downsampled.gl_position_texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gbuffer_downsampled.gl_position_texture, 0);
-    glObjectLabel(GL_TEXTURE, gbuffer_downsampled.gl_position_texture, -1, "GBuffer (downsampled) position texture");
-
-    // Global downsampled normal buffer
-    gbuffer_downsampled.gl_normal_texture_unit = get_next_free_texture_unit();
-    glActiveTexture(GL_TEXTURE0 + gbuffer_downsampled.gl_normal_texture_unit);
-    glGenTextures(1, &gbuffer_downsampled.gl_normal_texture);
-    glBindTexture(GL_TEXTURE_2D, gbuffer_downsampled.gl_normal_texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, gbuffer_downsampled.gl_normal_texture, 0);
-    glObjectLabel(GL_TEXTURE, gbuffer_downsampled.gl_normal_texture, -1, "GBuffer (downsampled) normal texture");
-
-    // Global downsampled depth buffer
-    gbuffer_downsampled.gl_depth_texture_unit = get_next_free_texture_unit();
-    glActiveTexture(GL_TEXTURE0 + gbuffer_downsampled.gl_depth_texture_unit);
-    glGenTextures(1, &gbuffer_downsampled.gl_depth_texture);
-    glBindTexture(GL_TEXTURE_2D, gbuffer_downsampled.gl_depth_texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, screen.width, screen.height, 0, GL_RED, GL_FLOAT, nullptr);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, gbuffer_downsampled.gl_depth_texture, 0);
-    glObjectLabel(GL_TEXTURE, gbuffer_downsampled.gl_depth_texture, -1, "GBuffer (downsampled) depth texture");
-
-    uint32_t attachments[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
-    glDrawBuffers(std::size(attachments), attachments);
-
-    // NOTE: Reuse shadowmap depth attachment for FBO completeness (disabled anyway)
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, gl_shadowmapping_texture, 0);
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-      Log::error("GBuffer (downsampled) framebuffer status not complete.");
-    }
-
-    gbuffer_downsampled.shader = new Shader(Filesystem::base + "shaders/generic-passthrough.vert.glsl",
-                                            Filesystem::base + "shaders/gbuffer-downsampled.frag.glsl");
-    const auto [ok, err_msg] = gbuffer_downsampled.shader->compile();
-    if (!ok) {
-      Log::error("Gbuffer (downsampled) shader error: " + err_msg); exit(1);
-    }
-
-    const auto program = gbuffer_downsampled.shader->gl_program;
-    glUseProgram(program);
-
-    glGenVertexArrays(1, &gbuffer_downsampled.gl_vao);
-    glBindVertexArray(gbuffer_downsampled.gl_vao);
-
-    GLuint gl_vbo = 0;
-    glGenBuffers(1, &gl_vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, gl_vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(Primitive::quad), &Primitive::quad, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
-    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
   }
 
   // TODO: Rework pointlights
@@ -443,248 +250,6 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
 
   // View frustum culling shader
   cull_shader = new ComputeShader(Filesystem::base + "shaders/culling.comp.glsl");
-
-  /// Directional shadow mapping setup
-  {
-    glGenFramebuffers(1, &gl_shadowmapping_fbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, gl_shadowmapping_fbo);
-		glObjectLabel(GL_FRAMEBUFFER, gl_shadowmapping_fbo, -1, "Shadowmap FBO");
-
-    gl_shadowmapping_texture_unit = get_next_free_texture_unit();
-    glActiveTexture(GL_TEXTURE0 + gl_shadowmapping_texture_unit); // FIXME: These are not neccessary when creating the texture only when they are used
-    glGenTextures(1, &gl_shadowmapping_texture);
-    glBindTexture(GL_TEXTURE_2D, gl_shadowmapping_texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexStorage2D(GL_TEXTURE_2D, 1, GL_DEPTH_COMPONENT16, state.shadow.SHADOWMAP_W, state.shadow.SHADOWMAP_H);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, gl_shadowmapping_texture, 0);
-    glObjectLabel(GL_TEXTURE, gl_shadowmapping_texture, -1, "Shadowmap texture");
-    glDrawBuffer(GL_NONE);
-    glReadBuffer(GL_NONE);
-
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-      Log::error("Directional shadow mapping FBO not complete"); exit(1);
-    }
-
-    shadowmapping_shader = new Shader(Filesystem::base + "shaders/shadowmapping.vert",
-                                      Filesystem::base + "shaders/shadowmapping.frag");
-    const auto [ok, err_msg] = shadowmapping_shader->compile();
-    if (!ok) {
-      Log::error("Shadowmapping shader error: " + err_msg); exit(1);
-    }
-  }
-
-  /// Voxelization pass
-  {
-    voxelization_shader = new Shader(Filesystem::base + "shaders/voxelization.vert",
-                                     Filesystem::base + "shaders/voxelization.geom",
-                                     Filesystem::base + "shaders/voxelization.frag");
-
-    const std::string includes = Filesystem::read_file(Filesystem::base + "shaders/voxel-cone-tracing-utils.glsl");
-    voxelization_shader->add(includes);
-
-    const auto [ok, err_msg] = voxelization_shader->compile();
-    if (!ok) {
-      Log::error("Voxelization shader error: " + err_msg); exit(-1);
-    }
-
-    glGenFramebuffers(1, &gl_voxelization_fbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, gl_voxelization_fbo);
-		glObjectLabel(GL_FRAMEBUFFER, gl_voxelization_fbo, -1, "Voxelization FBO");
-
-    for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
-      // Global radiance voxel buffer
-      gl_voxel_radiance_image_units[i] = get_next_free_image_unit();
-      gl_voxel_radiance_texture_units[i] = get_next_free_texture_unit();
-      glActiveTexture(GL_TEXTURE0 + gl_voxel_radiance_texture_units[i]);
-      glGenTextures(1, &gl_voxel_radiance_textures[i]);
-      glBindTexture(GL_TEXTURE_3D, gl_voxel_radiance_textures[i]);
-      glTexStorage3D(GL_TEXTURE_3D, 1, GL_RGBA8, clipmaps.size[i], clipmaps.size[i], clipmaps.size[i]);
-      glBindImageTexture(gl_voxel_radiance_image_units[i], gl_voxel_radiance_textures[i], 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32UI);
-      glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-      glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-      glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-      glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-      glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
-
-      const std::string radiance_object_label = "Clipmap #" + std::to_string(i) + " radiance texture";
-      glObjectLabel(GL_TEXTURE, gl_voxel_radiance_textures[i], -1, radiance_object_label.c_str());
- 
-      // Global opacity voxel buffer
-      gl_voxel_opacity_image_units[i] = get_next_free_image_unit();
-      gl_voxel_opacity_texture_units[i] = get_next_free_texture_unit();
-      glActiveTexture(GL_TEXTURE0 + gl_voxel_opacity_texture_units[i]);
-      glGenTextures(1, &gl_voxel_opacity_textures[i]);
-      glBindTexture(GL_TEXTURE_3D, gl_voxel_opacity_textures[i]);
-      glTexStorage3D(GL_TEXTURE_3D, 1, GL_RGBA8, clipmaps.size[i], clipmaps.size[i], clipmaps.size[i]);
-      glBindImageTexture(gl_voxel_opacity_image_units[i], gl_voxel_opacity_textures[i], 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA8);
-      glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-      glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-      glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-      glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-      glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
-
-      const std::string opacity_object_label = "Clipmap #" + std::to_string(i) + " opacity texture";
-      glObjectLabel(GL_TEXTURE, gl_voxel_opacity_textures[i], -1, opacity_object_label.c_str());
-    }
-
-    // Reuse shadowmap depth attachment for FBO completeness (disabled anyway)
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, gl_shadowmapping_texture, 0);
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-      Log::error("Voxelization FBO not complete"); exit(1);
-    }
-
-    /// Opacity normalization compute shader subpass
-    const std::string include = Filesystem::read_file(Filesystem::base + "shaders/voxel-cone-tracing-utils.glsl");
-    voxelization_opacity_norm_shader = new ComputeShader(Filesystem::base + "shaders/voxelization-opacity-normalization.comp",
-                                                         std::vector{include});
-  }
-
-  /// Voxel visualization pass
-  if (state.voxel_visualization.enabled) {
-    voxel_visualization_shader = new Shader(Filesystem::base + "shaders/voxel-visualization.vert",
-                                            Filesystem::base + "shaders/voxel-visualization.geom",
-                                            Filesystem::base + "shaders/voxel-visualization.frag");
-
-    const std::string includes = Filesystem::read_file(Filesystem::base + "shaders/voxel-cone-tracing-utils.glsl");
-    voxel_visualization_shader->add(includes);
-
-    const auto [ok, err_msg] = voxel_visualization_shader->compile();
-
-    if (!ok) {
-      Log::error("Voxel visualization shader error: " + err_msg); exit(-1);
-    } 
-
-    const auto program = voxel_visualization_shader->gl_program;
-    glUseProgram(program);
-
-    glGenFramebuffers(1, &gl_voxel_visualization_fbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, gl_voxel_visualization_fbo);
-    glObjectLabel(GL_FRAMEBUFFER, gl_voxel_visualization_fbo, -1, "Voxel visualization FBO");
-
-    gl_voxel_visualization_texture_unit = get_next_free_texture_unit();
-    glActiveTexture(GL_TEXTURE0 + gl_voxel_visualization_texture_unit);
-    glGenTextures(1, &gl_voxel_visualization_texture);
-    glBindTexture(GL_TEXTURE_2D, gl_voxel_visualization_texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, screen.width, screen.height, 0, GL_RGBA, GL_FLOAT, nullptr);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_voxel_visualization_texture, 0);
-    glObjectLabel(GL_TEXTURE, gl_voxel_visualization_texture, -1, "Voxel visualization texture");
-
-    const uint32_t attachments[] = { GL_COLOR_ATTACHMENT0 };
-    glDrawBuffers(std::size(attachments), attachments);
-
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-      Log::error("Voxel visualization FBO not complete"); exit(1);
-    }
-
-    glGenVertexArrays(1, &gl_voxel_visualization_vao);
-    glBindVertexArray(gl_voxel_visualization_vao);
-
-    GLuint gl_vbo = 0;
-    glGenBuffers(1, &gl_vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, gl_vbo);
-    const Vec3f vertex(1.0f, 1.0f, 1.0f);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(Vec3f), &vertex, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
-    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 0, nullptr);
-  }
-
-  /// Voxel cone tracing pass
-  {
-    /// Create SSBO for the diffuse cones
-    const size_t MAX_CONES = state.vct.MAX_DIFFUSE_CONES;
-    const std::vector<Vec4f> cones = generate_diffuse_cones(state.vct.num_diffuse_cones);
-
-    glGenBuffers(1, &gl_vct_diffuse_cones_ssbo);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, gl_vct_diffuse_cones_ssbo);
-    const auto flags = GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT | GL_MAP_WRITE_BIT;
-    glBufferStorage(GL_SHADER_STORAGE_BUFFER, MAX_CONES * sizeof(Vec4f), nullptr, flags);
-    gl_vct_diffuse_cones_ssbo_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, MAX_CONES * sizeof(Vec4f), flags);
-
-    const uint32_t gl_diffuse_cones_ssbo_binding_point_idx = 8; // Default value in voxel-cone-tracing.frag
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_diffuse_cones_ssbo_binding_point_idx, gl_vct_diffuse_cones_ssbo);
-    std::memcpy(gl_vct_diffuse_cones_ssbo_ptr, cones.data(), cones.size() * sizeof(Vec4f));
-
-    vct_shader = new Shader(Filesystem::base + "shaders/voxel-cone-tracing.vert",
-                            Filesystem::base + "shaders/voxel-cone-tracing.frag");
-
-    const std::string includes = Filesystem::read_file(Filesystem::base + "shaders/voxel-cone-tracing-utils.glsl");
-    vct_shader->add(includes);
-
-    const auto [ok, err_msg] = vct_shader->compile();
-    if (!ok) {
-      Log::error("Voxel cone tracing shader error: " + err_msg); exit(-1);
-    }
-
-    const auto program = vct_shader->gl_program;
-    glUseProgram(program);
-
-    glGenFramebuffers(1, &gl_vct_fbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, gl_vct_fbo);
-
-    // Global indirect radiance map
-    gl_indirect_radiance_texture_unit = get_next_free_texture_unit();
-    glActiveTexture(GL_TEXTURE0 + gl_indirect_radiance_texture_unit);
-    glGenTextures(1, &gl_indirect_radiance_texture);
-    glBindTexture(GL_TEXTURE_2D, gl_indirect_radiance_texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_indirect_radiance_texture, 0);
-    glObjectLabel(GL_TEXTURE, gl_indirect_radiance_texture, -1, "GBuffer indirect radiance texture");
-
-    // Global ambient radiance map
-    gl_ambient_radiance_texture_unit = get_next_free_texture_unit();
-    glActiveTexture(GL_TEXTURE0 + gl_ambient_radiance_texture_unit);
-    glGenTextures(1, &gl_ambient_radiance_texture);
-    glBindTexture(GL_TEXTURE_2D, gl_ambient_radiance_texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_R16F, screen.width, screen.height, 0, GL_RED, GL_FLOAT, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, gl_ambient_radiance_texture, 0);
-    glObjectLabel(GL_TEXTURE, gl_ambient_radiance_texture, -1, "GBuffer ambient radiance texture");
-
-    // Global specular radiance map
-    gl_specular_radiance_texture_unit = get_next_free_texture_unit();
-    glActiveTexture(GL_TEXTURE0 + gl_specular_radiance_texture_unit);
-    glGenTextures(1, &gl_specular_radiance_texture);
-    glBindTexture(GL_TEXTURE_2D, gl_specular_radiance_texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, gl_specular_radiance_texture, 0);
-    glObjectLabel(GL_TEXTURE, gl_specular_radiance_texture, -1, "GBuffer specular radiance texture");
-
-    // Global direct radiance map
-    gl_direct_radiance_texture_unit = get_next_free_texture_unit();
-    glActiveTexture(GL_TEXTURE0 + gl_direct_radiance_texture_unit);
-    glGenTextures(1, &gl_direct_radiance_texture);
-    glBindTexture(GL_TEXTURE_2D, gl_direct_radiance_texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen.width, screen.height, 0, GL_RGB, GL_FLOAT, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, gl_direct_radiance_texture, 0);
-    glObjectLabel(GL_TEXTURE, gl_direct_radiance_texture, -1, "GBuffer direct radiance texture");
-
-    const uint32_t attachments[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3 };
-    glDrawBuffers(std::size(attachments), attachments);
-
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-      Log::error("VCT fbo not complete"); log_gl_error(); exit(-1);
-    }
-
-    glGenVertexArrays(1, &gl_vct_vao);
-    glBindVertexArray(gl_vct_vao);
-
-    GLuint gl_vbo = 0;
-    glGenBuffers(1, &gl_vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, gl_vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(Primitive::quad), &Primitive::quad, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
-    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
-  }
 
   /// Bilateral filtering pass
   {
@@ -764,7 +329,7 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
       glGenFramebuffers(1, &gl_bf_pong_fbo);
       glBindFramebuffer(GL_FRAMEBUFFER, gl_bf_pong_fbo);
 
-      glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_ambient_radiance_texture, 0); // NOTE: Use w/e temp. texture for FBO completeness
+      glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_bf_ping_out_texture, 0); // NOTE: Use w/e temp. texture for FBO completeness
 
       const uint32_t attachments[] = { GL_COLOR_ATTACHMENT0 };
       glDrawBuffers(std::size(attachments), attachments);
@@ -772,53 +337,6 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
       if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
         Log::error("Bilateral filtering pong FBO not complete"); exit(-1);
       }
-    }
-  }
-
-  /// Lighting application pass
-  {
-    lighting_application_shader = new Shader(Filesystem::base + "shaders/generic-passthrough.vert.glsl",
-                                             Filesystem::base + "shaders/lighting-application.frag.glsl");
-
-    const std::string includes = Filesystem::read_file(Filesystem::base + "shaders/voxel-cone-tracing-utils.glsl");
-    lighting_application_shader->add(includes);
-
-    const auto [ok, msg] = lighting_application_shader->compile();
-    if (!ok) {
-      Log::error(msg); exit(-1);
-    }
-
-    const uint32_t program = lighting_application_shader->gl_program;
-    glUseProgram(program);
-    glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
-    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
-
-    GLuint gl_vbo = 0;
-    glGenBuffers(1, &gl_vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, gl_vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(Primitive::quad), &Primitive::quad, GL_STATIC_DRAW);
-
-    glGenFramebuffers(1, &gl_lighting_application_fbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, gl_lighting_application_fbo);
-
-    gl_lighting_application_texture_unit = get_next_free_texture_unit();
-    glActiveTexture(GL_TEXTURE0 + gl_lighting_application_texture_unit);
-
-    glGenTextures(1, &gl_lighting_application_texture);
-    glBindTexture(GL_TEXTURE_2D, gl_lighting_application_texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, screen.width, screen.height, 0, GL_RGBA, GL_FLOAT, nullptr);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_lighting_application_texture, 0);
-    glObjectLabel(GL_TEXTURE, gl_lighting_application_texture, -1, "Lighting application texture");
-
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_lighting_application_texture, 0);
-
-    const uint32_t attachments[1] = { GL_COLOR_ATTACHMENT0 };
-    glDrawBuffers(std::size(attachments), attachments);
-
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-      Log::error("Lighting application FBO not complete"); exit(-1);
     }
   }
 
@@ -906,39 +424,6 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     }
   }
 
-  /// Direct lighting pass
-  {
-    direct_lighting_shader = new Shader(Filesystem::base + "shaders/generic-passthrough.vert.glsl",
-                                        Filesystem::base + "shaders/direct-lighting.frag.glsl");
-
-    const auto [ok, msg] = direct_lighting_shader->compile();
-    if (!ok) {
-      Log::error(msg); exit(-1);
-    }
-
-    const uint32_t program = direct_lighting_shader->gl_program;
-    glUseProgram(program);
-    glEnableVertexAttribArray(glGetAttribLocation(program, "position"));
-    glVertexAttribPointer(glGetAttribLocation(program, "position"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
-
-    GLuint gl_vbo = 0;
-    glGenBuffers(1, &gl_vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, gl_vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(Primitive::quad), &Primitive::quad, GL_STATIC_DRAW);
-
-    glGenFramebuffers(1, &gl_direct_lighting_fbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, gl_direct_lighting_fbo);
-
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_direct_radiance_texture, 0);
-
-    const uint32_t attachments[] = { GL_COLOR_ATTACHMENT0 };
-    glDrawBuffers(std::size(attachments), attachments);
-
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-      Log::error("Direct lighting FBO not complete"); exit(-1);
-    }
-  }
-
   /// Rendering pass execution time query buffer
   {
     glGenQueries(MAX_RENDER_PASSES, &gl_query_ids[0]);
@@ -1001,16 +486,14 @@ void Renderer::render(const uint32_t delta) {
   // Help variable for the indexing of executing timings of the render passes
   const uint8_t TIME_IDX = state.frame % RenderState::execution_time_buffer_size;
 
-  GLuint last_executed_fbo = 0; // NOTE: This FBO's default buffer is blitted to the screen
-
   const float aspect_ratio = static_cast<float>(screen.width) / static_cast<float>(screen.height);
-  const auto projection_matrix = scene->camera.projection(aspect_ratio);
+  projection_matrix = scene->camera.projection(aspect_ratio);
 
-  const glm::mat4 camera_transform = projection_matrix * scene->camera.transform(); // TODO: Camera handling needs to be reworked
+  camera_transform = projection_matrix * scene->camera.transform(); // TODO: Camera handling needs to be reworked
 
   /// Renderer caches the transforms of components thus we need to fetch the ones who changed during the last frame
   // FIXME: This is a bad design?
-  update_transforms();
+  // update_transforms();
   TransformSystem::instance().reset_dirty();
 
   static GLsync syncs[3] = {nullptr, nullptr, nullptr};
@@ -1072,673 +555,292 @@ void Renderer::render(const uint32_t delta) {
     pass_ended();
   }
 
-  state.shadow.execution_time_shadowmapping[TIME_IDX] = gl_query_time_buffer_ptr[state.render_passes];
-  pass_started("Directional shadow mapping pass");
-  const glm::mat4 light_space_transform = shadowmap_transform(scene->aabb, scene->directional_light);
-  {
-    glCullFace(GL_FRONT);
-    glBindFramebuffer(GL_FRAMEBUFFER, gl_shadowmapping_fbo);
-    glViewport(0, 0, state.shadow.SHADOWMAP_W, state.shadow.SHADOWMAP_H);
-    glEnable(GL_DEPTH_TEST);
-    glClear(GL_DEPTH_BUFFER_BIT); // Always update the depth buffer with the new values
-    const uint32_t program = shadowmapping_shader->gl_program;
-    glUseProgram(program);
-    glUniformMatrix4fv(glGetUniformLocation(program, "uLight_space_transform"), 1, GL_FALSE, glm::value_ptr(light_space_transform));
-    for (size_t i = 0; i < graphics_batches.size(); i++) {
-      const auto& batch = graphics_batches[i];
-      glBindVertexArray(batch.gl_shadowmapping_vao);
-      glBindBuffer(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo); // GL_DRAW_INDIRECT_BUFFER is global context state
+  /// Directional shadowmapping
+  shadow_pass->light_space_transform = shadowmap_transform(scene->aabb, scene->directional_light);
+  shadow_pass->render(this);
 
-      const uint32_t gl_models_binding_point = 2; // Defaults to 2 in geometry.vert shader
-      glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_models_binding_point, batch.gl_depth_model_buffer);
-
-      const uint64_t draw_cmd_offset = batch.gl_curr_ibo_idx * sizeof(DrawElementsIndirectCommand);
-      glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (const void*) draw_cmd_offset, 1, sizeof(DrawElementsIndirectCommand));
-    }
-    glViewport(0, 0, screen.width, screen.height);
-    glCullFace(GL_BACK);
-
-    pass_ended();
-  }
-
-  {
-    state.gbuffer.execution_time[TIME_IDX] = gl_query_time_buffer_ptr[state.render_passes];
-    pass_started("Geometry pass");
-
-    glBindFramebuffer(GL_FRAMEBUFFER, gl_depth_fbo);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    for (size_t i = 0; i < graphics_batches.size(); i++) {
-      const auto& batch = graphics_batches[i];
-      const auto program = batch.depth_shader.gl_program;
-      glUseProgram(program);
-      glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, glm::value_ptr(projection_matrix));
-      glBindVertexArray(batch.gl_depth_vao);
-      glBindBuffer(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo); // GL_DRAW_INDIRECT_BUFFER is global context state
-
-			glUniformMatrix4fv(glGetUniformLocation(program, "camera_view"), 1, GL_FALSE, glm::value_ptr(camera_transform));
-
-      const uint32_t gl_models_binding_point = 2; // Defaults to 2 in geometry.vert shader
-      glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_models_binding_point, batch.gl_depth_model_buffer);
-
-      const uint32_t gl_material_binding_point = 3; // Defaults to 3 in geometry.frag shader
-      glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_material_binding_point, batch.gl_material_buffer);
-
-      glActiveTexture(GL_TEXTURE0 + batch.gl_diffuse_texture_unit);
-      glBindTexture(GL_TEXTURE_2D_ARRAY, batch.gl_diffuse_texture_array);
-
-      if (batch.gl_metallic_roughness_texture != 0) {
-        glActiveTexture(GL_TEXTURE0 + batch.gl_metallic_roughness_texture_unit); // TODO: Replace with DSA
-        glBindTexture(GL_TEXTURE_2D, batch.gl_metallic_roughness_texture);
-      }
-
-      if (batch.gl_tangent_normal_texture != 0) {
-        glActiveTexture(GL_TEXTURE0 + batch.gl_tangent_normal_texture_unit); // TODO: Replace with DSA
-        glBindTexture(GL_TEXTURE_2D, batch.gl_tangent_normal_texture);
-      }
-
-      glActiveTexture(GL_TEXTURE0 + batch.gl_emissive_texture_unit); // TODO: Replace with DSA
-      glBindTexture(GL_TEXTURE_2D, batch.gl_emissive_texture);
-
-      const uint64_t draw_cmd_offset = batch.gl_curr_ibo_idx * sizeof(DrawElementsIndirectCommand);
-      glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (const void*) draw_cmd_offset, 1, sizeof(DrawElementsIndirectCommand));
-    }
-
-    pass_ended();
-  }
+  /// Gbuffer pass
+  gbuffer_pass->render(this);
 
   /// Downsample pass
-  {
-    state.gbuffer_downsample.execution_time[TIME_IDX] = gl_query_time_buffer_ptr[state.render_passes];
-    pass_started("Downsample pass");
+  downsample_pass->render(this);
 
-    glBindFramebuffer(GL_FRAMEBUFFER, gbuffer_downsampled.gl_fbo);
-    glBindVertexArray(gbuffer_downsampled.gl_vao);
-
-    const auto program = gbuffer_downsampled.shader->gl_program;
-    glUseProgram(program);
-
-    const auto div = state.lighting.downsample_modifier;
-    const Vec2f input_pixel_size = Vec2(float(div) / (screen.width), float(div) / (screen.height));
-    glUniform2fv(glGetUniformLocation(program, "uInput_pixel_size"), 1, &input_pixel_size.x);
-
-    glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
-    glUniform1i(glGetUniformLocation(program, "uNormal"), gl_geometric_normal_texture_unit);
-    glUniform1i(glGetUniformLocation(program, "uDepth"), gl_depth_texture_unit);
-
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glViewport(0, 0, screen.width / div, screen.height / div);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glViewport(0, 0, screen.width, screen.height);
-
-    pass_ended();
-  }
-
+  /// Voxelization pass
   if (state.voxelization.voxelize) {
     if (!state.voxelization.always_voxelize) {
       state.voxelization.voxelize = false;
     }
 
-    state.voxelization.execution_time[TIME_IDX] = gl_query_time_buffer_ptr[state.render_passes];
-    pass_started("Voxelization pass");
-
-    for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
-      glClearTexImage(gl_voxel_radiance_textures[i], 0, GL_RGBA, GL_FLOAT, nullptr); 
-      glClearTexImage(gl_voxel_opacity_textures[i], 0, GL_RGBA, GL_FLOAT, nullptr);
-    }
-
-    glBindFramebuffer(GL_FRAMEBUFFER, gl_voxelization_fbo);
-
-    const auto program = voxelization_shader->gl_program;
-    glUseProgram(program);
-
-    // Orthogonal projection along +z-axis
-    // TODO: Precompute these - add notification when changed and precompute the new ones
-    glm::mat4 orthos[NUM_CLIPMAPS];
-    for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
-      orthos[i] = orthographic_projection(clipmaps.aabb[i]);
-    }
-    glUniformMatrix4fv(glGetUniformLocation(program, "uOrthos"), NUM_CLIPMAPS, GL_FALSE, glm::value_ptr(orthos[0]));
-
-    // TODO: Precompute these - add notification when changed and precompute the new ones
-    float scaling_factors[NUM_CLIPMAPS];
-    for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
-      scaling_factors[i] = 1.0f / clipmaps.aabb[i].max_axis();
-    }
-    glUniform1fv(glGetUniformLocation(program, "uScaling_factors"), NUM_CLIPMAPS, scaling_factors);
-
-    // TODO: Precompute these - add notification when changed and precompute the new ones
-    Vec3f aabb_centers[NUM_CLIPMAPS];
-    for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
-      aabb_centers[i] = clipmaps.aabb[i].center();
-    }
-    glUniform3fv(glGetUniformLocation(program, "uAABB_centers"), NUM_CLIPMAPS, &aabb_centers[0].x);
-    glUniform3fv(glGetUniformLocation(program, "uCamera_position"), 1, &scene->camera.position.x);
-
-    // Shadowmapping
-    glUniform1f(glGetUniformLocation(program, "uShadow_bias"), state.shadow.bias);
-    glUniform3fv(glGetUniformLocation(program, "uDirectional_light_direction"), 1, &scene->directional_light.direction.x);
-    glUniform3fv(glGetUniformLocation(program, "uDirectional_light_intensity"), 1, &scene->directional_light.intensity.x);
-    glUniformMatrix4fv(glGetUniformLocation(program, "uLight_space_transform"), 1, GL_FALSE, glm::value_ptr(light_space_transform));
-    glUniform1i(glGetUniformLocation(program, "uShadowmap"), gl_shadowmapping_texture_unit);
-    glUniform1iv(glGetUniformLocation(program, "uClipmap_sizes"), NUM_CLIPMAPS, clipmaps.size);
-    glUniform1i(glGetUniformLocation(program, "uConservative_rasterization_enabled"), state.voxelization.conservative_rasterization);
-
-    for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
-      glBindImageTexture(gl_voxel_radiance_image_units[i], gl_voxel_radiance_textures[i], 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32UI);
-      glBindImageTexture(gl_voxel_opacity_image_units[i], gl_voxel_opacity_textures[i], 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_RGBA8);
-    }
-    glUniform1iv(glGetUniformLocation(program, "uVoxel_radiance"), NUM_CLIPMAPS, gl_voxel_radiance_image_units);
-    glUniform1iv(glGetUniformLocation(program, "uVoxel_opacity"), NUM_CLIPMAPS, gl_voxel_opacity_image_units);
-
-    glDisable(GL_DEPTH_TEST);
-    glDepthMask(GL_FALSE);
-    glDisable(GL_CULL_FACE);
-    glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-    // TODO: Precompute these - add notification when changed and precompute the new ones
-    Vec4f viewports[NUM_CLIPMAPS];
-    for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
-      viewports[i] = Vec4f(0.0f, 0.0f, clipmaps.size[i], clipmaps.size[i]);
-    }
-    glViewportArrayv(0, NUM_CLIPMAPS, &viewports[0].x);
-
-    for (size_t i = 0; i < graphics_batches.size(); i++) {
-      const auto &batch = graphics_batches[i];
-      glBindVertexArray(batch.gl_voxelization_vao);
-      glBindBuffer(GL_DRAW_INDIRECT_BUFFER, batch.gl_ibo); // GL_DRAW_INDIRECT_BUFFER is global context state
-
-      glActiveTexture(GL_TEXTURE0 + batch.gl_diffuse_texture_unit);
-      glBindTexture(GL_TEXTURE_2D_ARRAY, batch.gl_diffuse_texture_array);
-      glUniform1i(glGetUniformLocation(program, "uDiffuse"), batch.gl_diffuse_texture_unit);
-
-      glActiveTexture(GL_TEXTURE0 + batch.gl_emissive_texture_unit);
-      glBindTexture(GL_TEXTURE_2D, batch.gl_emissive_texture);
-      glUniform1i(glGetUniformLocation(program, "uEmissive"), batch.gl_emissive_texture_unit);
-
-      const uint32_t gl_models_binding_point = 2; // Defaults to 2 in geometry.vert shader
-      glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_models_binding_point, batch.gl_depth_model_buffer);
-
-      const uint32_t gl_material_binding_point = 3; // Defaults to 3 in geometry.frag shader
-      glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_material_binding_point, batch.gl_material_buffer);
-
-      const uint64_t draw_cmd_offset = batch.gl_curr_ibo_idx * sizeof(DrawElementsIndirectCommand);
-      glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (const void *)draw_cmd_offset, 1, sizeof(DrawElementsIndirectCommand));
-    }
-
-    glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT); // Due to incoherent mem. access need to sync read and usage of voxel data
-
-    // Restore modified global state
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_CULL_FACE);
-    glDepthMask(GL_TRUE);
-    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-    glViewport(0, 0, screen.width, screen.height);
- 
-    pass_ended();
-
-    // NOTE: Opacity normalization subpass is way too slow around 12.7 ms (26% of frame time)
-    if constexpr(false) {
-      state.voxelization.execution_time[TIME_IDX] += gl_query_time_buffer_ptr[state.render_passes];
-      pass_started("Opacity normalization subpass");
-
-      const auto program = voxelization_opacity_norm_shader->gl_program;
-      glUseProgram(program);
-      for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
-        glBindImageTexture(gl_voxel_radiance_image_units[i], gl_voxel_radiance_textures[i], 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA8);
-        glUniform1i(glGetUniformLocation(program, "voxels"), gl_voxel_radiance_image_units[i]);
-        glDispatchCompute(clipmaps.size[i], clipmaps.size[i], clipmaps.size[i]);
-        glBindImageTexture(gl_voxel_radiance_image_units[i], gl_voxel_radiance_textures[i], 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32UI);
-      }
-
-      glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT); // Due to incoherent mem. access need to sync read and usage of voxel data
-
-      pass_ended();
-    }
-  }
-
-  // FIXME: Does not work
-  if (state.voxel_visualization.enabled) {
-    state.voxel_visualization.execution_time[TIME_IDX] = gl_query_time_buffer_ptr[state.render_passes];
-    pass_started("Voxel visualization pass");
-
-    const auto program = voxel_visualization_shader->gl_program;
-    glUseProgram(program);
-    glBindFramebuffer(GL_FRAMEBUFFER, gl_voxel_visualization_fbo);
-    glBindVertexArray(gl_voxel_visualization_vao);
-
-    glActiveTexture(GL_TEXTURE0 + gl_voxel_visualization_texture_unit);
-    glBindTexture(GL_TEXTURE_2D, gl_voxel_visualization_texture);
-
-    glUniform1iv(glGetUniformLocation(program, "uClipmap_sizes"), NUM_CLIPMAPS, clipmaps.size);
-    glUniformMatrix4fv(glGetUniformLocation(program, "uCamera_view"), 1, GL_FALSE, glm::value_ptr(camera_transform));
-
-    for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
-      glBindImageTexture(gl_voxel_radiance_image_units[i], gl_voxel_radiance_textures[i], 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32UI);
-      glBindImageTexture(gl_voxel_opacity_image_units[i], gl_voxel_opacity_textures[i], 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32UI);
-    }
-    glUniform1iv(glGetUniformLocation(program, "uVoxel_opacity"), NUM_CLIPMAPS, gl_voxel_opacity_image_units);
-    glUniform1iv(glGetUniformLocation(program, "uVoxel_radiance"), NUM_CLIPMAPS, gl_voxel_radiance_image_units);
-
-    Vec3f clipmap_aabb_mins[NUM_CLIPMAPS];
-    for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
-      clipmap_aabb_mins[i] = clipmaps.aabb[i].min;
-    }
-    glUniform3fv(glGetUniformLocation(program, "uAABB_mins"), NUM_CLIPMAPS, &clipmap_aabb_mins[0].x);
-
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
-      glUniform1ui(glGetUniformLocation(program, "uClipmapIdx"), i);
-      glDrawArrays(GL_POINTS, 0, clipmaps.size[i] * clipmaps.size[i] * clipmaps.size[i]);
-    }
-
-    pass_ended();
+    voxelization_pass->render(this);
   }
 
   /// Voxel cone tracing pass
-  {
-    state.vct.execution_time[TIME_IDX] = gl_query_time_buffer_ptr[state.render_passes];
-    pass_started("Voxel cone tracing pass");
-    const auto program = vct_shader->gl_program;
-
-    glUseProgram(program);
-    glBindFramebuffer(GL_FRAMEBUFFER, gl_vct_fbo);
-    glBindVertexArray(gl_vct_vao);
-
-    // User customizable
-    glUniform1i(glGetUniformLocation(program, "uIndirect"), state.lighting.indirect);
-    glUniform1i(glGetUniformLocation(program, "uEmissive"), state.lighting.emissive);
-    glUniform1i(glGetUniformLocation(program, "uSpecular"), state.lighting.specular);
-    glUniform1i(glGetUniformLocation(program, "uAmbient"), state.lighting.ambient);
-    glUniform1i(glGetUniformLocation(program, "uDirect"), state.lighting.direct && state.shadow.algorithm == ShadowAlgorithm::VCT);
-    const float roughness_aperature = glm::radians(state.vct.roughness_aperature);
-    glUniform1f(glGetUniformLocation(program, "uRoughness_aperature"), roughness_aperature);
-    const float metallic_aperature = glm::radians(state.vct.metallic_aperature);
-    glUniform1f(glGetUniformLocation(program, "uMetallic_aperature"), metallic_aperature);
-    glUniform1f(glGetUniformLocation(program, "uAmbient_decay"), state.vct.ambient_decay);
-    glUniform1f(glGetUniformLocation(program, "uSpecular_cone_trace_distance"), state.vct.specular_cone_trace_distance);
-
-    glUniform3fv(glGetUniformLocation(program, "uCamera_position"), 1, &scene->camera.position.x);
-
-    glUniform1ui(glGetUniformLocation(program, "uNum_diffuse_cones"), state.vct.num_diffuse_cones);
-    // TODO: Precompute these - add notification when changed and precompute the new ones
-    const std::vector<Vec4f> cones = generate_diffuse_cones(state.vct.num_diffuse_cones);
-    std::memcpy(gl_vct_diffuse_cones_ssbo_ptr, cones.data(), cones.size() * sizeof(Vec4f));
-
-    glUniform1i(glGetUniformLocation(program, "uNormalmapping"), state.lighting.normalmapping);
-
-    // TODO: Precompute these - add notification when changed and precompute the new ones
-    float scaling_factors[NUM_CLIPMAPS];
-    for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
-      scaling_factors[i] = 1.0f / clipmaps.aabb[i].max_axis();
-    }
-    glUniform1fv(glGetUniformLocation(program, "uScaling_factors"), NUM_CLIPMAPS, scaling_factors);
-
-    const float voxel_size_LOD0 = clipmaps.aabb[0].max_axis() / float(clipmaps.size[0]);
-    glUniform1f(glGetUniformLocation(program, "uVoxel_size_LOD0"), voxel_size_LOD0);
-
-    // TODO: Precompute these - add notification when changed and precompute the new ones
-    Vec3f clipmap_aabb_centers[NUM_CLIPMAPS];
-    Vec3f clipmap_aabb_mins[NUM_CLIPMAPS];
-    Vec3f clipmap_aabb_maxs[NUM_CLIPMAPS];
-
-    // TODO: Precompute these - add notification when changed and precompute the new ones
-    for (size_t i = 0; i < NUM_CLIPMAPS; i++) {
-      clipmap_aabb_centers[i] = clipmaps.aabb[i].center();
-      clipmap_aabb_mins[i] = clipmaps.aabb[i].min;
-      clipmap_aabb_maxs[i] = clipmaps.aabb[i].max;
-    }
-
-    glUniform3fv(glGetUniformLocation(program, "uAABB_centers"), NUM_CLIPMAPS, &clipmap_aabb_centers[0].x);
-    glUniform3fv(glGetUniformLocation(program, "uAABB_mins"), NUM_CLIPMAPS, &clipmap_aabb_mins[0].x);
-    glUniform3fv(glGetUniformLocation(program, "uAABB_maxs"), NUM_CLIPMAPS, &clipmap_aabb_maxs[0].x);
-		glUniform1iv(glGetUniformLocation(program, "uVoxel_radiance"), NUM_CLIPMAPS, gl_voxel_radiance_texture_units);
-    glUniform1iv(glGetUniformLocation(program, "uVoxel_opacity"), NUM_CLIPMAPS, gl_voxel_opacity_texture_units);
-    glUniform1ui(glGetUniformLocation(program, "uScreen_width"), screen.width / state.lighting.downsample_modifier);
-    glUniform1ui(glGetUniformLocation(program, "uScreen_height"), screen.height / state.lighting.downsample_modifier);
-    glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
-    glUniform1i(glGetUniformLocation(program, "uNormal"), gl_geometric_normal_texture_unit);
-    glUniform1i(glGetUniformLocation(program, "uPBR_parameters"), gl_pbr_parameters_texture_unit);
-    glUniform1i(glGetUniformLocation(program, "uTangent_normal"), gl_tangent_normal_texture_unit);
-    glUniform1i(glGetUniformLocation(program, "uTangent"), gl_tangent_texture_unit);
-
-    glViewport(0, 0, screen.width / state.lighting.downsample_modifier, screen.height / state.lighting.downsample_modifier);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glViewport(0, 0, screen.width, screen.height);
-
-    last_executed_fbo = gl_vct_fbo;
-
-    pass_ended();
-  }
+  voxel_cone_tracing_pass->render(this);
 
   /// Direct lighting (non-VCT) pass
   if (state.lighting.direct && state.shadow.algorithm != ShadowAlgorithm::VCT) {
-    state.shadow.execution_time_shadow[TIME_IDX] = gl_query_time_buffer_ptr[state.render_passes];
-    pass_started("Direct lighting pass");
-
-    const auto program = direct_lighting_shader->gl_program;
-    glUseProgram(program);
-    glBindFramebuffer(GL_FRAMEBUFFER, gl_direct_lighting_fbo);
-
-    glUniform1ui(glGetUniformLocation(program, "uPCF_samples"), state.shadow.pcf_samples);
-    glUniform1f(glGetUniformLocation(program, "uVCT_shadow_cone_aperature"), state.shadow.vct_cone_aperature);
-    glUniform1ui(glGetUniformLocation(program, "uShadow_algorithm"), static_cast<uint32_t>(state.shadow.algorithm));
-    glUniform1f(glGetUniformLocation(program, "uShadow_bias"), state.shadow.bias);
-    glUniform3fv(glGetUniformLocation(program, "uDirectional_light_intensity"), 1, &scene->directional_light.intensity.x);
-    glUniform3fv(glGetUniformLocation(program, "uDirectional_light_direction"), 1, &scene->directional_light.direction.x);
-    glUniformMatrix4fv(glGetUniformLocation(program, "uLight_space_transform"), 1, GL_FALSE, glm::value_ptr(light_space_transform));
-    glUniform1i(glGetUniformLocation(program, "uShadowmap"), gl_shadowmapping_texture_unit);
-    glUniform1ui(glGetUniformLocation(program, "uShadowmap_width"), state.shadow.SHADOWMAP_W);
-    glUniform1ui(glGetUniformLocation(program, "uShadowmap_height"), state.shadow.SHADOWMAP_H);
-
-    glUniform1ui(glGetUniformLocation(program, "uScreen_width"), screen.width);
-    glUniform1ui(glGetUniformLocation(program, "uScreen_height"), screen.height);
-    glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
-    glUniform1i(glGetUniformLocation(program, "uNormal"), gl_geometric_normal_texture_unit);
-    glUniform1i(glGetUniformLocation(program, "uTangent_normal"), gl_tangent_normal_texture_unit);
-    glUniform1i(glGetUniformLocation(program, "uTangent"), gl_tangent_texture_unit);
-    glUniform1i(glGetUniformLocation(program, "uNormalmapping"), state.lighting.normalmapping);
-
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-    last_executed_fbo = gl_direct_lighting_fbo;
-
-    pass_ended();
+    direct_lighting_pass->render(this);
   }
 
-  state.bilateral_filtering.kernel = gaussian_1d_kernel(state.bilateral_filtering.spatial_kernel_sigma, state.bilateral_filtering.spatial_kernel_radius);
-  if (state.bilateral_filtering.enabled) {
-    state.bilateral_filtering.execution_time[TIME_IDX] = gl_query_time_buffer_ptr[state.render_passes];
-    pass_started("Bilateral filtering pass");
+  // state.bilateral_filtering.kernel = gaussian_1d_kernel(state.bilateral_filtering.spatial_kernel_sigma, state.bilateral_filtering.spatial_kernel_radius);
+  // if (state.bilateral_filtering.enabled) {
+  //   state.bilateral_filtering.execution_time[TIME_IDX] = gl_query_time_buffer_ptr[state.render_passes];
+  //   pass_started("Bilateral filtering pass");
 
-    // NOTE: Joint bilateral filtering of a noisy signal with one or more 'robust' signals
-    const auto bilateral_filtering_pass = [&](const uint32_t in_texture, const uint32_t in_texture_unit, const float div = 1.0f) {
-      // TODO: Reduce to one single shader, reuse that one twice instead
-      // Ping
-      {
-        const auto program = bf_ping_shader->gl_program;
-        glUseProgram(program);
-        glBindFramebuffer(GL_FRAMEBUFFER, gl_bf_ping_fbo);
+  //   // NOTE: Joint bilateral filtering of a noisy signal with one or more 'robust' signals
+  //   const auto bilateral_filtering_pass = [&](const uint32_t in_texture, const uint32_t in_texture_unit, const float div = 1.0f) {
+  //     // TODO: Reduce to one single shader, reuse that one twice instead
+  //     // Ping
+  //     {
+  //       const auto program = bf_ping_shader->gl_program;
+  //       glUseProgram(program);
+  //       glBindFramebuffer(GL_FRAMEBUFFER, gl_bf_ping_fbo);
 
-        glUniform1i(glGetUniformLocation(program, "uPosition_weight"), state.bilateral_filtering.position_weight);
-        glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
-        glUniform1f(glGetUniformLocation(program, "uPosition_sigma"), state.bilateral_filtering.position_sigma);
-        glUniform1i(glGetUniformLocation(program, "uNormal_weight"), state.bilateral_filtering.normal_weight);
-        glUniform1i(glGetUniformLocation(program, "uNormal"), gl_geometric_normal_texture_unit);
-        glUniform1i(glGetUniformLocation(program, "uTangent"), gl_tangent_texture_unit);
-        glUniform1i(glGetUniformLocation(program, "uTangent_normal"), gl_tangent_normal_texture_unit);
-        glUniform1f(glGetUniformLocation(program, "uNormal_sigma"), state.bilateral_filtering.normal_sigma);
-        glUniform1i(glGetUniformLocation(program, "uDepth_weight"), state.bilateral_filtering.depth_weight);
-        glUniform1i(glGetUniformLocation(program, "uDepth"), gl_depth_texture_unit);
-        glUniform1f(glGetUniformLocation(program, "uDepth_sigma"), state.bilateral_filtering.depth_sigma);
+  //       glUniform1i(glGetUniformLocation(program, "uPosition_weight"), state.bilateral_filtering.position_weight);
+  //       glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
+  //       glUniform1f(glGetUniformLocation(program, "uPosition_sigma"), state.bilateral_filtering.position_sigma);
+  //       glUniform1i(glGetUniformLocation(program, "uNormal_weight"), state.bilateral_filtering.normal_weight);
+  //       glUniform1i(glGetUniformLocation(program, "uNormal"), gl_geometric_normal_texture_unit);
+  //       glUniform1i(glGetUniformLocation(program, "uTangent"), gl_tangent_texture_unit);
+  //       glUniform1i(glGetUniformLocation(program, "uTangent_normal"), gl_tangent_normal_texture_unit);
+  //       glUniform1f(glGetUniformLocation(program, "uNormal_sigma"), state.bilateral_filtering.normal_sigma);
+  //       glUniform1i(glGetUniformLocation(program, "uDepth_weight"), state.bilateral_filtering.depth_weight);
+  //       glUniform1i(glGetUniformLocation(program, "uDepth"), gl_depth_texture_unit);
+  //       glUniform1f(glGetUniformLocation(program, "uDepth_sigma"), state.bilateral_filtering.depth_sigma);
 
-        const Vec2f pixel_size = Vec2f(1.0f / screen.width, 1.0f / screen.height);
-        glUniform2fv(glGetUniformLocation(program, "uInput_pixel_size"), 1, &pixel_size.x);
-        glUniform2fv(glGetUniformLocation(program, "uOutput_pixel_size"), 1, &pixel_size.x);
+  //       const Vec2f pixel_size = Vec2f(1.0f / screen.width, 1.0f / screen.height);
+  //       glUniform2fv(glGetUniformLocation(program, "uInput_pixel_size"), 1, &pixel_size.x);
+  //       glUniform2fv(glGetUniformLocation(program, "uOutput_pixel_size"), 1, &pixel_size.x);
 
-        glUniform1ui(glGetUniformLocation(program, "uKernel_dim"), state.bilateral_filtering.kernel.size());
-        glUniform1fv(glGetUniformLocation(program, "uKernel"), state.bilateral_filtering.kernel.size(), state.bilateral_filtering.kernel.data());
+  //       glUniform1ui(glGetUniformLocation(program, "uKernel_dim"), state.bilateral_filtering.kernel.size());
+  //       glUniform1fv(glGetUniformLocation(program, "uKernel"), state.bilateral_filtering.kernel.size(), state.bilateral_filtering.kernel.data());
 
-        glUniform1i(glGetUniformLocation(program, "uInput"), in_texture_unit);
-        // glUniform1i(glGetUniformLocation(program, "uOutput"), 0); // NOTE: Default to 0 in shader
+  //       glUniform1i(glGetUniformLocation(program, "uInput"), in_texture_unit);
+  //       // glUniform1i(glGetUniformLocation(program, "uOutput"), 0); // NOTE: Default to 0 in shader
 
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glViewport(0, 0, screen.width / div, screen.height / div);
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-      }
+  //       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  //       glViewport(0, 0, screen.width / div, screen.height / div);
+  //       glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+  //     }
 
-      // Pong
-      {
-        const auto program = bf_pong_shader->gl_program;
-        glUseProgram(program);
-        glBindFramebuffer(GL_FRAMEBUFFER, gl_bf_pong_fbo);
+  //     // Pong
+  //     {
+  //       const auto program = bf_pong_shader->gl_program;
+  //       glUseProgram(program);
+  //       glBindFramebuffer(GL_FRAMEBUFFER, gl_bf_pong_fbo);
 
-        glUniform1i(glGetUniformLocation(program, "uPosition_weight"), state.bilateral_filtering.position_weight);
-        glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
-        glUniform1f(glGetUniformLocation(program, "uPosition_sigma"), state.bilateral_filtering.position_sigma);
-        glUniform1i(glGetUniformLocation(program, "uNormal_weight"), state.bilateral_filtering.normal_weight);
-        glUniform1i(glGetUniformLocation(program, "uNormal"), gl_geometric_normal_texture_unit);
-        glUniform1i(glGetUniformLocation(program, "uTangent_normal"), gl_tangent_normal_texture_unit);
-        glUniform1i(glGetUniformLocation(program, "uTangent"), gl_tangent_texture_unit);
-        glUniform1f(glGetUniformLocation(program, "uNormal_sigma"), state.bilateral_filtering.normal_sigma);
-        glUniform1i(glGetUniformLocation(program, "uDepth_weight"), state.bilateral_filtering.depth_weight);
-        glUniform1i(glGetUniformLocation(program, "uDepth"), gl_depth_texture_unit);
-        glUniform1f(glGetUniformLocation(program, "uDepth_sigma"), state.bilateral_filtering.depth_sigma);
+  //       glUniform1i(glGetUniformLocation(program, "uPosition_weight"), state.bilateral_filtering.position_weight);
+  //       glUniform1i(glGetUniformLocation(program, "uPosition"), gl_position_texture_unit);
+  //       glUniform1f(glGetUniformLocation(program, "uPosition_sigma"), state.bilateral_filtering.position_sigma);
+  //       glUniform1i(glGetUniformLocation(program, "uNormal_weight"), state.bilateral_filtering.normal_weight);
+  //       glUniform1i(glGetUniformLocation(program, "uNormal"), gl_geometric_normal_texture_unit);
+  //       glUniform1i(glGetUniformLocation(program, "uTangent_normal"), gl_tangent_normal_texture_unit);
+  //       glUniform1i(glGetUniformLocation(program, "uTangent"), gl_tangent_texture_unit);
+  //       glUniform1f(glGetUniformLocation(program, "uNormal_sigma"), state.bilateral_filtering.normal_sigma);
+  //       glUniform1i(glGetUniformLocation(program, "uDepth_weight"), state.bilateral_filtering.depth_weight);
+  //       glUniform1i(glGetUniformLocation(program, "uDepth"), gl_depth_texture_unit);
+  //       glUniform1f(glGetUniformLocation(program, "uDepth_sigma"), state.bilateral_filtering.depth_sigma);
 
-        const Vec2f pixel_size = Vec2f(1.0f / screen.width, 1.0f / screen.height);
-        glUniform2fv(glGetUniformLocation(program, "uInput_pixel_size"), 1, &pixel_size.x);
-        glUniform2fv(glGetUniformLocation(program, "uOutput_pixel_size"), 1, &pixel_size.x);
+  //       const Vec2f pixel_size = Vec2f(1.0f / screen.width, 1.0f / screen.height);
+  //       glUniform2fv(glGetUniformLocation(program, "uInput_pixel_size"), 1, &pixel_size.x);
+  //       glUniform2fv(glGetUniformLocation(program, "uOutput_pixel_size"), 1, &pixel_size.x);
 
-        glUniform1ui(glGetUniformLocation(program, "uKernel_dim"), state.bilateral_filtering.kernel.size());
-        glUniform1fv(glGetUniformLocation(program, "uKernel"), state.bilateral_filtering.kernel.size(), state.bilateral_filtering.kernel.data());
+  //       glUniform1ui(glGetUniformLocation(program, "uKernel_dim"), state.bilateral_filtering.kernel.size());
+  //       glUniform1fv(glGetUniformLocation(program, "uKernel"), state.bilateral_filtering.kernel.size(), state.bilateral_filtering.kernel.data());
 
-        glUniform1i(glGetUniformLocation(program, "uInput"), gl_bf_ping_out_texture_unit);
-        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, in_texture, 0);
+  //       glUniform1i(glGetUniformLocation(program, "uInput"), gl_bf_ping_out_texture_unit);
+  //       glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, in_texture, 0);
 
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glViewport(0, 0, screen.width / div, screen.height / div);
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-      }
+  //       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  //       glViewport(0, 0, screen.width / div, screen.height / div);
+  //       glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+  //     }
 
-      glViewport(0, 0, screen.width, screen.height);
-    };
+  //     glViewport(0, 0, screen.width, screen.height);
+  //   };
 
-    // Pre-filtering screenshot
-    const auto get_texture = [&](const uint32_t gl_texture) -> Vec3f* {
-      const size_t buf_size = sizeof(Vec3f) * screen.width * screen.height;
-      Vec3f *pixels = (Vec3f*) calloc(buf_size, 1);
-      glGetTextureImage(gl_texture, 0, GL_RGB, GL_FLOAT, buf_size, (void*) pixels);
-      return pixels;
-    };
+  //   // Pre-filtering screenshot
+  //   const auto get_texture = [&](const uint32_t gl_texture) -> Vec3f* {
+  //     const size_t buf_size = sizeof(Vec3f) * screen.width * screen.height;
+  //     Vec3f *pixels = (Vec3f*) calloc(buf_size, 1);
+  //     glGetTextureImage(gl_texture, 0, GL_RGB, GL_FLOAT, buf_size, (void*) pixels);
+  //     return pixels;
+  //   };
 
-    Vec3f* ambient_radiance_pixels = nullptr;
-    Vec3f* indirect_radiance_pixels = nullptr;
-    Vec3f* specular_radiance_pixels = nullptr;
-    if (state.bilateral_filtering.pixel_diff) {
-      if (state.bilateral_filtering.ambient)  { ambient_radiance_pixels = get_texture(gl_ambient_radiance_texture); };
-      if (state.bilateral_filtering.indirect) { indirect_radiance_pixels = get_texture(gl_indirect_radiance_texture); };
-      if (state.bilateral_filtering.specular) { specular_radiance_pixels = get_texture(gl_specular_radiance_texture); };
-    }
+  //   Vec3f* ambient_radiance_pixels = nullptr;
+  //   Vec3f* indirect_radiance_pixels = nullptr;
+  //   Vec3f* specular_radiance_pixels = nullptr;
+  //   if (state.bilateral_filtering.pixel_diff) {
+  //     if (state.bilateral_filtering.ambient)  { ambient_radiance_pixels = get_texture(gl_ambient_radiance_texture); };
+  //     if (state.bilateral_filtering.indirect) { indirect_radiance_pixels = get_texture(gl_indirect_radiance_texture); };
+  //     if (state.bilateral_filtering.specular) { specular_radiance_pixels = get_texture(gl_specular_radiance_texture); };
+  //   }
 
-    // Declare input & output texture
-    const float div = state.lighting.downsample_modifier;
-    if (state.bilateral_filtering.ambient)  { bilateral_filtering_pass(gl_ambient_radiance_texture,  gl_ambient_radiance_texture_unit, div);  }
-    if (state.bilateral_filtering.indirect) { bilateral_filtering_pass(gl_indirect_radiance_texture, gl_indirect_radiance_texture_unit, div); }
-    if (state.bilateral_filtering.specular) { bilateral_filtering_pass(gl_specular_radiance_texture, gl_specular_radiance_texture_unit, div); }
-    if (state.bilateral_filtering.direct)   { bilateral_filtering_pass(gl_direct_radiance_texture,   gl_direct_radiance_texture_unit);   }
+  //   // Declare input & output texture
+  //   const float div = state.lighting.downsample_modifier;
+  //   if (state.bilateral_filtering.ambient)  { bilateral_filtering_pass(gl_ambient_radiance_texture,  gl_ambient_radiance_texture_unit, div);  }
+  //   if (state.bilateral_filtering.indirect) { bilateral_filtering_pass(gl_indirect_radiance_texture, gl_indirect_radiance_texture_unit, div); }
+  //   if (state.bilateral_filtering.specular) { bilateral_filtering_pass(gl_specular_radiance_texture, gl_specular_radiance_texture_unit, div); }
+  //   if (state.bilateral_filtering.direct)   { bilateral_filtering_pass(gl_direct_radiance_texture,   gl_direct_radiance_texture_unit);   }
 
-    const auto save_pixel_diff = [&](const std::string& filename, const Vec3f* pre, const Vec3f* post, const TextureFormat fmt = TextureFormat::RGB32F) {
-      const std::string pre_fp  = Filesystem::save_image_as_ppm(Filesystem::tmp + "pre-"  + filename, pre, screen.width, screen.height, div, fmt);
-      const std::string post_fp = Filesystem::save_image_as_ppm(Filesystem::tmp + "post-" + filename, post, screen.width, screen.height, div, fmt);
-      const std::string out_fp = Filesystem::tmp + "diff-" + filename + ".png";
-      // FIXME: Compare using grayscale not binary white-black?
-      const std::string cmd = "compare -highlight-color white " + pre_fp + " " + post_fp + " " + out_fp;
-      std::system(cmd.c_str());
-      Log::info("Saved pixel difference: " + out_fp);
-      delete pre;
-      delete post;
-    };
+  //   const auto save_pixel_diff = [&](const std::string& filename, const Vec3f* pre, const Vec3f* post, const TextureFormat fmt = TextureFormat::RGB32F) {
+  //     const std::string pre_fp  = Filesystem::save_image_as_ppm(Filesystem::tmp + "pre-"  + filename, pre, screen.width, screen.height, div, fmt);
+  //     const std::string post_fp = Filesystem::save_image_as_ppm(Filesystem::tmp + "post-" + filename, post, screen.width, screen.height, div, fmt);
+  //     const std::string out_fp = Filesystem::tmp + "diff-" + filename + ".png";
+  //     // FIXME: Compare using grayscale not binary white-black?
+  //     const std::string cmd = "compare -highlight-color white " + pre_fp + " " + post_fp + " " + out_fp;
+  //     std::system(cmd.c_str());
+  //     Log::info("Saved pixel difference: " + out_fp);
+  //     delete pre;
+  //     delete post;
+  //   };
 
-    // Post-filtering screenshot
-    if (state.bilateral_filtering.pixel_diff) {
-      if (state.bilateral_filtering.ambient)   { save_pixel_diff("ambient-radiance",  ambient_radiance_pixels, get_texture(gl_ambient_radiance_texture), TextureFormat::R32F); };
-      if (state.bilateral_filtering.indirect)  { save_pixel_diff("indirect-radiance", indirect_radiance_pixels, get_texture(gl_indirect_radiance_texture)); };
-      if (state.bilateral_filtering.specular)  { save_pixel_diff("specular-radiance", specular_radiance_pixels, get_texture(gl_specular_radiance_texture)); };
-      state.bilateral_filtering.pixel_diff = false;
-    }
+  //   // Post-filtering screenshot
+  //   if (state.bilateral_filtering.pixel_diff) {
+  //     if (state.bilateral_filtering.ambient)   { save_pixel_diff("ambient-radiance",  ambient_radiance_pixels, get_texture(gl_ambient_radiance_texture), TextureFormat::R32F); };
+  //     if (state.bilateral_filtering.indirect)  { save_pixel_diff("indirect-radiance", indirect_radiance_pixels, get_texture(gl_indirect_radiance_texture)); };
+  //     if (state.bilateral_filtering.specular)  { save_pixel_diff("specular-radiance", specular_radiance_pixels, get_texture(gl_specular_radiance_texture)); };
+  //     state.bilateral_filtering.pixel_diff = false;
+  //   }
 
-    pass_ended();
-  }
+  //   pass_ended();
+  // }
 
   /// Bilateral upsampling
-  if (state.bilateral_upsample.enabled && state.lighting.downsample_modifier > 1) {
-    assert(!state.bilinear_upsample.enabled);
-    state.bilateral_upsample.execution_time[TIME_IDX] = gl_query_time_buffer_ptr[state.render_passes];
-    pass_started("Bilateral upsampling pass");
+  /// IN: downsample_pass
+  // if (state.bilateral_upsample.enabled && state.lighting.downsample_modifier > 1) {
+  //   assert(!state.bilinear_upsample.enabled);
+  //   state.bilateral_upsample.execution_time[TIME_IDX] = gl_query_time_buffer_ptr[state.render_passes];
+  //   pass_started("Bilateral upsampling pass");
 
-    // NOTE: Joint bilateral upsampling of a filtered low-res noisy signal with high-res 'robust' signal(s)
-    const auto bilateral_upsampling_pass = [&](const uint32_t in_texture, const uint32_t in_texture_unit) {
-      // Ping - upsamples
-      {
-        const auto program = bs_ping_shader->gl_program;
-        glUseProgram(program);
-        glBindFramebuffer(GL_FRAMEBUFFER, gl_bs_ping_fbo);
+  //   // NOTE: Joint bilateral upsampling of a filtered low-res noisy signal with high-res 'robust' signal(s)
+  //   const auto bilateral_upsampling_pass = [&](const uint32_t in_texture, const uint32_t in_texture_unit) {
+  //     // Ping - upsamples
+  //     {
+  //       const auto program = bs_ping_shader->gl_program;
+  //       glUseProgram(program);
+  //       glBindFramebuffer(GL_FRAMEBUFFER, gl_bs_ping_fbo);
 
-        glTextureParameteri(in_texture, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTextureParameteri(in_texture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  //       glTextureParameteri(in_texture, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  //       glTextureParameteri(in_texture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-        glTextureParameteri(gbuffer_downsampled.gl_normal_texture, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTextureParameteri(gbuffer_downsampled.gl_normal_texture, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  //       glTextureParameteri(downsample_pass->gl_normal_texture, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  //       glTextureParameteri(downsample_pass->gl_normal_texture, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
-        glTextureParameteri(gbuffer_downsampled.gl_position_texture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTextureParameteri(gbuffer_downsampled.gl_position_texture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  //       glTextureParameteri(downsample_pass->gl_position_texture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  //       glTextureParameteri(downsample_pass->gl_position_texture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-        glTextureParameteri(gbuffer_downsampled.gl_depth_texture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTextureParameteri(gbuffer_downsampled.gl_depth_texture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  //       glTextureParameteri(downsample_pass->gl_depth_texture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  //       glTextureParameteri(downsample_pass->gl_depth_texture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-        glUniform1i(glGetUniformLocation(program, "uPosition_weight"), state.bilateral_upsample.position_weight);
-        glUniform1i(glGetUniformLocation(program, "uPosition_high_res"), gl_position_texture_unit);
-        glUniform1i(glGetUniformLocation(program, "uPosition_low_res"), gbuffer_downsampled.gl_position_texture_unit);
+  //       glUniform1i(glGetUniformLocation(program, "uPosition_weight"), state.bilateral_upsample.position_weight);
+  //       glUniform1i(glGetUniformLocation(program, "uPosition_high_res"), gl_position_texture_unit);
+  //       glUniform1i(glGetUniformLocation(program, "uPosition_low_res"), downsample_pass->gl_position_texture_unit);
 
-        glUniform1i(glGetUniformLocation(program, "uNormal_weight"), state.bilateral_upsample.normal_weight);
-        glUniform1i(glGetUniformLocation(program, "uNormal_high_res"), gl_geometric_normal_texture_unit);
-        glUniform1i(glGetUniformLocation(program, "uNormal_low_res"), gbuffer_downsampled.gl_normal_texture_unit);
+  //       glUniform1i(glGetUniformLocation(program, "uNormal_weight"), state.bilateral_upsample.normal_weight);
+  //       glUniform1i(glGetUniformLocation(program, "uNormal_high_res"), gl_geometric_normal_texture_unit);
+  //       glUniform1i(glGetUniformLocation(program, "uNormal_low_res"), downsample_pass->gl_normal_texture_unit);
 
-        glUniform1i(glGetUniformLocation(program, "uTangent"), gl_tangent_texture_unit);
-        glUniform1i(glGetUniformLocation(program, "uTangent_normal"), gl_tangent_normal_texture_unit);
-        glUniform1i(glGetUniformLocation(program, "uNormal_mapping"), state.bilateral_upsample.normal_mapping);
+  //       glUniform1i(glGetUniformLocation(program, "uTangent"), gl_tangent_texture_unit);
+  //       glUniform1i(glGetUniformLocation(program, "uTangent_normal"), gl_tangent_normal_texture_unit);
+  //       glUniform1i(glGetUniformLocation(program, "uNormal_mapping"), state.bilateral_upsample.normal_mapping);
 
-        glUniform1i(glGetUniformLocation(program, "uDepth_weight"), state.bilateral_upsample.depth_weight);
-        glUniform1i(glGetUniformLocation(program, "uDepth_high_res"), gl_depth_texture_unit);
-        glUniform1i(glGetUniformLocation(program, "uDepth_low_res"), gbuffer_downsampled.gl_depth_texture_unit);
+  //       glUniform1i(glGetUniformLocation(program, "uDepth_weight"), state.bilateral_upsample.depth_weight);
+  //       glUniform1i(glGetUniformLocation(program, "uDepth_high_res"), gl_depth_texture_unit);
+  //       glUniform1i(glGetUniformLocation(program, "uDepth_low_res"), downsample_pass->gl_depth_texture_unit);
 
-        // Input - low res
-        const float div = state.lighting.downsample_modifier;
-        const Vec2f input_pixel_size = Vec2f(1.0f / (screen.width * div), 1.0f / (screen.height * div));
-        glUniform2fv(glGetUniformLocation(program, "uInput_pixel_size"), 1, &input_pixel_size.x);
+  //       // Input - low res
+  //       const float div = state.lighting.downsample_modifier;
+  //       const Vec2f input_pixel_size = Vec2f(1.0f / (screen.width * div), 1.0f / (screen.height * div));
+  //       glUniform2fv(glGetUniformLocation(program, "uInput_pixel_size"), 1, &input_pixel_size.x);
 
-        const Vec2f input_texture_size = Vec2f(screen.width / div, screen.height / div);
-        glUniform2fv(glGetUniformLocation(program, "uInput_texture_size"), 1, &input_texture_size.x);
+  //       const Vec2f input_texture_size = Vec2f(screen.width / div, screen.height / div);
+  //       glUniform2fv(glGetUniformLocation(program, "uInput_texture_size"), 1, &input_texture_size.x);
 
-        // Output - high res
-        const Vec2f output_pixel_size = Vec2f(1.0f / screen.width, 1.0f / screen.height);
-        glUniform2fv(glGetUniformLocation(program, "uOutput_pixel_size"), 1, &output_pixel_size.x);
+  //       // Output - high res
+  //       const Vec2f output_pixel_size = Vec2f(1.0f / screen.width, 1.0f / screen.height);
+  //       glUniform2fv(glGetUniformLocation(program, "uOutput_pixel_size"), 1, &output_pixel_size.x);
 
-        const Vec2f output_texture_size = Vec2f(screen.width, screen.height);
-        glUniform2fv(glGetUniformLocation(program, "uOutput_texture_size"), 1, &output_texture_size.x);
+  //       const Vec2f output_texture_size = Vec2f(screen.width, screen.height);
+  //       glUniform2fv(glGetUniformLocation(program, "uOutput_texture_size"), 1, &output_texture_size.x);
 
-        glUniform1i(glGetUniformLocation(program, "uInput"), in_texture_unit);
-        // glUniform1i(glGetUniformLocation(program, "uOutput"), 0); // NOTE: Default to 0 in shader
+  //       glUniform1i(glGetUniformLocation(program, "uInput"), in_texture_unit);
+  //       // glUniform1i(glGetUniformLocation(program, "uOutput"), 0); // NOTE: Default to 0 in shader
 
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-      }
+  //       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  //       glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+  //     }
 
-      // Pong - copies the color attacment of ping's FBO
-      glCopyTextureSubImage2D(in_texture, 0, 0, 0, 0, 0, screen.width, screen.height);
+  //     // Pong - copies the color attacment of ping's FBO
+  //     glCopyTextureSubImage2D(in_texture, 0, 0, 0, 0, 0, screen.width, screen.height);
 
-      glTextureParameteri(in_texture, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-      glTextureParameteri(in_texture, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    };
+  //     glTextureParameteri(in_texture, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  //     glTextureParameteri(in_texture, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  //   };
 
-    // Declare input & output texture
-    if (state.bilateral_upsample.ambient)  { bilateral_upsampling_pass(gl_ambient_radiance_texture,  gl_ambient_radiance_texture_unit);  }
-    if (state.bilateral_upsample.indirect) { bilateral_upsampling_pass(gl_indirect_radiance_texture, gl_indirect_radiance_texture_unit); }
-    if (state.bilateral_upsample.specular) { bilateral_upsampling_pass(gl_specular_radiance_texture, gl_specular_radiance_texture_unit); }
+  //   // Declare input & output texture
+  //   if (state.bilateral_upsample.ambient)  { bilateral_upsampling_pass(gl_ambient_radiance_texture,  gl_ambient_radiance_texture_unit);  }
+  //   if (state.bilateral_upsample.indirect) { bilateral_upsampling_pass(gl_indirect_radiance_texture, gl_indirect_radiance_texture_unit); }
+  //   if (state.bilateral_upsample.specular) { bilateral_upsampling_pass(gl_specular_radiance_texture, gl_specular_radiance_texture_unit); }
 
-    pass_ended();
-  }
+  //   pass_ended();
+  // }
 
   /// Bilinear upsampling
-  if (state.bilinear_upsample.enabled && state.lighting.downsample_modifier > 1) {
-    state.bilinear_upsample.execution_time[TIME_IDX] = gl_query_time_buffer_ptr[state.render_passes];
-    pass_started("Bilinear upsampling pass");
+  // if (state.bilinear_upsample.enabled && state.lighting.downsample_modifier > 1) {
+  //   state.bilinear_upsample.execution_time[TIME_IDX] = gl_query_time_buffer_ptr[state.render_passes];
+  //   pass_started("Bilinear upsampling pass");
 
-    // FIXME: Reuses some of Bilateral filtering ping-pong texture resources
-    const auto bilinear_upsample = [&](const uint32_t in_texture, const uint32_t in_texture_unit) {
-      const auto program = bilinear_upsampling_shader->gl_program;
-      glUseProgram(program);
-      glBindFramebuffer(GL_FRAMEBUFFER, gl_bilinear_upsampling_fbo);
+  //   // FIXME: Reuses some of Bilateral filtering ping-pong texture resources
+  //   const auto bilinear_upsample = [&](const uint32_t in_texture, const uint32_t in_texture_unit) {
+  //     const auto program = bilinear_upsampling_shader->gl_program;
+  //     glUseProgram(program);
+  //     glBindFramebuffer(GL_FRAMEBUFFER, gl_bilinear_upsampling_fbo);
 
-      if (state.bilinear_upsample.nearest_neighbor) {
-        glTextureParameteri(in_texture, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTextureParameteri(in_texture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTextureParameteri(gl_bf_ping_out_texture, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTextureParameteri(gl_bf_ping_out_texture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-      } else {
-        glTextureParameteri(in_texture, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTextureParameteri(in_texture, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTextureParameteri(gl_bf_ping_out_texture, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTextureParameteri(gl_bf_ping_out_texture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-      }
+  //     if (state.bilinear_upsample.nearest_neighbor) {
+  //       glTextureParameteri(in_texture, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  //       glTextureParameteri(in_texture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  //       glTextureParameteri(gl_bf_ping_out_texture, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  //       glTextureParameteri(gl_bf_ping_out_texture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  //     } else {
+  //       glTextureParameteri(in_texture, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  //       glTextureParameteri(in_texture, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  //       glTextureParameteri(gl_bf_ping_out_texture, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  //       glTextureParameteri(gl_bf_ping_out_texture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  //     }
 
-      // Ping
-      {
-        const float d = state.lighting.downsample_modifier;
-        const Vec2f output_pixel_size = Vec2f(1.0f / (screen.width * d), 1.0f / (screen.height * d));
-        glUniform2fv(glGetUniformLocation(program, "uOutput_pixel_size"), 1, &output_pixel_size.x);
+  //     // Ping
+  //     {
+  //       const float d = state.lighting.downsample_modifier;
+  //       const Vec2f output_pixel_size = Vec2f(1.0f / (screen.width * d), 1.0f / (screen.height * d));
+  //       glUniform2fv(glGetUniformLocation(program, "uOutput_pixel_size"), 1, &output_pixel_size.x);
 
-        glUniform1i(glGetUniformLocation(program, "uInput"), in_texture_unit);
-        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_bf_ping_out_texture, 0);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-      }
+  //       glUniform1i(glGetUniformLocation(program, "uInput"), in_texture_unit);
+  //       glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gl_bf_ping_out_texture, 0);
+  //       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  //       glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+  //     }
 
-      // Pong - copies the color attacment of ping's FBO
-      glCopyTextureSubImage2D(in_texture, 0, 0, 0, 0, 0, screen.width, screen.height);
-    };
+  //     // Pong - copies the color attacment of ping's FBO
+  //     glCopyTextureSubImage2D(in_texture, 0, 0, 0, 0, 0, screen.width, screen.height);
+  //   };
 
-    if (state.bilinear_upsample.ambient)  { bilinear_upsample(gl_ambient_radiance_texture, gl_ambient_radiance_texture_unit);   }
-    if (state.bilinear_upsample.indirect) { bilinear_upsample(gl_indirect_radiance_texture, gl_indirect_radiance_texture_unit); }
-    if (state.bilinear_upsample.specular) { bilinear_upsample(gl_specular_radiance_texture, gl_specular_radiance_texture_unit); }
+  //   if (state.bilinear_upsample.ambient)  { bilinear_upsample(gl_ambient_radiance_texture, gl_ambient_radiance_texture_unit);   }
+  //   if (state.bilinear_upsample.indirect) { bilinear_upsample(gl_indirect_radiance_texture, gl_indirect_radiance_texture_unit); }
+  //   if (state.bilinear_upsample.specular) { bilinear_upsample(gl_specular_radiance_texture, gl_specular_radiance_texture_unit); }
 
-    last_executed_fbo = gl_bilinear_upsampling_fbo;
-
-    pass_ended();
-  }
+  //   pass_ended();
+  // }
 
   /// Lighting application pass
-  {
-    state.lighting.execution_time[TIME_IDX] = gl_query_time_buffer_ptr[state.render_passes];
-    pass_started("Lighting application pass");
-
-    const auto program = lighting_application_shader->gl_program;
-    glUseProgram(program);
-    glBindFramebuffer(GL_FRAMEBUFFER, gl_lighting_application_fbo);
-
-    const Vec2f pixel_size = Vec2(1.0f / screen.width, 1.0f / screen.height);
-    glUniform2fv(glGetUniformLocation(program, "uPixel_size"), 1, &pixel_size.x);
-
-    glUniform1i(glGetUniformLocation(program, "uDiffuse"), gl_diffuse_texture_unit);
-
-    glUniform1i(glGetUniformLocation(program, "uIndirect_radiance"), gl_indirect_radiance_texture_unit);
-    glUniform1i(glGetUniformLocation(program, "uAmbient_radiance"), gl_ambient_radiance_texture_unit);
-    glUniform1i(glGetUniformLocation(program, "uSpecular_radiance"), gl_specular_radiance_texture_unit);
-    glUniform1i(glGetUniformLocation(program, "uEmissive_radiance"), gl_emissive_texture_unit);
-    glUniform1i(glGetUniformLocation(program, "uDirect_radiance"), gl_direct_radiance_texture_unit);
-
-    // Applicable radiance values
-    const bool ambient_radiance_applicable = state.lighting.downsample_modifier > 1  ? (state.bilateral_upsample.enabled && state.bilateral_upsample.ambient) || (state.bilinear_upsample.enabled && state.bilinear_upsample.ambient) : true;
-    glUniform1i(glGetUniformLocation(program, "uAmbient_radiance_applicable"), ambient_radiance_applicable);
-    const bool indirect_radiance_applicable = state.lighting.downsample_modifier > 1  ? (state.bilateral_upsample.enabled && state.bilateral_upsample.indirect) || (state.bilinear_upsample.enabled && state.bilinear_upsample.indirect) : true;
-    glUniform1i(glGetUniformLocation(program, "uIndirect_radiance_applicable"), indirect_radiance_applicable);
-    const bool specular_radiance_applicable = state.lighting.downsample_modifier > 1  ? (state.bilateral_upsample.enabled && state.bilateral_upsample.specular) || (state.bilinear_upsample.enabled && state.bilinear_upsample.specular) : true;
-    glUniform1i(glGetUniformLocation(program, "uSpecular_radiance_applicable"), specular_radiance_applicable);
-
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-    last_executed_fbo = gl_lighting_application_fbo;
-
-    pass_ended();
-  }
+  lighting_application_pass->render(this);
 
   /// Copy final pass into default FBO
   {
     state.blit.execution_time[TIME_IDX] = gl_query_time_buffer_ptr[state.render_passes];
     pass_started("Final blit pass");
 
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, last_executed_fbo);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, lighting_application_pass->gl_lighting_application_fbo);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     const auto mask = GL_COLOR_BUFFER_BIT;
     const auto filter = GL_NEAREST;
@@ -1852,7 +954,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
 
   /// Shadowmap pass setup
   {
-    const auto program = shadowmapping_shader->gl_program;
+    const auto program = shadow_pass->shadowmapping_shader->gl_program;
     glUseProgram(program);
 
     glGenVertexArrays(1, &batch.gl_shadowmapping_vao);
@@ -1873,7 +975,7 @@ void Renderer::link_batch(GraphicsBatch& batch) {
 
   /// Voxelization pass setup
   {
-    const auto program = voxelization_shader->gl_program;
+    const auto program = voxelization_pass->shader->gl_program;
     glUseProgram(program);
 
     glGenVertexArrays(1, &batch.gl_voxelization_vao);
