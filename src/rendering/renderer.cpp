@@ -87,18 +87,8 @@ void Renderer::load_environment_map(const std::array<std::string, 6>& faces) {
     texture.gl_texture_target = GL_TEXTURE_CUBE_MAP_ARRAY;
     texture.id = resource.to_hash();
 
-    gl_environment_map_texture_unit = get_next_free_texture_unit();
-    glActiveTexture(GL_TEXTURE0 + gl_environment_map_texture_unit);
-    uint32_t gl_environment_map_texture = 0;
-    glGenTextures(1, &gl_environment_map_texture);
-    glBindTexture(texture.gl_texture_target, gl_environment_map_texture);
-    glTexParameteri(texture.gl_texture_target, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(texture.gl_texture_target, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexStorage3D(texture.gl_texture_target, 1, GL_RGB8, texture.data.width, texture.data.height, texture.data.faces);
-    glTexSubImage3D(texture.gl_texture_target, 0, 0, 0, 0, texture.data.width, texture.data.height, texture.data.faces, GL_RGB, GL_UNSIGNED_BYTE, texture.data.pixels);
-    environment_map = texture;
-
-    glObjectLabel(GL_TEXTURE, gl_environment_map_texture, -1, "Environment texture");
+    // TODO: Environment map support
+    Log::info("Image based lighting is not implemented");
   } else {
     Log::warn("Could not load environment map");
   }
@@ -216,19 +206,6 @@ Renderer::Renderer(const Resolution& screen): screen(screen), graphics_batches{}
     }
   }
 
-  // TODO: Rework pointlights
-  /// Create SSBO for the PointLights
-  pointlights.emplace_back(PointLight(Vec3f(200.0f)));
-  glGenBuffers(1, &gl_pointlights_ssbo);
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, gl_pointlights_ssbo);
-  const auto flags = GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT | GL_MAP_WRITE_BIT;
-  glBufferStorage(GL_SHADER_STORAGE_BUFFER, pointlights.size() * sizeof(PointLight), nullptr, flags);
-  gl_pointlights_ssbo_ptr = (uint8_t*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, pointlights.size() * sizeof(PointLight), flags);
-
-  const uint32_t gl_pointlight_ssbo_binding_point_idx = 4; // Default value in lightning.frag
-  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, gl_pointlight_ssbo_binding_point_idx, gl_pointlights_ssbo);
-  std::memcpy(gl_pointlights_ssbo_ptr, pointlights.data(), pointlights.size() * sizeof(PointLight));
-
   glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
   glEnable(GL_CULL_FACE);
   glCullFace(GL_BACK);
@@ -305,9 +282,6 @@ void Renderer::render(const uint32_t delta) {
     const auto& batch = graphics_batches[i];
     ((DrawElementsIndirectCommand*)batch.gl_ibo_ptr)[batch.gl_curr_ibo_idx].instanceCount = 0;
   }
-
-  // Update pointlights
-  std::memcpy(gl_pointlights_ssbo_ptr, pointlights.data(), pointlights.size() * sizeof(PointLight));
 
   if (state.culling.enabled) {
     view_frustum_culling_pass->render(this);

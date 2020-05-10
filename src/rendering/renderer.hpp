@@ -70,11 +70,12 @@ struct Renderer {
   /// Returns the default framebuffer color in callee-owned ptr
   Vec3f* take_screenshot(const uint32_t gl_fbo = 0) const;
 
+  Scene *scene = nullptr;
   RenderState state;
   Resolution screen;
   std::vector<GraphicsBatch> graphics_batches;
+  std::vector<PointLight> pointlights; // FIXME: Unused for now
 
- 
   DownsampleRenderPass* downsample_pass = nullptr;
   GbufferRenderPass* gbuffer_pass = nullptr;
   DirectionalShadowRenderPass* shadow_pass = nullptr;
@@ -112,7 +113,6 @@ struct Renderer {
   // TODO: Docs
   glm::mat4 orthographic_projection(const AABB& aabb);
 
-  // Render pass handling related
   /// Called when a rendering pass is started
   void pass_started(const std::string &msg);
   /// Called when a rendering pass is ended
@@ -124,10 +124,6 @@ struct Renderer {
   // TODO: Document
   uint32_t get_next_free_image_unit(bool peek = false);
 
-  Scene *scene = nullptr;
-  std::vector<PointLight> pointlights;
-// private:
-
   // TODO: Document
   void add_graphics_state(GraphicsBatch& batch, const RenderComponent& comp, Material material, ID entity_id);
 
@@ -136,15 +132,6 @@ struct Renderer {
 
   // TODO: Document
   void link_batch(GraphicsBatch& batch);
-
-  uint32_t gl_pointlights_ssbo = 0;
-  uint8_t* gl_pointlights_ssbo_ptr = nullptr;
-
-  // Filtering related
-  std::vector<float> kernel = {}; // Gaussian 1D separable kernel weights
-  //    Environment map
-  Texture environment_map;
-  uint32_t gl_environment_map_texture_unit = 0;
 };
 
 #endif // MEINEKRAFT_RENDERER_HPP
