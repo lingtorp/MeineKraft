@@ -4,28 +4,34 @@
 #include <SDL2/SDL_events.h>
 
 #include "imgui/imgui.h"
-#include "nodes/physics_system.hpp"
+#include "../include/imgui/imgui_impl_sdl.h"
+
 #include "rendering/primitives.hpp"
 #include "rendering/renderer.hpp"
-#include "../include/imgui/imgui_impl_sdl.h"
 #include "rendering/camera.hpp"
-#include "nodes/model.hpp"
-#include "util/filesystem.hpp"
-#include "scene/world.hpp"
 #include "rendering/debug_opengl.hpp"
+#include "nodes/model.hpp"
 #include "nodes/skybox.hpp"
+#include "nodes/physics_system.hpp"
 #include "scene/world.hpp"
 #include "rendering/graphicsbatch.hpp"
+#include "util/filesystem.hpp"
 #include "util/config.hpp"
+#include "util/logging_system.hpp"
+#include "util/mkass.hpp"
+// #include "network/network_system.hpp"
 
 // TODO: Try to update ImGui some day
 
 // ImGui global GUI settings
 struct {
+  bool imgui_test_window = false;    // ImGui demonstration window
   bool render_system_window = true;  // Render system information and config. window
   bool scene_graph_window = true;    // Scene graph of Graphic entities
-  bool logger_window = false;        // TODO: Logger of engine messages
-  bool console_window = false;       // TODO: Console for engine commands
+  bool logger_window = true;         // TODO: Logger of engine messages
+  bool console_window = true;        // TODO: Console for engine commands
+  bool network_window = false;       // TODO: Network system
+  bool scripting_window = true;      // Scripting window for writing small programs
   bool help_window = false;          // TODO: Helpful keyboard shortcuts, displayed on first launch
   bool about_window = false;         // TODO: Displays some information about the application
 } Gui;
@@ -75,6 +81,10 @@ void imgui_styling() {
   style->GrabMinSize = 20.0f;
   style->GrabRounding = 3.0f;
 
+  style->AntiAliasedLines = true;
+  style->AntiAliasedShapes = true;
+  style->FrameRounding = true;
+
   style->Colors[ImGuiCol_Text] = ImVec4(0.80f, 0.80f, 0.83f, 1.00f);
   style->Colors[ImGuiCol_TextDisabled] = ImVec4(0.24f, 0.23f, 0.29f, 1.00f);
   style->Colors[ImGuiCol_WindowBg] = ImVec4(0.06f, 0.05f, 0.07f, 0.80f);
@@ -118,220 +128,6 @@ void imgui_styling() {
   style->Colors[ImGuiCol_PlotHistogramHovered] = ImVec4(1.0f, 1.00f, 1.0f, 1.00f);
   style->Colors[ImGuiCol_TextSelectedBg] = ImVec4(0.55f, 0.55f, 0.55f, 0.43f);
   style->Colors[ImGuiCol_ModalWindowDarkening] = ImVec4(1.00f, 0.98f, 0.95f, 0.73f);
-}
-
-static void dump_performance_data(const struct Renderer* render, const size_t fps) {
-  const float total_time = render->state.total_execution_time / 1'000'000'00.0f;
-
-  float OH = 0.0f;
-  float GI = 0.0f;
-  float GB = 0.0f;
-  float DS = 0.0f;
-
-  nlohmann::json obj;
-
-  // General information
-  {
-    obj["general"]["fps"] = fps;
-  }
-
-  // GPU view frustum culling
-  if (render->state.culling.enabled) {
-    float time = 0.0f;
-    for (size_t i = 0; i < RenderState::execution_time_buffer_size; i++) {
-      time += render->state.culling.execution_time[i] / 1'000'000.0f;
-    }
-    time /= RenderState::execution_time_buffer_size;
-    obj["culling"]["time_ms"] = time;
-    obj["culling"]["time_percent"] = time / total_time;
-    OH += time / total_time;
-  }
-
-  // Lighting application
-  {
-    float time = 0.0f;
-    for (size_t i = 0; i < RenderState::execution_time_buffer_size; i++) {
-      time += render->state.lighting.execution_time[i] / 1'000'000.0f;
-    }
-    time /= RenderState::execution_time_buffer_size;
-    obj["lighting_application"]["time_ms"] = time;
-    obj["lighting_application"]["time_percent"] = time / total_time;
-    OH += time / total_time;
-  }
-
-  // Gbuffer generation
-  {
-    float time = 0.0f;
-    for (size_t i = 0; i < RenderState::execution_time_buffer_size; i++) {
-      time += render->state.gbuffer.execution_time[i] / 1'000'000.0f;
-    }
-    time /= RenderState::execution_time_buffer_size;
-    obj["gbuffer"]["time_ms"] = time;
-    obj["gbuffer"]["time_percent"] = time / total_time;
-    GI += time / total_time;
-  }
-
-  // Gbuffer downsample pass
-  if (render->state.lighting.downsample_modifier > 1) {
-    float time = 0.0f;
-    for (size_t i = 0; i < RenderState::execution_time_buffer_size; i++) {
-      time += render->state.gbuffer_downsample.execution_time[i] / 1'000'000.0f;
-    }
-    time /= RenderState::execution_time_buffer_size;
-    obj["gbuffer_downsample"]["time_ms"] = time;
-    obj["gbuffer_downsample"]["time_percent"] = time / total_time;
-    GI += time / total_time;
-  }
-
-  // Voxelization pass
-  if (render->state.voxelization.always_voxelize) {
-    float time = 0.0f;
-    for (size_t i = 0; i < RenderState::execution_time_buffer_size; i++) {
-      time += render->state.voxelization.execution_time[i] / 1'000'000.0f;
-    }
-    time /= RenderState::execution_time_buffer_size;
-    obj["voxelization"]["time_ms"] = time;
-    obj["voxelization"]["time_percent"] = time / total_time;
-    GI += time / total_time;
-  }
-
-  // VCT
-  {
-    float time = 0.0f;
-    for (size_t i = 0; i < RenderState::execution_time_buffer_size; i++) {
-      time += render->state.vct.execution_time[i] / 1'000'000.0f;
-    }
-    time /= RenderState::execution_time_buffer_size;
-    obj["vct"]["time_ms"] = time;
-    obj["vct"]["time_percent"] = time / total_time;
-    GI += time / total_time;
-  }
-
-  if (render->state.shadow.enabled) {
-    float time0 = 0.0f;
-    float time1 = 0.0f;
-    for (size_t i = 0; i < RenderState::execution_time_buffer_size; i++) {
-      time0 += render->state.shadow.execution_time_shadowmapping[i] / 1'000'000.0f;
-      time1 += render->state.shadow.execution_time_shadow[i] / 1'000'000.0f;
-    }
-    time0 /= RenderState::execution_time_buffer_size;
-    time1 /= RenderState::execution_time_buffer_size;
-    obj["depth_map_generation"]["time_ms"] = time0;
-    obj["depth_map_generation"]["time_percent"] = time0 / total_time;
-    obj["shadow_application"]["time_ms"] = time1;
-    obj["shadow_application"]["time_percent"] = time1 / total_time;
-    GI += (time0 + time1) / total_time;
-  }
-
-  // Bilateral filtering pass
-  if (render->state.bilateral_filtering.enabled && render->state.lighting.downsample_modifier > 1) {
-    float time = 0.0f;
-    for (size_t i = 0; i < RenderState::execution_time_buffer_size; i++) {
-      time += render->state.bilateral_filtering.execution_time[i] / 1'000'000.0f;
-    }
-    time /= RenderState::execution_time_buffer_size;
-    obj["bilateral_filtering"]["time_ms"] = time;
-    obj["bilateral_filtering"]["time_percent"] = time / total_time;
-  }
-
-  // Bilateral upsampling pass
-  if (render->state.bilateral_upsample.enabled && render->state.lighting.downsample_modifier > 1) {
-    float time = 0.0f;
-    for (size_t i = 0; i < RenderState::execution_time_buffer_size; i++) {
-      time += render->state.bilateral_upsample.execution_time[i] / 1'000'000.0f;
-    }
-    time /= RenderState::execution_time_buffer_size;
-    obj["bilateral_upsampling"]["time_ms"] = time;
-    obj["bilateral_upsampling"]["time_percent"] = time / total_time;
-  }
-
-  // Bilinear upsampling pass
-  if (render->state.bilinear_upsample.enabled && render->state.lighting.downsample_modifier > 1) {
-    float time = 0.0f;
-    for (size_t i = 0; i < RenderState::execution_time_buffer_size; i++) {
-      time += render->state.bilinear_upsample.execution_time[i] / 1'000'000.0f;
-    }
-    time /= RenderState::execution_time_buffer_size;
-    obj["bilinear_upsampling"]["time_ms"] = time;
-    obj["bilinear_upsampling"]["time_percent"] = time / total_time;
-  }
-
-  // Voxel visualization pass
-  if (render->state.voxel_visualization.enabled) {
-    float time = 0.0f;
-    for (size_t i = 0; i < RenderState::execution_time_buffer_size; i++) {
-      time += render->state.voxel_visualization.execution_time[i] / 1'000'000.0f;
-    }
-    time /= RenderState::execution_time_buffer_size;
-    obj["voxel_visualization"]["time_ms"] = time;
-    obj["voxel_visualization"]["time_percent"] = time / total_time;
-  }
-
-  // Blit
-  {
-    float time = 0.0f;
-    for (size_t i = 0; i < RenderState::execution_time_buffer_size; i++) {
-      time += render->state.blit.execution_time[i] / 1'000'000.0f;
-    }
-    time /= RenderState::execution_time_buffer_size;
-    obj["blit"]["time_ms"] = time;
-    obj["blit"]["time_percent"] = time / total_time;
-    OH += time / total_time;
-  }
-
-  // OH + GI
-  {
-    obj["OH"]["time_percentage"] = OH;
-    obj["GI"]["time_percentage"] = GI;
-  }
-
-  Filesystem::save_text_in_file(Filesystem::tmp + "performance_data", obj.dump(2));
-}
-
-void record_fps_loop(struct Renderer* renderer) {
-  const auto component = ActionComponent([=](const uint64_t frame,
-                                             const uint64_t delta) -> bool {
-        static auto step = 0;
-        static const auto MEASUREMENTS = 90;
-        static std::array<uint32_t, MEASUREMENTS> fps;
-
-        if (step == 0) {
-          renderer->scene->camera.position = Vec3f(-562.0f, 583.0f, -9.0f);
-          renderer->scene->camera.direction = Vec3f(0.64f, -0.3f, -0.71f);
-        }
-        else if (step == 29) {
-          renderer->scene->camera.position = Vec3f(-956.0f, 837.0f, -505.0f);
-          renderer->scene->camera.direction = Vec3f(0.66f, -0.61f, 0.42f);
-        }
-        else if (step == 59) {
-          renderer->scene->camera.position = Vec3f(1123.0f, 182.0f, -101.0f);
-          renderer->scene->camera.direction = Vec3f(-1.0f, -0.1f, 0.0f);
-        }
-
-        fps[step] = 1'000.0f / delta;
-        renderer->scene->camera.position += Vec3f(0.05f) * step;
-
-        step++;
-
-        if (step == MEASUREMENTS) {
-          std::string txt;
-          float avg_fps = 0.0f;
-          for (size_t i = 0; i < fps.size(); i++) {
-            txt += "(" + std::to_string(i) + ", " + std::to_string(fps[i]) + ") \n";
-            avg_fps += fps[i];
-          }
-          avg_fps /= fps.size();
-          txt += "\n AVG FPS: " + std::to_string(avg_fps) + "\n";
-          Filesystem::save_text_in_file(Filesystem::tmp + "fps", txt);
-        }
-
-        return step == MEASUREMENTS;
-      });
-  ActionSystem::instance().add_component(component);
-}
-
-void record_screenshot_loop(struct Renderer* renderer) {
-
 }
 
 /// Main engine constructor
@@ -386,6 +182,7 @@ void MeineKraft::init() {
   screenshot_mode = config["screenshot_mode"].get<bool>();
 
   renderer->init();
+  LoggingSystem::instance().init();
 }
 
 MeineKraft::~MeineKraft() {
@@ -413,6 +210,7 @@ void MeineKraft::mainloop() {
   /// Window handling
   bool throttle_rendering = false;
   bool throttle_rendering_enabled = false; // NOTE: Enables the flag 'throttle_rendering'
+  bool keyboard_enabled = true;
 
   while (!done) {
       current_tick = std::chrono::high_resolution_clock::now();
@@ -439,6 +237,9 @@ void MeineKraft::mainloop() {
           break;
 
         case SDL_KEYDOWN:
+          if (!keyboard_enabled) {
+            break;
+          }
           switch (event.key.keysym.sym) {
           case SDLK_w:
             renderer->scene->camera.move_forward(true);
@@ -548,25 +349,30 @@ void MeineKraft::mainloop() {
 
       //  Main window
       {
-        // ImGui::ShowTestWindow(); // NOTE: Shows demo of ImGui widgets
+        if (Gui.imgui_test_window) {
+          ImGui::ShowTestWindow(); // NOTE: Shows demo of ImGui widgets
+        }
 
         if (ImGui::BeginMainMenuBar()) {
           if (ImGui::BeginMenu("MeineKraft")) {
             if (ImGui::MenuItem("Quit", "ESC")) { done = true; }
             if (ImGui::MenuItem("Screenshot")) { take_screenshot = true; }
             if (ImGui::MenuItem("Pixel diff")) { renderer->state.bilateral_filtering.pixel_diff = true; }
-            if (ImGui::MenuItem("Dump performance data")) { dump_performance_data(renderer, io.Framerate); }
-            if (ImGui::MenuItem("Hide GUI")) {  } // TODO: Implement
+            if (ImGui::MenuItem("Hide GUI")) { memset(&Gui, 0, sizeof(Gui)); }
             ImGui::EndMenu();
           }
 
           if (ImGui::BeginMenu("Windows")) {
             if (ImGui::MenuItem("Render system", "CTRL+R")) { Gui.render_system_window = !Gui.render_system_window; }
-            if (ImGui::MenuItem("Logger system", "CTRL+L")) { Gui.logger_window = !Gui.logger_window; }
-            if (ImGui::MenuItem("Scene graph",   "CTRL+S")) { Gui.scene_graph_window = !Gui.scene_graph_window; }
+            if (ImGui::MenuItem("Logger system", "CTRL+L")) { Gui.logger_window        = !Gui.logger_window; }
+            if (ImGui::MenuItem("Scene graph",   "CTRL+S")) { Gui.scene_graph_window   = !Gui.scene_graph_window; }
+            if (ImGui::MenuItem("Scripting",     "CTRL+P")) { Gui.scripting_window     = !Gui.scripting_window; }
+            if (ImGui::MenuItem("Console",       "CTRL+C")) { Gui.console_window       = !Gui.console_window; }
             ImGui::Separator();
             if (ImGui::MenuItem("Close all ..")) {  }; // TODO: Implement ...
             if (ImGui::MenuItem("Reset position ..")) {  }; // TODO: Implement ...
+            ImGui::Separator();
+            if (ImGui::MenuItem("ImGui demo")) { Gui.imgui_test_window = !Gui.imgui_test_window; }
             ImGui::EndMenu();
           }
 
@@ -579,7 +385,6 @@ void MeineKraft::mainloop() {
         if (Gui.render_system_window) {
           ImGui::Begin("Render system", &Gui.render_system_window);
 
-          // NOTE: Execution time per render pass is only updated every 'execution_time_buffer_size'th time
           ImGui::PushItemWidth(90.0f);
 
           static size_t i = -1; i = (i + 1) % num_deltas;
@@ -589,39 +394,10 @@ void MeineKraft::mainloop() {
           ImGui::PlotLines("", deltas_ms, num_deltas, 0, "ms / frame", 0.0f, 50.0f, ImVec2(ImGui::GetWindowWidth(), 80));
           ImGui::PopStyleColor();
 
-          // Measurements recording
-          if (ImGui::Button("Record FPS loop")) {
-            record_fps_loop(renderer);
-          }
-
-          if (ImGui::Button("Record screenshot loop")) {
-            record_screenshot_loop(renderer);
-          }
-
-          if (ImGui::Button("Camera 1")) {
-            renderer->scene->camera.position = Vec3f(-562.0f, 583.0f, -9.0f);
-            renderer->scene->camera.direction = Vec3f(0.64f, -0.3f, -0.71f);
-          }
-
-          ImGui::SameLine();
-
-          if (ImGui::Button("Camera 2")) {
-            renderer->scene->camera.position = Vec3f(-956.0f, 837.0f, -505.0f);
-            renderer->scene->camera.direction = Vec3f(0.66f, -0.61f, 0.42f);
-          }
-
-          ImGui::SameLine();
-
-          if (ImGui::Button("Camera 3")) {
-            renderer->scene->camera.position = Vec3f(1123.0f, 182.0f, -101.0f);
-            renderer->scene->camera.direction = Vec3f(-1.0f, -0.1f, 0.0f);
-          }
-
           ImGui::Text("Average %lu ms/frame (%.1f FPS)", delta_ms, io.Framerate);
           ImGui::Text("Frame: %lu", renderer->state.frame);
           ImGui::Text("Resolution: (%u, %u)", renderer->screen.width, renderer->screen.height);
           ImGui::Text("Render passes: %u", renderer->state.render_passes);
-          ImGui::Text("Render passes total time (ms): %.1f", renderer->state.total_execution_time / 1'000'000.0f);
           // TODO: Change resolution, memory usage, textures, render pass execution times, etc
 
           if (ImGui::CollapsingHeader("Global settings")) {
@@ -629,43 +405,11 @@ void MeineKraft::mainloop() {
             ImGui::SliderInt("Downsample modifier", &renderer->state.lighting.downsample_modifier, 1, 8);
             ImGui::SameLine(); ImGui_HelpMarker("GI is performed in lower resolution by a of factor 1/x");
 
-            ImGui::Checkbox("Capture render pass timings", &renderer->state.capture_execution_timings);
-            ImGui::SameLine(); ImGui_HelpMarker("Performance timings updated or not");
-
             ImGui::Checkbox("Throttle rendering in background", &throttle_rendering_enabled);
             ImGui::SameLine(); ImGui_HelpMarker("Disables rendering when in the background.");
-
-            if (ImGui::TreeNode("GPU view frustum culling")) {
-              ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.culling.execution_time[0] / 1'000'000.0f, 100.0f * float(renderer->state.culling.execution_time[0]) / float(renderer->state.total_execution_time));
-              ImGui::Checkbox("Enabled##culling", &renderer->state.culling.enabled);
-              ImGui::TreePop();
-            }
-
-
-            if (ImGui::TreeNode("Depth map generation")) {
-              ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.shadow.execution_time_shadowmapping[0] / 1'000'000.0f, 100.0f * float(renderer->state.shadow.execution_time_shadowmapping[0]) / float(renderer->state.total_execution_time));
-              ImGui::TreePop();
-            }
-
-            if (ImGui::TreeNode("Global buffer generation")) {
-              ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.gbuffer.execution_time[0] / 1'000'000.0f, 100.0f * float(renderer->state.gbuffer.execution_time[0]) / float(renderer->state.total_execution_time));
-              ImGui::TreePop();
-              if (renderer->state.lighting.downsample_modifier > 1) {
-                if (ImGui::TreeNode("Global buffer downsample pass")) {
-                  ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.gbuffer_downsample.execution_time[0] / 1'000'000.0f, 100.0f * float(renderer->state.gbuffer_downsample.execution_time[0]) / float(renderer->state.total_execution_time));
-                  ImGui::TreePop();
-                }
-              }
-            }
-
-            if (ImGui::TreeNode("Final blit pass")) {
-              ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.blit.execution_time[0] / 1'000'000.0f, 100.0f * float(renderer->state.blit.execution_time[0]) / float(renderer->state.total_execution_time));
-              ImGui::TreePop();
-            }
           }
 
           if (ImGui::CollapsingHeader("Direct shadows")) {
-            ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.shadow.execution_time_shadow[0] / 1'000'000.0f, 100.0f * float(renderer->state.shadow.execution_time_shadow[0]) / float(renderer->state.total_execution_time));
             ImGui::Checkbox("Enabled", &renderer->state.lighting.direct);
             ImGui::Text("Shadowmap resolution: (%u, %u)", renderer->state.shadow.SHADOWMAP_W, renderer->state.shadow.SHADOWMAP_H);
             ImGui::SliderInt("Resolution modifier", &renderer->state.shadow.shadowmap_resolution_step, 1, 5);
@@ -693,7 +437,6 @@ void MeineKraft::mainloop() {
           }
 
           if (ImGui::CollapsingHeader("Voxelization")) {
-            ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.voxelization.execution_time[0] / 1'000'000.0f, 100.0f * float(renderer->state.voxelization.execution_time[0]) / float(renderer->state.total_execution_time));
 
             if (ImGui::Button("Voxelize")) {
               renderer->state.voxelization.voxelize = true;
@@ -705,7 +448,6 @@ void MeineKraft::mainloop() {
           }
 
           if (ImGui::CollapsingHeader("Voxel cone tracing", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.vct.execution_time[0] / 1'000'000.0f, 100.0f * float(renderer->state.vct.execution_time[0]) / float(renderer->state.total_execution_time));
 
             ImGui::InputFloat("Ambient decay factor", &renderer->state.vct.ambient_decay);
 
@@ -763,7 +505,6 @@ void MeineKraft::mainloop() {
           }
 
           if (ImGui::CollapsingHeader("Bilateral filtering", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.bilateral_filtering.execution_time[0] / 1'000'000.0f, 100.0f * float(renderer->state.bilateral_filtering.execution_time[0]) / float(renderer->state.total_execution_time));
 
             ImGui::Checkbox("Enabled##filtering", &renderer->state.bilateral_filtering.enabled);
 
@@ -816,8 +557,6 @@ void MeineKraft::mainloop() {
               renderer->state.bilateral_upsample.enabled = true;
               renderer->state.bilinear_upsample.enabled = false;
 
-              ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.bilateral_upsample.execution_time[0] / 1'000'000.0f, 100.0f * float(renderer->state.bilateral_upsample.execution_time[0]) / float(renderer->state.total_execution_time));
-
               ImGui::Text("Radiance:");
               ImGui::Checkbox("Indirect##bilateralupsample", &renderer->state.bilateral_upsample.indirect);
               ImGui::SameLine();
@@ -846,8 +585,6 @@ void MeineKraft::mainloop() {
               if (s == 2) {
                 renderer->state.bilinear_upsample.nearest_neighbor = true;
               }
-
-              ImGui::Text("Execution time (ms): %.2f / %.2f%% total", renderer->state.bilinear_upsample.execution_time[0] / 1'000'000.0f, 100.0f * float(renderer->state.bilinear_upsample.execution_time[0]) / float(renderer->state.total_execution_time));
 
               ImGui::Checkbox("Indirect##bilinear", &renderer->state.bilinear_upsample.indirect);
               ImGui::SameLine();
@@ -948,9 +685,11 @@ void MeineKraft::mainloop() {
                     ImGui::Text("Entity id: %lu", id);
 
                     const std::string* name = NameSystem::instance().get_name_from_entity_referenced(id);
-                    ImGui::Text("Name: %s", name->c_str());
-                    // ImGui::InputText("Name", name->c_str(), name->size()); // TODO: Change Entity name
-                    // NameSystem::instance().update_name(id, name);
+                    char new_name[128] = {0};
+                    ImGui::InputText("Name", new_name, sizeof(new_name));
+                    if (ImGui::Button("Confirm")) {
+                      // NameSystem::instance().update_name(id, std::string(new_name));
+                    }
 
                     TransformComponent* transform = TransformSystem::instance().lookup_referenced(id);
                     ImGui::PushID(transform);
@@ -972,15 +711,15 @@ void MeineKraft::mainloop() {
                       break;
                     }
 
-                    ImGui::PopID();
-
                     if (ImGui::Button("Remove")) {
                       renderer->remove_component(id);
                     }
                     ImGui::SameLine();
                     if (ImGui::Button("Clone")) {
-                      // TODO: Clone Entity: entity-clone();
+                      NameSystem::instance().add_name_to_entity(std::string(new_name), id);
                     }
+
+                    ImGui::PopID();
                   }
                 }
               }
@@ -991,11 +730,139 @@ void MeineKraft::mainloop() {
         }
 
         if (Gui.logger_window) {
-          ImGui::Begin("Logger system", &Gui.logger_window);
-          // TODO: Implement logger system window
-          // for (const auto& item : Logger::msgs) {
-          // }
-          ImGui::End();
+          LoggingSystem::instance().draw_gui(&Gui.logger_window);
+        }
+
+        if (Gui.network_window) {
+          // NetworkSystem::instance().draw_gui(&Gui.network_window);
+        }
+
+        if (Gui.scripting_window) {
+          ImGui::SetWindowSize(ImVec2(500, 450), ImGuiSetCond_Once);
+
+          if (ImGui::Begin("Scripting window")) {
+            keyboard_enabled = !ImGui::IsRootWindowOrAnyChildFocused();
+
+            // static char buf[1024] = {"start:\n"
+            //                       "\tADDI 0 1\n"
+            //                       "\tCALL Log::info\n"
+            //                       "\tJUMP start\n"};
+            // static char buf[1024] = {"start:\n"
+            //                       "\tADDI 0 1\n"
+            //                       "\tCALL Log::info\n"
+            //                       "\tCMPI 0 4\n"
+            //                       "\tBRNEQ start\n"
+            //                       "\tCALL exit\n\n\n\n"};
+            static char buf[1024] = {"start:\n"
+                                  "\tCALL counter\n"
+                                  "\tBRNEQ start\n"
+                                  "\tCALL exit\n"
+                                 "counter:\n"
+                                  "\tADDI R0 1\n"
+                                  "\tCALL Log::info\n"
+                                  "\tCMPI R0 4\n"
+                                  "\tRET\n"
+            };
+
+            if (ImGui::Button("Compile")) {
+              Log::warn("TODO: Implement me!");
+            }
+
+            ImGui::SameLine();
+
+            static MkAssContext ctx;
+
+            if (!ctx.exit) {
+              if (ImGui::Button("Run")) {
+                ctx = MkAssContext();
+
+                ctx.register_external_symbol("log::info", [](MkAssContext& ctx){
+                                                            Log::info("\t[MkAssContext]: " + std::to_string(ctx.regs[0]));
+                                                          });
+                ctx.register_external_symbol("exit",      [](MkAssContext& ctx){
+                                                            Log::info("\t[MkAssContext]: exited");
+                                                            ctx.exit = true;
+                                                          });
+
+                const std::string src = std::string(buf);
+                const std::vector<MkAss::Token> tokens = MkAss::tokenize(ctx, src);
+                MkAss::run(ctx, tokens);
+              }
+            } else {
+              if (ImGui::Button("Exit")) {
+                ctx.exit = true;
+              }
+            }
+
+            ImGui::SameLine();
+
+            if (ImGui::Button("Step")) {
+              Log::warn("TODO: Implement me!");
+            }
+
+            const ImVec2 size = ImVec2(260,450);
+
+            {
+              ImGui::BeginChild("##assembly", size, true, ImGuiWindowFlags_NoScrollbar);
+
+              const ImVec4 linnum_color {0.3, 0.7, 0.9, 1.0};
+              const ImVec4 linnum_color0{0.7, 0.3, 0.9, 1.0};
+
+              ImGui::BeginChild("##linnum", ImVec2(15,450), false, ImGuiWindowFlags_NoScrollbar);
+              ImGui::PushItemWidth(ImGui::GetWindowWidth());
+              for (int i = 0; i < 20; i++) {
+                if (ctx.pc == i) {
+                  ImGui::TextColored(linnum_color0, "%u", i);
+                } else {
+                  ImGui::TextColored(linnum_color, "%u", i);
+                }
+              }
+              ImGui::PopItemWidth();
+              ImGui::EndChild();
+
+              ImGui::SameLine();
+
+              ImGui::PushItemWidth(ImGui::GetWindowWidth());
+              ImGui::InputTextMultiline(" ", buf, sizeof(buf), size);
+              ImGui::PopItemWidth();
+              ImGui::EndChild();
+            }
+
+            ImGui::SameLine();
+
+            {
+              ImGui::BeginChild("##runtime", size, true, ImGuiWindowFlags_NoScrollbar);
+
+              const ImVec4 linnum_color{0.3, 0.7, 0.9, 1.0};
+
+              ImGui::BeginChild("##linnum", ImVec2(15,450), false, ImGuiWindowFlags_NoScrollbar);
+              ImGui::PushItemWidth(ImGui::GetWindowWidth());
+              for (int i = 0; i < 20; i++) {
+                ImGui::TextColored(linnum_color, "%u", i);
+              }
+              ImGui::PopItemWidth();
+              ImGui::EndChild();
+
+              ImGui::SameLine();
+
+              ImGui::PushItemWidth(ImGui::GetWindowWidth());
+              ImGui::InputTextMultiline(" ", buf, sizeof(buf), size);
+              ImGui::PopItemWidth();
+              ImGui::EndChild();
+            }
+
+            MkAss::draw_gui(ctx);
+
+            ImGui::End();
+          }
+        }
+
+        if (Gui.console_window) {
+          if (ImGui::Begin("Console window")) {
+            keyboard_enabled = !ImGui::IsRootWindowOrAnyChildFocused();
+            ImGui::Text("> ls -a -systems");
+            ImGui::End();
+          }
         }
 
         ImGui::Render();

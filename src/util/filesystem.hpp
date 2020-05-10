@@ -16,7 +16,7 @@
 namespace Filesystem {
   /// Base filepath to the executeable root folder
 #if defined(__linux__)
-  const std::string base = "/home/alexander/repos/MeineKraft-2/MeineKraft/";
+  const std::string base = "/home/alexander/repos/MeineKraft/";
 #elif defined(_WIN32) || defined(_WIN64)
   const std::string base = "C:/Users/Alexander/repos/MeineKraft/";
 #endif

@@ -14,7 +14,9 @@
 #endif
 
 struct Renderer;
+struct LoggingSystem;
 struct SDL_Window;
+struct MkAssProgramManager;
 
 /// Main struct of the engine
 struct MeineKraft {

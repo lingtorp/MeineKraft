@@ -104,7 +104,7 @@ struct Vec4 {
         return x == rhs.x && y == rhs.y && z == rhs.z && w == rhs.w;
     }
 
-    friend std::ostream &operator<<(std::ostream &os, const Vec4 &vec) {
+    friend std::ostream& operator<<(std::ostream &os, const Vec4 &vec) {
         return os << "(x:" << vec.x << " y:" << vec.y << " z:" << vec.z << " w:" << vec.w << ")";
     }
 
