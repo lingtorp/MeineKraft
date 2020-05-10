@@ -29,6 +29,10 @@ struct LightingApplicationRenderPass;
 struct DirectLightingRenderPass;
 struct VoxelizationRenderPass;
 struct VoxelConeTracingRenderPass;
+struct ViewFrustumCullingRenderPass;
+struct BilinearUpsamplingRenderPass;
+struct BilateralFilteringRenderPass;
+struct BilateralUpsamplingRenderPass;
 
 // GOAL WITH RENDERPASS REFACTOR:
 // - Nothing about the render passes shall be exposed through the Renderer interface
@@ -78,6 +82,10 @@ struct Renderer {
   DirectLightingRenderPass* direct_lighting_pass = nullptr;
   VoxelizationRenderPass* voxelization_pass = nullptr;
   VoxelConeTracingRenderPass* voxel_cone_tracing_pass = nullptr;
+  ViewFrustumCullingRenderPass* view_frustum_culling_pass = nullptr;
+  BilinearUpsamplingRenderPass* bilinear_upsampling_pass = nullptr;
+  BilateralFilteringRenderPass* bilateral_filtering_pass = nullptr;
+  BilateralUpsamplingRenderPass* bilateral_upsampling_pass = nullptr;
   std::vector<RenderPass*> render_passes;
 
   glm::mat4 camera_transform; // TODO
@@ -136,37 +144,11 @@ struct Renderer {
   // TODO: Document
   void link_batch(GraphicsBatch& batch);
 
-  /// View frustum culling shader
-  ComputeShader* cull_shader = nullptr;
-
   uint32_t gl_pointlights_ssbo = 0;
   uint8_t* gl_pointlights_ssbo_ptr = nullptr;
 
-  // Bilateral filtering shader pass
-  Shader* bf_ping_shader = nullptr;
-  Shader* bf_pong_shader = nullptr;
-  uint32_t gl_bf_vao = 0;
-  uint32_t gl_bf_ping_fbo = 0;
-  uint32_t gl_bf_pong_fbo = 0;
-  uint32_t gl_bf_ping_out_texture = 0;
-  uint32_t gl_bf_ping_out_texture_unit = 0;
-
-  // Bilateral upsampling shader pass
-  Shader* bs_ping_shader = nullptr;
-  uint32_t gl_bs_vao = 0;
-  uint32_t gl_bs_ping_fbo = 0;
-  uint32_t gl_bs_ping_out_texture = 0;
-  uint32_t gl_bs_ping_out_texture_unit = 0;
-
   // Filtering related
   std::vector<float> kernel = {}; // Gaussian 1D separable kernel weights
-
-  // Bilinear upsampling pass
-  Shader* bilinear_upsampling_shader = nullptr;
-  uint32_t gl_bilinear_upsampling_fbo = 0;
-  uint32_t gl_bilinear_upsampling_texture = 0;
-  uint32_t gl_bilinear_upsampling_texture_unit = 0;
-
   //    Environment map
   Texture environment_map;
   uint32_t gl_environment_map_texture_unit = 0;
