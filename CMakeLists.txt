@@ -7,11 +7,17 @@ if(UNIX)
 endif(UNIX)
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_BUILD_TYPE DEBUG)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# MeineKraft build variables
+set(MEINEKRAFT_VAR_RENDERER VK) # GL = OpenGL, VK = Vulkan
+
 if(WIN32)
-        # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /d2cgsummary") # 
+        # Get rid of annoying MSVC warnings.
+        add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+
+        # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /d2cgsummary") #
         # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Bt") #  time spent in frontend (c1xx.dll) vs backend (c2.dll)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4") # Enable warning level 4
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP") # MultiProcessor compilation
@@ -32,23 +38,40 @@ source_group("math" FILES ${MATH_SRC_FILES})
 set(NODES_SRC_FILES "src/nodes/transform.hpp" "src/nodes/skybox.cpp" "src/nodes/skybox.hpp" "src/nodes/model.cpp" "src/nodes/model.hpp" "src/nodes/entity.cpp" "src/nodes/entity.hpp")
 source_group("nodes" FILES ${NODES_SRC_FILES})
 
-set(RENDER_SRC_FILES "src/rendering/shader.cpp" "src/rendering/shader.hpp" "src/rendering/texture.cpp" "src/rendering/texture.hpp" 
-        "src/rendering/rendercomponent.cpp" "src/rendering/rendercomponent.hpp" "src/rendering/ray.hpp" "src/rendering/graphicsbatch.hpp"
-        "src/rendering/renderer.cpp" "src/rendering/renderer.hpp"    "src/rendering/primitives.hpp"
-        "src/rendering/camera.cpp"   "src/rendering/camera.hpp"      "src/rendering/debug_opengl.hpp"
-        "src/rendering/light.hpp"    "src/rendering/meshmanager.cpp" "src/rendering/meshmanager.hpp" "src/rendering/texturemanager.hpp"
-        "src/rendering/renderpass/renderpass.hpp" "src/rendering/renderpass/renderpass.cpp"
-        "src/rendering/renderpass/downsample_pass.hpp" "src/rendering/renderpass/downsample_pass.cpp"
-        "src/rendering/renderpass/directionalshadow_pass.hpp" "src/rendering/renderpass/directionalshadow_pass.cpp"
-        "src/rendering/renderpass/gbuffer_pass.hpp" "src/rendering/renderpass/gbuffer_pass.cpp"
-        "src/rendering/renderpass/lighting_application_pass.hpp" "src/rendering/renderpass/lighting_application_pass.cpp"
-        "src/rendering/renderpass/direct_lighting_pass.hpp" "src/rendering/renderpass/direct_lighting_pass.cpp"
-        "src/rendering/renderpass/voxelization_pass.hpp" "src/rendering/renderpass/voxelization_pass.cpp"
-        "src/rendering/renderpass/voxel_cone_tracing_pass.hpp" "src/rendering/renderpass/voxel_cone_tracing_pass.cpp"
-        "src/rendering/renderpass/view_frustum_culling_pass.hpp" "src/rendering/renderpass/view_frustum_culling_pass.cpp"
-        "src/rendering/renderpass/bilinear_upsampling_pass.hpp" "src/rendering/renderpass/bilinear_upsampling_pass.cpp"
-        "src/rendering/renderpass/bilateral_filtering_pass.hpp" "src/rendering/renderpass/bilateral_filtering_pass.cpp"
-        "src/rendering/renderpass/bilateral_upsampling_pass.hpp" "src/rendering/renderpass/bilateral_upsampling_pass.cpp")
+set(RENDER_SRC_FILES "src/rendering/shader.cpp" "src/rendering/shader.hpp"
+        "src/rendering/texture.cpp" "src/rendering/texture.hpp"
+        "src/rendering/rendercomponent.cpp" "src/rendering/rendercomponent.hpp"
+        "src/rendering/ray.hpp" "src/rendering/graphicsbatch.hpp"
+        "src/rendering/render_system.hpp" "src/rendering/render_system.cpp"
+        "src/rendering/vk/renderer.cpp" "src/rendering/vk/renderer.hpp"
+        "src/rendering/primitives.hpp" "src/rendering/camera.cpp"
+        "src/rendering/camera.hpp" "src/rendering/debug_opengl.hpp"
+        "src/rendering/light.hpp" "src/rendering/meshmanager.cpp"
+        "src/rendering/meshmanager.hpp" "src/rendering/texturemanager.hpp"
+        "src/rendering/renderpass/renderpass.hpp"
+        "src/rendering/renderpass/renderpass.cpp"
+        "src/rendering/renderpass/downsample_pass.hpp"
+        "src/rendering/renderpass/downsample_pass.cpp"
+        "src/rendering/renderpass/directionalshadow_pass.hpp"
+        "src/rendering/renderpass/directionalshadow_pass.cpp"
+        "src/rendering/renderpass/gbuffer_pass.hpp"
+        "src/rendering/renderpass/gbuffer_pass.cpp"
+        "src/rendering/renderpass/lighting_application_pass.hpp"
+        "src/rendering/renderpass/lighting_application_pass.cpp"
+        "src/rendering/renderpass/direct_lighting_pass.hpp"
+        "src/rendering/renderpass/direct_lighting_pass.cpp"
+        "src/rendering/renderpass/voxelization_pass.hpp"
+        "src/rendering/renderpass/voxelization_pass.cpp"
+        "src/rendering/renderpass/voxel_cone_tracing_pass.hpp"
+        "src/rendering/renderpass/voxel_cone_tracing_pass.cpp"
+        "src/rendering/renderpass/view_frustum_culling_pass.hpp"
+        "src/rendering/renderpass/view_frustum_culling_pass.cpp"
+        "src/rendering/renderpass/bilinear_upsampling_pass.hpp"
+        "src/rendering/renderpass/bilinear_upsampling_pass.cpp"
+        "src/rendering/renderpass/bilateral_filtering_pass.hpp"
+        "src/rendering/renderpass/bilateral_filtering_pass.cpp"
+        "src/rendering/renderpass/bilateral_upsampling_pass.hpp"
+        "src/rendering/renderpass/bilateral_upsampling_pass.cpp")
 source_group("render" FILES ${RENDER_SRC_FILES})
 
 set(UTIL_SRC_FILES "src/util/filemonitor.cpp" "src/util/filemonitor.hpp" "src/util/filesystem.hpp" "src/util/logging.hpp" "src/util/logging.cpp" "src/util/config.hpp" "src/util/config.cpp" "src/util/logging_system.hpp" "src/util/logging_system.cpp" "src/util/mkass.cpp" "src/util/mkass.hpp")
@@ -58,11 +81,13 @@ set(SCENE_SRC_FILES "src/scene/world.cpp" "src/scene/world.hpp")
 source_group("scene" FILES ${SCENE_SRC_FILES})
 
 # NOTE: Not needed for compilation but its nice to have the shaders visible in Visual Studio
-set(SHADER_SRC_FILES "shaders/blur.vert" "shaders/blur.frag" "shaders/geometry.vert"
-        "shaders/geometry.frag" "shaders/lightning.vert" "shaders/lightning.frag"
-        "shaders/ssao.frag" "shaders/ssao.vert" "shaders/culling.comp.glsl"
-        "shaders/voxel-cone-tracing.vert" "shaders/voxel-cone-tracing.frag" "shaders/voxelization.vert"
-        "shaders/voxelization.geom" "shaders/voxelization.frag" "shaders/voxelization-opacity-normalization.comp")
+set(SHADER_SRC_FILES "shaders/blur.vert" "shaders/blur.frag"
+        "shaders/geometry.vert" "shaders/geometry.frag" "shaders/lightning.vert"
+        "shaders/lightning.frag" "shaders/ssao.frag" "shaders/ssao.vert"
+        "shaders/culling.comp.glsl" "shaders/voxel-cone-tracing.vert"
+        "shaders/voxel-cone-tracing.frag" "shaders/voxelization.vert"
+        "shaders/voxelization.geom" "shaders/voxelization.frag"
+        "shaders/voxelization-opacity-normalization.comp")
 source_group("shaders" FILES ${SHADER_SRC_FILES})
 
 set(SOURCE_FILES main.cpp src/meinekraft.hpp src/meinekraft.cpp ${MATH_SRC_FILES} ${NODES_SRC_FILES} ${RENDER_SRC_FILES} ${UTIL_SRC_FILES} ${SCENE_SRC_FILES} ${IMGUI_SRC} ${SHADER_SRC_FILES})
@@ -82,6 +107,16 @@ endif(WIN32)
 find_package(OpenGL REQUIRED)
 include_directories(${OPENGL_INCLUDE_DIRS})
 target_link_libraries(MeineKraft ${OPENGL_LIBRARIES})
+
+if(APPLE)
+  find_library(MoltenVK NAMES "libMoltenVK.dylib" HINTS "${CMAKE_CURRENT_SOURCE_DIR}/ext/MoltenVK/macOS")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -framework Cocoa -framework Metal -framework IOKit -framework CoreVideo")
+  include_directories("${PROJECT_SOURCE_DIR}/ext/MoltenVK/include")
+else(APPLE)
+  find_package(Vulkan REQUIRED)
+  include_directories(${Vulkan_INCLUDE_DIRS})
+  target_link_libraries(MeineKraft ${Vulkan_LIBRARIES})
+endif(APPLE)
 
 if(WIN32)
         find_library(ASSIMP_LIBRARIES NAMES assimp assimp.dll PATHS ${CMAKE_SOURCE_DIR}/libs)
