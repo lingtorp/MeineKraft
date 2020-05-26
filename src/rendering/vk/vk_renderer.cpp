@@ -1,5 +1,4 @@
-#include "renderer.hpp"
-
+#include "vk_renderer.hpp"
 #include "vk_utils.hpp"
 
 #include <algorithm>
@@ -10,9 +9,104 @@
 #include <iterator>
 #include <vector>
 #include <chrono>
-#include <vulkan/vulkan_core.h>
 
-#include "shader.hpp"
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
+#define GLM_RIGHT_HANDED
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
+#include "../../nodes/model.hpp"
+
+namespace VkUtil {
+  static VkVertexInputBindingDescription get_binding_description() {
+    VkVertexInputBindingDescription description = {};
+    description.binding = 0;
+    description.stride = sizeof(Vertex);
+    description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+    return description;
+  }
+
+  static std::array<VkVertexInputAttributeDescription, 2>
+  get_attribute_descriptions() {
+    std::array<VkVertexInputAttributeDescription, 2> descriptions = {};
+
+    descriptions[0].binding = 0;
+    descriptions[0].location = 0;
+    descriptions[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+    descriptions[0].offset = offsetof(Vertex, position);
+
+    descriptions[1].binding = 0;
+    descriptions[1].location = 1;
+    descriptions[1].format = VK_FORMAT_R32G32_SFLOAT;
+    descriptions[1].offset = offsetof(Vertex, tex_coord);
+
+    return descriptions;
+  }
+}
+
+struct ShaderBundle {
+  ShaderBundle() = default;
+  ShaderBundle(VkDevice device, const std::string &vertex_filepath, const std::string &fragment_filepath) {
+    // TODO: Check if .spv ending and do the correct thing
+
+    const auto vert_shader_code = Filesystem::read_file(Filesystem::base + "shaders/vert.spv");
+
+    VkShaderModuleCreateInfo vert_shadermodule_ci = {};
+    vert_shadermodule_ci.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    vert_shadermodule_ci.codeSize = vert_shader_code.size();
+    vert_shadermodule_ci.pCode = reinterpret_cast<const uint32_t*>(vert_shader_code.data());
+    VkShaderModule vert_shadermodule;
+    vkCreateShaderModule(device, &vert_shadermodule_ci, nullptr, &vert_shadermodule);
+
+    const auto frag_shader_code = Filesystem::read_file(Filesystem::base + "shaders/frag.spv");
+
+    VkShaderModuleCreateInfo frag_shadermodule_ci = {};
+    frag_shadermodule_ci.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    frag_shadermodule_ci.codeSize = frag_shader_code.size();
+    frag_shadermodule_ci.pCode = reinterpret_cast<const uint32_t*>(frag_shader_code.data());
+    VkShaderModule frag_shadermodule;
+    vkCreateShaderModule(device, &frag_shadermodule_ci, nullptr, &frag_shadermodule);
+
+    /// Pipeline
+    VkPipelineShaderStageCreateInfo vert_pipeline_stage_ci = {};
+    vert_pipeline_stage_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    vert_pipeline_stage_ci.stage = VK_SHADER_STAGE_VERTEX_BIT;
+    vert_pipeline_stage_ci.module = vert_shadermodule;
+    vert_pipeline_stage_ci.pName = "main";
+    vert_pipeline_stage_ci.pSpecializationInfo = nullptr;
+
+    VkPipelineShaderStageCreateInfo frag_pipeline_stage_ci = {};
+    frag_pipeline_stage_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    frag_pipeline_stage_ci.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+    frag_pipeline_stage_ci.module = frag_shadermodule;
+    frag_pipeline_stage_ci.pName = "main";
+    frag_pipeline_stage_ci.pSpecializationInfo = nullptr;
+
+    this->shader_stages_ci = {vert_pipeline_stage_ci, frag_pipeline_stage_ci};
+
+    this->vertex_input_binding = VkUtil::get_binding_description();
+    this->vertex_input_attribs = VkUtil::get_attribute_descriptions();
+
+    this->vertex_input_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    this->vertex_input_ci.vertexBindingDescriptionCount = 1;
+    this->vertex_input_ci.pVertexBindingDescriptions = &this->vertex_input_binding;
+    this->vertex_input_ci.vertexAttributeDescriptionCount = this->vertex_input_attribs.size();
+    this->vertex_input_ci.pVertexAttributeDescriptions = this->vertex_input_attribs.data();
+
+    // vkDestroyShaderModule(device, vert_shadermodule, nullptr);
+    // vkDestroyShaderModule(device, frag_shadermodule, nullptr);
+  };
+
+  // Vulkan objects
+  VkVertexInputBindingDescription vertex_input_binding = {};
+  std::array<VkVertexInputAttributeDescription, 2> vertex_input_attribs = {};
+
+
+  std::vector<VkPipelineShaderStageCreateInfo> shader_stages_ci = {};
+  VkPipelineVertexInputStateCreateInfo vertex_input_ci = {};
+};
 
 // TODO: Cleanup all Vulkan objects
 Renderer::~Renderer() {
@@ -28,17 +122,9 @@ Renderer::~Renderer() {
 }
 
 bool Renderer::init() {
-  Scene scene = load_scene(Filesystem::base() + "rsrcs/box-textured/", "box-textured.gltf");
+  Scene scene(Filesystem::base + "rsrcs/box-textured/", "box-textured.gltf");
   Mesh mesh = scene.models[0].mesh;
   std::string texture_filepath = scene.models[0].textures.front().filepath;
-
-  const uint32_t sdl_flags = SDL_WINDOW_VULKAN;
-  sdl_window = SDL_CreateWindow("vkVCT", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 500, 500, sdl_flags);
-  if (!sdl_window) {
-    Log::error(SDL_GetError());
-    Log::error("[SDL]: Failed to create window");
-    return false;
-  }
 
   // ----- Vulkan ------
 
@@ -69,7 +155,7 @@ bool Renderer::init() {
   swapchain = vk::utils::create_swapchain(physical_device, device, surface);
 
   /// Shaders
-  const auto shader = Shader(device, Filesystem::base() + "shaders/vert.spv", Filesystem::base() + "shaders/frag.spv");
+  const auto shader = ShaderBundle(device, Filesystem::base + "shaders/vert.spv", Filesystem::base + "shaders/frag.spv");
 
   VkPipelineInputAssemblyStateCreateInfo input_assembly_ci = {};
   input_assembly_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;

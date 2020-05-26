@@ -1,18 +1,9 @@
 #pragma once
 
-#include "debug_vulkan.hpp"
-#include "logging.hpp"
-#include "render_pass.hpp"
-#include "scene.hpp"
+#include "vk_debug.hpp"
+#include "../../util/logging.hpp"
 #include "vk_objects.hpp"
-#include "filesystem.hpp"
-
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
-#define GLM_RIGHT_HANDED
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
+#include "../../util/filesystem.hpp"
 
 const bool validation_enabled = true;
 

@@ -130,37 +130,59 @@ void imgui_styling() {
   style->Colors[ImGuiCol_ModalWindowDarkening] = ImVec4(1.00f, 0.98f, 0.95f, 0.73f);
 }
 
+/// Rendering API selection
+#define MK_VK
+// #define MK_GL
+
 /// Main engine constructor
 MeineKraft::MeineKraft() {
   // TODO: Enable configuration to set windows position, size and whether or not to be centered
   const Resolution res = FULL_HD;
 
   SDL_Init(SDL_INIT_EVERYTHING);
+
+  #ifdef MK_GL
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, OPENGL_MINOR_VERSION);
   SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
   SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
-  auto window_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_MOUSE_CAPTURE;
-  window = SDL_CreateWindow("MeineKraft", 0, 0, res.width, res.height, window_flags);
+  const auto window_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_MOUSE_CAPTURE;
+  #else // MK_VK
+  const auto window_flags = SDL_WINDOW_VULKAN | SDL_WINDOW_MOUSE_CAPTURE;
+  #endif
+
+  window = SDL_CreateWindow("MeineKraft", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, res.width, res.height, window_flags);
+
+  if (!window) {
+    Log::error(SDL_GetError());
+    Log::error("[SDL]: Failed to create window");
+    return;
+  }
+
+  #ifdef MK_GL
   SDL_GLContext context = SDL_GL_CreateContext(window);
   if (!context) { Log::error(std::string(SDL_GetError())); }
+
   SDL_GL_SetSwapInterval(0); // Disables vsync
 
   glewExperimental = (GLboolean) true;
   glewInit();
 
+  OpenGLContextInfo gl_context_info(4, OPENGL_MINOR_VERSION);
+
+  ImGui_ImplSdlGL3_Init(window);
+  #else // MK_VK
+
+  #endif
+
   // Create MeineKraft folder structure
   Filesystem::create_directory(Filesystem::tmp);
-
-  OpenGLContextInfo gl_context_info(4, OPENGL_MINOR_VERSION);
 
   atexit(IMG_Quit);
   IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG); 
   
-  ImGui_ImplSdlGL3_Init(window);
-
   renderer = new Renderer(res);
 
   imgui_styling();
@@ -333,7 +355,7 @@ void MeineKraft::mainloop() {
 
     if (take_screenshot) {
       const Vec3f *pixels = renderer->take_screenshot();
-      Filesystem::save_image_as_ppm(Filesystem::tmp + "screenshot", pixels, renderer->screen.width, renderer->screen.height);
+      Filesystem::save_image_as_ppm(Filesystem::tmp + "screenshot", (float*)&pixels[0].x, renderer->screen.width, renderer->screen.height);
       delete pixels;
       take_screenshot = false;
     }

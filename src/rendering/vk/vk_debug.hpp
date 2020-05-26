@@ -3,7 +3,7 @@
 #include <vulkan/vulkan.h>
 #include <iostream>
 
-#include "logging.hpp"
+#include "../../util/logging.hpp"
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback(
       VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,

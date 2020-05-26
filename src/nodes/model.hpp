@@ -14,7 +14,7 @@ public:
 
 struct Scene {
   /// Scene-wide AABB containing all Models
-	AABB aabb;
+  AABB aabb;
 
   /// Scene main camera
   Camera camera;
