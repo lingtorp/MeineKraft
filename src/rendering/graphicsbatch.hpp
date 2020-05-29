@@ -1,4 +1,5 @@
 #pragma once
+/*
 #ifndef MEINEKRAFT_GRAPHICSBATCH_HPP
 #define MEINEKRAFT_GRAPHICSBATCH_HPP
 
@@ -8,7 +9,6 @@
 #include "../nodes/transform.hpp"
 #include "primitives.hpp"
 #include "shader.hpp"
-#include "debug_opengl.hpp"
 #include "meshmanager.hpp"
 
 #define GL_EXT_texture_sRGB 1
@@ -302,3 +302,4 @@ struct GraphicsBatch {
 };
 
 #endif // MEINEKRAFT_GRAPHICSBATCH_HPP
+*/

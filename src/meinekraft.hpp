@@ -13,7 +13,7 @@
 #define OPENGL_MINOR_VERSION 1 // macOS (deprecated)
 #endif
 
-struct Renderer;
+struct RenderSystem;
 struct LoggingSystem;
 struct SDL_Window;
 struct MkAssProgramManager;
@@ -34,7 +34,7 @@ struct MeineKraft {
     const uint8_t screenshot_mode_frame_wait = 25;
 
     SDL_Window* window = nullptr;
-    Renderer* renderer = nullptr;
+    RenderSystem* render_system = nullptr;
 
     /// MeineKraft initialization is done when this is called
     void init();

@@ -48,13 +48,7 @@ struct Shader {
   std::string geometry_filepath = "";
   std::string fragment_filepath = "";
 
-  /// OpenGL object identifiers
-  uint32_t gl_program = 0;
-  uint32_t gl_vertex_shader = 0;
-  uint32_t gl_geometry_shader = 0;
-  uint32_t gl_fragment_shader = 0;
-
-  /// Configuration of the shader a la Ubershader
+  ///  Configuration of the shader a la Ubershader
   std::set<Shader::Defines> defines{};
 
 private:
@@ -72,7 +66,6 @@ private:
 struct ComputeShader {
   explicit ComputeShader(const std::string &compute_filepath,
                          const std::vector<std::string> &defines = {});
-  uint32_t gl_program = 0;
 };
 
 #endif // MEINEKRAFT_SHADER_HPP

@@ -7,9 +7,8 @@
 #include "../include/imgui/imgui_impl_sdl.h"
 
 #include "rendering/primitives.hpp"
-#include "rendering/renderer.hpp"
+#include "rendering/render_system.hpp"
 #include "rendering/camera.hpp"
-#include "rendering/debug_opengl.hpp"
 #include "nodes/model.hpp"
 #include "nodes/skybox.hpp"
 #include "nodes/physics_system.hpp"
@@ -183,7 +182,7 @@ MeineKraft::MeineKraft() {
   atexit(IMG_Quit);
   IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG); 
   
-  renderer = new Renderer(res);
+  render_system = new RenderSystem(res);
 
   imgui_styling();
 }
@@ -194,21 +193,20 @@ void MeineKraft::init() {
   if (success) {
     const std::string path = config["scene"]["path"].get<std::string>();
     const std::string name = config["scene"]["name"].get<std::string>();
-    renderer->scene = new Scene(Filesystem::home + path, name);
-    renderer->scene->camera = Camera(config);
+    render_system->scene = new Scene(Filesystem::home + path, name);
   } else {
-    renderer->scene = new Scene();
+    render_system->scene = new Scene();
     Log::warn("Failed to load config.json.");
   }
 
   screenshot_mode = config["screenshot_mode"].get<bool>();
 
-  renderer->init();
+  render_system->init();
   LoggingSystem::instance().init();
 }
 
 MeineKraft::~MeineKraft() {
-  if (renderer) { delete renderer; }
+  if (render_system) { delete render_system; }
   ImGui_ImplSdlGL3_Shutdown();
   SDL_DestroyWindow(window);
   SDL_Quit();
@@ -247,15 +245,9 @@ void MeineKraft::mainloop() {
         switch (event.type) {
         case SDL_MOUSEMOTION:
           if (toggle_mouse_capture) { break; }
-          renderer->scene->camera.pitch += event.motion.yrel;
-          renderer->scene->camera.yaw += event.motion.xrel;
-          renderer->scene->camera.direction = renderer->scene->camera.recalculate_direction();
           break;
 
         case SDL_MOUSEBUTTONDOWN:
-          if (!ImGui::IsMouseHoveringAnyWindow()) {
-            world.spawn_entity(MeshPrimitive::Sphere, renderer->scene->camera.position, renderer->scene->camera.direction, 20.0f);
-          }
           break;
 
         case SDL_KEYDOWN:
@@ -264,22 +256,16 @@ void MeineKraft::mainloop() {
           }
           switch (event.key.keysym.sym) {
           case SDLK_w:
-            renderer->scene->camera.move_forward(true);
             break;
           case SDLK_a:
-            renderer->scene->camera.move_left(true);
             break;
           case SDLK_s:
-            renderer->scene->camera.move_backward(true);
             break;
           case SDLK_d:
-            renderer->scene->camera.move_right(true);
             break;
           case SDLK_q:
-            renderer->scene->camera.move_down(true);
             break;
           case SDLK_e:
-            renderer->scene->camera.move_up(true);
             break;
           case SDLK_TAB:
             toggle_mouse_capture = !toggle_mouse_capture;
@@ -293,22 +279,17 @@ void MeineKraft::mainloop() {
         case SDL_KEYUP:
           switch (event.key.keysym.sym) {
           case SDLK_w:
-            renderer->scene->camera.move_forward(false);
             break;
           case SDLK_a:
-            renderer->scene->camera.move_left(false);
             break;
           case SDLK_s:
-            renderer->scene->camera.move_backward(false);
             break;
           case SDLK_d:
-            renderer->scene->camera.move_right(false);
             break;
           case SDLK_q:
-            renderer->scene->camera.move_down(false);
             break;
           case SDLK_e:
-            renderer->scene->camera.move_up(false);
+            break;
           }
           break;
 
@@ -333,10 +314,9 @@ void MeineKraft::mainloop() {
           break;
       }
     }
-    renderer->scene->camera.position = renderer->scene->camera.update(delta_ms);
 
     /// Run all actions
-    ActionSystem::instance().execute_actions(renderer->state.frame, delta_ms);
+    ActionSystem::instance().execute_actions(render_system->state.frame, delta_ms);
 
     /// Let the game do its thing
     world.tick();
@@ -346,22 +326,10 @@ void MeineKraft::mainloop() {
 
     /// Render the world
     if (!throttle_rendering || !throttle_rendering_enabled) {
-      renderer->render(delta_ms);
+      render_system->render_frame();
     }
 
-    if (screenshot_mode && renderer->state.frame > screenshot_mode_frame_wait) {
-      take_screenshot = true;
-    }
-
-    if (take_screenshot) {
-      const Vec3f *pixels = renderer->take_screenshot();
-      Filesystem::save_image_as_ppm(Filesystem::tmp + "screenshot", (float*)&pixels[0].x, renderer->screen.width, renderer->screen.height);
-      delete pixels;
-      take_screenshot = false;
-    }
-
-    if (screenshot_mode && renderer->state.frame > screenshot_mode_frame_wait) { return; }
-
+    /*
     /// ImGui - Debug instruments
     if (!throttle_rendering || !throttle_rendering_enabled) {
       begin_gl_cmds("ImGui");
@@ -379,7 +347,7 @@ void MeineKraft::mainloop() {
           if (ImGui::BeginMenu("MeineKraft")) {
             if (ImGui::MenuItem("Quit", "ESC")) { done = true; }
             if (ImGui::MenuItem("Screenshot")) { take_screenshot = true; }
-            if (ImGui::MenuItem("Pixel diff")) { renderer->state.bilateral_filtering.pixel_diff = true; }
+            if (ImGui::MenuItem("Pixel diff")) { render_system->state.bilateral_filtering.pixel_diff = true; }
             if (ImGui::MenuItem("Hide GUI")) { memset(&Gui, 0, sizeof(Gui)); }
             ImGui::EndMenu();
           }
@@ -417,14 +385,14 @@ void MeineKraft::mainloop() {
           ImGui::PopStyleColor();
 
           ImGui::Text("Average %lu ms/frame (%.1f FPS)", delta_ms, io.Framerate);
-          ImGui::Text("Frame: %lu", renderer->state.frame);
-          ImGui::Text("Resolution: (%u, %u)", renderer->screen.width, renderer->screen.height);
-          ImGui::Text("Render passes: %u", renderer->state.render_passes);
+          ImGui::Text("Frame: %lu", render_system->state.frame);
+          ImGui::Text("Resolution: (%u, %u)", render_system->screen.width, render_system->screen.height);
+          ImGui::Text("Render passes: %u", render_system->state.render_passes);
           // TODO: Change resolution, memory usage, textures, render pass execution times, etc
 
           if (ImGui::CollapsingHeader("Global settings")) {
-            ImGui::Checkbox("Normal mapping", &renderer->state.lighting.normalmapping);
-            ImGui::SliderInt("Downsample modifier", &renderer->state.lighting.downsample_modifier, 1, 8);
+            ImGui::Checkbox("Normal mapping", &render_system->state.lighting.normalmapping);
+            ImGui::SliderInt("Downsample modifier", &render_system->state.lighting.downsample_modifier, 1, 8);
             ImGui::SameLine(); ImGui_HelpMarker("GI is performed in lower resolution by a of factor 1/x");
 
             ImGui::Checkbox("Throttle rendering in background", &throttle_rendering_enabled);
@@ -432,28 +400,28 @@ void MeineKraft::mainloop() {
           }
 
           if (ImGui::CollapsingHeader("Direct shadows")) {
-            ImGui::Checkbox("Enabled", &renderer->state.lighting.direct);
-            ImGui::Text("Shadowmap resolution: (%u, %u)", renderer->state.shadow.SHADOWMAP_W, renderer->state.shadow.SHADOWMAP_H);
-            ImGui::SliderInt("Resolution modifier", &renderer->state.shadow.shadowmap_resolution_step, 1, 5);
+            ImGui::Checkbox("Enabled", &render_system->state.lighting.direct);
+            ImGui::Text("Shadowmap resolution: (%u, %u)", render_system->state.shadow.SHADOWMAP_W, render_system->state.shadow.SHADOWMAP_H);
+            ImGui::SliderInt("Resolution modifier", &render_system->state.shadow.shadowmap_resolution_step, 1, 5);
             ImGui::SameLine(); ImGui_HelpMarker("Changes the shadowmap texture size");
 
             static int s = 0; // Selection
             ImGui::Combo("Algorithm", &s, "Plain \0 PCF \0 VCT \0");
             ImGui::SameLine(); ImGui_HelpMarker("Shadow algorithm applied by the directional light \n Plain: Classic shadowmapping \n PCF: Percentage-closer filtering \n VCT: Voxel cone traced shadows");
-            renderer->state.shadow.algorithm = ShadowAlgorithm(s);
+            render_system->state.shadow.algorithm = ShadowAlgorithm(s);
 
-            switch (renderer->state.shadow.algorithm) {
+            switch (render_system->state.shadow.algorithm) {
             case ShadowAlgorithm::Plain:
-                ImGui::InputFloat("Shadow bias", &renderer->state.shadow.bias);
+                ImGui::InputFloat("Shadow bias", &render_system->state.shadow.bias);
                 ImGui::SameLine(); ImGui_HelpMarker("Offset along normal to avoid shadow acne");
                 break;
             case ShadowAlgorithm::PercentageCloserFiltering:
-                ImGui::InputFloat("Shadow bias", &renderer->state.shadow.bias);
+                ImGui::InputFloat("Shadow bias", &render_system->state.shadow.bias);
                 ImGui::SameLine(); ImGui_HelpMarker("Offset along normal to avoid shadow acne");
-                ImGui::InputInt("Samples", &renderer->state.shadow.pcf_samples);
+                ImGui::InputInt("Samples", &render_system->state.shadow.pcf_samples);
                 break;
             case ShadowAlgorithm::VCT:
-                ImGui::InputFloat("Shadow cone aperature (deg.)", &renderer->state.shadow.vct_cone_aperature);
+                ImGui::InputFloat("Shadow cone aperature (deg.)", &render_system->state.shadow.vct_cone_aperature);
                 break;
             }
           }
@@ -461,66 +429,66 @@ void MeineKraft::mainloop() {
           if (ImGui::CollapsingHeader("Voxelization")) {
 
             if (ImGui::Button("Voxelize")) {
-              renderer->state.voxelization.voxelize = true;
+              render_system->state.voxelization.voxelize = true;
             }
             ImGui::SameLine();
-            ImGui::Checkbox("Always voxelize", &renderer->state.voxelization.always_voxelize);
+            ImGui::Checkbox("Always voxelize", &render_system->state.voxelization.always_voxelize);
 
-            ImGui::Checkbox("Conservative voxelization", &renderer->state.voxelization.conservative_rasterization);
+            ImGui::Checkbox("Conservative voxelization", &render_system->state.voxelization.conservative_rasterization);
           }
 
           if (ImGui::CollapsingHeader("Voxel cone tracing", ImGuiTreeNodeFlags_DefaultOpen)) {
 
-            ImGui::InputFloat("Ambient decay factor", &renderer->state.vct.ambient_decay);
+            ImGui::InputFloat("Ambient decay factor", &render_system->state.vct.ambient_decay);
 
-            ImGui::Checkbox("Indirect", &renderer->state.lighting.indirect);
+            ImGui::Checkbox("Indirect", &render_system->state.lighting.indirect);
             ImGui::SameLine();
-            ImGui::Checkbox("Specular", &renderer->state.lighting.specular);
+            ImGui::Checkbox("Specular", &render_system->state.lighting.specular);
             ImGui::SameLine();
-            ImGui::Checkbox("Ambient", &renderer->state.lighting.ambient);
+            ImGui::Checkbox("Ambient", &render_system->state.lighting.ambient);
             ImGui::SameLine();
             ImGui_HelpMarker("Note ambient is only available when 'Indirect' is used.");
 
             if (ImGui::TreeNode("Diffuse cone settings")) {
-              ImGui::InputFloat("Roughness aperature (deg.)", &renderer->state.vct.roughness_aperature);
-              ImGui::SliderInt("# diffuse cones", &renderer->state.vct.num_diffuse_cones, 4, renderer->state.vct.MAX_DIFFUSE_CONES);
+              ImGui::InputFloat("Roughness aperature (deg.)", &render_system->state.vct.roughness_aperature);
+              ImGui::SliderInt("# diffuse cones", &render_system->state.vct.num_diffuse_cones, 4, render_system->state.vct.MAX_DIFFUSE_CONES);
               ImGui::TreePop();
             }
 
             if (ImGui::TreeNode("Specular cone settings")) {
-              ImGui::InputFloat("Metallic aperature (half ang. deg.)", &renderer->state.vct.metallic_aperature);
+              ImGui::InputFloat("Metallic aperature (half ang. deg.)", &render_system->state.vct.metallic_aperature);
               if (ImGui::Button("1")) {
-               renderer->state.vct.metallic_aperature = 1.0f;
+               render_system->state.vct.metallic_aperature = 1.0f;
               }
               if (ImGui::Button("2")) {
-               renderer->state.vct.metallic_aperature = 2.0f;
+               render_system->state.vct.metallic_aperature = 2.0f;
               }
               if (ImGui::Button("3")) {
-               renderer->state.vct.metallic_aperature = 3.0f;
+               render_system->state.vct.metallic_aperature = 3.0f;
               }
               if (ImGui::Button("4")) {
-               renderer->state.vct.metallic_aperature = 4.0f;
+               render_system->state.vct.metallic_aperature = 4.0f;
               }
               if (ImGui::Button("5")) {
-               renderer->state.vct.metallic_aperature = 5.0f;
+               render_system->state.vct.metallic_aperature = 5.0f;
               }
-              ImGui::SliderFloat("Trace distance", &renderer->state.vct.specular_cone_trace_distance, 0.0625f, 1.0f);
+              ImGui::SliderFloat("Trace distance", &render_system->state.vct.specular_cone_trace_distance, 0.0625f, 1.0f);
               ImGui::SameLine();
               ImGui_HelpMarker("Specular cone trace distance in terms of factor of max scene length");
               if (ImGui::Button("1")) {
-               renderer->state.vct.specular_cone_trace_distance = 1.0f; 
+               render_system->state.vct.specular_cone_trace_distance = 1.0f;
               }
               if (ImGui::Button("1/2")) {
-               renderer->state.vct.specular_cone_trace_distance = 1.0f / 2.0f;
+               render_system->state.vct.specular_cone_trace_distance = 1.0f / 2.0f;
               }
               if (ImGui::Button("1/4")) {
-               renderer->state.vct.specular_cone_trace_distance = 1.0f / 4.0f;
+               render_system->state.vct.specular_cone_trace_distance = 1.0f / 4.0f;
               }
               if (ImGui::Button("1/8")) {
-               renderer->state.vct.specular_cone_trace_distance = 1.0f / 8.0f;
+               render_system->state.vct.specular_cone_trace_distance = 1.0f / 8.0f;
               }
               if (ImGui::Button("1/16")) {
-               renderer->state.vct.specular_cone_trace_distance = 1.0f / 16.0f;
+               render_system->state.vct.specular_cone_trace_distance = 1.0f / 16.0f;
               }
               ImGui::TreePop();
             }
@@ -528,42 +496,42 @@ void MeineKraft::mainloop() {
 
           if (ImGui::CollapsingHeader("Bilateral filtering", ImGuiTreeNodeFlags_DefaultOpen)) {
 
-            ImGui::Checkbox("Enabled##filtering", &renderer->state.bilateral_filtering.enabled);
+            ImGui::Checkbox("Enabled##filtering", &render_system->state.bilateral_filtering.enabled);
 
-            ImGui::Checkbox("Normalmapping##filtering", &renderer->state.bilateral_filtering.normalmapping);
+            ImGui::Checkbox("Normalmapping##filtering", &render_system->state.bilateral_filtering.normalmapping);
 
             ImGui::Text("Filter:");
-            ImGui::Checkbox("Direct##filtering", &renderer->state.bilateral_filtering.direct);
+            ImGui::Checkbox("Direct##filtering", &render_system->state.bilateral_filtering.direct);
             ImGui::SameLine();
-            ImGui::Checkbox("Indirect##filtering", &renderer->state.bilateral_filtering.indirect);
+            ImGui::Checkbox("Indirect##filtering", &render_system->state.bilateral_filtering.indirect);
 
-            ImGui::Checkbox("Specular##filtering", &renderer->state.bilateral_filtering.specular);
+            ImGui::Checkbox("Specular##filtering", &render_system->state.bilateral_filtering.specular);
             ImGui::SameLine();
-            ImGui::Checkbox("Ambient##filtering", &renderer->state.bilateral_filtering.ambient);
+            ImGui::Checkbox("Ambient##filtering", &render_system->state.bilateral_filtering.ambient);
 
             ImGui::Separator();
 
             ImGui::Text("Gaussian spatial kernel weights");
             ImGui::BeginChild("spatial_kernel", ImVec2(0, 3.5f * ImGui::GetTextLineHeight()), true, ImGuiWindowFlags_HorizontalScrollbar);
-            for (const float& weight : renderer->state.bilateral_filtering.kernel) {
+            for (const float& weight : render_system->state.bilateral_filtering.kernel) {
               ImGui::SameLine(); ImGui::Text("%0.2f", weight);
             }
             ImGui::EndChild();
 
-            ImGui::InputInt("Spatial kernel radius", (int*) (&renderer->state.bilateral_filtering.spatial_kernel_radius));
-            ImGui::InputFloat("Spatial kernel sigma", &renderer->state.bilateral_filtering.spatial_kernel_sigma);
+            ImGui::InputInt("Spatial kernel radius", (int*) (&render_system->state.bilateral_filtering.spatial_kernel_radius));
+            ImGui::InputFloat("Spatial kernel sigma", &render_system->state.bilateral_filtering.spatial_kernel_sigma);
 
             ImGui::Separator();
 
             ImGui::Text("Weights:");
-            ImGui::Checkbox("Position", &renderer->state.bilateral_filtering.position_weight);
-            ImGui::SameLine(); ImGui::SliderFloat("Sigma##Position", &renderer->state.bilateral_filtering.position_sigma, 0.05f, 8.0f);
+            ImGui::Checkbox("Position", &render_system->state.bilateral_filtering.position_weight);
+            ImGui::SameLine(); ImGui::SliderFloat("Sigma##Position", &render_system->state.bilateral_filtering.position_sigma, 0.05f, 8.0f);
 
-            ImGui::Checkbox("Normal", &renderer->state.bilateral_filtering.normal_weight);
-            ImGui::SameLine(); ImGui::SliderFloat("Sigma##Normal", &renderer->state.bilateral_filtering.normal_sigma, 0.05f, 8.0f);
+            ImGui::Checkbox("Normal", &render_system->state.bilateral_filtering.normal_weight);
+            ImGui::SameLine(); ImGui::SliderFloat("Sigma##Normal", &render_system->state.bilateral_filtering.normal_sigma, 0.05f, 8.0f);
 
-            ImGui::Checkbox("Depth", &renderer->state.bilateral_filtering.depth_weight);
-            ImGui::SameLine(); ImGui::SliderFloat("Sigma##Depth", &renderer->state.bilateral_filtering.depth_sigma, 0.05f, 8.0f);
+            ImGui::Checkbox("Depth", &render_system->state.bilateral_filtering.depth_weight);
+            ImGui::SameLine(); ImGui::SliderFloat("Sigma##Depth", &render_system->state.bilateral_filtering.depth_sigma, 0.05f, 8.0f);
           }
 
           if (ImGui::CollapsingHeader("Upsampling", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -576,43 +544,43 @@ void MeineKraft::mainloop() {
 
             // Joint bilateral upsampling
             if (s == 0) {
-              renderer->state.bilateral_upsample.enabled = true;
-              renderer->state.bilinear_upsample.enabled = false;
+              render_system->state.bilateral_upsample.enabled = true;
+              render_system->state.bilinear_upsample.enabled = false;
 
               ImGui::Text("Radiance:");
-              ImGui::Checkbox("Indirect##bilateralupsample", &renderer->state.bilateral_upsample.indirect);
+              ImGui::Checkbox("Indirect##bilateralupsample", &render_system->state.bilateral_upsample.indirect);
               ImGui::SameLine();
-              ImGui::Checkbox("Specular##bilateralupsample", &renderer->state.bilateral_upsample.specular);
+              ImGui::Checkbox("Specular##bilateralupsample", &render_system->state.bilateral_upsample.specular);
               ImGui::SameLine();
-              ImGui::Checkbox("Ambient##bilateralupsample", &renderer->state.bilateral_upsample.ambient);
+              ImGui::Checkbox("Ambient##bilateralupsample", &render_system->state.bilateral_upsample.ambient);
 
               ImGui::Separator();
 
               ImGui::Text("Weights:");
-              ImGui::Checkbox("Depth##bilateralupsample", &renderer->state.bilateral_upsample.depth_weight);
+              ImGui::Checkbox("Depth##bilateralupsample", &render_system->state.bilateral_upsample.depth_weight);
               ImGui::SameLine();
-              ImGui::Checkbox("Normal##bilateralupsample", &renderer->state.bilateral_upsample.normal_weight);
+              ImGui::Checkbox("Normal##bilateralupsample", &render_system->state.bilateral_upsample.normal_weight);
               ImGui::SameLine();
-              ImGui::Checkbox("Position##bilateralupsample", &renderer->state.bilateral_upsample.position_weight);
+              ImGui::Checkbox("Position##bilateralupsample", &render_system->state.bilateral_upsample.position_weight);
 
-              ImGui::Checkbox("Normal mapping##bilateralupsample", &renderer->state.bilateral_upsample.normal_mapping);
+              ImGui::Checkbox("Normal mapping##bilateralupsample", &render_system->state.bilateral_upsample.normal_mapping);
             }
 
             // Bilinear upsampling
             if (s == 1 || s == 2) {
-              renderer->state.bilateral_upsample.enabled = false;
-              renderer->state.bilinear_upsample.enabled = true;
+              render_system->state.bilateral_upsample.enabled = false;
+              render_system->state.bilinear_upsample.enabled = true;
 
               // Nearest neighbor
               if (s == 2) {
-                renderer->state.bilinear_upsample.nearest_neighbor = true;
+                render_system->state.bilinear_upsample.nearest_neighbor = true;
               }
 
-              ImGui::Checkbox("Indirect##bilinear", &renderer->state.bilinear_upsample.indirect);
+              ImGui::Checkbox("Indirect##bilinear", &render_system->state.bilinear_upsample.indirect);
               ImGui::SameLine();
-              ImGui::Checkbox("Specular##bilinear", &renderer->state.bilinear_upsample.specular);
+              ImGui::Checkbox("Specular##bilinear", &render_system->state.bilinear_upsample.specular);
               ImGui::SameLine();
-              ImGui::Checkbox("Ambient##bilinear", &renderer->state.bilinear_upsample.ambient);
+              ImGui::Checkbox("Ambient##bilinear", &render_system->state.bilinear_upsample.ambient);
             }
           }
 
@@ -650,31 +618,31 @@ void MeineKraft::mainloop() {
           }
 
           if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::InputFloat3("Position##camera", &renderer->scene->camera.position.x);
-            ImGui::InputFloat3("Direction##camera", &renderer->scene->camera.direction.x);
-            // ImGui::InputFloat("FoV", &renderer->scene->camera.FoV); // TODO: Camera adjustable FoV
+            ImGui::InputFloat3("Position##camera", &render_system->scene->camera.position.x);
+            ImGui::InputFloat3("Direction##camera", &render_system->scene->camera.direction.x);
+            // ImGui::InputFloat("FoV", &render_system->scene->camera.FoV); // TODO: Camera adjustable FoV
             ImGui::SameLine();
-            if (ImGui::Button("Reset")) { renderer->scene->reset_camera(); }
+            if (ImGui::Button("Reset")) { render_system->scene->reset_camera(); }
           }
 
           // Directional light
           if (ImGui::CollapsingHeader("Directional light")) {
-            ImGui::InputFloat3("Direction##directional_light", &renderer->scene->directional_light.direction.x);
+            ImGui::InputFloat3("Direction##directional_light", &render_system->scene->directional_light.direction.x);
             ImGui::SameLine(); ImGui_HelpMarker("Direction is negative.");
 
-            ImGui::ColorEdit3("Intensity##directional_light", &renderer->scene->directional_light.intensity.x);
+            ImGui::ColorEdit3("Intensity##directional_light", &render_system->scene->directional_light.intensity.x);
             ImGui::SameLine(); ImGui_HelpMarker("Intensity or color of the light."); // FIXME: May or may not exceed 1.0??
           }
 
           // Point lights
-          const std::string pointlights_title = "Point lights (" + std::to_string(renderer->pointlights.size()) + ")";
+          const std::string pointlights_title = "Point lights (" + std::to_string(render_system->pointlights.size()) + ")";
           if (ImGui::CollapsingHeader(pointlights_title.c_str())) {
-            for (size_t i = 0; i < renderer->pointlights.size(); i++) {
-              ImGui::PushID(&renderer->pointlights[i]);
+            for (size_t i = 0; i < render_system->pointlights.size(); i++) {
+              ImGui::PushID(&render_system->pointlights[i]);
               const std::string str = std::to_string(i);
               if (ImGui::CollapsingHeader(str.c_str())) {
-                ImGui::InputFloat3("Position##pointlight", &renderer->pointlights[i].position.x);
-                ImGui::ColorEdit3("Intensity##pointlight", &renderer->pointlights[i].intensity.x);
+                ImGui::InputFloat3("Position##pointlight", &render_system->pointlights[i].position.x);
+                ImGui::ColorEdit3("Intensity##pointlight", &render_system->pointlights[i].intensity.x);
                 ImGui::SameLine(); ImGui_HelpMarker("Intensity or color of the light."); // FIXME: May or may not exceed 1.0??
               }
               ImGui::PopID();
@@ -682,10 +650,10 @@ void MeineKraft::mainloop() {
           }
 
           // Graphics batches
-          const std::string graphicsbatches_title = "Graphics batches (" + std::to_string(renderer->graphics_batches.size()) + ")";
+          const std::string graphicsbatches_title = "Graphics batches (" + std::to_string(render_system->graphics_batches.size()) + ")";
           if (ImGui::CollapsingHeader(graphicsbatches_title.c_str())) {
-            for (size_t batch_num = 0; batch_num < renderer->graphics_batches.size(); batch_num++) {
-              auto& batch = renderer->graphics_batches[batch_num];
+            for (size_t batch_num = 0; batch_num < render_system->graphics_batches.size(); batch_num++) {
+              auto& batch = render_system->graphics_batches[batch_num];
              
               const std::string batch_title = "Batch #" + std::to_string(batch_num + 1) + " (" + std::to_string(batch.entity_ids.size()) + ")";
               if (ImGui::CollapsingHeader(batch_title.c_str())) {
@@ -734,7 +702,7 @@ void MeineKraft::mainloop() {
                     }
 
                     if (ImGui::Button("Remove")) {
-                      renderer->remove_component(id);
+                      render_system->remove_component(id);
                     }
                     ImGui::SameLine();
                     if (ImGui::Button("Clone")) {
@@ -891,8 +859,9 @@ void MeineKraft::mainloop() {
         end_gl_cmds();
       }
     }
+    */
     SDL_GL_SwapWindow(window);
   }
   // TODO: Config::save_scene
-  // Config::save_scene(renderer->scene);
+  // Config::save_scene(render_system->scene);
 }

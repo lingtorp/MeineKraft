@@ -3,7 +3,7 @@
 #include <cassert>
 
 #include "../rendering/rendercomponent.hpp"
-#include "../rendering/renderer.hpp"
+#include "../rendering/render_system.hpp"
 #include "../nodes/physics_system.hpp"
 #include "transform.hpp"
 
@@ -32,7 +32,7 @@ ID Entity::clone() const {
 void Entity::attach_component(const RenderComponent& component) {
     assert(!(components & RENDER_SYSTEM_COMPONENT_TAG));
     components |= RENDER_SYSTEM_COMPONENT_TAG;
-    MeineKraft::instance().renderer->add_component(component, id);
+    MeineKraft::instance().render_system->add_component(component, id);
 }
 
 void Entity::attach_component(const TransformComponent& component) {
@@ -51,7 +51,7 @@ void Entity::attach_component(const ActionComponent& component) {
 
 // Detachs
 void Entity::detach_component(const RenderComponent& component) {
-    MeineKraft::instance().renderer->remove_component(id);
+    MeineKraft::instance().render_system->remove_component(id);
 }
 
 void Entity::detach_component(const TransformComponent& component) {

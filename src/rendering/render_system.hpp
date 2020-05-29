@@ -1,7 +1,9 @@
 #pragma once
 
-#include "../../primitives.hpp"
-#include "../../graphicsbatch.hpp"
+#include "primitives.hpp"
+#include "rendercomponent.hpp"
+
+struct Scene;
 
 struct RenderSystem {
 
@@ -19,10 +21,9 @@ struct RenderSystem {
   void add_component(const RenderComponent comp, const ID entity_id);
 
   /// Removes the RenderComponent associated with the CID if there exists one
-  void remove_component(ID cid);
+  void remove_component(const ID entity_id);
 
   Scene* scene = nullptr;
   RenderState state;
   Resolution screen;
-  std::vector<GraphicsBatch> graphics_batches;
 };

@@ -2,7 +2,7 @@
 #include "../rendering/camera.hpp"
 #include "../rendering/rendercomponent.hpp"
 #include "../util/filesystem.hpp"
-#include "../rendering/renderer.hpp"
+#include "../rendering/render_system.hpp"
 #include "transform.hpp"
 
 Skybox::Skybox(): Entity() {
@@ -28,5 +28,5 @@ Skybox::Skybox(): Entity() {
            Filesystem::base + std::string("resources/lightmaps/garden/negy.bmp"),
            Filesystem::base + std::string("resources/lightmaps/garden/posz.bmp"),
            Filesystem::base + std::string("resources/lightmaps/garden/negz.bmp")};
-  MeineKraft::instance().renderer->load_environment_map(faces);
+  // MeineKraft::instance().render_system->load_environment_map(faces); // FIXME
 }
