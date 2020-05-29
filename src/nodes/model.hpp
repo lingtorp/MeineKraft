@@ -4,6 +4,7 @@
 
 #include "../rendering/camera.hpp"
 #include "../rendering/rendercomponent.hpp"
+#include "model.hpp"
 #include "entity.hpp"
 
 class Model: public Entity {
@@ -18,6 +19,9 @@ struct Scene {
 
   /// Scene main camera
   Camera camera;
+
+  /// TODO: Eventual SceneGraph
+  std::vector<Model> models;
 
   /// Scene directional light
   DirectionalLight directional_light = DirectionalLight(Vec3f(0.0f, -1.0f, -0.3f));
