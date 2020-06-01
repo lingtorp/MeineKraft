@@ -122,8 +122,8 @@ Renderer::~Renderer() {
 
 bool Renderer::init() {
   Scene scene(Filesystem::base + "rsrcs/box-textured/", "box-textured.gltf");
-  Mesh mesh = scene.models[0].mesh;
-  std::string texture_filepath = scene.models[0].textures.front().filepath;
+  Mesh& mesh = scene.models[0].mesh;
+  std::string texture_filepath = scene.models[0].texture_filepath;
 
   // ----- Vulkan ------
 

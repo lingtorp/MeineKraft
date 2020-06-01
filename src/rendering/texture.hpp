@@ -23,7 +23,7 @@ struct RawTexture {
   uint8_t  bytes_per_pixel = 0;
   uint32_t size   = 0; // Byte size per face
   uint32_t width  = 0; // Measured in pixels
-  uint32_t height = 0; 
+  uint32_t height = 0;
   uint32_t faces  = 0; // Number of faces, used for cube maps
   RawTexture() = default;
 };
@@ -60,10 +60,6 @@ struct Texture {
   ID id = 0;
   
   RawTexture data;
-
-  /// OpenGL texture target; CUBE_MAP, CUBE_MAP_ARRAY, TEXTURE_2D, etc
-  uint32_t gl_texture_target = 0;
-
   TextureFormat format; // FIXME: Use!
 
   enum class Type: uint8_t {

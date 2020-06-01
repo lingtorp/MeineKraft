@@ -63,6 +63,7 @@ Scene::Scene(const std::string& directory, const std::string& file) {
   for (size_t i = 0; i < render_components.size(); i++) {
     render_components[i].set_shading_model(ShadingModel::PhysicallyBased);
     Model model(render_components[i]);
+    model.texture_filepath = directory + file;
     NameSystem::instance().add_name_to_entity("mesh-" + std::to_string(i), model.id);
   }
 

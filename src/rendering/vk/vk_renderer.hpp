@@ -3,6 +3,7 @@
 #include "vk_debug.hpp"
 #include "../../util/logging.hpp"
 #include "vk_objects.hpp"
+#include "vk_utils.hpp"
 #include "../../util/filesystem.hpp"
 
 #define GLM_FORCE_RADIANS
@@ -19,7 +20,6 @@ struct MVPUniform {
   glm::mat4 proj;
 };
 
-// TODO: Document
 struct Renderer {
   SDL_Window *sdl_window = nullptr;
   VkInstance instance = {};

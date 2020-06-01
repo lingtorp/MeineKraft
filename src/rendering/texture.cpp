@@ -9,6 +9,14 @@
 
 #include "../util/logging.hpp"
 
+// int width, height, channels;
+// stbi_uc *pixels = stbi_load(texture_filepath.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+// assert(channels == 4);
+// if (!pixels) {
+//   Log::error("Could not load texture: " + texture_filepath);
+//   return {};
+// }
+
 RawTexture Texture::load_textures(const TextureResource& resource) {
   RawTexture texture{};
 

@@ -19,27 +19,22 @@ void RenderComponent::set_mesh(const std::string& directory, const std::string& 
     switch (texture_type) {
       case Texture::Type::Diffuse:
         diffuse_texture.data = Texture::load_textures(resource);
-        diffuse_texture.gl_texture_target = GL_TEXTURE_2D_ARRAY; // FIXME: Assumes texture format
         diffuse_texture.id = resource.to_hash();
         break;
       case Texture::Type::MetallicRoughness:
         metallic_roughness_texture.data = Texture::load_textures(resource);
-        metallic_roughness_texture.gl_texture_target = GL_TEXTURE_2D; // FIXME: Assumes texture format
         metallic_roughness_texture.id = resource.to_hash();
         break;
       case Texture::Type::AmbientOcclusion:
         ambient_occlusion_texture.data = Texture::load_textures(resource);
-        ambient_occlusion_texture.gl_texture_target = GL_TEXTURE_2D;
         ambient_occlusion_texture.id = resource.to_hash();
         break;   
       case Texture::Type::Emissive:
         emissive_texture.data = Texture::load_textures(resource);
-        emissive_texture.gl_texture_target = GL_TEXTURE_2D;
         emissive_texture.id = resource.to_hash();
         break;
       case Texture::Type::TangentNormal:
         normal_texture.data = Texture::load_textures(resource);
-        normal_texture.gl_texture_target = GL_TEXTURE_2D;
         normal_texture.id = resource.to_hash();
         break;
        default:
@@ -68,27 +63,22 @@ RenderComponent::load_scene_models(const std::string& directory, const std::stri
       switch (texture_type) {
       case Texture::Type::Diffuse:
         render_component.diffuse_texture.data = Texture::load_textures(resource);
-        render_component.diffuse_texture.gl_texture_target = GL_TEXTURE_2D_ARRAY; // FIXME: Assumes texture format
         render_component.diffuse_texture.id = resource.to_hash();
         break;
       case Texture::Type::MetallicRoughness:
         render_component.metallic_roughness_texture.data = Texture::load_textures(resource);
-        render_component.metallic_roughness_texture.gl_texture_target = GL_TEXTURE_2D; // FIXME: Assumes texture format
         render_component.metallic_roughness_texture.id = resource.to_hash();
         break;
       case Texture::Type::AmbientOcclusion:
         render_component.ambient_occlusion_texture.data = Texture::load_textures(resource);
-        render_component.ambient_occlusion_texture.gl_texture_target = GL_TEXTURE_2D;
         render_component.ambient_occlusion_texture.id = resource.to_hash();
         break;
       case Texture::Type::Emissive:
         render_component.emissive_texture.data = Texture::load_textures(resource);
-        render_component.emissive_texture.gl_texture_target = GL_TEXTURE_2D;
         render_component.emissive_texture.id = resource.to_hash();
         break;
       case Texture::Type::TangentNormal:
         render_component.normal_texture.data = Texture::load_textures(resource);
-        render_component.normal_texture.gl_texture_target = GL_TEXTURE_2D;
         render_component.normal_texture.id = resource.to_hash();
         break;
       default:
@@ -109,7 +99,6 @@ void RenderComponent::set_cube_map_texture(const std::array<std::string, 6>& fac
   const auto resource = TextureResource{rsrcs};
   diffuse_texture.id = resource.to_hash();
   diffuse_texture.data = TextureManager::textures[diffuse_texture.id];
-  diffuse_texture.gl_texture_target = GL_TEXTURE_CUBE_MAP_ARRAY;
   if (!diffuse_texture.data.pixels) {
     TextureManager::textures[diffuse_texture.id] = Texture::load_textures(resource);
     Log::info("Loading new cube map textures with id:" + std::to_string(diffuse_texture.id));

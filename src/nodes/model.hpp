@@ -11,6 +11,10 @@ class Model: public Entity {
 public:
   Model(const std::string& directory, const std::string& file);
   Model(const RenderComponent& render);
+
+  Mesh mesh;
+  Texture texture;
+  std::string texture_filepath;
 };
 
 struct Scene {

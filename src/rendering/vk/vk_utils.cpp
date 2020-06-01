@@ -6,7 +6,9 @@
 #include "vk_mem_alloc.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
-#include "../include/stb_image.h"
+#include "../../../include/stb/stb_image.h"
+
+#include "vk_renderer.hpp"
 
 namespace vk::utils {
   /// Debug utils EXT
