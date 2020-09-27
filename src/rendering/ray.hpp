@@ -4,23 +4,22 @@
 
 #include "../math/vector.hpp"
 
-class Ray {
-public:
+struct Ray {
     Vec3f origin;
     Vec3f direction;
 
-    Ray() : origin(Vec3f::ZERO(), direction(Vec3f::ZERO()) {}
+    explicit Ray(): origin(Vec3f::ZERO(), direction(Vec3f::ZERO()) {}
     Ray(Vec3f position, Vec3f direction): origin(position), direction(direction) {}
 
-    inline bool hits_sphere(Vec3f sphere_center, double sphere_radius) {
+    inline bool hits_sphere(Vec3f sphere_center, double sphere_radius) const {
         // dot(p(t) - C, p(t) - C) - R^2 = 0
         // p(t) = A + t*B // ray
         // C = (x, y, z) // position of the sphere
-        auto oc = origin - sphere_center;
-        auto a  = direction.dot(direction);
-        auto b  = 2.0 * direction.dot(oc);
-        auto c  = oc.dot(oc) - sphere_radius * sphere_radius;
-        auto discriminant = b*b - 4*a*c;
+        const Vec3f oc = origin - sphere_center;
+        const float a  = direction.dot(direction);
+        const float b  = 2.0 * direction.dot(oc);
+        const float c  = oc.dot(oc) - sphere_radius * sphere_radius;
+        const float discriminant = b*b - 4*a*c;
         return (discriminant > 0);
     }
 };
