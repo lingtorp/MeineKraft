@@ -13,15 +13,9 @@
 
 #define GL_EXT_texture_sRGB 1
 
-#ifdef _WIN32
-#include <glew.h>
-#include <SDL_image.h>
-#include <SDL_opengl.h>
-#else
 #include <GL/glew.h>
 #include <SDL2/SDL_image.h>
-#include "sdl2/SDL_opengl.h"
-#endif 
+#include <SDL2/SDL_opengl.h>
 
 // TODO: Remove, this is a sphere, call it and use it for what it is
 /// Bounding volume in the shape of a sphere

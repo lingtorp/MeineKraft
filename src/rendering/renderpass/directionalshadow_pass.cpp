@@ -7,12 +7,7 @@
 #include "../../rendering/primitives.hpp"
 #include "../../util/filesystem.hpp"
 
-
-#ifdef WIN32
-#include <glew.h>
-#else
 #include <GL/glew.h>
-#endif
 
 bool DirectionalShadowRenderPass::setup(Renderer* render) {
   glGenFramebuffers(1, &gl_shadowmapping_fbo);

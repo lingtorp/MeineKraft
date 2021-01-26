@@ -20,11 +20,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_syswm.h>
 
-#ifdef _WIN32
-#include <glew.h>
-#else
 #include <GL/glew.h>
-#endif 
 
 // Data
     static double g_Time = 0.0f;
@@ -379,8 +375,8 @@
         // NULL and call ImGui::GetDrawData()
         // after ImGui::Render() to get the same
         // ImDrawData pointer.
-        io.SetClipboardTextFn = ImGui_ImplSdlGL3_SetClipboardText;
-        io.GetClipboardTextFn = ImGui_ImplSdlGL3_GetClipboardText;
+        // io.SetClipboardTextFn = ImGui_ImplSdlGL3_SetClipboardText;
+        // io.GetClipboardTextFn = ImGui_ImplSdlGL3_GetClipboardText;
 
 #ifdef _WIN32
         SDL_SysWMinfo wmInfo;
@@ -396,7 +392,7 @@
 
     void ImGui_ImplSdlGL3_Shutdown() {
         ImGui_ImplSdlGL3_InvalidateDeviceObjects();
-        ImGui::Shutdown();
+        ImGui::DestroyContext();
     }
 
     void ImGui_ImplSdlGL3_NewFrame(SDL_Window *window) {

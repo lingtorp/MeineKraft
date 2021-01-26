@@ -10,11 +10,7 @@
 #include "gbuffer_pass.hpp"
 #include "directionalshadow_pass.hpp"
 
-#ifdef WIN32
-#include <glew.h>
-#else
 #include <GL/glew.h>
-#endif
 
 bool VoxelizationRenderPass::setup(Renderer* render) {
   shader = new Shader(Filesystem::base + "shaders/voxelization.vert",

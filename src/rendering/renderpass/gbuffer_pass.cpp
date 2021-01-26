@@ -7,11 +7,7 @@
 #include "../../rendering/primitives.hpp"
 #include "../../util/filesystem.hpp"
 
-#ifdef WIN32
-#include <glew.h>
-#else
 #include <GL/glew.h>
-#endif
 
 #include <glm/common.hpp>
 #include <glm/gtc/matrix_transform.hpp>

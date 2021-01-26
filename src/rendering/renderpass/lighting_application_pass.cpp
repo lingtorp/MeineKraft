@@ -9,11 +9,7 @@
 #include "../renderpass/voxel_cone_tracing_pass.hpp"
 #include "../../util/filesystem.hpp"
 
-#ifdef WIN32
-#include <glew.h>
-#else
 #include <GL/glew.h>
-#endif
 
 bool LightingApplicationRenderPass::setup(Renderer* render) {
   const Resolution screen = render->screen;

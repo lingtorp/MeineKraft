@@ -340,7 +340,8 @@ namespace MkAss {
   }
 };
 
-#include "imgui/imgui.h"
+// #include "imgui/imgui.h"
+#include <imgui.h>
 
 namespace MkAss {
   void draw_gui(MkAssContext& ctx) {

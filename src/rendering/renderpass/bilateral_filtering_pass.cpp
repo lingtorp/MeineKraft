@@ -6,11 +6,7 @@
 #include "voxel_cone_tracing_pass.hpp"
 #include "gbuffer_pass.hpp"
 
-#ifdef WIN32
-#include <glew.h>
-#else
 #include <GL/glew.h>
-#endif
 
 bool BilateralFilteringRenderPass::setup(Renderer* render) {
   const Resolution screen = render->screen;

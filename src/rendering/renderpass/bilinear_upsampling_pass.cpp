@@ -5,11 +5,7 @@
 #include "../../util/filesystem.hpp"
 #include "voxel_cone_tracing_pass.hpp"
 
-#ifdef WIN32
-#include <glew.h>
-#else
 #include <GL/glew.h>
-#endif
 
 bool BilinearUpsamplingRenderPass::setup(Renderer* render) {
   const Resolution screen = render->screen;

@@ -1,6 +1,6 @@
 #include "logging_system.hpp"
 
-#include "imgui/imgui.h"
+#include <imgui.h>
 
 #define LOG_FILTER_ALL 0xFFFF
 #define LOG_FILTER_DEBUG 0x0001
@@ -8,7 +8,7 @@
 #define LOG_FILTER_ERROR 0x0004
 
 void LoggingSystem::draw_gui(bool* open) {
-  ImGui::SetWindowSize(ImVec2(500, 450), ImGuiSetCond_Once);
+  ImGui::SetWindowSize(ImVec2(500, 450), ImGuiCond_Once);
 
   if (ImGui::Begin("Logger system", open, ImGuiWindowFlags_MenuBar)) {
 

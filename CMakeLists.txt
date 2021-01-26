@@ -13,18 +13,20 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 if(WIN32)
         # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /d2cgsummary") # 
         # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Bt") #  time spent in frontend (c1xx.dll) vs backend (c2.dll)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4") # Enable warning level 4
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W1") # Enable warning level X
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP") # MultiProcessor compilation
 endif(WIN32)
 
-file(GLOB IMGUI_SRC "include/imgui/*.cpp" "include/imgui/*.h") # Adds all imgui related files into the application
+file(GLOB IMGUI_SRC "include/imgui/*.cpp") # Adds imgui related files into the application
 
+if(NOT WIN32)
 include_directories(include)
 include_directories(include/assimp)
 include_directories(include/glew)
 include_directories(include/sdl2)
 include_directories(include/sdl2-image)
 include_directories(include/json)
+endif(WIN32)
 
 set(MATH_SRC_FILES "src/math/noise.hpp" "src/math/vector.hpp" "src/math/quaternion.hpp")
 source_group("math" FILES ${MATH_SRC_FILES})

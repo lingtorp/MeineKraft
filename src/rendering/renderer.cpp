@@ -5,11 +5,7 @@
 #include <array>
 #include <cmath>
 
-#ifdef WIN32
-#include <glew.h>
-#else
 #include <GL/glew.h>
-#endif
 
 #include "../nodes/model.hpp"
 #include "../nodes/entity.hpp"

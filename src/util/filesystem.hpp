@@ -120,7 +120,7 @@ namespace Filesystem {
     file.close();
 
     Log::info("Screenshot saved at: " + filepath.string());
-    return filepath;
+    return filepath.string();
   }
 
   /// Returns filepath to the saved file if it was created successfully, otherwise empty string

@@ -10,11 +10,7 @@
 #include "../renderpass/directionalshadow_pass.hpp"
 #include "../../util/filesystem.hpp"
 
-#ifdef WIN32
-#include <glew.h>
-#else
 #include <GL/glew.h>
-#endif
 
 bool DirectLightingRenderPass::setup(Renderer* render) {
   shader = new Shader(Filesystem::base + "shaders/generic-passthrough.vert.glsl",

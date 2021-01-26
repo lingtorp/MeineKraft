@@ -5,12 +5,9 @@
 
 #include <cassert>
 #include <string>
+#include <memory>
 
-#ifdef _WIN32
-#include <glew.h>
-#else
 #include <GL/glew.h>
-#endif
 
 #if defined(__linux__)
 static const char *GLSL_VERSION = "#version 450 core \n";
@@ -62,14 +59,16 @@ static std::string shader_compilation_err_msg(const GLuint shader) {
     return "";
   }
 
-  char err_log[max_lng];
+  char* err_log = (char*)calloc(max_lng, sizeof(char));
   glGetShaderInfoLog(shader, max_lng, &max_lng, &err_log[0]);
 
-  return std::string(&err_log[0]);
+  const std::string str = std::string(&err_log[0]);
+  delete err_log;
+
+  return str;
 }
 
-// TODO: Rewrite to use a compile function for correct err msg handling (remove
-// exit(-1))
+// TODO: Rewrite to use a compile function for correct err msg handling (remove exit(-1))
 ComputeShader::ComputeShader(const std::string &compute_filepath,
                              const std::vector<std::string> &defines) {
   GLuint gl_comp_shader = glCreateShader(GL_COMPUTE_SHADER);
@@ -95,8 +94,7 @@ ComputeShader::ComputeShader(const std::string &compute_filepath,
 
   if (!compute_shader_status) {
     const std::string err_msg = shader_compilation_err_msg(gl_comp_shader);
-    Log::error("Could not compile compute shader: " + compute_filepath + "\n" +
-               err_msg);
+    Log::error("Could not compile compute shader: " + compute_filepath + "\n" + err_msg);
     glDetachShader(gl_program, gl_comp_shader);
     glDeleteShader(gl_comp_shader);
     exit(-1);
@@ -114,9 +112,10 @@ ComputeShader::ComputeShader(const std::string &compute_filepath,
   if (!program_linked) {
     GLint err_size = 0;
     glGetProgramiv(gl_program, GL_INFO_LOG_LENGTH, &err_size);
-    char program_err_msg[err_size];
+    char* program_err_msg = (char*)calloc(err_size, sizeof(char));
     glGetProgramInfoLog(gl_program, err_size, nullptr, program_err_msg);
     Log::warn(try_to_parse_shader_err_msg(comp_src, std::string(program_err_msg)));
+    free(program_err_msg);
 
     glDeleteProgram(gl_program);
   }
@@ -201,8 +200,7 @@ std::pair<bool, std::string> Shader::compile() {
 
     glObjectLabel(GL_SHADER, gl_geometry_shader, -1, geometry_filepath.c_str());
 
-    glGetShaderiv(gl_geometry_shader, GL_COMPILE_STATUS,
-                  &geometry_shader_compiled);
+    glGetShaderiv(gl_geometry_shader, GL_COMPILE_STATUS, &geometry_shader_compiled);
   }
 
   if (!fragment_filepath.empty()) {
@@ -228,8 +226,7 @@ std::pair<bool, std::string> Shader::compile() {
 
     glObjectLabel(GL_SHADER, gl_fragment_shader, -1, fragment_filepath.c_str());
 
-    glGetShaderiv(gl_fragment_shader, GL_COMPILE_STATUS,
-                  &fragment_shader_compiled);
+    glGetShaderiv(gl_fragment_shader, GL_COMPILE_STATUS, &fragment_shader_compiled);
   }
 
   const std::string program_label =
@@ -269,9 +266,10 @@ std::pair<bool, std::string> Shader::compile() {
 
     GLint err_size = 0;
     glGetProgramiv(gl_program, GL_INFO_LOG_LENGTH, &err_size);
-    char err_msg[err_size];
+    char* err_msg = (char*) calloc(err_size, sizeof(char));
     glGetProgramInfoLog(gl_program, err_size, nullptr, err_msg);
     total_err_msg += std::string(err_msg);
+    free(err_msg);
 
     glDeleteProgram(gl_program);
 
@@ -287,11 +285,12 @@ std::pair<bool, std::string> Shader::compile() {
   if (!program_linked) {
     GLint err_size = 0;
     glGetProgramiv(gl_program, GL_INFO_LOG_LENGTH, &err_size);
-    char program_err_msg[err_size];
+    char* program_err_msg = (char*)calloc(err_size, sizeof(char));
     glGetProgramInfoLog(gl_program, err_size, nullptr, program_err_msg);
     err_msg += "Program error (" + vertex_filepath + ", " + geometry_filepath +
                ", " + fragment_filepath + "): \n" +
                std::string(program_err_msg);
+    free(program_err_msg);
   }
 
   if (vertex_included) {

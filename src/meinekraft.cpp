@@ -3,7 +3,8 @@
 #include <chrono>
 #include <SDL2/SDL_events.h>
 
-#include "imgui/imgui.h"
+// #include "../include/imgui.h"
+#include <imgui.h>
 #include "../include/imgui/imgui_impl_sdl.h"
 
 #include "rendering/primitives.hpp"
@@ -82,13 +83,14 @@ void imgui_styling() {
   style->GrabRounding = 3.0f;
 
   style->AntiAliasedLines = true;
-  style->AntiAliasedShapes = true;
+  style->AntiAliasedFill = true;
+  style->AntiAliasedLinesUseTex = true;
   style->FrameRounding = true;
 
   style->Colors[ImGuiCol_Text] = ImVec4(0.80f, 0.80f, 0.83f, 1.00f);
   style->Colors[ImGuiCol_TextDisabled] = ImVec4(0.24f, 0.23f, 0.29f, 1.00f);
   style->Colors[ImGuiCol_WindowBg] = ImVec4(0.06f, 0.05f, 0.07f, 0.80f);
-  style->Colors[ImGuiCol_ChildWindowBg] = ImVec4(0.07f, 0.07f, 0.09f, 1.00f);
+  style->Colors[ImGuiCol_ChildBg] = ImVec4(0.07f, 0.07f, 0.09f, 1.00f);
   style->Colors[ImGuiCol_PopupBg] = ImVec4(0.07f, 0.07f, 0.09f, 1.00f);
   style->Colors[ImGuiCol_Border] = ImVec4(0.80f, 0.80f, 0.83f, 0.88f);
   style->Colors[ImGuiCol_BorderShadow] = ImVec4(0.92f, 0.91f, 0.88f, 0.00f);
@@ -103,7 +105,7 @@ void imgui_styling() {
   style->Colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.80f, 0.80f, 0.83f, 0.31f);
   style->Colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.56f, 0.56f, 0.58f, 1.00f);
   style->Colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.06f, 0.05f, 0.07f, 1.00f);
-  style->Colors[ImGuiCol_ComboBg] = ImVec4(0.19f, 0.18f, 0.21f, 1.00f);
+  style->Colors[ImGuiCol_PopupBg] = ImVec4(0.19f, 0.18f, 0.21f, 1.00f);
   style->Colors[ImGuiCol_CheckMark] = ImVec4(0.40f, 1.0f, 0.40f, 0.31f);
   style->Colors[ImGuiCol_SliderGrab] = ImVec4(0.80f, 0.80f, 0.83f, 0.31f);
   style->Colors[ImGuiCol_SliderGrabActive] = ImVec4(0.06f, 0.05f, 0.07f, 1.00f);
@@ -113,15 +115,12 @@ void imgui_styling() {
   style->Colors[ImGuiCol_Header] = ImVec4(0.10f, 0.09f, 0.12f, 1.00f);
   style->Colors[ImGuiCol_HeaderHovered] = ImVec4(0.35f, 0.35f, 0.35f, 1.00f);
   style->Colors[ImGuiCol_HeaderActive] = ImVec4(0.06f, 0.05f, 0.07f, 1.00f);
-  style->Colors[ImGuiCol_Column] = ImVec4(0.56f, 0.56f, 0.58f, 1.00f);
-  style->Colors[ImGuiCol_ColumnHovered] = ImVec4(0.24f, 0.23f, 0.29f, 1.00f);
-  style->Colors[ImGuiCol_ColumnActive] = ImVec4(0.56f, 0.56f, 0.58f, 1.00f);
+  style->Colors[ImGuiCol_Separator] = ImVec4(0.56f, 0.56f, 0.58f, 1.00f);
+  style->Colors[ImGuiCol_SeparatorHovered] = ImVec4(0.24f, 0.23f, 0.29f, 1.00f);
+  style->Colors[ImGuiCol_SeparatorActive] = ImVec4(0.56f, 0.56f, 0.58f, 1.00f);
   style->Colors[ImGuiCol_ResizeGrip] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
   style->Colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.56f, 0.56f, 0.58f, 1.00f);
   style->Colors[ImGuiCol_ResizeGripActive] = ImVec4(0.06f, 0.05f, 0.07f, 1.00f);
-  style->Colors[ImGuiCol_CloseButton] = ImVec4(0.40f, 0.39f, 0.38f, 0.16f);
-  style->Colors[ImGuiCol_CloseButtonHovered] = ImVec4(0.40f, 0.39f, 0.38f, 0.39f);
-  style->Colors[ImGuiCol_CloseButtonActive] = ImVec4(0.40f, 0.39f, 0.38f, 1.00f);
   style->Colors[ImGuiCol_PlotLines] = ImVec4(0.40f, 0.39f, 0.88f, 0.63f);
   style->Colors[ImGuiCol_PlotLinesHovered] = ImVec4(1.0f, 1.00f, 1.0f, 1.00f);
   style->Colors[ImGuiCol_PlotHistogram] = ImVec4(0.40f, 0.39f, 0.38f, 0.63f);
@@ -133,7 +132,7 @@ void imgui_styling() {
 /// Main engine constructor
 MeineKraft::MeineKraft() {
   // TODO: Enable configuration to set windows position, size and whether or not to be centered
-  const Resolution res = FULL_HD;
+  const Resolution res = HD;
 
   SDL_Init(SDL_INIT_EVERYTHING);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
@@ -159,6 +158,7 @@ MeineKraft::MeineKraft() {
   atexit(IMG_Quit);
   IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG); 
   
+  ImGui::CreateContext();
   ImGui_ImplSdlGL3_Init(window);
 
   renderer = new Renderer(res);
@@ -231,7 +231,7 @@ void MeineKraft::mainloop() {
           break;
 
         case SDL_MOUSEBUTTONDOWN:
-          if (!ImGui::IsMouseHoveringAnyWindow()) {
+          if (!ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow)) {
             world.spawn_entity(MeshPrimitive::Sphere, renderer->scene->camera.position, renderer->scene->camera.direction, 20.0f);
           }
           break;
@@ -345,12 +345,13 @@ void MeineKraft::mainloop() {
       begin_gl_cmds("ImGui");
 
       ImGui_ImplSdlGL3_NewFrame(window);
+      
       auto io = ImGui::GetIO();
 
       //  Main window
       {
         if (Gui.imgui_test_window) {
-          ImGui::ShowTestWindow(); // NOTE: Shows demo of ImGui widgets
+          ImGui::ShowDemoWindow(); // NOTE: Shows demo of ImGui widgets
         }
 
         if (ImGui::BeginMainMenuBar()) {
@@ -738,10 +739,10 @@ void MeineKraft::mainloop() {
         }
 
         if (Gui.scripting_window) {
-          ImGui::SetWindowSize(ImVec2(500, 450), ImGuiSetCond_Once);
+          ImGui::SetWindowSize(ImVec2(500, 450), ImGuiCond_Once);
 
           if (ImGui::Begin("Scripting window")) {
-            keyboard_enabled = !ImGui::IsRootWindowOrAnyChildFocused();
+            keyboard_enabled = !ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
 
             // static char buf[1024] = {"start:\n"
             //                       "\tADDI 0 1\n"
@@ -859,7 +860,7 @@ void MeineKraft::mainloop() {
 
         if (Gui.console_window) {
           if (ImGui::Begin("Console window")) {
-            keyboard_enabled = !ImGui::IsRootWindowOrAnyChildFocused();
+            keyboard_enabled = !ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
             ImGui::Text("> ls -a -systems");
             ImGui::End();
           }

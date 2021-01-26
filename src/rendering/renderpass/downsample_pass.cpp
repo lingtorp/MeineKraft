@@ -9,11 +9,7 @@
 #include "directionalshadow_pass.hpp"
 #include "gbuffer_pass.hpp"
 
-#ifdef WIN32
-#include <glew.h>
-#else
 #include <GL/glew.h>
-#endif
 
 bool DownsampleRenderPass::setup(Renderer* render) {
   const Resolution screen = render->screen;

@@ -8,6 +8,11 @@
 #include <algorithm>
 
 #include <glm/common.hpp>
+#include <glm/vec3.hpp>
+
+#ifndef M_PI
+#define M_PI 3.1413f
+#endif
 
 #if defined(__linux__)
 #include <math.h>
@@ -260,7 +265,7 @@ struct Vec3 {
       x += rhs.x; y += rhs.y; z += rhs.z;
     }
 
-    inline glm::vec3 as_glm() const {
+    glm::vec3 as_glm() const {
       return glm::vec3(x, y, z);
     }
 
@@ -512,9 +517,12 @@ static std::vector<float> gaussian_1d_kernel(const float sigma, const size_t ker
   // NOTE: Center/origin strata is half on the positive and half on the negative interval
   float x0 = -strata_size / 2.0f;
   float x1 = strata_size / 2.0f;
-  const float v = sampler(x0, x1);
-  cum_v += v;
-  kernel.push_back(v);
+
+  {
+    const float v = sampler(x0, x1);
+    cum_v += v;
+    kernel.push_back(v);
+  }
 
   for (size_t i = 0; i < kernel_dim - 1; i++) {
     x0 += strata_size; x1 += strata_size; // Move interval

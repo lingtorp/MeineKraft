@@ -10,11 +10,7 @@
 #include "gbuffer_pass.hpp"
 #include "voxel_cone_tracing_pass.hpp"
 
-#ifdef WIN32
-#include <glew.h>
-#else
 #include <GL/glew.h>
-#endif
 
 bool BilateralUpsamplingRenderPass::setup(Renderer* render) {
   const Resolution screen = render->screen;
